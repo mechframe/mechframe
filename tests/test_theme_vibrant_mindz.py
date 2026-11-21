@@ -117,6 +117,26 @@ def test_every_pair_was_checked() -> None:
     assert set(ADMIN_GROUNDS) <= {bg for _, bg, _ in PAIRS}
 
 
+def blend(a: str, b: str, share: float) -> str:
+    """`a` taken `share` of the way to `b`, each channel rounded."""
+    pairs = [(int(a[i : i + 2], 16), int(b[i : i + 2], 16)) for i in (1, 3, 5)]
+    return "#" + "".join(f"{round(x + (y - x) * share):02X}" for x, y in pairs)
+
+
+def test_the_control_edges_are_line_2_taken_toward_muted() -> None:
+    line_2, muted = hex_of("color.palette.line-2"), hex_of("color.palette.muted")
+    # line-3: 41% of the way, a control's edge at 3:1 on the canvas, panels and rail (K4.4).
+    assert hex_of("color.palette.line-3") == blend(line_2, muted, 0.41)
+    # line-4: 57%, for a field's edge on the marketplace band, where line-3 falls short
+    # (the homepage's newsletter field; VM Website, the owner, 2026-11-21).
+    assert hex_of("color.palette.line-4") == blend(line_2, muted, 0.57)
+    band = hex_of("color.palette.band")
+    assert ratio(hex_of("color.palette.line-3"), band) < 3.0
+    assert ratio(hex_of("color.palette.line-4"), band) >= 3.0
+    palette = [t.path[2] for t in TOKENS if t.path[:2] == ("color", "palette") and len(t.path) == 3]
+    assert palette.index("line-4") == palette.index("line-3") + 1
+
+
 def test_every_alias_resolves_and_roles_hold_no_hex() -> None:
     aliases = [t for t in TOKENS if isinstance(t.value, str) and themes.ALIAS.match(t.value)]
     # 62, plus the kernel's font, radius and motion names (K4), plus the control edge and the
