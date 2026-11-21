@@ -5,15 +5,24 @@ for the people who can act on it.
 The kernel's own items are the site's missing description and card image,
 for those who can change the site's settings, and failed background jobs, for
 those who can also open System and retry them. The worst come first: a
-danger, then a warning, then what's only worth knowing. Modules add theirs
-through the dashboard cards hook, after v1.0 (decision 0018).
+danger, then a warning, then what's only worth knowing.
+
+**Modules add theirs** (hook 8, decision 0052): a module's `dashboard.py`
+gives `ATTENTION`, `async def ATTENTION(db, user) -> list[attention.Item]`,
+each item keyed `<id>.<name>` and naming the `permission` a person needs to
+see it. The kernel asks the modules that are on, keeps each item only for
+those who hold its permission, and drops a module's items, logged by its
+error's type, when its `ATTENTION` fails, so one module can't break the
+Dashboard.
 """
 
 from __future__ import annotations
 
-import uuid
+import inspect
+import logging
+from collections.abc import Awaitable, Callable, Iterable, Mapping
 from dataclasses import dataclass
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,6 +30,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from kernel import server_copy
 from kernel.auth.permissions import can
 from kernel.models import Job
+
+if TYPE_CHECKING:
+    from kernel.auth.models import User
+    from kernel.modules import InstalledModule
+
+log = logging.getLogger(__name__)
 
 Tone = Literal["info", "warning", "danger"]
 
@@ -41,6 +56,9 @@ class Item:
     why: str
     label: str
     to: str
+    #: Who sees it: those who hold this permission. A module's item MUST name
+    #: one; the kernel's own are checked in code.
+    permission: str | None = None
 
     def as_answer(self) -> dict[str, object]:
         return {
@@ -94,8 +112,60 @@ async def _dead_jobs(db: AsyncSession) -> int:
     return int(count or 0)
 
 
-async def for_person(db: AsyncSession, user_id: uuid.UUID) -> list[Item]:
-    """What needs this person, the worst first."""
+Provider = Callable[[AsyncSession, "User"], Awaitable[list[Item]]]
+
+_providers: dict[str, Provider] = {}
+
+
+def build(installed: Iterable[InstalledModule]) -> dict[str, Provider]:
+    """Each module's `ATTENTION`, by id. ValueError for one that isn't
+    `async def ATTENTION(db, user)`."""
+    found: dict[str, Provider] = {}
+    for module in installed:
+        if module.attention is None:
+            continue
+        if not inspect.iscoroutinefunction(module.attention):
+            raise ValueError(f"{module.id}'s ATTENTION is `async def ATTENTION(db, user)`.")
+        found[module.id] = module.attention
+    return found
+
+
+def install(providers: Mapping[str, Provider]) -> None:
+    """Called by `kernel.app.assemble` with `build`'s answer."""
+    global _providers
+    _providers = dict(providers)
+
+
+async def _modules_items(db: AsyncSession, user: User, on: Iterable[str]) -> list[Item]:
+    found: list[Item] = []
+    allowed: dict[str, bool] = {}
+    for module in sorted(set(on) & set(_providers)):
+        try:
+            items = await _providers[module](db, user)
+        except Exception as error:  # one module's failure never breaks the Dashboard
+            log.warning("%s's attention items failed (%s).", module, type(error).__name__)
+            continue
+        for item in items:
+            if (
+                not isinstance(item, Item)
+                or not item.key.startswith(f"{module}.")
+                or item.permission is None
+            ):
+                log.warning(
+                    "%s gave an attention item that isn't its own Item naming a permission.", module
+                )
+                continue
+            if item.permission not in allowed:
+                allowed[item.permission] = await can(db, user.id, item.permission)
+            if allowed[item.permission]:
+                found.append(item)
+    return found
+
+
+async def for_person(db: AsyncSession, user: User, on: Iterable[str] = ()) -> list[Item]:
+    """What needs this person, the worst first: the kernel's items, then
+    those of the modules `on` that they hold the permission for."""
+    user_id = user.id
     found: list[Item] = []
     site_settings = await can(db, user_id, SETTINGS)
     if site_settings:
@@ -109,4 +179,5 @@ async def for_person(db: AsyncSession, user_id: uuid.UUID) -> list[Item]:
         dead = await _dead_jobs(db)
         if dead:
             found.append(_failed(dead))
+    found.extend(await _modules_items(db, user, on))
     return sorted(found, key=lambda item: _RANK[item.tone])

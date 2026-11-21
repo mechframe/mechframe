@@ -102,10 +102,32 @@ export interface paths {
         /**
          * Needs You
          * @description What needs the signed-in staff member, the worst first, each item only
-         *     if they can act on it (K4 contract §2, addition 9). On an admin path,
-         *     `current_user` lets only staff with a second factor through.
+         *     if they can act on it (K4 contract §2, addition 9), the modules' too
+         *     (hook 8). On an admin path, `current_user` lets only staff with a second
+         *     factor through.
          */
         get: operations["needs_you_api_kernel_admin_attention_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/kernel/admin/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Set Up
+         * @description The setup steps of the modules on that the staff member may take, each
+         *     checked now (hook 8): the Dashboard's Set up card, while any is open.
+         */
+        get: operations["set_up_api_kernel_admin_setup_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2475,6 +2497,28 @@ export interface components {
             /** Saved By Id */
             saved_by_id: string | null;
         };
+        /** SetupList */
+        SetupList: {
+            /** Items */
+            items: components["schemas"]["SetupStep"][];
+        };
+        /**
+         * SetupStep
+         * @description One thing to set up (hook 8): what, why it matters, the page that does
+         *     it, and whether it's done, checked as it was read.
+         */
+        SetupStep: {
+            /** Key */
+            key: string;
+            /** Title */
+            title: string;
+            /** Why */
+            why: string;
+            /** Link */
+            link: string;
+            /** Done */
+            done: boolean;
+        };
         /** SignIn */
         SignIn: {
             /** Email */
@@ -2921,6 +2965,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AttentionList"];
+                };
+            };
+            /** @description A problem (RFC 9457) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    set_up_api_kernel_admin_setup_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SetupList"];
                 };
             };
             /** @description A problem (RFC 9457) */

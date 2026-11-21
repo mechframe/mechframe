@@ -20,7 +20,9 @@ is judged by the bot check (hook 5), and it adds a bot provider of its own,
 video player's host in the category `media` (hook 6), so the site asks
 consent for `media` while it's on. A note made by someone signed in is
 theirs, and `export_user_data` and `delete_user_data` (hook 7) give and
-anonymise a person's notes.
+anonymise a person's notes. Its Dashboard parts (hook 8): the setup step
+"Set the probe's count", done once its settings' count is 2 or more, and a
+"Needs you" item, both for those who hold `kernel.settings.manage`.
 Their table, `probe_note`, lives on a metadata of its own (`TABLES`), which
 the test support makes when its app starts, so the migrations never see it.
 """
@@ -40,6 +42,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from kernel import (
     BotProof,
+    attention,
     bot,
     jobs,
     lifecycle,
@@ -47,6 +50,8 @@ from kernel import (
     search,
     seed,
     server_copy,
+    settings,
+    setup,
     taxonomy,
 )
 from kernel.access import public
@@ -428,6 +433,46 @@ async def delete_user_data(db: AsyncSession, subject: privacy.Subject) -> None:
         note.author_id = None
 
 
+# --- hook 8, dashboard cards ----------------------------------------------------------------
+
+#: Who sees the probe's step and item: an admin, not an editor.
+_SETTINGS = "kernel.settings.manage"
+
+
+async def _count_set(db: AsyncSession) -> bool:
+    found = await settings.for_module(db, "probe")
+    return isinstance(found, ProbeSettings) and found.count >= 2
+
+
+SETUP = (
+    setup.Step(
+        key="probe.count",
+        title="Set the probe's count",
+        why="The probe's setup step: done once its count is 2 or more, so the suite can flip it.",
+        link="/admin/settings/probe",
+        permission=_SETTINGS,
+        done=_count_set,
+    ),
+)
+
+
+async def _attention(db: AsyncSession, user: User) -> list[attention.Item]:
+    return [
+        attention.Item(
+            key="probe.waiting",
+            tone="info",
+            what="The probe is waiting",
+            why="The probe's item, shown to those who can change settings.",
+            label="Open its settings",
+            to="/admin/settings/probe",
+            permission=_SETTINGS,
+        )
+    ]
+
+
+ATTENTION = _attention
+
+
 #: An embed's player host, held for the visitor's consent to `media` (hook 6).
 CSP = (("frame-src", "https://www.youtube-nocookie.com", "media"),)
 
@@ -482,6 +527,8 @@ MODULES = (
         csp=CSP,
         export_user_data=export_user_data,
         delete_user_data=delete_user_data,
+        attention=ATTENTION,
+        setup=SETUP,
     ),
     InstalledModule(
         _manifest(

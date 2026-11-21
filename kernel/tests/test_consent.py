@@ -21,6 +21,12 @@ from kernel.modules import InstalledModule, Manifest
 from .conftest import AppFactory, Client, make_config
 
 
+@pytest.fixture(autouse=True)
+def _restore(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Each test's installs are undone after it: a server built later keeps its own."""
+    monkeypatch.setattr(consent, "_categories", consent._categories)
+
+
 def _module(module_id: str, *csp: tuple[str, ...]) -> InstalledModule:
     manifest = Manifest.from_dict(
         {
@@ -111,13 +117,10 @@ def test_necessary_is_never_listed_and_the_order_is_fixed() -> None:
         "b": frozenset({"media"}),
         "c": frozenset({"analytics"}),
     }
-    try:
-        consent.install(found)
-        assert consent.categories({"a", "b", "c", "d"}) == ["analytics", "marketing", "media"]
-        assert consent.categories({"b", "d"}) == ["media"]
-        assert consent.categories(set()) == []
-    finally:
-        consent.install(consent.build(PROBES))
+    consent.install(found)
+    assert consent.categories({"a", "b", "c", "d"}) == ["analytics", "marketing", "media"]
+    assert consent.categories({"b", "d"}) == ["media"]
+    assert consent.categories(set()) == []
 
 
 # --- CONSENT_MODE ----------------------------------------------------------------------------

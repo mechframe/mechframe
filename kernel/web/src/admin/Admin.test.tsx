@@ -32,6 +32,7 @@ const admin = testUser({
 
 const NOTHING = {
   "GET /api/kernel/admin/attention": { status: 200, body: { items: [] } },
+  "GET /api/kernel/admin/setup": { status: 200, body: { items: [] } },
   "GET /api/kernel/notifications": { status: 200, body: { items: [], next_cursor: null, unread: 0 } },
 };
 
@@ -360,6 +361,47 @@ describe("the Dashboard", () => {
     routedFetch({ ...NOTHING, "GET /api/kernel/admin/attention": problem(500, "kernel.internal_error") });
     renderApp({ path: "/admin", session: admin });
     expect(await screen.findByText("What needs you couldn't be loaded.")).toBeInTheDocument();
+  });
+
+  it("shows the Set up card while a step is open: the done ones ticked, each open one with its page", async () => {
+    routedFetch({
+      ...NOTHING,
+      "GET /api/kernel/admin/setup": {
+        status: 200,
+        body: {
+          items: [
+            { key: "payments.connect", title: "Connect Stripe", why: "Until it's connected, nobody can pay.", link: "/admin/settings/payments", done: false },
+            { key: "shop.first_product", title: "Add a first product", why: "The shop is empty.", link: "/admin/shop", done: true },
+          ],
+        },
+      },
+    });
+    renderApp({ path: "/admin", session: admin });
+    const card = await screen.findByRole("region", { name: "Set up" });
+    expect(within(card).getByText("1 of 2 done")).toBeInTheDocument();
+    const [open, done] = within(card).getAllByRole("listitem");
+    expect(open).toHaveTextContent("Until it's connected, nobody can pay.");
+    expect(within(card).getByRole("link", { name: "Set it up: Connect Stripe" })).toHaveAttribute("href", "/admin/settings/payments");
+    expect(done?.querySelector("[role=img]")).toHaveAccessibleName("Done");
+    expect(done).not.toHaveTextContent("The shop is empty.");
+    expect(within(card).getAllByRole("link")).toHaveLength(1);
+  });
+
+  it("shows no Set up card once every step is done, or when no module lists one", async () => {
+    routedFetch({
+      ...NOTHING,
+      "GET /api/kernel/admin/setup": {
+        status: 200,
+        body: { items: [{ key: "shop.first_product", title: "Add a first product", why: "Empty.", link: "/admin/shop", done: true }] },
+      },
+    });
+    const { unmount } = renderApp({ path: "/admin", session: admin });
+    expect(await screen.findByText("Nothing needs you right now.")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Set up" })).toBeNull();
+    unmount();
+    routedFetch({ ...NOTHING, "GET /api/kernel/admin/setup": problem(500, "kernel.internal_error") });
+    renderApp({ path: "/admin", session: admin });
+    expect(await screen.findByText("The setup steps couldn't be loaded.")).toBeInTheDocument();
   });
 
   it("lays out the modules' cards, each one's own", async () => {

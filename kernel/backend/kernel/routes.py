@@ -3,8 +3,9 @@ the staff's audit log (decision 0037), the dashboard's "Needs you" list (K4
 contract §2, addition 9), each person's notices (decision 0038), and
 moderation: reports, the queue, actions, time-outs and the moderators' log
 (decision 0039); and the terms of the vocabularies modules declare, with
-staff's changes to them (decision 0052, hook 2); site search (hook 3); and
-the site's consent categories (hook 6)."""
+staff's changes to them (decision 0052, hook 2); site search (hook 3);
+the site's consent categories (hook 6); and the modules' setup steps
+(hook 8)."""
 
 from __future__ import annotations
 
@@ -35,6 +36,7 @@ from kernel import (
     notifications,
     search,
     server_copy,
+    setup,
     taxonomy,
 )
 from kernel.access import public
@@ -129,6 +131,21 @@ class AttentionItem(Answer):
 
 class AttentionList(Answer):
     items: list[AttentionItem]
+
+
+class SetupStep(Answer):
+    """One thing to set up (hook 8): what, why it matters, the page that does
+    it, and whether it's done, checked as it was read."""
+
+    key: str
+    title: str
+    why: str
+    link: str
+    done: bool
+
+
+class SetupList(Answer):
+    items: list[SetupStep]
 
 
 class Notice(Answer):
@@ -399,12 +416,24 @@ async def audit_log(
 
 @router.get("/admin/attention", response_model=AttentionList)
 async def needs_you(
-    user: User = Depends(current_user), db: AsyncSession = Depends(get_db)
+    request: Request, user: User = Depends(current_user), db: AsyncSession = Depends(get_db)
 ) -> dict[str, Any]:
     """What needs the signed-in staff member, the worst first, each item only
-    if they can act on it (K4 contract §2, addition 9). On an admin path,
-    `current_user` lets only staff with a second factor through."""
-    return {"items": [item.as_answer() for item in await attention.for_person(db, user.id)]}
+    if they can act on it (K4 contract §2, addition 9), the modules' too
+    (hook 8). On an admin path, `current_user` lets only staff with a second
+    factor through."""
+    on = await request.app.state.modules.on(db)
+    return {"items": [item.as_answer() for item in await attention.for_person(db, user, on)]}
+
+
+@router.get("/admin/setup", response_model=SetupList)
+async def set_up(
+    request: Request, user: User = Depends(current_user), db: AsyncSession = Depends(get_db)
+) -> dict[str, Any]:
+    """The setup steps of the modules on that the staff member may take, each
+    checked now (hook 8): the Dashboard's Set up card, while any is open."""
+    on = await request.app.state.modules.on(db)
+    return {"items": await setup.for_person(db, user.id, on)}
 
 
 # --- each person's notices (kernel.notifications, decision 0038) ------------------------

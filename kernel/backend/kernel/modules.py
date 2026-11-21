@@ -139,6 +139,11 @@ class InstalledModule:
     #: `data_hooks` says.
     export_user_data: Callable[[Any, Any], Awaitable[Any]] | None = None
     delete_user_data: Callable[[Any, Any], Awaitable[None]] | None = None
+    #: The module's Dashboard parts (kernel.attention and kernel.setup,
+    #: decision 0052): its `dashboard.py`'s `ATTENTION`, `async (db, user) ->
+    #: list[attention.Item]`, and `SETUP`, a tuple of `setup.Step`.
+    attention: Callable[[Any, Any], Awaitable[Any]] | None = None
+    setup: tuple[Any, ...] = ()
 
     @property
     def id(self) -> str:
@@ -232,7 +237,9 @@ def load_module(manifest: Path) -> InstalledModule:
     - `<id_>/__init__.py`'s `BOT_PROVIDER`, a bot check for public forms
       (kernel.bot);
     - `<id_>/privacy.py`'s `export_user_data` and `delete_user_data`, what
-      it holds about a person (kernel.privacy).
+      it holds about a person (kernel.privacy);
+    - `<id_>/dashboard.py`'s `ATTENTION` and `SETUP`, its "Needs you" items
+      and setup steps (kernel.attention, kernel.setup).
 
     The package `<id_>` must be importable: the caller puts its folder on
     `sys.path`. A package that isn't there gives the manifest alone."""
@@ -258,6 +265,8 @@ def load_module(manifest: Path) -> InstalledModule:
         bot_provider=_attribute(package, "BOT_PROVIDER"),
         export_user_data=_attribute(f"{package}.privacy", "export_user_data"),
         delete_user_data=_attribute(f"{package}.privacy", "delete_user_data"),
+        attention=_attribute(f"{package}.dashboard", "ATTENTION"),
+        setup=tuple(_attribute(f"{package}.dashboard", "SETUP") or ()),
     )
 
 

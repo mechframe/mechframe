@@ -65,9 +65,9 @@ SUBJECT = privacy.Subject(uuid.UUID("00000000-0000-4000-8000-000000000042"), "Pe
 
 
 @pytest.fixture(autouse=True)
-def _restore() -> Any:
-    yield
-    privacy.install(privacy.build(PROBES))
+def _restore(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Each test's installs are undone after it: a server built later keeps its own."""
+    monkeypatch.setattr(privacy, "_hooks", privacy._hooks)
 
 
 # --- the start's checks ----------------------------------------------------------------------

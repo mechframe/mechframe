@@ -149,7 +149,7 @@
         {"name": "Bot check", "status": "done", "prs": [103], "decisions": ["0052"]},
         {"name": "Consent categories", "status": "done", "prs": [107], "decisions": ["0052"]},
         {"name": "Export and erase", "status": "done", "prs": [109], "decisions": ["0052"]},
-        {"name": "Dashboard cards", "status": "todo"},
+        {"name": "Dashboard cards", "status": "done", "prs": [110], "decisions": ["0052"]},
         {"name": "Entitlements", "status": "todo", "note": "Waits until just before Vibrant Mindz step 5, its downloads (the owner, 2026-11-21)"},
         {"name": "Profile tabs", "status": "todo", "note": "Waits until just before wave 2b, its profiles module (the owner, 2026-11-21)"}
       ]

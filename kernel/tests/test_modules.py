@@ -308,6 +308,15 @@ def test_load_module_builds_a_module_from_its_fixed_names(
                 "        return None\n"
                 "BOT_PROVIDER = Check()\n"
             ),
+            "dashboard.py": (
+                "from kernel import setup\n"
+                "async def _done(db):\n"
+                "    return True\n"
+                "async def ATTENTION(db, user):\n"
+                "    return []\n"
+                'SETUP = (setup.Step(key="x.y", title="T", why="W", link="/admin", '
+                'permission="kernel.settings.manage", done=_done),)\n'
+            ),
             "privacy.py": (
                 "async def export_user_data(db, subject):\n"
                 '    return {"photos": []}\n'
@@ -410,6 +419,8 @@ def test_load_module_builds_a_module_from_its_fixed_names(
     assert module.export_user_data is not None
     assert module.export_user_data.__name__ == "export_user_data"
     assert module.delete_user_data is not None
+    assert module.attention is not None
+    assert [step.key for step in module.setup] == ["x.y"]
     assert [model.__content_type__ for model in module.publishable] == [f"{module_id}.photo"]
     assert [source.content_type for source in module.searchable] == [f"{module_id}.photo"]
     assert module.seed is not None
@@ -462,6 +473,7 @@ def test_load_module_of_a_package_with_none_of_the_names_or_none_at_all(
         None,
     )
     assert (found.export_user_data, found.delete_user_data) == (None, None)
+    assert (found.attention, found.setup) == (None, ())
     assert (
         found.csp,
         found.jobs,

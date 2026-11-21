@@ -114,7 +114,7 @@ The owner decided these when they picked the post-v1.0 modules (decision 0018, `
 | Hook | Needed by | In the spec already | Likely shape |
 | --- | --- | --- | --- |
 | Export and erase | privacy-center | Yes, since #109 | `kernel.privacy` (decision 0052) |
-| Dashboard cards | setup-wizard, fleet | Partly: the `admin.dashboard.widget` slot (8) | Setup-checklist steps as a manifest field or a fixed-name part with a live check |
+| Dashboard cards | setup-wizard, fleet | Yes, since #110 | `kernel.setup` and `kernel.attention` (decision 0052) |
 | Profile tabs | profiles | Partly: `account.section` is the member's own page | A public `profile.tab` slot plus a rule that it shows only public data |
 | Search index | site-search, semantic-search, concierge, docs | Yes, since #99 | `kernel.search` (decision 0052) |
 | Consent categories | consent, analytics-adapters, social-feeds, video | Yes, since #107 | `kernel.consent` (decision 0052) |

@@ -80,6 +80,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.exc import SQLAlchemyError
 
 from kernel import (
+    attention,
     audit,
     bot,
     consent,
@@ -95,6 +96,7 @@ from kernel import (
     privacy,
     search,
     server_copy,
+    setup,
     shell,
     taxonomy,
 )
@@ -255,6 +257,8 @@ def assemble(
         providers = bot.build(installed)
         asked = consent.build(installed)
         data_hooks = privacy.build(installed)
+        needs = attention.build(installed)
+        steps = setup.build(installed)
         public = server_copy.build(installed, site)
         catalog = events.build(
             [
@@ -298,6 +302,8 @@ def assemble(
     bot.install(providers)
     consent.install(asked)
     privacy.install(data_hooks)
+    attention.install(needs)
+    setup.install(steps)
     server_copy.install(site_name=config.site_name, site_url=config.site_url)
     # Here, not in create_app: a job in a worker of its own reads its module's
     # settings too (Codex on #63).
