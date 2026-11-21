@@ -15,7 +15,7 @@ MechFrame: website modules on a FastAPI + Postgres kernel (`CLAUDE.md`, `SPEC.md
 
 ## 3. State (2026-11-21, evening Eastern; check it, don't trust it)
 
-- **main** should be this handoff's PR on `12b3993` (#114). #113 and #114 landed. `git log -1 origin/main`, `gh pr list`.
+- **main** should be this handoff's PR (#115) on `12b3993` (#114). #113 and #114 landed. `git log -1 origin/main`, `gh pr list`. **If #115 is open,** land it by fast-forward on a green "CI result".
 - **`feat/media`** is local only, at `aae5612` on `0d19081` (#113): merge `origin/main` in first, then run the full suite (the session's last run wasn't read). It holds `modules/media/` (backend, migration, `module.json`, `openapi.json`, 53 upload tests), the pins and `catalog.json`.
 - `CLAUDE.md` is 159 lines: lean it (`C:\DEV\LEAN-CONTEXT-PROMPT.md`) unless the owner says not now.
 
