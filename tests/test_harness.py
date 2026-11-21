@@ -32,7 +32,7 @@ def test_discover(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         tmp_path,
         "test-gallery",
         {
-            "__init__.py": 'CSP = [("frame-src", "https://player.test")]\n',
+            "__init__.py": 'CSP = [("frame-src", "https://player.test", "media"), ("img-src", "https://cdn.test")]\n',
             "router.py": "from fastapi import APIRouter\nrouter = APIRouter()\n",
             "schemas.py": "from pydantic import BaseModel\nclass Settings(BaseModel):\n    size: int = 3\n",
             "emails.py": (
@@ -72,7 +72,10 @@ def test_discover(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     assert gallery.router is not None
     assert gallery.settings is not None
     assert gallery.settings().model_dump() == {"size": 3}
-    assert gallery.csp == (("frame-src", "https://player.test"),)
+    assert gallery.csp == (
+        ("frame-src", "https://player.test", "media"),
+        ("img-src", "https://cdn.test"),
+    )
     assert gallery.emails["test-gallery.new_photo"].subject == "New photo on $site_name"
 
 

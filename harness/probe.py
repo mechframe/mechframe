@@ -16,7 +16,9 @@ tested on them: `probe` fills each hook and `probe-addon` doesn't. Its notes,
 Its seed (hook 4, `seed_notes`) makes three of them under the topic `seeded`,
 by the seeded editor, two published. Its form, `POST /api/probe/inquiries`,
 is judged by the bot check (hook 5), and it adds a bot provider of its own,
-`BOT_PROVIDER`, which the setting `kernel.bot` can name.
+`BOT_PROVIDER`, which the setting `kernel.bot` can name. Its `CSP` adds a
+video player's host in the category `media` (hook 6), so the site asks
+consent for `media` while it's on.
 Their table, `probe_note`, lives on a metadata of its own (`TABLES`), which
 the test support makes when its app starts, so the migrations never see it.
 """
@@ -375,6 +377,9 @@ class ProbeBotCheck:
 
 BOT_PROVIDER = ProbeBotCheck()
 
+#: An embed's player host, held for the visitor's consent to `media` (hook 6).
+CSP = (("frame-src", "https://www.youtube-nocookie.com", "media"),)
+
 
 def _manifest(
     module_id: str, name: str, summary: str, requires: dict[str, str], **more: Any
@@ -422,6 +427,7 @@ MODULES = (
         searchable=SEARCH,
         seed=seed_notes,
         bot_provider=BOT_PROVIDER,
+        csp=CSP,
     ),
     InstalledModule(
         _manifest(

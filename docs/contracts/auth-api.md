@@ -43,6 +43,7 @@ Options are the JSON form of WebAuthn's `PublicKeyCredentialCreationOptions` or 
 | Method and path | Body | Answer |
 | --- | --- | --- |
 | `GET /api/kernel/modules` | | 200 `{"on": [ids]}`, the modules on, sorted; a module that's off isn't named (SPEC 12) |
+| `GET /api/kernel/site` | | 200 `{name, description, kind, logo, card_image, same_as, consent}`: the site's identity (Admin, Settings, Site), and `consent: {mode, categories}` (hook 6, decision 0052): `mode` is CONSENT_MODE (`ask` or `off`), and `categories` the consent categories the modules on name in their CSP entries, never `necessary`, in the order `analytics`, `marketing`, `media` |
 | `POST /api/auth/sign-up` | `{email, password, invite?}` | 202 `{"status": "check_email"}`; the account is a member, unverified. 403 `auth.sign_up_closed` or `auth.invite_required` by the site's mode (the settings section `kernel.auth`, defaulting to `SIGN_UP_MODE`; K4.8); 422 `auth.password_rejected` with the reason; 422 `kernel.invalid_request` for anything but one email address |
 | `POST /api/auth/verify-email` | `{token}` | 200 `{"status": "verified"}`; signs nobody in. 400 `auth.token_invalid` for a token used, older than 24 hours, or sent to an address the account no longer has |
 | `POST /api/auth/sign-in` | `{email, password}` | 200 `{"status": "signed_in", "user": {...}}` and the cookie; or 200 `{"status": "second_factor", "challenge": "...", "methods": [...]}`; 401 `auth.invalid_credentials` |

@@ -50,6 +50,7 @@ export const TEST_SITE: Site = {
   logo: "",
   card_image: "",
   same_as: [],
+  consent: { mode: "ask", categories: [] },
 };
 
 /** A signed-in person: a member with nothing extra, unless `overrides` says otherwise. */

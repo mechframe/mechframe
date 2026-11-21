@@ -68,6 +68,7 @@ export default defineRailway((ctx) => {
       JOBS_DRAIN_SECONDS: preserve(),
       AUDIT_KEEP_DAYS: preserve(),
       SEARCH_LANGUAGE: preserve(),
+      CONSENT_MODE: preserve(),
       DB_POOL_SIZE: preserve(),
       DB_MAX_OVERFLOW: preserve(),
       MODULES_CACHE_SECONDS: preserve(),

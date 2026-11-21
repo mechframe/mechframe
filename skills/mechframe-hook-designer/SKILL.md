@@ -117,7 +117,7 @@ The owner decided these when they picked the post-v1.0 modules (decision 0018, `
 | Dashboard cards | setup-wizard, fleet | Partly: the `admin.dashboard.widget` slot (8) | Setup-checklist steps as a manifest field or a fixed-name part with a live check |
 | Profile tabs | profiles | Partly: `account.section` is the member's own page | A public `profile.tab` slot plus a rule that it shows only public data |
 | Search index | site-search, semantic-search, concierge, docs | Yes, since #99 | `kernel.search` (decision 0052) |
-| Consent categories | consent, analytics-adapters, social-feeds, video | No: `CSP` hosts carry no category | A category on each `CSP` entry, the front end holding scripts and iframes until consent |
+| Consent categories | consent, analytics-adapters, social-feeds, video | Yes, since #107 | `kernel.consent` (decision 0052) |
 | Entitlements | memberships, member-only video, ai-studio | No: roles and permissions only (14.8) | Kernel `require_access(resource)` with providers registered by modules |
 | Bot check | bot-shield, forms, reviews, submissions | Yes, since #103 | `kernel.bot` (decision 0052) |
 | Content lifecycle | editorial-calendar, drops, podcast, changelog, announcements | Yes, since #97 | `kernel.lifecycle` (decision 0052) |

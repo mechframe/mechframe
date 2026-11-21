@@ -97,8 +97,11 @@ class InstalledModule:
     router: APIRouter | None = None
     #: The module's settings model, stored by `kernel.settings`.
     settings: type[BaseModel] | None = None
-    #: Hosts the module adds to the CSP while it's on: (directive, https origin).
-    csp: tuple[tuple[str, str], ...] = ()
+    #: Hosts the module adds to the CSP while it's on: (directive, https
+    #: origin), or (directive, https origin, category), the category its
+    #: visitors consent to (kernel.consent, decision 0052): `necessary` when
+    #: it names none.
+    csp: tuple[tuple[str, str] | tuple[str, str, str], ...] = ()
     #: The module's email templates, each named `<id>.<name>` (kernel.email).
     #: A site may reword them through create_app(emails=...).
     emails: Mapping[str, Template] = field(default_factory=dict)
@@ -209,7 +212,8 @@ def load_module(manifest: Path) -> InstalledModule:
     - `<id_>/router.py`'s `router`, mounted at /api/<id>;
     - `<id_>/schemas.py`'s `Settings`, the module's settings model;
     - `<id_>/__init__.py`'s `CSP`, the hosts it adds while it's on, as
-      (directive, https origin) pairs;
+      (directive, https origin) pairs, or with a third item, the consent
+      category (kernel.consent);
     - `<id_>/emails.py`'s `EMAILS`, its email templates (kernel.email);
     - `<id_>/jobs.py`'s jobs (kernel.jobs);
     - `<id_>/events.py`'s event payloads and listeners (kernel.events);
