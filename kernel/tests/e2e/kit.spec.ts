@@ -189,26 +189,48 @@ for (const [theme, canvas] of Object.entries(THEMES)) {
       await expect(off).toBeFocused();
       expect((await focusedShadow(page)).shadow).toBe(gap);
 
+      // An admin field, a select and a text area too: the ring met a field's edge (#5C6584) at 2.2:1
+      // in Vibrant Mindz (VM Website, the owner, 2026-11-21). The site's fields keep the outline, below.
+      for (const name of ["Site name", "Time zone", "Description"]) {
+        const field = page.getByLabel(name, { exact: true });
+        await field.focus();
+        await page.keyboard.press("Shift+Tab");
+        await page.keyboard.press("Tab");
+        await expect(field).toBeFocused();
+        expect((await focusedShadow(page)).shadow, name).toBe(gap);
+      }
+
       await page.getByRole("tab", { name: "Site" }).focus();
       await page.keyboard.press("ArrowRight");
       await page.keyboard.press("ArrowLeft");
       await expect(page.getByRole("tab", { name: "Site" })).toBeFocused();
       expect((await focusedShadow(page)).shadow).toBe(tab);
 
+      const siteFocus = () =>
+        page.evaluate(() => {
+          const style = getComputedStyle(document.activeElement as Element);
+          const focus = getComputedStyle(document.documentElement).getPropertyValue("--mf-color-focus");
+          const probe = document.createElement("div");
+          probe.style.color = focus;
+          document.body.append(probe);
+          const colour = getComputedStyle(probe).color;
+          probe.remove();
+          return { outline: `${style.outlineStyle} ${style.outlineWidth} ${style.outlineColor}`, offset: style.outlineOffset, shadow: style.boxShadow, colour };
+        });
       await page.getByRole("button", { name: "Use a passkey" }).focus();
       await page.keyboard.press("Shift+Tab");
       await expect(page.getByRole("button", { name: "Sign in", exact: true }).first()).toBeFocused();
-      const site = await page.evaluate(() => {
-        const style = getComputedStyle(document.activeElement as Element);
-        const focus = getComputedStyle(document.documentElement).getPropertyValue("--mf-color-focus");
-        const probe = document.createElement("div");
-        probe.style.color = focus;
-        document.body.append(probe);
-        const colour = getComputedStyle(probe).color;
-        probe.remove();
-        return { outline: `${style.outlineStyle} ${style.outlineWidth} ${style.outlineColor}`, offset: style.outlineOffset, shadow: style.boxShadow, colour };
-      });
+      const site = await siteFocus();
       expect(site).toEqual({ outline: `solid 2px ${site.colour}`, offset: "3px", shadow: "none", colour: site.colour });
+
+      // The site's own field keeps the outline, off its edge.
+      const email = page.getByLabel("Email", { exact: true });
+      await email.focus();
+      await page.keyboard.press("Shift+Tab");
+      await page.keyboard.press("Tab");
+      await expect(email).toBeFocused();
+      const field = await siteFocus();
+      expect(field).toEqual({ outline: `solid 2px ${field.colour}`, offset: "3px", shadow: "none", colour: field.colour });
     });
   });
 }
