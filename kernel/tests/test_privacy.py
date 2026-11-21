@@ -342,6 +342,76 @@ async def test_a_copy_whose_job_was_lost_is_failed_a_day_on_and_its_owner_told(
 
 
 @pytest.mark.db
+async def test_an_old_copy_whose_job_is_still_queued_or_running_waits_for_it(
+    app_factory: AppFactory, database: Database, db: AsyncSession
+) -> None:
+    """A day-old copy whose job is only late, or at work, isn't failed: its
+    job still ends it (CodeRabbit on #109)."""
+    from sqlalchemy import update
+
+    app_factory([])
+    user = await _account(db)
+    ids = []
+    for state in ("queued", "running"):
+        row = ExportRow(
+            user_id=user.id,
+            status="queued",
+            created_at=clock.now() - exports.STUCK - timedelta(hours=2),
+            expires_at=clock.now() + timedelta(days=5),
+        )
+        db.add(row)
+        await db.flush()
+        job_id = await jobs.enqueue(
+            db, exports.MAKE.name, {"export_id": str(row.id)}, key=str(row.id)
+        )
+        await db.execute(update(Job).where(Job.id == job_id).values(state=state))
+        ids.append(row.id)
+    await db.commit()
+    before = await _mails(db)
+    await exports._prune(_context(database, 1))
+    await db.rollback()
+    assert [await _status(db, each) for each in ids] == ["queued", "queued"]
+    assert await _mails(db) == before
+
+
+@pytest.mark.db
+async def test_a_try_finishing_after_its_copy_was_failed_mails_nothing(
+    app_factory: AppFactory, database: Database, db: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The copy was failed while the try was at work: the try stores nothing
+    more, marks nothing ready and mails nothing (CodeRabbit on #109)."""
+    from sqlalchemy import update
+
+    from kernel import storage
+
+    app_factory([])
+    user = await _account(db)
+    export_id = await _queued(db, user)
+    stored: list[str] = []
+    deleted: list[str] = []
+
+    async def put(key: str, data: bytes, **_: Any) -> None:
+        stored.append(key)
+        async with database.sessions() as other:  # the prune, failing it meanwhile
+            await other.execute(
+                update(ExportRow).where(ExportRow.id == export_id).values(status="failed")
+            )
+            await other.commit()
+
+    async def remove(key: str, **_: Any) -> None:
+        deleted.append(key)
+
+    monkeypatch.setattr(storage, "put", put)
+    monkeypatch.setattr(storage, "delete", remove)
+    before = await _mails(db)
+    await exports._make(_context(database, 1), {"export_id": str(export_id)})
+    await db.rollback()
+    assert await _status(db, export_id) == "failed"
+    assert await _mails(db) == before
+    assert deleted == stored == [exports.storage_key(export_id)]
+
+
+@pytest.mark.db
 async def test_a_deleted_accounts_copy_stays_tracked_for_the_prune(db: AsyncSession) -> None:
     """Its row stays, without an owner, so the prune still finds its file
     (CodeRabbit on #109)."""
