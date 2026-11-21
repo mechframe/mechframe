@@ -1,8 +1,9 @@
 """`python -m mechframe <command>` (K5 contract §2; cli/README.md).
 
 Built: `new` (with `--recipe`, a recipe's modules too), `add`, `remove`,
-`create-owner`, `seed`, `catalog` and `check`. `diff` and `upgrade` wait for a
-module's second version (the owner, 2026-11-20).
+`create-owner`, `seed`, `catalog`, `check` and `upgrade kernel` (decision
+0053). `diff`, and `upgrade <id>` for a module, wait for a module's second
+version (the owner, 2026-11-20).
 """
 
 from __future__ import annotations
@@ -12,7 +13,7 @@ import json
 import sys
 from pathlib import Path
 
-from mechframe import __version__, catalog, check, modules, new, owner, seed
+from mechframe import __version__, catalog, check, modules, new, owner, seed, upgrade
 from mechframe.source import ROOT
 
 
@@ -66,6 +67,32 @@ def _parser() -> argparse.ArgumentParser:
     made.add_argument("--check", action="store_true", help="only say whether it's current")
     _root(made)
 
+    upgrading = commands.add_parser(
+        "upgrade", help="take the kernel's changes from a Git ref of this checkout"
+    )
+    upgrading.add_argument("what", help="kernel (a module's upgrade waits for its second version)")
+    upgrading.add_argument("--site", type=Path, default=Path(), help="the site (default: here)")
+    upgrading.add_argument(
+        "--from",
+        dest="ref",
+        default="main",
+        help="the branch, tag or commit to take (default: main)",
+    )
+    upgrading.add_argument(
+        "--base", help="the commit the site was made from, for a lock that doesn't record one"
+    )
+    upgrading.add_argument(
+        "--merged",
+        action="append",
+        default=[],
+        metavar="PATH",
+        help="a file both sides changed that you've merged by hand (once for each)",
+    )
+    upgrading.add_argument(
+        "--dry-run", action="store_true", help="say what it would do, and write nothing"
+    )
+    _root(upgrading)
+
     checked = commands.add_parser(
         "check", help="what a site edited, what is behind, and which advisories are open"
     )
@@ -107,6 +134,28 @@ def main(argv: list[str] | None = None) -> int:
             return 2
         print("\n".join(lines))
         return 0
+    if args.command == "upgrade":
+        if args.what != "kernel":
+            print(
+                f"Only the kernel can be upgraded yet: mechframe upgrade kernel. {args.what}'s "
+                "upgrade waits for a module's second version (SPEC 12).",
+                file=sys.stderr,
+            )
+            return 2
+        try:
+            outcome = upgrade.run(
+                args.site.resolve(),
+                root=args.root,
+                ref=args.ref,
+                base=args.base,
+                merged=args.merged,
+                dry_run=args.dry_run,
+            )
+        except upgrade.Refused as refusal:
+            print(refusal, file=sys.stderr)
+            return 2
+        print("\n".join(upgrade.lines(outcome)))
+        return outcome.exit_code
     if args.command == "catalog":
         if args.check:
             if catalog.stale(args.root):

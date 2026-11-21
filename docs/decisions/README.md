@@ -59,3 +59,4 @@ One short record per decision, numbered, written when the decision is made (`C:\
 | [0050](0050-add-and-remove.md) | `mechframe add` and `remove`: what each writes, what `remove` keeps, and how `requires` reads a range | Decided; applied in K5.4 (#94) |
 | [0051](0051-create-owner.md) | The site's owner, made from the server: the reset's own link, and only an owner's address once there is one | Decided; applied in K5.5 (#95) |
 | [0052](0052-the-contract-hooks.md) | The ten contract hooks: their shapes and their order | Accepted; hooks 1 to 5 applied (#97 to #99, #102, #103); 9 and 10 wait (2026-11-21) |
+| [0053](0053-upgrade-kernel.md) | `mechframe upgrade kernel`: the new copy from a Git ref, the base from the lock's commit, each file three ways, whole or not at all | Decided; applied in #PR3 |

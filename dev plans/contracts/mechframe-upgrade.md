@@ -1,9 +1,9 @@
 ---
 feature: mechframe upgrade kernel (a site takes the kernel's changes; session M3 of the Vibrant Mindz push plan)
-status: approved
+status: done
 approved: 2026-11-21 (the owner: "Approve as recommended", the four answers in §8)
 plan: dev plans/2026-11-21-vibrant-mindz-push-plan.md, M3; SPEC 12 and 13; cli/README.md
-pr: 108 for this contract, docs only (predicted at push time); the build's own predicted when M3 starts
+pr: 108 for this contract (docs only); #PR3 the build
 ---
 
 # Contract: `mechframe upgrade kernel`
@@ -80,4 +80,5 @@ None. The owner answered all four on 2026-11-21, as recommended:
 
 ## Changes after approval
 
+- 2026-11-21 (the build, #PR3): **the site's name for the template's marks** comes from `.env.example`'s `SITE_NAME`, as `new` wrote it, since the lock has no name. Where it's missing, a file that carries the name (`README.md`, `CLAUDE.md`, `AGENTS.md`) is kept and listed as not compared. **The kernel's new settings** are the keys new in the template's `.env.example`, since `kernel.json` lists no settings. `upgrade <id>` for a module is refused, exiting 2. The template's `.gitignore` leaves out `.mechframe/`, and its README has the command. Decision 0053.
 - 2026-11-21 (Codex on #108): **an older lock's base, found by its hashes, is refused when it's ambiguous.** The lock holds hashes only for the kernel's files. So several commits can match it while differing in the template's files: `4e9be32`, for one, changed only `templates/site/README.md`. Taking the newest match would make the site's older copy look like a site edit, and the fix would be kept out. Now the candidates must agree on the template's files, pins and `tokens.css`, or `--base` names one. For the same reason, `new` writes `kernel.commit` only when every file it copies matches `HEAD`, not just the kernel's. The owner's answer 1 stands; this narrows how it finds the base.

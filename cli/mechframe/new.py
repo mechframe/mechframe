@@ -13,7 +13,9 @@ In one go, or not at all:
    (quoted for dotenv in `.env.example`, escaped inside a TypeScript or JSON
    string), `__THEME__` in `web/index.html`, and
    the theme's `tokens.css` as `web/src/theme/tokens.css`.
-4. Copies the kernel (`mechframe.layout`) and writes `mechframe.lock.json`.
+4. Copies the kernel (`mechframe.layout`) and writes `mechframe.lock.json`,
+   with `kernel.commit` when every file it copied is as the checkout's `HEAD`
+   has it, so `mechframe upgrade` knows the copy's base (decision 0053).
 5. With a recipe, runs `add` for each of its modules, each after those it
    requires (`mechframe.modules`). The theme is the recipe's unless one is
    given, and the recipe's settings are printed for Admin, Settings.
@@ -32,7 +34,7 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-from mechframe import __version__, layout, lock, modules
+from mechframe import __version__, gitref, layout, lock, modules
 from mechframe.source import ROOT, kernel_manifest, schema_problems
 
 TEMPLATE = "templates/site"
@@ -192,21 +194,55 @@ def _refusals(site: Path, theme: str, root: Path) -> None:
         raise Refused(f"This checkout has no {TEMPLATE}/.")
 
 
-def _write_in(path: Path, relative: str, name: str, theme: str) -> None:
-    """The site's name and theme in place of the template's marks."""
+def written_in(data: bytes, relative: str, name: str, theme: str) -> bytes:
+    """A template file's bytes with the site's name and theme in place of its
+    marks; a file that holds none, a picture or a font, as it was."""
     try:
-        text = path.read_bytes().decode("utf-8")
+        text = data.decode("utf-8")
     except UnicodeDecodeError:
-        return  # a picture or a font: no marks
+        return data  # a picture or a font: no marks
     if NAME_MARK not in text and THEME_MARK not in text:
-        return
+        return data
     if relative == ".env.example":
         shown = env_value(name)
     elif relative.endswith((".ts", ".tsx", ".js", ".json")):
         shown = json.dumps(name, ensure_ascii=False)[1:-1]  # inside a "..." string
     else:
         shown = name
-    path.write_bytes(text.replace(NAME_MARK, shown).replace(THEME_MARK, theme).encode("utf-8"))
+    return text.replace(NAME_MARK, shown).replace(THEME_MARK, theme).encode("utf-8")
+
+
+def _write_in(path: Path, relative: str, name: str, theme: str) -> None:
+    """The site's name and theme in place of the template's marks."""
+    data = path.read_bytes()
+    written = written_in(data, relative, name, theme)
+    if written is not data:
+        path.write_bytes(written)
+
+
+def left_behind(path: PurePosixPath) -> bool:
+    """Whether a path in the checkout is one a copy leaves behind: build output
+    and caches in the template, a test or package file in the kernel."""
+    if path.parts[:1] == ("kernel",):
+        return layout.left_out(path)
+    return any(part in LEFT_OUT for part in path.parts)
+
+
+def copied_paths(theme: str) -> list[str]:
+    """Every path in the checkout that `new` copies from: the kernel, the
+    template, the pins and the theme's `tokens.css`."""
+    kernel = [each.source for each in layout.kernel_copies()]
+    return [*kernel, TEMPLATE, *REQUIREMENTS, f"themes/{theme}/tokens.css"]
+
+
+def source_commit(root: Path, theme: str) -> str | None:
+    """The checkout's `HEAD` when every file `new` copies is as it has it, so
+    the copy's base can be read back from Git; None otherwise, or outside Git."""
+    if not gitref.is_repository(root):
+        return None
+    if not gitref.clean(root, copied_paths(theme), left_behind):
+        return None
+    return gitref.commit_of(root, "HEAD")
 
 
 def _copy_template(site: Path, name: str, theme: str, root: Path) -> None:
@@ -278,10 +314,14 @@ def new(
         _copy_template(site, name, theme, root)
         manifest = kernel_manifest(root)
         files = layout.copy(root, site, layout.kernel_copies())
+        kernel: dict[str, Any] = {"version": manifest["version"], "files": files}
+        commit = source_commit(root, theme)
+        if commit is not None:
+            kernel["commit"] = commit
         data: dict[str, Any] = {
             "mechframe": __version__,
             "spec": manifest["spec"],
-            "kernel": {"version": manifest["version"], "files": files},
+            "kernel": kernel,
             "modules": {},
             "recipe": chosen.id if chosen else None,
             "theme": theme,
