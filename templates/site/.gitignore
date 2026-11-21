@@ -21,6 +21,9 @@ coverage/
 *.pem
 *.key
 
+# mechframe upgrade's diffs, while it waits for a merge
+.mechframe/
+
 # Playwright
 test-results/
 playwright-report/

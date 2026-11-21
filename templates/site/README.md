@@ -37,6 +37,7 @@ Copy `.env.example` to `.env`, set `DEBUG=true`, `SITE_URL=http://localhost:8000
 | Web tests, lint, types | `cd web; npm test; npm run lint; npm run typecheck` |
 | End-to-end tests | `cd web; npx playwright install chromium` once, then `npm run build; npm run e2e`, with `TEST_DATABASE_URL` set |
 | What this site edited, and what is behind | from MechFrame's checkout: `python -m mechframe check --site <this folder>` |
+| Take the kernel's changes | from MechFrame's checkout, after `git fetch` there: `python -m mechframe upgrade kernel --site <this folder>` (add `--dry-run` to see what it would do first). Where this site and the kernel both changed a file, it stops with nothing written but a diff for each in `.mechframe/upgrade/`: merge each, then run it again with `--merged <path>` for every one |
 
 The tests use their own databases on `TEST_DATABASE_URL`'s server (`postgresql://site:site@localhost:5432/postgres` by default, compose.yaml's).
 

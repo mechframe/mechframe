@@ -1,6 +1,6 @@
 # mechframe CLI
 
-Built in phase K5 (the contract: `dev plans/contracts/k5-cli-and-site-template.md`; decision 0047). The CLI is written in Python, using the standard library plus `jsonschema`. It copies from, and checks against, **the MechFrame checkout its own code sits in**, and fetches nothing.
+Built in phase K5 (the contract: `dev plans/contracts/k5-cli-and-site-template.md`; decision 0047). The CLI is written in Python, using the standard library plus `jsonschema`. It copies from, and checks against, **the MechFrame checkout its own code sits in**, and fetches nothing. `upgrade` reads that checkout through Git, so it needs Git and a clone (decision 0053).
 
 From the repo root:
 
@@ -22,6 +22,7 @@ Without installing it, `python -m mechframe` works with `cli` on the path: `$env
 | `mechframe remove <id> [--site <dir>]` | Refuses while another module requires it. Removes its code, registry and lock entries, and comments its settings out. Keeps its tables, its migrations and its `railway.ts` lines | #94 |
 | `mechframe create-owner <email> [--site <dir>]` | Runs the site's `python -m app.owner <email>` with its `.venv`: the address's account becomes the owner and a one-time link to set its password is printed. With an owner already, only an owner's own address gets a new link | #95 |
 | `mechframe seed [--site <dir>]` | Runs the site's `python -m app.seed` with its `.venv`: every module's seed data, each after those it requires, then the site's own, in one transaction. A second run leaves the same rows; it records another `kernel.seed.ran` audit entry and stores the images again, the same bytes over whatever is at a seed key (`<id>/seed/`). Refused unless `MECHFRAME_ALLOW_SEED=1` is in the environment for the run, never on a live site (hook 4, decision 0052) | #102 |
-| `mechframe diff <id>`, `upgrade <id>` | Three-way against the copy in the lock, the site's files and this checkout | When a module ships its second version |
+| `mechframe upgrade kernel [--site <dir>] [--from <ref>] [--base <commit>] [--merged <path>]... [--dry-run]` | Takes the kernel's and the template's changes from a Git ref of this checkout, `main` by default (run `git fetch` first; it fetches nothing). Each file three ways: the base the lock records (`kernel.commit`, or found by the lock's hashes; `--base` names it), the site's, the new copy. A file the site left alone takes the new copy; one only the site changed stays; where both changed, nothing is written but a diff for each in `.mechframe/upgrade/`, and it exits 1 until each is merged and named with `--merged <path>`. Never touches `backend/app/site/`, `web/src/site/`, the registries, `.env.example` or `.railway/railway.ts`; prints the template's new settings and the site's next steps. Exits 2 when refused | #111 (decision 0053) |
+| `mechframe diff <id>`, `upgrade <id>` for a module | Three-way against the copy in the lock, the site's files and this checkout | When a module ships its second version |
 
 The site's layout, the lock's hashes and the advisories' entries: SPEC.md sections 4 and 13. The template itself: `templates/README.md`. The code is in `cli/mechframe/`, and its tests are in `cli/tests/`.

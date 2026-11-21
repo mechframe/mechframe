@@ -43,6 +43,11 @@
             "type": "string",
             "pattern": "^sha256:[0-9a-f]{64}$"
           }
+        },
+        "commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$",
+          "description": "The MechFrame commit the kernel was copied from (decision 0053): written by `mechframe new` when every file it copied is as that commit has it, and by `mechframe upgrade kernel`. `upgrade` reads the copy's base from it."
         }
       }
     },
