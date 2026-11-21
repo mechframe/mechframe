@@ -251,6 +251,11 @@ async def _made(ctx: jobs.Context, export_id: uuid.UUID) -> None:
     async with ctx.sessions() as db:
         row = await db.get(ExportRow, export_id, with_for_update=True)
         user = await db.get(User, row.user_id) if row and row.user_id else None
+        if row is not None and row.status == "ready":
+            # Another try, whose lease had run out, finished first: the file at
+            # this key is the copy now, so it stays, and nothing more is mailed
+            # (CodeRabbit on #109).
+            return
         if row is None or user is None or row.status != "queued":
             # Its account went, or it was failed meanwhile: the file goes,
             # and nothing more is mailed (CodeRabbit on #109).
