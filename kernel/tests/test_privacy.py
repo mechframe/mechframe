@@ -11,7 +11,7 @@ import io
 import json
 import uuid
 import zipfile
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -312,6 +312,33 @@ async def test_a_shutdown_on_the_last_try_leaves_the_copy_to_its_lease(
         await exports._make(_context(database, exports.TRIES), {"export_id": str(export_id)})
     await db.rollback()
     assert await _status(db, export_id) == "queued"
+
+
+@pytest.mark.db
+async def test_a_copy_whose_job_was_lost_is_failed_a_day_on_and_its_owner_told(
+    app_factory: AppFactory, database: Database, db: AsyncSession
+) -> None:
+    """A worker that dies on the last try leaves the job dead without running
+    it again: the hourly prune fails a copy still queued a day on, and mails
+    its owner; a newer one waits (CodeRabbit on #109)."""
+    app_factory([])
+    user = await _account(db)
+    lost = ExportRow(
+        user_id=user.id,
+        status="queued",
+        created_at=clock.now() - exports.STUCK - timedelta(minutes=1),
+        expires_at=clock.now() + timedelta(days=5),
+    )
+    db.add(lost)
+    await db.commit()
+    lost_id = lost.id
+    waiting = await _queued(db, user)
+    before = await _mails(db)
+    await exports._prune(_context(database, 1))
+    await db.rollback()
+    assert await _status(db, lost_id) == "failed"
+    assert await _status(db, waiting) == "queued"
+    assert await _mails(db) == before + 1
 
 
 @pytest.mark.db
