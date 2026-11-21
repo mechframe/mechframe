@@ -22,6 +22,7 @@ Each step is in the person's security activity (`auth.data_export_*`).
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import uuid
 from datetime import timedelta
@@ -223,7 +224,7 @@ async def _make(ctx: jobs.Context, payload: dict[str, Any]) -> None:
     try:
         async with ctx.sessions() as db:
             row = await db.get(ExportRow, export_id)
-            if row is None or row.status != "queued":
+            if row is None or row.status != "queued" or row.user_id is None:
                 return  # its account went, or a run before this one finished it
             user = await db.get(User, row.user_id)
             if user is None:
@@ -232,13 +233,15 @@ async def _make(ctx: jobs.Context, payload: dict[str, Any]) -> None:
                 "kernel": await own_data(db, user),
                 **await privacy.export(db, privacy.Subject(user.id, user.email)),
             }
-            data = privacy.archive(files, at=clock.now())
+        # Made in a thread: compressing a big copy would hold the event loop
+        # (CodeRabbit on #109).
+        data = await asyncio.to_thread(privacy.archive, files, at=clock.now())
         # Stored outside any session: an upload holds no connection.
         key = storage_key(export_id)
         await storage.put(key, data, content_type="application/zip", filename="your-data.zip")
         async with ctx.sessions() as db:
             row = await db.get(ExportRow, export_id, with_for_update=True)
-            user = await db.get(User, row.user_id) if row is not None else None
+            user = await db.get(User, row.user_id) if row and row.user_id else None
             if row is None or user is None:
                 await storage.delete(key)  # its account went while it was made
                 return
@@ -259,9 +262,12 @@ async def _make(ctx: jobs.Context, payload: dict[str, Any]) -> None:
                 details={"export_id": str(export_id), "modules": len(files) - 1},
             )
             await db.commit()
-    except Exception:
+    except (Exception, asyncio.CancelledError):
+        # A timeout on the last try arrives as a cancellation: it's that try's
+        # failure too, and the shield lets the copy be marked and its owner told
+        # (CodeRabbit on #109).
         if ctx.try_number >= TRIES:
-            await _failed(ctx, export_id)
+            await asyncio.shield(_failed(ctx, export_id))
         raise
 
 
@@ -269,7 +275,7 @@ async def _failed(ctx: jobs.Context, export_id: uuid.UUID) -> None:
     """The last try failed: the copy is marked failed and its owner told."""
     async with ctx.sessions() as db:
         row = await db.get(ExportRow, export_id, with_for_update=True)
-        if row is None or row.status != "queued":
+        if row is None or row.status != "queued" or row.user_id is None:
             return
         user = await db.get(User, row.user_id)
         if user is None:
@@ -301,9 +307,14 @@ async def _prune(ctx: jobs.Context) -> None:
         )
     files = not storage_missing(get_config())
     for export_id in gone:
-        if files:
-            await storage.delete(storage_key(export_id))
         async with ctx.sessions() as db:
+            # Locked and checked again: a try finishing meanwhile moves the
+            # expiry on, and the copy then stays (CodeRabbit on #109).
+            row = await db.get(ExportRow, export_id, with_for_update=True)
+            if row is None or row.expires_at > clock.now():
+                continue
+            if files:
+                await storage.delete(storage_key(export_id))
             await db.execute(delete(ExportRow).where(ExportRow.id == export_id))
             await db.commit()
 

@@ -727,7 +727,7 @@ Both limits are site settings (Q6).
 | `auth_api_key` | Id, secret hash, scopes, expiry, last use |
 | `kernel_audit_event` | The audit log, every module's: auth's table renamed when it became the kernel's (decision 0037) |
 | `kernel_moderation_case`, `kernel_moderation_report` | One case per reported thing, at most one open, with the excerpt as first reported, and the reports on it; closed cases go after `AUDIT_KEEP_DAYS` (decision 0039) |
-| `kernel_export` | A copy of an account's data asked for: its status (`queued`, `ready` or `failed`), its private file's key, and when it goes, 7 days on; with its account (hook 7, decision 0052) |
+| `kernel_export` | A copy of an account's data asked for: its status (`queued`, `ready` or `failed`), its private file's key, and when it goes, 7 days on; an account deleted meanwhile leaves it, its owner null, for the prune (hook 7, decision 0052) |
 | `kernel_vocabulary`, `kernel_term`, `kernel_term_link` | The vocabularies modules declare (made on first use, kept in step with the manifests), their terms (a slug unique in each, a parent in a hierarchical one, a position), and a term's links to a module's content by type and id, with no foreign key to the module's row (decision 0052, hook 2) |
 | `kernel_search_document` | One row per public thing site search finds, by content type and id: its title, plain-text body, path and text search language, and the words Postgres keeps from them in a GIN index; no foreign key to the module's row (decision 0052, hook 3) |
 
