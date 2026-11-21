@@ -412,6 +412,44 @@ async def test_a_try_finishing_after_its_copy_was_failed_mails_nothing(
 
 
 @pytest.mark.db
+async def test_a_try_finishing_after_another_made_the_copy_leaves_its_file(
+    app_factory: AppFactory, database: Database, db: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Two tries overlap once a lease runs out: the one that finishes second
+    finds the copy ready and leaves the file, the copy's own key, in place,
+    and mails nothing more (CodeRabbit on #109)."""
+    from sqlalchemy import update
+
+    from kernel import storage
+
+    app_factory([])
+    user = await _account(db)
+    export_id = await _queued(db, user)
+    deleted: list[str] = []
+
+    async def put(key: str, data: bytes, **_: Any) -> None:
+        async with database.sessions() as other:  # the other try, finishing first
+            await other.execute(
+                update(ExportRow)
+                .where(ExportRow.id == export_id)
+                .values(status="ready", storage_key=key)
+            )
+            await other.commit()
+
+    async def remove(key: str, **_: Any) -> None:
+        deleted.append(key)
+
+    monkeypatch.setattr(storage, "put", put)
+    monkeypatch.setattr(storage, "delete", remove)
+    before = await _mails(db)
+    await exports._make(_context(database, 1), {"export_id": str(export_id)})
+    await db.rollback()
+    assert await _status(db, export_id) == "ready"
+    assert deleted == []
+    assert await _mails(db) == before
+
+
+@pytest.mark.db
 async def test_a_deleted_accounts_copy_stays_tracked_for_the_prune(db: AsyncSession) -> None:
     """Its row stays, without an owner, so the prune still finds its file
     (CodeRabbit on #109)."""
