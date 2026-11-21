@@ -64,6 +64,9 @@ TRIES = 5
 #: `_failed` time to mark the copy and mail its owner.
 JOB_SECONDS = 1800
 WORK_SECONDS = 1680
+#: A copy still queued this long after it was asked for lost its job: every
+#: try and every wait between them fit well inside it.
+STUCK = timedelta(days=1)
 
 _stepped_up = require_recent_auth()
 
@@ -311,7 +314,23 @@ async def _prune(ctx: jobs.Context) -> None:
     """Deletes the copies past their 7 days, with their files: each copy's
     own key, whether or not its row recorded it, since a try can store the
     ZIP and then fail to say so. While storage is off it deletes nothing: a
-    row is what finds its file once storage is back (CodeRabbit on #109)."""
+    row is what finds its file once storage is back (CodeRabbit on #109).
+
+    First, a copy still queued a day after it was asked for lost its job: a
+    worker that died on the last try leaves the job dead without running it
+    again. It's failed, and its owner told (CodeRabbit on #109)."""
+    async with ctx.sessions() as db:
+        stuck = list(
+            (
+                await db.scalars(
+                    select(ExportRow.id).where(
+                        ExportRow.status == "queued", ExportRow.created_at <= clock.now() - STUCK
+                    )
+                )
+            ).all()
+        )
+    for export_id in stuck:
+        await _failed(ctx, export_id)
     if storage_missing(get_config()):
         log.warning("Storage is off: the copies past their days wait for it to be back.")
         return
