@@ -269,6 +269,44 @@ async def test_the_last_try_marks_the_copy_failed_and_tells_its_owner(
 
 
 @pytest.mark.db
+async def test_a_timeout_on_the_last_try_marks_the_copy_failed_too(
+    app_factory: AppFactory, database: Database, db: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The worker's timeout cancels the try: on the last one that's a failure,
+    and its owner is told (CodeRabbit on #109)."""
+    import asyncio
+
+    app_factory([])
+    user = await _account(db)
+    export_id = await _queued(db, user)
+
+    async def cancelled(db: Any, subject: Any) -> Any:
+        raise asyncio.CancelledError
+
+    monkeypatch.setattr(privacy, "export", cancelled)
+    with pytest.raises(asyncio.CancelledError):
+        await exports._make(_context(database, exports.TRIES), {"export_id": str(export_id)})
+    await db.rollback()
+    assert await _status(db, export_id) == "failed"
+
+
+@pytest.mark.db
+async def test_a_deleted_accounts_copy_stays_tracked_for_the_prune(db: AsyncSession) -> None:
+    """Its row stays, without an owner, so the prune still finds its file
+    (CodeRabbit on #109)."""
+    from sqlalchemy import delete as delete_rows
+
+    user = await _account(db)
+    user_id = user.id
+    export_id = await _queued(db, user, status="ready")
+    await db.execute(delete_rows(User).where(User.id == user_id))
+    await db.commit()
+    owner = await db.scalar(select(ExportRow.user_id).where(ExportRow.id == export_id))
+    assert await _status(db, export_id) == "ready"
+    assert owner is None
+
+
+@pytest.mark.db
 async def test_a_copy_already_made_or_gone_is_left_alone(
     app_factory: AppFactory, database: Database, db: AsyncSession
 ) -> None:

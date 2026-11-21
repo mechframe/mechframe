@@ -389,8 +389,9 @@ class Export(Base):
     """A copy of an account's data (hook 7, decision 0052; `kernel.auth.exports`):
     asked for (`queued`), made by the job `kernel.privacy_export` into private
     storage at `storage_key` (`ready`), or given up on its last try
-    (`failed`); removed with its file once `expires_at` passes, and with its
-    account."""
+    (`failed`); removed with its file once `expires_at` passes. An account
+    deleted meanwhile leaves the row, its `user_id` null, so the prune still
+    finds the file (CodeRabbit on #109)."""
 
     __tablename__ = "kernel_export"
     __table_args__ = (
@@ -400,8 +401,8 @@ class Export(Base):
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("auth_user.id", ondelete="CASCADE")
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("auth_user.id", ondelete="SET NULL")
     )
     status: Mapped[str] = mapped_column(String(16))
     storage_key: Mapped[str | None] = mapped_column(String(200))
