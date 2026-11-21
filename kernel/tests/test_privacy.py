@@ -269,11 +269,35 @@ async def test_the_last_try_marks_the_copy_failed_and_tells_its_owner(
 
 
 @pytest.mark.db
-async def test_a_timeout_on_the_last_try_marks_the_copy_failed_too(
+async def test_running_out_of_time_on_the_last_try_marks_the_copy_failed(
     app_factory: AppFactory, database: Database, db: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The worker's timeout cancels the try: on the last one that's a failure,
-    and its owner is told (CodeRabbit on #109)."""
+    """The export's own time limit runs out inside the job's: on the last try
+    that's an ordinary failure, and its owner is told (CodeRabbit on #109)."""
+    import asyncio
+
+    app_factory([])
+    user = await _account(db)
+    export_id = await _queued(db, user)
+
+    async def slow(db: Any, subject: Any) -> Any:
+        await asyncio.sleep(5)
+
+    monkeypatch.setattr(privacy, "export", slow)
+    monkeypatch.setattr(exports, "WORK_SECONDS", 0.05)
+    with pytest.raises(TimeoutError):
+        await exports._make(_context(database, exports.TRIES), {"export_id": str(export_id)})
+    await db.rollback()
+    assert await _status(db, export_id) == "failed"
+    assert exports.WORK_SECONDS < exports.JOB_SECONDS
+
+
+@pytest.mark.db
+async def test_a_shutdown_on_the_last_try_leaves_the_copy_to_its_lease(
+    app_factory: AppFactory, database: Database, db: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A worker's shutdown cancels the try: that's no failure, so the copy
+    stays queued for the job's next run (CodeRabbit on #109)."""
     import asyncio
 
     app_factory([])
@@ -287,7 +311,7 @@ async def test_a_timeout_on_the_last_try_marks_the_copy_failed_too(
     with pytest.raises(asyncio.CancelledError):
         await exports._make(_context(database, exports.TRIES), {"export_id": str(export_id)})
     await db.rollback()
-    assert await _status(db, export_id) == "failed"
+    assert await _status(db, export_id) == "queued"
 
 
 @pytest.mark.db
@@ -372,6 +396,18 @@ async def test_the_prune_removes_a_copys_file_its_row_never_recorded(
             await db.commit()
             row_id = row.id
             await storage.put(exports.storage_key(row_id), b"PK", content_type="application/zip")
+
+            # Storage switched off: the prune keeps the row that finds the file.
+            monkeypatch.setenv("STORAGE_BUCKET", "")
+            reset_config()
+            await exports._prune(_context(database, 1))
+            await db.rollback()
+            assert await _status(db, row_id) == "failed"
+
+            # Back on: the file and the row go.
+            monkeypatch.setenv("STORAGE_BUCKET", STORAGE_ENV["STORAGE_BUCKET"])
+            reset_config()
+            storage._client.cache_clear()
             await exports._prune(_context(database, 1))
             assert await storage.get(exports.storage_key(row_id)) is None
             await db.rollback()
@@ -383,7 +419,7 @@ async def test_the_prune_removes_a_copys_file_its_row_never_recorded(
 
 
 @pytest.mark.db
-async def test_the_prune_removes_the_copies_past_their_days_and_keeps_the_rest(
+async def test_while_storage_is_off_the_prune_removes_nothing(
     database: Database, db: AsyncSession
 ) -> None:
     user = await _account(db)
@@ -399,5 +435,6 @@ async def test_the_prune_removes_the_copies_past_their_days_and_keeps_the_rest(
     gone_id = gone.id
     await exports._prune(_context(database, 1))
     await db.rollback()
-    assert await _status(db, gone_id) is None
+    # Storage is off in these tests: nothing is deleted until it's back.
+    assert await _status(db, gone_id) == "failed"
     assert await _status(db, kept) == "queued"
