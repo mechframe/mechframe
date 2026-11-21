@@ -1,50 +1,67 @@
 # Handoff
 
-Overwritten every session. This one: 2026-11-21, midday Eastern (Claude Code, the owner's machine), session M1 of `dev plans/2026-11-21-vibrant-mindz-push-plan.md`: the kit's two fixes (#101) and hooks 4 and 5 (#102, #103), all landed; `main` is `3f0a79b`. Hook 6, M1's stretch, is the next session's first job.
+Overwritten every session. This one: 2026-11-21, afternoon Eastern (Claude Code, the owner's machine), session M2 of `dev plans/2026-11-21-vibrant-mindz-push-plan.md`: hooks 6, 7 and 8 (#107, #109, #110), with hooks 1 to 8 of the ten now in. A second MechFrame session ran alongside, at the owner's start (#105, #106, #108 and #111). `main` is `096e51e`.
 
 ## State
 
 - **The kernel is done**, K0 to K5. K2's steps 9 to 11 still wait for the site (decision 0029).
-- **Hooks 1 to 5 of the ten are in** (decision 0052, `dev plans/contracts/hooks.md`): content lifecycle (#97), taxonomy (#98), search index (#99), seed data (#102), bot check (#103). Next: consent categories, export and erase, dashboard cards; then Vibrant Mindz's step 1. Entitlements and profile tabs wait (decision 0052, item 11).
-- **#101, the kit's two fixes** (VM Website Dev 05, the owner's OK), landed at `b1e94b8`: the required token `color.field` fills `.mf-input` (Vibrant Mindz's canvas `#070A16`, Machined Light's well), and every switch takes the admin's gap ring, off as well as on. Decision 0042 amended; SPEC's change log; the K4 contract's token list.
-- **#102, hook 4, seed data**, landed at `9658849`:
-  - `kernel.seed`: a module's `seed.py` gives `async def seed(db, ctx)`, idempotent. `seed.run` seeds the modules in `requires` order (ties by id), then the site's own `backend/app/site/seed.py`, in one transaction, audited as `kernel.seed.ran`. `seed.Context`: `module`, a fixed `now` (2026-01-01 12:00 UTC), `random` seeded with the module's id, `user(role)` (`seed-<role>@example.com`, verified, no password, never owner; an account at that address the seed didn't make is refused), `put_image(name)` (the key at once; the PNG stored after the commit, so a seed that raises stores none).
-  - Every caller goes through `run`, which refuses unless `MECHFRAME_ALLOW_SEED=1` is in the environment: never `.env`, never `railway.ts` (a template test). Commands: `python -m harness.seed`, the template's `python -m app.seed`, `mechframe seed --site <dir>` (`owner.run_in_site`, shared with `create-owner`). `POST /api/_test/seed {allow}` for the contract suite.
-  - CodeRabbit's seven findings answered with fixes and tests: account collisions, the PNG off the event loop, the public import in the examples, the PowerShell line clearing the variable, images stored after the commit, what an upload failing after it leaves (the rows kept; the next run stores every image), and what a repeat run does besides its rows (another audit entry, the images again).
-- **#103, hook 5, bot check**, landed at `3f0a79b`:
-  - `kernel.bot`: a public form's body carries `bot: kernel.BotProof` (annotate with `kernel.BotProof`: a field named `bot` hides the module). `bot.verify(request, proof, form="<id>.<form>", db=db)`, with the route's own session, answers `Pass()` or `Held(reason)`; a held submission is kept and never dropped. The kernel's `form` check is VybeSite's contact filter (trap field `website`, three seconds). The settings section `kernel.bot` names `form` or a module's `__init__.py` `BOT_PROVIDER` while it's on; one that fails or answers neither is `provider_error`.
-  - Codex's finding fixed with a test: `verify` reads through the route's session, since a second connection waited forever on a one-connection pool.
-  - The kit's `<BotFields />` and `useBotProof()`, on the kit page so axe checks them. The probe's form is `POST /api/probe/inquiries`.
-- Mutants: 12 caught for each hook. Brand check clean on #103. The full suite: 2595 passed, 98.23 %.
-- **v1.0:** 70 % (43 of 61 steps); the hooks are after v1.0's steps. The ledger was republished from `3f0a79b`.
+- **Hooks 1 to 8 of the ten are in** (decision 0052, its Status "Hooks 1 to 8 applied"; `dev plans/contracts/hooks.md`): content lifecycle (#97), taxonomy (#98), search index (#99), seed data (#102), bot check (#103), consent categories (#107), export and erase (#109), dashboard cards (#110). Entitlements and profile tabs wait (decision 0052, item 11). Vibrant Mindz's step 1 (its modules) can start.
+- **#107, hook 6, consent categories**, landed at `69bd37a`. A `CSP` entry's third item is its category: `necessary` by default, or `analytics`, `marketing` or `media`; the start refuses any other. The CSP itself doesn't change. `GET /api/kernel/site` gains `consent: {mode, categories}`, and `CONSENT_MODE` (`ask` or `off`) is in `KernelConfig`, both `.env.example` files and the template's `railway.ts`. The web side is `useConsent(category)` (`{granted, grant, withdraw}`) and `<ConsentGate category fallback>` (`fallback(grant)` for an embed's facade), in `kernel/web/src/consent/`. The choice is kept in `__Host-mf_consent`: the granted categories joined by dots, 180 days, set by script.
+- **#109, hook 7, export and erase**, landed at `7ac07f2`.
+  - `kernel.privacy`: `privacy.py`'s `export_user_data(db, subject)` and `delete_user_data(db, subject)`, with `Subject` `{user_id, email}`. The start refuses `data_hooks` that disagree. `erase` waits for K2's step 11.
+  - `kernel/auth/exports.py` builds 14.7's export. `POST /api/auth/account/export` asks for a copy: step-up, once an hour, storage on.
+  - The job `kernel.privacy_export` writes a ZIP of `kernel.json` and one file per module to private storage, at `kernel/exports/<id>.zip`. It mails `kernel.data_export_ready`, or `_failed` on its last try.
+  - `GET /api/auth/account/exports/{id}` answers 303 to a 5-minute download, for the account's own owner only. `kernel.prune_exports` removes a copy hourly after its 7 days.
+  - The table is `kernel_export` (`kernel_0015`). The account page has a "Your data" card.
+  - The contract suite's in-process harness keeps files in a fake S3 (moto) and reads them back with `GET /api/_test/files`.
+  - Codex's two findings, fixed with tests: asking needs a confirmed address (403 `auth.email_unverified`), since a module finds data by address; and the prune deletes each copy's own key whether or not its row recorded it.
+  - CodeRabbit's seven findings, each answered:
+    - `kernel_export.user_id` is `ON DELETE SET NULL`, so a deleted account's copy stays tracked for the prune.
+    - The export has its own time limit, 28 of the job's 30 minutes, so running out of time is an ordinary failure, marked on the last try, while a worker's shutdown leaves the job to its lease.
+    - The prune locks each row and checks its expiry again, and deletes nothing while storage is off.
+    - A copy still queued a day after it was asked for, with no job of its own queued or running (its job lost with a worker), is failed by the prune and its owner told. A try marks a copy ready only while it's still queued, and one that finds it already ready (overlapping tries) leaves its file.
+    - The ZIP is made in a thread.
+    - The downgrade's notes say what it leaves in storage.
+  - The local suite's own finding: the contract suite's fake storage now lives per test, not per session, so it no longer leaks into later tests.
+- **#110, hook 8, dashboard cards**, landed at `096e51e`.
+  - `dashboard.py`'s `SETUP` (`setup.Step(key, title, why, link, permission, done)`) and `ATTENTION` (items naming their `permission`).
+  - "Needs you" adds the modules' items, and `GET /api/kernel/admin/setup` serves the Dashboard's Set up card.
+  - The hooks' unit tests now restore the kernel's globals with `monkeypatch`. A mutant showed the old fixtures hid a server that never installed them.
+  - Codex's finding, fixed with tests: each setup check and each module's `ATTENTION` runs in a savepoint, so a database error in one doesn't abort the request's transaction.
+  - CodeRabbit's findings, fixed with tests: a provider's answer is checked inside its guard; an item must name a declared permission (an owner holds every one); a setup link with a backslash or a control character is refused; the export's try re-checks that the address is confirmed.
+- **The other MechFrame session's work**, all landed:
+  - #105, `line-4` and the gap ring on admin fields.
+  - #106, the site's own header and footer and full-bleed pages (`dev plans/contracts/site-frame.md`, decision 0048 amended).
+  - #108, the `mechframe upgrade kernel` contract, approved by the owner, and #111, the command itself (decision 0053), which was M3's first job.
+- Mutants caught: 18 for hook 6, 19 for hook 7, 17 for hook 8, and the four "never installed" ones.
+- **v1.0:** 78% (48 of 61 steps). The ledger was republished from `096e51e`.
 
 ## Next
 
-1. **Session M2** (`dev plans/2026-11-21-next-session-m2-hooks-6-to-8.md`): hook 6, consent categories (M1's stretch); hook 7, export and erase (14.7's export); hook 8, dashboard cards. Then decision 0052's Status reads "1 to 8 applied".
-2. M3 to M5 as the plan has them.
+1. **Session M3** (`dev plans/2026-11-21-next-session-m3-media.md`): `media`, since `mechframe upgrade kernel` is in (#111).
+2. M4 and M5 as the plan has them.
 
 ## Open questions for the owner
 
-- **Fields and the gap ring** (VM Website Dev 05): a focused field's ring meets its `#5C6584` edge at 2.2:1. Give fields the gap ring too, or leave them?
-- **The Vibrant Mindz site** copies `themes/vibrant-mindz/tokens.json` byte for byte: it gained `color.field` (#101), and the site's count tests take one more alias and role.
-- **Hooks 4 and 5's changes after approval** (the contract's list): override any you'd rather. One changed the contract's shape: `bot.verify` takes `db=`.
+- **Hooks 6 to 8's changes after approval** (the contract's list): override any you'd rather. Hook 6 added `withdraw()`; hook 7's ZIP holds the kernel's own `kernel.json`; hook 8's items are dropped unless they name a permission.
+- **The parallel sessions:** the PC ran at 90 to 100% CPU with several sessions at once, so local full suites crawled. #107 was pushed with CI as its gate (the owner, 2026-11-21: "Push now, CI gates"). CodeRabbit's free reviews ran out with two sessions' PRs.
 - **A public name and handle for a person**, before hook 10, which waits for wave 2b.
-- **The `mechframe upgrade` contract** (M3), for your approval when it comes.
 - **The Vibrant Mindz content** (`C:\DEV\VM Website\design\specs\content-intake.md`).
 - `mechframe-iac-probe` on Railway; a Railway variable to confirm a destructive migration; seven unused ledger assets; cubic and CodeRabbit's limits; rewording the kernel's screens; the R2 test buckets; renaming the folder and the `devkit-*` skills.
 
 ## Notes
 
-- **The full suite takes about 25 minutes.** Run it in the background with its log in the scratchpad, and edit nothing and switch no branch meanwhile: CLI tests copy the kernel.
-- **CodeRabbit keeps reviewing each fix** and found something new five times on #102; Codex reviews only a PR's first push. Answer each finding with a fix and a test, or a reply saying why not.
-- **A review fix on a stacked PR:** stash the next PR's work (`git stash push -u`), fix on the first PR's branch, then fast-forward the next and pop (once the next has commits, merge instead). Docs both touch conflict: keep the first PR's line, then the next's.
-- **Git writes CRLF on a stash pop or a merge here:** a patch script matches after `.replace("\r\n", "\n")`.
-- **A hook's contract test** calls only routes in `docs/contracts/auth-api.md`; a unit fixture restores a kernel global with `monkeypatch.setattr`. A test-support route can stand for an environment variable a suite can't set on a running server (`/api/_test/seed`'s `allow`).
-- **A kernel call from a module route reads through the route's session** (`db=`): `require_module` already holds a connection.
-- **The Bash tool decodes `\n` and `\uXXXX`:** write patch scripts with the Write tool.
+- **PR numbers go fast with two sessions:** predict at push time (the highest plus one), and check again just before.
+- **The full suite takes about 25 minutes on a quiet machine,** and hours at full load. Run it in the background with its log in the scratchpad, and edit nothing in that checkout meanwhile: CLI tests copy the kernel. A worktree under `.claude/worktrees/` lets work go on beside it. Use this checkout's `.venv` python and a junction to its `node_modules`; Python imports the worktree's kernel.
+- **`eslint .` also scans `.claude/worktrees/`:** while another worktree has work in progress, lint by folder (`npx eslint kernel harness modules`).
+- **The suite's `jobs/run` doesn't tick the scheduler:** queue a scheduled job by name (`POST /api/_test/jobs {name}`).
+- **A 404 `kernel.not_found` reads as "not built"** to the contract client: a test-support route answers its own code (`harness.no_file`).
+- **A unit fixture restores a kernel global with `monkeypatch.setattr`**, never by installing the probe's parts again.
+- **Git writes CRLF on a stash pop or a merge here,** and the Bash tool decodes `\n` and `\uXXXX`. Patch scripts go through the Write tool, match after `.replace("\r\n", "\n")`, and build a CR with `chr(13)`.
 
 ## Warnings
 
+- **An account deleted while its copy is stored** leaves the row, its owner null, until the hourly prune takes it and its file after 7 days. K2's step 11 should delete a person's copies at once, with `privacy.erase`.
 - Nothing from VybeSite's `dev plans\` or `snapshots\`; run its brand check on lifted code.
 - Editing CI's security gates is the owner's call. Never apply a site's `railway.ts` for the owner.
 - Never edit `C:\DEV\VM Website`: a Vibrant Mindz session works there.
