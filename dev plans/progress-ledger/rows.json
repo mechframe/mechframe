@@ -694,10 +694,10 @@
    "gate": "",
    "step_order": 5,
    "step": "Bot check",
-   "status": "todo",
-   "status_label": "To do",
-   "prs": "",
-   "decisions": "",
+   "status": "done",
+   "status_label": "Done",
+   "prs": "#103",
+   "decisions": "0052",
    "note": ""
   },
   {

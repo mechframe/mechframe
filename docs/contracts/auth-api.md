@@ -189,5 +189,6 @@ Mounted by the harness only when `HARNESS_TEST_SUPPORT=1`, so the contract suite
 | `PUT /api/probe/notes/{id}/terms` | `{vocabulary, slugs}`, `topics` or `tags`: 200 `{"terms": [{vocabulary, slug, label}]}`, the note's terms in that vocabulary set to exactly those (hook 2, taxonomy) |
 | `GET /api/probe/notes?vocabulary=&term=` | 200 `{"items": [slugs]}`, the published notes holding the term |
 | `DELETE /api/probe/notes/{id}` | 204: the note and its terms' links gone |
+| `POST /api/probe/inquiries` | `{message, bot?}`, `bot` a `{website?, elapsed_ms?, token?}` proof: 201 `{"held"}`, the bot check's reason, or null when it passed (hook 5, decision 0052). A real module answers a held submission and a passed one alike; the probe tells the suite. With the kernel's `form` check, text in `website` is `honeypot`, under 3,000 ms is `too_fast`, and a missing `website` or `elapsed_ms`, or no proof, is `not_from_form`; a bad proof is 422. The probe's own provider, named by the setting `kernel.bot`, passes the token `probe-ok` and holds the rest as `probe_token` |
 | `GET /api/_test/delete-hooks` | `{"deleted": [user ids]}`, recorded by the harness's probe module |
 | `GET /api/_test/routes` | `{"undeclared": [...], "admin": [...], "step_up": [...]}`: the route audit's list, then every admin route and every step-up route as `METHOD /path/{template}` |

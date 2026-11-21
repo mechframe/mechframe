@@ -137,6 +137,16 @@
     resize: vertical;
   }
 
+  /* --- The bot check's trap (BotFields): off the page, never only hidden --- */
+
+  .mf-bot-trap {
+    position: absolute;
+    left: -10000px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+  }
+
   /* --- Switch ----------------------------------------------------------- */
 
   .mf-switch-row {

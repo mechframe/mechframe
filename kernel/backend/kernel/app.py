@@ -81,6 +81,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from kernel import (
     audit,
+    bot,
     email,
     error_tracking,
     events,
@@ -244,6 +245,7 @@ def assemble(
         publishable = lifecycle.build(installed)
         vocabularies = taxonomy.build(installed)
         sources = search.build(installed)
+        providers = bot.build(installed)
         public = server_copy.build(installed, site)
         catalog = events.build(
             [
@@ -284,11 +286,13 @@ def assemble(
     lifecycle.install(publishable)
     taxonomy.install(vocabularies)
     search.install(sources, language=config.search_language)
+    bot.install(providers)
     server_copy.install(site_name=config.site_name, site_url=config.site_url)
     # Here, not in create_app: a job in a worker of its own reads its module's
     # settings too (Codex on #63).
     settings.register(moderation.SECTION, moderation.Filters)
     settings.register(server_copy.SECTION, server_copy.SiteSettings)
+    settings.register(bot.SECTION, bot.Choice)
     settings.register(sign_up.SECTION, sign_up.settings_model(config.sign_up_mode))
     for module in installed:
         if module.settings is not None:

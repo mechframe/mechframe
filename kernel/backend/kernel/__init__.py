@@ -10,11 +10,13 @@ dependencies (`current_user`, `optional_user`, `require_permission`,
 `require_owner_or`, `require_recent_auth`). From K3: `storage`, `email`,
 `jobs`, `events`, `audit`, `notifications`, `moderation` and `server_copy`.
 From K4: `Answer`, `answer`, `Id` and `When`, for every route's answer model.
-The contract hooks (decision 0052): `lifecycle`, `taxonomy`, `search` and `seed`.
+The contract hooks (decision 0052): `lifecycle`, `taxonomy`, `search`, `seed`, and
+`bot` with its `BotProof`.
 """
 
 from kernel import (
     audit,
+    bot,
     crypto,
     email,
     events,
@@ -39,6 +41,7 @@ from kernel.auth.dependencies import (
     require_permission,
     require_recent_auth,
 )
+from kernel.bot import BotProof
 from kernel.db import Base, Database, for_saving, get_db, one_row_only
 from kernel.errors import Problem
 from kernel.modules import InstalledModule, Manifest, load_module, require_module
@@ -49,6 +52,7 @@ from kernel.version import __version__
 __all__ = [
     "Answer",
     "Base",
+    "BotProof",
     "Database",
     "Id",
     "InstalledModule",
@@ -59,6 +63,7 @@ __all__ = [
     "__version__",
     "answer",
     "audit",
+    "bot",
     "create_app",
     "crypto",
     "current_user",

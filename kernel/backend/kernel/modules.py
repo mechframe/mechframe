@@ -127,6 +127,9 @@ class InstalledModule:
     #: The module's seed data (kernel.seed, decision 0052): its `seed.py`'s
     #: `async def seed(db, ctx: kernel.seed.Context) -> None`, or None.
     seed: Callable[[Any, Any], Awaitable[None]] | None = None
+    #: The bot check the module adds (kernel.bot, decision 0052): its
+    #: `__init__.py`'s `BOT_PROVIDER`, chosen by the setting `kernel.bot`.
+    bot_provider: Any = None
 
     @property
     def id(self) -> str:
@@ -215,7 +218,9 @@ def load_module(manifest: Path) -> InstalledModule:
     - `<id_>/lifecycle.py`'s `PUBLISHABLE`, its publishable models
       (kernel.lifecycle);
     - `<id_>/search.py`'s `SEARCH`, its search sources (kernel.search);
-    - `<id_>/seed.py`'s `seed`, its seed data (kernel.seed).
+    - `<id_>/seed.py`'s `seed`, its seed data (kernel.seed);
+    - `<id_>/__init__.py`'s `BOT_PROVIDER`, a bot check for public forms
+      (kernel.bot).
 
     The package `<id_>` must be importable: the caller puts its folder on
     `sys.path`. A package that isn't there gives the manifest alone."""
@@ -238,6 +243,7 @@ def load_module(manifest: Path) -> InstalledModule:
         publishable=tuple(_attribute(f"{package}.lifecycle", "PUBLISHABLE") or ()),
         searchable=tuple(_attribute(f"{package}.search", "SEARCH") or ()),
         seed=_attribute(f"{package}.seed", "seed"),
+        bot_provider=_attribute(package, "BOT_PROVIDER"),
     )
 
 

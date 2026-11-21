@@ -14,7 +14,9 @@ tested on them: `probe` fills each hook and `probe-addon` doesn't. Its notes,
 `/probe/notes/:slug`, take terms from `topics` (hierarchical) and `tags`
 (hook 2), and are found by site search once published (hook 3, `SEARCH`).
 Its seed (hook 4, `seed_notes`) makes three of them under the topic `seeded`,
-by the seeded editor, two published.
+by the seeded editor, two published. Its form, `POST /api/probe/inquiries`,
+is judged by the bot check (hook 5), and it adds a bot provider of its own,
+`BOT_PROVIDER`, which the setting `kernel.bot` can name.
 Their table, `probe_note`, lives on a metadata of its own (`TABLES`), which
 the test support makes when its app starts, so the migrations never see it.
 """
@@ -26,13 +28,13 @@ from collections.abc import AsyncIterator, Mapping
 from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
 from sqlalchemy import MetaData, String, Text, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-from kernel import jobs, lifecycle, search, seed, server_copy, taxonomy
+from kernel import BotProof, bot, jobs, lifecycle, search, seed, server_copy, taxonomy
 from kernel.access import public
 from kernel.answers import Answer, Id, When
 from kernel.db import NAMING, get_db
@@ -330,6 +332,48 @@ async def seed_notes(db: AsyncSession, ctx: seed.Context) -> None:
             await lifecycle.publish(db, note)
 
 
+# --- hook 5, bot check: a public form, and a provider of the probe's own -----------------
+
+
+class Inquiry(BaseModel):
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    message: str = Field(min_length=1, max_length=2_000)
+    # `kernel.BotProof`, not `bot.BotProof`: a field named `bot` hides the module.
+    bot: BotProof | None = None
+
+
+class Judged(Answer):
+    #: The verdict, which a real module never tells its visitor: the suite reads it.
+    held: str | None
+
+
+@router.post("/inquiries", dependencies=[Depends(public)], status_code=201, response_model=Judged)
+async def send_inquiry(body: Inquiry, request: Request) -> dict[str, Any]:
+    """A public form's submission, judged as `contact` will judge an inquiry."""
+    found = await bot.verify(request, body.bot, form="probe.inquiry")
+    return {"held": found.reason if isinstance(found, bot.Held) else None}
+
+
+#: The one token the probe's provider passes: the suite's, never a secret.
+PROBE_TOKEN = "probe-ok"  # noqa: S105
+
+
+class ProbeBotCheck:
+    """The probe's provider, for the setting `kernel.bot` to name: it passes
+    a proof whose token is `PROBE_TOKEN` and holds the rest."""
+
+    async def verify(
+        self, request: Request, proof: BotProof | None, form: str
+    ) -> bot.Pass | bot.Held:
+        if proof is not None and proof.token == PROBE_TOKEN:
+            return bot.Pass()
+        return bot.Held("probe_token")
+
+
+BOT_PROVIDER = ProbeBotCheck()
+
+
 def _manifest(
     module_id: str, name: str, summary: str, requires: dict[str, str], **more: Any
 ) -> Manifest:
@@ -375,6 +419,7 @@ MODULES = (
         publishable=(ProbeNote,),
         searchable=SEARCH,
         seed=seed_notes,
+        bot_provider=BOT_PROVIDER,
     ),
     InstalledModule(
         _manifest(

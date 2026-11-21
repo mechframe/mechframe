@@ -15,6 +15,7 @@ import { RouterProvider, createBrowserRouter } from "react-router";
 import {
   Accordion,
   Attention,
+  BotFields,
   Button,
   Card,
   Chip,
@@ -37,6 +38,7 @@ import {
   Tabs,
   TextArea,
   ToastProvider,
+  useBotProof,
   useToast,
   type Column,
   type HistoryVersion,
@@ -88,6 +90,7 @@ function AdminLook() {
   const [open, setOpen] = useState(true);
   const [on, setOn] = useState(true);
   const [pressed, setPressed] = useState(true);
+  const bot = useBotProof();
   const [dialog, setDialog] = useState(false);
   return (
     <section className="mf-admin-look kit-section" aria-labelledby="admin-look">
@@ -158,6 +161,7 @@ function AdminLook() {
         <Field label="Description">
           <TextArea placeholder="A line or two about the site" data-kit-boundary="field" />
         </Field>
+        <BotFields {...bot.fields} />
       </div>
       <div className="kit-stack">
         <Switch label="Open sign-up" hint="Anyone can make an account." checked={on} onChange={setOn} />

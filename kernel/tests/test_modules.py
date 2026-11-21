@@ -301,7 +301,13 @@ def test_load_module_builds_a_module_from_its_fixed_names(
         tmp_path,
         module_id,
         {
-            "__init__.py": 'CSP = [("frame-src", "https://player.test")]\n',
+            "__init__.py": (
+                'CSP = [("frame-src", "https://player.test")]\n'
+                "class Check:\n"
+                "    async def verify(self, request, proof, form):\n"
+                "        return None\n"
+                "BOT_PROVIDER = Check()\n"
+            ),
             "router.py": "from fastapi import APIRouter\nrouter = APIRouter()\n",
             "schemas.py": "from pydantic import BaseModel\nclass Settings(BaseModel):\n    size: int = 3\n",
             "emails.py": (
@@ -396,6 +402,7 @@ def test_load_module_builds_a_module_from_its_fixed_names(
     assert [source.content_type for source in module.searchable] == [f"{module_id}.photo"]
     assert module.seed is not None
     assert module.seed.__name__ == "seed"
+    assert type(module.bot_provider).__name__ == "Check"
 
 
 def test_a_modules_vocabularies_reach_the_taxonomy_from_its_manifest(
@@ -435,7 +442,13 @@ def test_load_module_of_a_package_with_none_of_the_names_or_none_at_all(
     finally:
         for loaded in [each for each in sys.modules if each.startswith(bare_id.replace("-", "_"))]:
             del sys.modules[loaded]
-    assert (found.router, found.settings, found.pages, found.seed) == (None, None, None, None)
+    assert (found.router, found.settings, found.pages, found.seed, found.bot_provider) == (
+        None,
+        None,
+        None,
+        None,
+        None,
+    )
     assert (
         found.csp,
         found.jobs,

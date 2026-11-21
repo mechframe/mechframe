@@ -119,7 +119,7 @@ The owner decided these when they picked the post-v1.0 modules (decision 0018, `
 | Search index | site-search, semantic-search, concierge, docs | Yes, since #99 | `kernel.search` (decision 0052) |
 | Consent categories | consent, analytics-adapters, social-feeds, video | No: `CSP` hosts carry no category | A category on each `CSP` entry, the front end holding scripts and iframes until consent |
 | Entitlements | memberships, member-only video, ai-studio | No: roles and permissions only (14.8) | Kernel `require_access(resource)` with providers registered by modules |
-| Bot check | bot-shield, forms, reviews, submissions | No: `rate_limit` only | A kernel API dependency with a provider adapter and one setting |
+| Bot check | bot-shield, forms, reviews, submissions | Yes, since #103 | `kernel.bot` (decision 0052) |
 | Content lifecycle | editorial-calendar, drops, podcast, changelog, announcements | Yes, since #97 | `kernel.lifecycle` (decision 0052) |
 | Taxonomy | directory, recipes, docs, wiki | Yes, since #98 | `kernel.taxonomy` (decision 0052) |
 | Seed data | catalog-site, visual-regression, theme-generator | Yes, since #102 | `kernel.seed` (decision 0052) |

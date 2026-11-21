@@ -9,6 +9,8 @@ export { Accordion } from "./Accordion";
 export type { AccordionProps, SectionState } from "./Accordion";
 export { Attention } from "./Attention";
 export type { AttentionProps } from "./Attention";
+export { BotFields, useBotProof } from "./BotFields";
+export type { BotFieldsProps, BotProof } from "./BotFields";
 export { Button, LinkButton, buttonClass } from "./Button";
 export type { ButtonLook, ButtonProps, LinkButtonProps } from "./Button";
 export { Card } from "./Card";
