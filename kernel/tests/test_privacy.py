@@ -296,6 +296,55 @@ async def test_the_kernels_own_file_holds_the_account_its_roles_and_its_activity
 
 
 @pytest.mark.db
+async def test_the_prune_removes_a_copys_file_its_row_never_recorded(
+    database: Database, db: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A try can store the ZIP and then fail to record it: the prune deletes
+    the copy's own key all the same (Codex on #109)."""
+    from moto import mock_aws
+
+    from kernel import storage
+    from kernel.config import reset_config
+
+    from .test_storage import PRIVATE, STORAGE_ENV
+
+    for name, value in STORAGE_ENV.items():
+        monkeypatch.setenv(name, value)
+    reset_config()
+    storage._client.cache_clear()
+    try:
+        with mock_aws():
+            client = storage._client(
+                STORAGE_ENV["STORAGE_ENDPOINT_URL"],
+                "auto",
+                STORAGE_ENV["STORAGE_ACCESS_KEY_ID"],
+                STORAGE_ENV["STORAGE_SECRET_ACCESS_KEY"],
+            )
+            client.create_bucket(
+                Bucket=PRIVATE, CreateBucketConfiguration={"LocationConstraint": "auto"}
+            )
+            user = await _account(db)
+            row = ExportRow(
+                user_id=user.id,
+                status="failed",
+                created_at=clock.now() - exports.KEEP * 2,
+                expires_at=clock.now() - exports.KEEP,
+            )
+            db.add(row)
+            await db.commit()
+            row_id = row.id
+            await storage.put(exports.storage_key(row_id), b"PK", content_type="application/zip")
+            await exports._prune(_context(database, 1))
+            assert await storage.get(exports.storage_key(row_id)) is None
+            await db.rollback()
+            assert await _status(db, row_id) is None
+    finally:
+        monkeypatch.undo()
+        reset_config()
+        storage._client.cache_clear()
+
+
+@pytest.mark.db
 async def test_the_prune_removes_the_copies_past_their_days_and_keeps_the_rest(
     database: Database, db: AsyncSession
 ) -> None:

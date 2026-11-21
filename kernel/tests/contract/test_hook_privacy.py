@@ -106,6 +106,17 @@ async def test_asking_needs_a_recent_sign_in_and_waits_an_hour(api: Api) -> None
     assert again.json()["code"] == "kernel.rate_limited"
 
 
+async def test_an_unconfirmed_address_gets_no_copy(api: Api) -> None:
+    """What a module holds by address could be someone else's until the
+    address is confirmed (Codex on #109)."""
+    person = await api.make_user(verified=False)
+    browser = api.another_browser()
+    await browser.signed_in_as(person)
+    refused = await browser.http.post(ASK)
+    assert refused.status_code == 403
+    assert refused.json()["code"] == "auth.email_unverified"
+
+
 async def test_the_copy_goes_after_seven_days(api: Api) -> None:
     browser, person = await _signed_in(api)
     link = await _asked(api, browser, person.email)

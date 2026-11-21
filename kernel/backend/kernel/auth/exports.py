@@ -2,7 +2,8 @@
 the site holds about a person, as a ZIP of JSON.
 
 - `POST /api/auth/account/export` asks for one: a recent sign-in (step-up),
-  once an hour, with storage on. It answers 202 at once; the job
+  a verified address (a module finds data by it, so an unverified one could
+  be someone else's: Codex on #109), once an hour, with storage on. It answers 202 at once; the job
   `kernel.privacy_export` makes the copy.
 - **The job** collects the kernel's own `kernel.json` (the account, its
   roles and its security activity) and each exporting module's file
@@ -12,7 +13,9 @@ the site holds about a person, as a ZIP of JSON.
   marked failed and the person is told to ask again.
 - **The link** sends the account's own signed-in owner to a 5-minute signed
   download; anyone else, or a copy that isn't ready or has gone, gets 404.
-- **A copy goes after 7 days** (`kernel.prune_exports`, hourly), with its file.
+- **A copy goes after 7 days** (`kernel.prune_exports`, hourly), with its file:
+  always the copy's own key, so a ZIP stored by a try whose record then
+  failed goes too (Codex on #109).
 
 Each step is in the person's security activity (`auth.data_export_*`).
 """
@@ -36,7 +39,7 @@ from kernel.auth import audit, mails
 from kernel.auth.dependencies import current_user, require_recent_auth
 from kernel.auth.models import User
 from kernel.auth.permissions import roles_of
-from kernel.config import KernelConfig, storage_missing
+from kernel.config import KernelConfig, get_config, storage_missing
 from kernel.db import get_db
 from kernel.email import queue_message
 from kernel.errors import Problem
@@ -79,6 +82,17 @@ async def _storage_on(request: Request) -> None:
         )
 
 
+async def _verified(user: User = Depends(_stepped_up)) -> None:
+    """403 `auth.email_unverified` until the address is confirmed: what a
+    module holds by address could otherwise be someone else's."""
+    if user.email_verified_at is None:
+        raise Problem(
+            "auth.email_unverified",
+            403,
+            "Confirm your email address first: a copy holds what the site keeps under it.",
+        )
+
+
 class ExportAsked(Answer):
     """A copy asked for: the link comes by mail once it's made."""
 
@@ -93,6 +107,7 @@ class ExportAsked(Answer):
     # Access before the limit (kernel.auth.dependencies): a refused step-up spends nothing.
     dependencies=[
         Depends(_stepped_up),
+        Depends(_verified),
         Depends(_storage_on),
         Depends(rate_limit(EXPORTS_PER_HOUR, key="account")),
     ],
@@ -275,20 +290,19 @@ MAKE = jobs.handler("kernel.privacy_export", tries=TRIES, timeout=1800)(_make)
 
 
 async def _prune(ctx: jobs.Context) -> None:
-    """Deletes the copies past their 7 days, with their files."""
+    """Deletes the copies past their 7 days, with their files: each copy's
+    own key, whether or not its row recorded it, since a try can store the
+    ZIP and then fail to say so. With storage off there are no files to go."""
     async with ctx.sessions() as db:
         gone = list(
             (
-                await db.execute(
-                    select(ExportRow.id, ExportRow.storage_key).where(
-                        ExportRow.expires_at <= clock.now()
-                    )
-                )
+                await db.scalars(select(ExportRow.id).where(ExportRow.expires_at <= clock.now()))
             ).all()
         )
-    for export_id, key in gone:
-        if key is not None:
-            await storage.delete(key)
+    files = not storage_missing(get_config())
+    for export_id in gone:
+        if files:
+            await storage.delete(storage_key(export_id))
         async with ctx.sessions() as db:
             await db.execute(delete(ExportRow).where(ExportRow.id == export_id))
             await db.commit()
