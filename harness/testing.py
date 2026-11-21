@@ -36,7 +36,7 @@ from sqlalchemy import delete, select
 
 from harness import probe
 from harness.registry import discover
-from kernel import clock, create_app, crypto, jobs, seed
+from kernel import clock, create_app, crypto, jobs, seed, storage
 from kernel.access import needs_step_up, public, undeclared
 from kernel.auth.accounts import normal_email
 from kernel.auth.models import Role, Totp, User, UserRole
@@ -103,6 +103,16 @@ async def run_jobs(request: Request) -> Response:
     so the suite reads a settled queue (kernel.worker.Worker.run_due)."""
     await request.app.state.worker.run_due()
     return Response(status_code=204)
+
+
+@router.get("/files")
+async def stored_file(key: str) -> Response:
+    """The private file stored at `key`, as stored: the suite reads what a
+    signed link would download, since it can't reach the store itself."""
+    found = await storage.get(key)
+    if found is None:
+        raise Problem("harness.no_file", 404, "No file is stored there.")
+    return Response(found.data, media_type=found.content_type)
 
 
 @router.get("/mail")

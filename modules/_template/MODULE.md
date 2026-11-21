@@ -31,7 +31,7 @@
 
 <!-- Settings, slots, events and public.py / web/public.ts exports a site can use instead of editing the copy. -->
 
-<!-- The contract hooks it fills (SPEC 7's index): content lifecycle (its `content_types` with `lifecycle: true`, lifecycle.py's PUBLISHABLE), taxonomy (its `vocabularies` and `content_types[].taxonomy`, tagged through `kernel.taxonomy`), search index (its `content_types` with `search: true`, search.py's SEARCH), seed data (seed.py's `seed`, idempotent), bot check (each public form's `bot: kernel.BotProof`, judged by `bot.verify`, a held submission kept apart), consent categories (each `CSP` entry's third item, what it loads held in `<ConsentGate>`), and the rest as they land. -->
+<!-- The contract hooks it fills (SPEC 7's index): content lifecycle (its `content_types` with `lifecycle: true`, lifecycle.py's PUBLISHABLE), taxonomy (its `vocabularies` and `content_types[].taxonomy`, tagged through `kernel.taxonomy`), search index (its `content_types` with `search: true`, search.py's SEARCH), seed data (seed.py's `seed`, idempotent), bot check (each public form's `bot: kernel.BotProof`, judged by `bot.verify`, a held submission kept apart), consent categories (each `CSP` entry's third item, what it loads held in `<ConsentGate>`), export and erase (`data_hooks` and privacy.py's `export_user_data` and `delete_user_data`), and the rest as they land. -->
 
 ## Known limits
 

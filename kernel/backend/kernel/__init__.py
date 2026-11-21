@@ -11,7 +11,7 @@ dependencies (`current_user`, `optional_user`, `require_permission`,
 `jobs`, `events`, `audit`, `notifications`, `moderation` and `server_copy`.
 From K4: `Answer`, `answer`, `Id` and `When`, for every route's answer model.
 The contract hooks (decision 0052): `lifecycle`, `taxonomy`, `search`, `seed`,
-`bot` with its `BotProof`, and `consent`.
+`bot` with its `BotProof`, `consent`, and `privacy` with its `Subject`.
 """
 
 from kernel import (
@@ -25,6 +25,7 @@ from kernel import (
     lifecycle,
     moderation,
     notifications,
+    privacy,
     search,
     seed,
     server_copy,
@@ -80,6 +81,7 @@ __all__ = [
     "notifications",
     "one_row_only",
     "optional_user",
+    "privacy",
     "public",
     "rate_limit",
     "require_module",

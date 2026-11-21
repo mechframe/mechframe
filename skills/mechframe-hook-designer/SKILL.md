@@ -113,7 +113,7 @@ The owner decided these when they picked the post-v1.0 modules (decision 0018, `
 
 | Hook | Needed by | In the spec already | Likely shape |
 | --- | --- | --- | --- |
-| Export and erase | privacy-center | Yes: `data_hooks` (5) and `export_user_data` / `delete_user_data` (10); 14.13 tests delete only | Confirm; add an export contract test |
+| Export and erase | privacy-center | Yes, since #109 | `kernel.privacy` (decision 0052) |
 | Dashboard cards | setup-wizard, fleet | Partly: the `admin.dashboard.widget` slot (8) | Setup-checklist steps as a manifest field or a fixed-name part with a live check |
 | Profile tabs | profiles | Partly: `account.section` is the member's own page | A public `profile.tab` slot plus a rule that it shows only public data |
 | Search index | site-search, semantic-search, concierge, docs | Yes, since #99 | `kernel.search` (decision 0052) |

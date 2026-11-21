@@ -127,6 +127,10 @@ KERNEL_ACTIONS = frozenset(
         "kernel.term.deleted",
         # Seed data loaded, never on a live site (decision 0052, hook 4).
         "kernel.seed.ran",
+        # A copy of an account's data (14.7; decision 0052, hook 7).
+        "auth.data_export_requested",
+        "auth.data_export_ready",
+        "auth.data_export_downloaded",
     }
 )
 

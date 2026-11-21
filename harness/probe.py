@@ -18,7 +18,9 @@ by the seeded editor, two published. Its form, `POST /api/probe/inquiries`,
 is judged by the bot check (hook 5), and it adds a bot provider of its own,
 `BOT_PROVIDER`, which the setting `kernel.bot` can name. Its `CSP` adds a
 video player's host in the category `media` (hook 6), so the site asks
-consent for `media` while it's on.
+consent for `media` while it's on. A note made by someone signed in is
+theirs, and `export_user_data` and `delete_user_data` (hook 7) give and
+anonymise a person's notes.
 Their table, `probe_note`, lives on a metadata of its own (`TABLES`), which
 the test support makes when its app starts, so the migrations never see it.
 """
@@ -36,9 +38,21 @@ from sqlalchemy import MetaData, String, Text, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-from kernel import BotProof, bot, jobs, lifecycle, search, seed, server_copy, taxonomy
+from kernel import (
+    BotProof,
+    bot,
+    jobs,
+    lifecycle,
+    privacy,
+    search,
+    seed,
+    server_copy,
+    taxonomy,
+)
 from kernel.access import public
 from kernel.answers import Answer, Id, When
+from kernel.auth.dependencies import optional_user
+from kernel.auth.models import User
 from kernel.db import NAMING, get_db
 from kernel.errors import Problem
 from kernel.modules import InstalledModule, Manifest
@@ -173,9 +187,16 @@ async def _shown(db: AsyncSession, slug: str) -> ProbeNote | None:
     return found
 
 
-@router.post("/notes", dependencies=[Depends(public)], status_code=201, response_model=NoteMade)
-async def new_note(body: NewNote, db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
-    note = ProbeNote(slug=body.slug, title=body.title, body=body.body)
+@router.post("/notes", status_code=201, response_model=NoteMade)
+async def new_note(
+    body: NewNote,
+    user: User | None = Depends(optional_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, Any]:
+    """A note, the signed-in person's own when there is one (hook 7)."""
+    note = ProbeNote(
+        slug=body.slug, title=body.title, body=body.body, author_id=user.id if user else None
+    )
     db.add(note)
     await db.commit()
     return {"id": str(note.id)}
@@ -377,6 +398,36 @@ class ProbeBotCheck:
 
 BOT_PROVIDER = ProbeBotCheck()
 
+# --- hook 7, export and erase ------------------------------------------------------------
+
+
+async def export_user_data(db: AsyncSession, subject: privacy.Subject) -> privacy.Exported:
+    """The person's notes, by slug."""
+    notes = await db.scalars(
+        select(ProbeNote).where(ProbeNote.author_id == subject.user_id).order_by(ProbeNote.slug)
+    )
+    return {
+        "notes": [
+            {
+                "id": str(note.id),
+                "slug": note.slug,
+                "title": note.title,
+                "body": note.body,
+                "status": note.status,
+            }
+            for note in notes
+        ]
+    }
+
+
+async def delete_user_data(db: AsyncSession, subject: privacy.Subject) -> None:
+    """A person's notes stay, theirs no longer: the author goes."""
+    for note in await db.scalars(
+        select(ProbeNote).where(ProbeNote.author_id == subject.user_id).with_for_update()
+    ):
+        note.author_id = None
+
+
 #: An embed's player host, held for the visitor's consent to `media` (hook 6).
 CSP = (("frame-src", "https://www.youtube-nocookie.com", "media"),)
 
@@ -418,6 +469,7 @@ MODULES = (
                     "search": True,
                 }
             ],
+            data_hooks={"export": True, "delete": True},
         ),
         router=router,
         settings=ProbeSettings,
@@ -428,6 +480,8 @@ MODULES = (
         seed=seed_notes,
         bot_provider=BOT_PROVIDER,
         csp=CSP,
+        export_user_data=export_user_data,
+        delete_user_data=delete_user_data,
     ),
     InstalledModule(
         _manifest(

@@ -183,6 +183,9 @@ _SEED = [
     "INSERT INTO kernel_search_document (content_type, content_id, title, body, path, language, "
     "updated_at) VALUES ('blog.post', gen_random_uuid(), 'Jazz', 'Mixing jazz', '/blog/jazz', "
     "'english', now())",
+    "INSERT INTO kernel_export (id, user_id, status, storage_key, created_at, expires_at) "
+    "VALUES (gen_random_uuid(), :user, 'ready', 'kernel/exports/x.zip', now(), "
+    "now() + interval '7 days')",
 ]
 
 

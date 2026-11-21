@@ -21,6 +21,7 @@ from typing import Annotated, Any, Union, get_args, get_origin
 import httpx
 import pytest
 from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
 from jsonschema import Draft202012Validator
 from pydantic import ValidationError
 
@@ -48,22 +49,34 @@ def _app() -> FastAPI:
     return openapi.build_app()
 
 
+def _redirects(route: Any) -> bool:
+    """A route that answers 303 to somewhere else: a mailed link's landing,
+    such as the export's download (hook 7). The typed client never calls it."""
+    return route.status_code == 303 and route.response_class is RedirectResponse
+
+
 def test_every_api_route_declares_a_typed_answer() -> None:
     untyped = [
         f"{','.join(sorted(route.methods))} {path}"
         for path, route in openapi.api_routes(_app())
-        if route.status_code != 204 and not _typed(route.response_model)
+        if route.status_code != 204 and not _redirects(route) and not _typed(route.response_model)
     ]
     assert untyped == []
 
 
-def test_a_204_route_declares_no_body() -> None:
+def test_a_204_or_a_redirect_declares_no_body() -> None:
     bodied = [
         path
         for path, route in openapi.api_routes(_app())
-        if route.status_code == 204 and route.response_model is not None
+        if (route.status_code == 204 or _redirects(route)) and route.response_model is not None
     ]
     assert bodied == []
+
+
+def test_the_only_redirect_is_the_exports_download() -> None:
+    """A new one is a choice to make, not a route that forgot its answer."""
+    found = [path for path, route in openapi.api_routes(_app()) if _redirects(route)]
+    assert found == ["/api/auth/account/exports/{export_id}"]
 
 
 #: The only files that may build a JSONResponse: `answer` itself, and problems.

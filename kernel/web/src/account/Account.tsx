@@ -1,8 +1,8 @@
 /**
  * `/account`, "Sign-in and security" (K4 contract §2; VM Website
  * design/site/Account.dc.html): passkeys, the authenticator app and its
- * recovery codes, the password, the email, the signed-in devices, then each
- * module's `account.section`. Every change but a sign-out asks for a recent
+ * recovery codes, the password, the email, the signed-in devices, a copy of
+ * the account's data (14.7, hook 7), then each module's `account.section`. Every change but a sign-out asks for a recent
  * sign-in, which the step-up dialog gives.
  *
  * Staff sent here from the admin without a second factor
@@ -58,9 +58,50 @@ export default function Account() {
         <Password />
         <Email user={session.user} />
         <Devices />
+        <YourData />
         <Sections />
       </div>
     </AccountPage>
+  );
+}
+
+/**
+ * A copy of what the site holds about the person (14.7, hook 7): asked for
+ * here, made in the background, and mailed as a link that works for 7 days.
+ * Once an hour; asking needs a recent sign-in, which the step-up dialog gives.
+ */
+function YourData() {
+  const { busy, run } = useAction();
+  const [asked, setAsked] = useState(false);
+  const ask = () => {
+    void run(
+      () => api.POST("/api/auth/account/export"),
+      {
+        done: "We're making your copy. The link will be in your email soon.",
+        refused: {
+          "kernel.rate_limited": "You asked within the last hour. The link we sent then works for 7 days.",
+          "kernel.storage_off": "This site can't make copies of your data yet.",
+        },
+      },
+      true,
+    ).then((result) => {
+      if (result.ok) setAsked(true);
+    });
+  };
+  return (
+    <Card title="Your data" description="A copy of what this site holds about you, as files you can open or keep.">
+      <Rows label="Your data">
+        <Row
+          name="Download a copy"
+          meta={asked ? "On its way to your email. The link works for 7 days." : "We email you a link once it's made. You can ask once an hour."}
+          actions={
+            <Button disabled={busy || asked} onClick={ask}>
+              Email me a copy
+            </Button>
+          }
+        />
+      </Rows>
+    </Card>
   );
 }
 

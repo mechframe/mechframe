@@ -402,6 +402,33 @@ describe("the email", () => {
   });
 });
 
+describe("your data", () => {
+  it("is asked for once and comes by email", async () => {
+    const { sent } = page({ "POST /api/auth/account/export": { status: 202, body: { id: "e-1", status: "queued" } } });
+    renderApp({ path: "/account", session: me });
+    const data = await card("Your data");
+    expect(within(data).getByText(/We email you a link once it's made/)).toBeInTheDocument();
+    await userEvent.click(within(data).getByRole("button", { name: "Email me a copy" }));
+    expect(await screen.findByText(/We're making your copy/)).toBeInTheDocument();
+    expect(within(data).getByText(/On its way to your email/)).toBeInTheDocument();
+    expect(within(data).getByRole("button", { name: "Email me a copy" })).toBeDisabled();
+    expect(sent.filter((request) => request.url.endsWith("/account/export"))).toHaveLength(1);
+  });
+
+  it("says why when it was asked within the hour, or the site keeps no files", async () => {
+    page({ "POST /api/auth/account/export": problem(429, "kernel.rate_limited") });
+    const { unmount } = renderApp({ path: "/account", session: me });
+    await userEvent.click(within(await card("Your data")).getByRole("button", { name: "Email me a copy" }));
+    expect(await screen.findByText(/You asked within the last hour/)).toBeInTheDocument();
+    expect(within(await card("Your data")).getByRole("button", { name: "Email me a copy" })).toBeEnabled();
+    unmount();
+    page({ "POST /api/auth/account/export": problem(503, "kernel.storage_off") });
+    renderApp({ path: "/account", session: me });
+    await userEvent.click(within(await card("Your data")).getByRole("button", { name: "Email me a copy" }));
+    expect(await screen.findByText("This site can't make copies of your data yet.")).toBeInTheDocument();
+  });
+});
+
 describe("the signed-in devices", () => {
   it("show this one first with its place, and each other with when it was last seen", async () => {
     page();

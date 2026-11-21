@@ -385,6 +385,31 @@ class SearchDocument(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
+class Export(Base):
+    """A copy of an account's data (hook 7, decision 0052; `kernel.auth.exports`):
+    asked for (`queued`), made by the job `kernel.privacy_export` into private
+    storage at `storage_key` (`ready`), or given up on its last try
+    (`failed`); removed with its file once `expires_at` passes, and with its
+    account."""
+
+    __tablename__ = "kernel_export"
+    __table_args__ = (
+        CheckConstraint("status IN ('queued', 'ready', 'failed')", name="status_known"),
+        Index("ix_kernel_export_user_id", "user_id"),
+        Index("ix_kernel_export_expires_at", "expires_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("auth_user.id", ondelete="CASCADE")
+    )
+    status: Mapped[str] = mapped_column(String(16))
+    storage_key: Mapped[str | None] = mapped_column(String(200))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    #: Seven days after it's asked for, and again after it's made.
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
 # Auth's tables live in kernel.auth.models; importing them here puts every
 # kernel table in Base.metadata for Alembic and the model checks. Last, since
 # auth's models import the audit log's from here.

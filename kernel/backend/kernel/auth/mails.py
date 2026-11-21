@@ -191,4 +191,19 @@ TEMPLATES: dict[str, Template] = {
         "If it wasn't, someone is signed in to your account: reset your password now at "
         "$site_url/sign-in, which signs every device out, then make new codes.\n",
     ),
+    "kernel.data_export_ready": Template(
+        "Your $site_name data is ready",
+        "The copy of your data you asked for on $site_name is ready. Sign in, then "
+        "open this link to download it:\n\n"
+        "$link\n\n"
+        "It works until $until; then the copy is deleted.\n\n"
+        "If you didn't ask for it, someone is signed in to your account: reset your "
+        "password now at $site_url/sign-in, which signs every device out.\n",
+    ),
+    "kernel.data_export_failed": Template(
+        "We couldn't make your $site_name data",
+        "We couldn't make the copy of your data you asked for on $site_name. "
+        "Ask again on your account page, $site_url/account, in an hour; if it fails "
+        "again, tell the site's team.\n",
+    ),
 }

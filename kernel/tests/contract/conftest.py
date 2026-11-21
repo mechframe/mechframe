@@ -110,6 +110,52 @@ def contract_database(request: pytest.FixtureRequest) -> str | None:
     return url
 
 
+#: The in-process server's files go to a fake S3 (moto), as the storage
+#: tests' do; a running server under CONTRACT_BASE_URL brings its own.
+_FAKE_STORAGE = {
+    "STORAGE_ENDPOINT_URL": "https://r2.mechframe.test",
+    "STORAGE_ACCESS_KEY_ID": "contract-key-id-AKIA0000",
+    "STORAGE_SECRET_ACCESS_KEY": "contract-secret-do-not-print",
+    "STORAGE_BUCKET": "contract-private",
+    "STORAGE_PUBLIC_BUCKET": "contract-public",
+    "STORAGE_PUBLIC_URL": "https://files.mechframe.test",
+}
+
+
+@contextmanager
+def _fake_storage() -> Iterator[None]:
+    from moto import mock_aws
+
+    from kernel import storage
+    from kernel.config import reset_config
+
+    before = {name: os.environ.get(name) for name in _FAKE_STORAGE}
+    os.environ.update(_FAKE_STORAGE)
+    reset_config()
+    storage._client.cache_clear()
+    try:
+        with mock_aws():
+            client = storage._client(
+                _FAKE_STORAGE["STORAGE_ENDPOINT_URL"],
+                "auto",
+                _FAKE_STORAGE["STORAGE_ACCESS_KEY_ID"],
+                _FAKE_STORAGE["STORAGE_SECRET_ACCESS_KEY"],
+            )
+            for bucket in (_FAKE_STORAGE["STORAGE_BUCKET"], _FAKE_STORAGE["STORAGE_PUBLIC_BUCKET"]):
+                client.create_bucket(
+                    Bucket=bucket, CreateBucketConfiguration={"LocationConstraint": "auto"}
+                )
+            yield
+    finally:
+        for name, value in before.items():
+            if value is None:
+                os.environ.pop(name, None)
+            else:
+                os.environ[name] = value
+        reset_config()
+        storage._client.cache_clear()
+
+
 @pytest_asyncio.fixture(scope="session", loop_scope="session")
 async def server(contract_database: str | None) -> AsyncIterator[httpx.AsyncBaseTransport]:
     """One server for the whole suite; `/api/_test/reset` isolates the tests."""
@@ -119,10 +165,11 @@ async def server(contract_database: str | None) -> AsyncIterator[httpx.AsyncBase
     migrated_url = contract_database
     from harness.testing import build_test_app  # the harness, not the kernel
 
-    with _test_support_flag():
-        app = build_test_app(migrated_url)
-    async with app.router.lifespan_context(app):
-        yield httpx.ASGITransport(app=app, raise_app_exceptions=False)
+    with _fake_storage():
+        with _test_support_flag():
+            app = build_test_app(migrated_url)
+        async with app.router.lifespan_context(app):
+            yield httpx.ASGITransport(app=app, raise_app_exceptions=False)
 
 
 @pytest_asyncio.fixture(loop_scope="session")

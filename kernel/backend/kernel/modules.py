@@ -133,6 +133,12 @@ class InstalledModule:
     #: The bot check the module adds (kernel.bot, decision 0052): its
     #: `__init__.py`'s `BOT_PROVIDER`, chosen by the setting `kernel.bot`.
     bot_provider: Any = None
+    #: What the module holds about a person (kernel.privacy, decision 0052):
+    #: its `privacy.py`'s `async def export_user_data(db, subject)` and
+    #: `async def delete_user_data(db, subject)`, each as its manifest's
+    #: `data_hooks` says.
+    export_user_data: Callable[[Any, Any], Awaitable[Any]] | None = None
+    delete_user_data: Callable[[Any, Any], Awaitable[None]] | None = None
 
     @property
     def id(self) -> str:
@@ -224,7 +230,9 @@ def load_module(manifest: Path) -> InstalledModule:
     - `<id_>/search.py`'s `SEARCH`, its search sources (kernel.search);
     - `<id_>/seed.py`'s `seed`, its seed data (kernel.seed);
     - `<id_>/__init__.py`'s `BOT_PROVIDER`, a bot check for public forms
-      (kernel.bot).
+      (kernel.bot);
+    - `<id_>/privacy.py`'s `export_user_data` and `delete_user_data`, what
+      it holds about a person (kernel.privacy).
 
     The package `<id_>` must be importable: the caller puts its folder on
     `sys.path`. A package that isn't there gives the manifest alone."""
@@ -248,6 +256,8 @@ def load_module(manifest: Path) -> InstalledModule:
         searchable=tuple(_attribute(f"{package}.search", "SEARCH") or ()),
         seed=_attribute(f"{package}.seed", "seed"),
         bot_provider=_attribute(package, "BOT_PROVIDER"),
+        export_user_data=_attribute(f"{package}.privacy", "export_user_data"),
+        delete_user_data=_attribute(f"{package}.privacy", "delete_user_data"),
     )
 
 

@@ -33,6 +33,12 @@ def test_discover(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         "test-gallery",
         {
             "__init__.py": 'CSP = [("frame-src", "https://player.test", "media"), ("img-src", "https://cdn.test")]\n',
+            "privacy.py": (
+                "async def export_user_data(db, subject):\n"
+                '    return {"photos": []}\n'
+                "async def delete_user_data(db, subject):\n"
+                "    return None\n"
+            ),
             "router.py": "from fastapi import APIRouter\nrouter = APIRouter()\n",
             "schemas.py": "from pydantic import BaseModel\nclass Settings(BaseModel):\n    size: int = 3\n",
             "emails.py": (
@@ -67,11 +73,14 @@ def test_discover(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     assert found["test-bare"].router is None
     assert found["test-bare"].emails == {}
     assert found["test-bare"].reportable == ()
+    assert found["test-bare"].export_user_data is None
     assert [kind.name for kind in found["test-gallery"].reportable] == ["test-gallery.photo"]
     gallery = found["test-gallery"]
     assert gallery.router is not None
     assert gallery.settings is not None
     assert gallery.settings().model_dump() == {"size": 3}
+    assert gallery.export_user_data is not None
+    assert gallery.delete_user_data is not None
     assert gallery.csp == (
         ("frame-src", "https://player.test", "media"),
         ("img-src", "https://cdn.test"),

@@ -308,6 +308,12 @@ def test_load_module_builds_a_module_from_its_fixed_names(
                 "        return None\n"
                 "BOT_PROVIDER = Check()\n"
             ),
+            "privacy.py": (
+                "async def export_user_data(db, subject):\n"
+                '    return {"photos": []}\n'
+                "async def delete_user_data(db, subject):\n"
+                "    return None\n"
+            ),
             "router.py": "from fastapi import APIRouter\nrouter = APIRouter()\n",
             "schemas.py": "from pydantic import BaseModel\nclass Settings(BaseModel):\n    size: int = 3\n",
             "emails.py": (
@@ -401,6 +407,9 @@ def test_load_module_builds_a_module_from_its_fixed_names(
     assert [listener.name for listener in module.listeners] == [f"{module_id}.forget_user"]
     assert [kind.name for kind in module.reportable] == [f"{module_id}.photo"]
     assert isinstance(module.pages, server_copy.Pages)
+    assert module.export_user_data is not None
+    assert module.export_user_data.__name__ == "export_user_data"
+    assert module.delete_user_data is not None
     assert [model.__content_type__ for model in module.publishable] == [f"{module_id}.photo"]
     assert [source.content_type for source in module.searchable] == [f"{module_id}.photo"]
     assert module.seed is not None
@@ -452,6 +461,7 @@ def test_load_module_of_a_package_with_none_of_the_names_or_none_at_all(
         None,
         None,
     )
+    assert (found.export_user_data, found.delete_user_data) == (None, None)
     assert (
         found.csp,
         found.jobs,

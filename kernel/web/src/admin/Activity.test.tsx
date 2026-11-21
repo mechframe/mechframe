@@ -130,7 +130,16 @@ describe("the activity log", () => {
     await waitFor(() => {
       expect(screen.getByRole("table", { name: "Accounts and roles entries, newest first" })).toBeInTheDocument();
     });
-    expect(asked.at(-1)).toEqual(["auth.sign_up", "auth.email_verified", "auth.verification_resent", "auth.user.", "auth.role."]);
+    expect(asked.at(-1)).toEqual([
+      "auth.sign_up",
+      "auth.email_verified",
+      "auth.verification_resent",
+      "auth.data_export_requested",
+      "auth.data_export_ready",
+      "auth.data_export_downloaded",
+      "auth.user.",
+      "auth.role.",
+    ]);
     // Pressed again, a kind lets go: All.
     await userEvent.click(within(kinds).getByRole("button", { name: /Accounts and roles/ }));
     await screen.findByRole("table", { name: "Entries, newest first" });

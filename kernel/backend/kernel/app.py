@@ -92,6 +92,7 @@ from kernel import (
     moderation,
     notifications,
     openapi,
+    privacy,
     search,
     server_copy,
     shell,
@@ -103,6 +104,9 @@ from kernel.auth.codes import router as codes_router
 from kernel.auth.dependencies import SessionCookies
 from kernel.auth.devices import router as devices_router
 from kernel.auth.email_change import router as email_change_router
+from kernel.auth.exports import MAKE as MAKE_EXPORT
+from kernel.auth.exports import PRUNE as PRUNE_EXPORTS
+from kernel.auth.exports import router as exports_router
 from kernel.auth.factor_undo import router as factor_undo_router
 from kernel.auth.mails import TEMPLATES as KERNEL_MAILS
 from kernel.auth.passkeys import router as passkeys_router
@@ -135,8 +139,8 @@ log = logging.getLogger(__name__)
 #: The kernel's own jobs: queued mail, pruning the queue, removing accounts
 #: whose address isn't verified (decision 0035), and pruning the audit log
 #: (decision 0037), the notices (decision 0038) and closed moderation cases
-#: (decision 0039), publishing what's due, and rebuilding site search on
-#: demand (decision 0052).
+#: (decision 0039), publishing what's due, rebuilding site search on
+#: demand, and making and pruning the account's exports (decision 0052).
 KERNEL_JOBS: tuple[jobs.Job, ...] = (
     email.SEND_MAIL,
     jobs.PRUNE,
@@ -146,6 +150,8 @@ KERNEL_JOBS: tuple[jobs.Job, ...] = (
     moderation.PRUNE,
     lifecycle.PUBLISH_DUE,
     search.REINDEX,
+    MAKE_EXPORT,
+    PRUNE_EXPORTS,
 )
 
 #: The kernel's own listeners: site search hearing content published and
@@ -248,6 +254,7 @@ def assemble(
         sources = search.build(installed)
         providers = bot.build(installed)
         asked = consent.build(installed)
+        data_hooks = privacy.build(installed)
         public = server_copy.build(installed, site)
         catalog = events.build(
             [
@@ -290,6 +297,7 @@ def assemble(
     search.install(sources, language=config.search_language)
     bot.install(providers)
     consent.install(asked)
+    privacy.install(data_hooks)
     server_copy.install(site_name=config.site_name, site_url=config.site_url)
     # Here, not in create_app: a job in a worker of its own reads its module's
     # settings too (Codex on #63).
@@ -392,6 +400,7 @@ def create_app(
     app.include_router(codes_router, prefix="/api/auth")
     app.include_router(resets_router, prefix="/api/auth")
     app.include_router(email_change_router, prefix="/api/auth")
+    app.include_router(exports_router, prefix="/api/auth")
     app.include_router(password_change_router, prefix="/api/auth")
     app.include_router(totp_router, prefix="/api/auth")
     app.include_router(passkeys_router, prefix="/api/auth")

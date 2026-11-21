@@ -44,6 +44,9 @@ export const DONE: Readonly<Record<string, string>> = {
   "auth.second_factor_undone": "Removed a second factor from its email",
   "auth.user.suspended": "The account was suspended",
   "auth.user.restored": "The account was restored",
+  "auth.data_export_requested": "Asked for a copy of the account's data",
+  "auth.data_export_ready": "A copy of the account's data was made",
+  "auth.data_export_downloaded": "Downloaded a copy of the account's data",
 };
 
 function When({ at }: { at: string }) {
