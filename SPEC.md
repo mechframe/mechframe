@@ -521,8 +521,9 @@ The CLI runs from a MechFrame checkout, with MechFrame's Python, and copies from
 
 - `mechframe diff <id>` compares three versions: the copy recorded in the lock file, the site's current files, and the latest MechFrame version.
 - `mechframe upgrade <id>` applies the change when the site hasn't edited the module. Otherwise it writes a patch for an agent to merge.
+- **`mechframe upgrade kernel [--from <ref>] [--base <commit>] [--merged <path>]... [--dry-run]`** is built (decision 0053, `dev plans/contracts/mechframe-upgrade.md`). It reads the new kernel and template from a Git ref of the CLI's checkout, `main` by default, never its working tree. The base is the lock's `kernel.commit`; for an older lock, the commit whose kernel matches the lock's hashes, refused when such commits differ in the template's files until `--base` names one. Each file is compared three ways (the base, the site's, the new copy): a file the site left alone takes the new copy, one only the site changed stays the site's, and where both changed it's a conflict. It runs whole or not at all: with a conflict, nothing in the site changes but a diff for each in `.mechframe/upgrade/`, and the command exits 1; `--merged <path>` keeps the site's merged file. The template's files, the pins and the theme's `tokens.css` follow the same rule, with the site's name and theme written in; the site's own folders, the registries, `.env.example` and `.railway/railway.ts` are never touched, and the template's new settings are printed. It prints the site's next steps.
 - `mechframe check` lists every edited, missing or added file in copied folders, every copy behind the checkout's version, and every open advisory. It exits 2 when the lock or a copied manifest doesn't validate, 1 on an open high or critical advisory, and 0 otherwise.
-- `diff` and `upgrade` wait for a module's second version: a three-way diff reads the old copy's files from a Git tag per version (the owner, 2026-11-20).
+- `diff`, and `upgrade <id>` for a module, wait for a module's second version (the owner, 2026-11-20); the kernel's upgrade reads its base from the lock's commit instead of a tag per version (decision 0053).
 
 **Customizing without editing.** Prefer settings, slots, event handlers and pages in `site/`. Edit copied files only when those can't do the job.
 
@@ -542,7 +543,7 @@ The kernel, each module and this spec carry their own semver. Because copies don
 {
   "mechframe": "0.1.0",
   "spec": "0.1",
-  "kernel": {"version": "0.1.0", "files": {"backend/kernel/auth/sessions.py": "sha256:..."}},
+  "kernel": {"version": "0.1.0", "files": {"backend/kernel/auth/sessions.py": "sha256:..."}, "commit": "4afc27f..."},
   "modules": {
     "blog": {"version": "0.1.0", "added": "2026-11-20", "files": {"backend/modules/blog/service.py": "sha256:..."}}
   },
@@ -551,7 +552,7 @@ The kernel, each module and this spec carry their own semver. Because copies don
 }
 ```
 
-Paths are relative to the site, with `/`. A file's hash is `sha256:` of its bytes with `\r\n` read as `\n`, so the line endings Git writes in a Windows checkout don't read as edits. `recipe` is null for a site with the kernel only.
+Paths are relative to the site, with `/`. A file's hash is `sha256:` of its bytes with `\r\n` read as `\n`, so the line endings Git writes in a Windows checkout don't read as edits. `recipe` is null for a site with the kernel only. `kernel.commit`, optional, is the MechFrame commit the kernel was copied from: `mechframe new` writes it when every file it copies is as that commit has it, and `mechframe upgrade kernel` always does (decision 0053).
 
 **Advisories.** `ADVISORIES.md` and `advisories.json` in MechFrame list each security fix. Each entry in `advisories.json` is `{id, module, introduced, fixed, severity, summary}`:
 
@@ -903,6 +904,7 @@ All eleven were answered on 2026-11-12, and the sections above already reflect t
 | Date | Change |
 | --- | --- |
 | 2026-11-21 | Hook 7, export and erase (decision 0052, `dev plans/contracts/hooks.md`): `privacy.py`'s `export_user_data(db, subject)` and `delete_user_data(db, subject)`, `privacy.Subject` `{user_id, email}`, the start refusing `data_hooks` that disagree; 14.7's export (`POST /api/auth/account/export`, the job `kernel.privacy_export`, `GET /api/auth/account/exports/{id}`, `kernel.prune_exports`) on the kernel table `kernel_export` (`kernel_0015`); `privacy.erase` for K2's step 11; the account page's "Your data"; the hooks index's seventh row (5, 6, 7, 10, 14.7, 14.11) |
+| 2026-11-21 | `mechframe upgrade kernel` (decision 0053, `dev plans/contracts/mechframe-upgrade.md`): the new copy from a Git ref, the base from the lock's new `kernel.commit` (or found by its hashes), each file three ways, whole or not at all with diffs where both sides changed, `--merged`, the template's files under the same rule (12, 13) |
 | 2026-11-21 | Hook 6, consent categories (decision 0052, `dev plans/contracts/hooks.md`): each `CSP` entry's third item, its category (`necessary` by default, `analytics`, `marketing` or `media`), refused at the start when it's another; `GET /api/kernel/site`'s `consent: {mode, categories}`; CONSENT_MODE (`ask` or `off`); the web's `useConsent` and `<ConsentGate>`, the choice in `__Host-mf_consent`; the CSP unchanged; the hooks index's sixth row (6, 7, 8, 9, 15) |
 | 2026-11-21 | The site's own header and footer, and full-bleed pages (decision 0048, amended; `dev plans/contracts/site-frame.md`; VM Website's "For MechFrame" item 5): `defineSite`'s `header` and `footer`, drawn in the site frame in place of its own, the frame's as the fallback; `SiteAccountLinks`; a route's `bleed` (8) |
 | 2026-11-21 | The kit's next two fixes (decision 0042, amended; VM Website's "For MechFrame" items 3 and 4): Vibrant Mindz's palette gains `line-4`, a field's edge on its marketplace band, and an admin field, select and text area take the gap ring on focus; the site's fields keep their outline (no section's words change) |

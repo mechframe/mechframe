@@ -44,6 +44,6 @@ def test_the_source_is_this_checkout() -> None:
 
 def test_a_command_not_built_yet_is_refused(capsys: pytest.CaptureFixture[str]) -> None:
     with pytest.raises(SystemExit) as stopped:
-        main(["upgrade", "blog"])
+        main(["diff", "blog"])
     assert stopped.value.code == 2
     assert "invalid choice" in capsys.readouterr().err
