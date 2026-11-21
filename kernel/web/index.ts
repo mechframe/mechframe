@@ -34,6 +34,9 @@ export { RequireAuth, RequirePermission } from "./src/guards/guards";
 export { useSlot, SlotOutlet } from "./src/slots/slots";
 export { useModuleEnabled, useSite } from "./src/site/site";
 export type { Site } from "./src/site/site";
+// A third-party script or iframe held for the visitor's consent (hook 6, decision 0052).
+export { CONSENT_COOKIE, ConsentGate, useConsent } from "./src/consent/consent";
+export type { Consent, ConsentCategory, ConsentGateProps } from "./src/consent/consent";
 // A settings section's admin form, for a module's admin.settings.section part (K4.8).
 export { useSettings } from "./src/settings/useSettings";
 export type { SaveOutcome, SettingsForm, SettingsValues } from "./src/settings/useSettings";

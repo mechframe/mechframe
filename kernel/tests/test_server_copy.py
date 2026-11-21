@@ -905,6 +905,7 @@ async def test_the_site_route_answers_the_identity_to_anyone(
         "logo": "",
         "card_image": "",
         "same_as": [],
+        "consent": {"mode": "ask", "categories": []},
     }
     form = await settings.form(db, server_copy.SECTION)
     await settings.save(
@@ -931,6 +932,7 @@ async def test_the_site_route_answers_the_identity_to_anyone(
             "logo": "/logo.png",
             "card_image": "https://cdn.test/card.png",
             "same_as": ["https://social.test/us"],
+            "consent": {"mode": "ask", "categories": []},
         }
     finally:
         form = await settings.form(db, server_copy.SECTION)

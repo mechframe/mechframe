@@ -55,8 +55,9 @@ export interface paths {
         /**
          * Site
          * @description The site's name and saved identity, for the web app's home page, frame
-         *     and `<Seo>` (K4 contract §2, addition 2). llms.txt's summary and the AI
-         *     crawlers' switch stay with the server.
+         *     and `<Seo>` (K4 contract §2, addition 2), and what it asks consent for
+         *     (hook 6). llms.txt's summary and the AI crawlers' switch stay with the
+         *     server.
          */
         get: operations["site_api_kernel_site_get"];
         put?: never;
@@ -2444,7 +2445,8 @@ export interface components {
         };
         /**
          * Site
-         * @description The site's identity as the web app reads it (`useSite`).
+         * @description The site's identity as the web app reads it (`useSite`), and what it
+         *     asks consent for (`useConsent`).
          */
         Site: {
             /** Name */
@@ -2462,6 +2464,22 @@ export interface components {
             card_image: string;
             /** Same As */
             same_as: string[];
+            consent: components["schemas"]["SiteConsent"];
+        };
+        /**
+         * SiteConsent
+         * @description What the web app asks consent for (kernel.consent, hook 6): CONSENT_MODE,
+         *     and the categories the modules on name in their CSP entries, other than
+         *     `necessary`, in the order `analytics`, `marketing`, `media`.
+         */
+        SiteConsent: {
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "ask" | "off";
+            /** Categories */
+            categories: ("analytics" | "marketing" | "media")[];
         };
         /** StepUp */
         StepUp: {

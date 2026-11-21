@@ -708,10 +708,10 @@
    "gate": "",
    "step_order": 6,
    "step": "Consent categories",
-   "status": "todo",
-   "status_label": "To do",
-   "prs": "",
-   "decisions": "",
+   "status": "done",
+   "status_label": "Done",
+   "prs": "#107",
+   "decisions": "0052",
    "note": ""
   },
   {

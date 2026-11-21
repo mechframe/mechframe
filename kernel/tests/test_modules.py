@@ -302,7 +302,7 @@ def test_load_module_builds_a_module_from_its_fixed_names(
         module_id,
         {
             "__init__.py": (
-                'CSP = [("frame-src", "https://player.test")]\n'
+                'CSP = [("frame-src", "https://player.test", "media"), ("img-src", "https://cdn.test")]\n'
                 "class Check:\n"
                 "    async def verify(self, request, proof, form):\n"
                 "        return None\n"
@@ -389,7 +389,10 @@ def test_load_module_builds_a_module_from_its_fixed_names(
     assert module.router is not None
     assert module.settings is not None
     assert module.settings().model_dump() == {"size": 3}
-    assert module.csp == (("frame-src", "https://player.test"),)
+    assert module.csp == (
+        ("frame-src", "https://player.test", "media"),
+        ("img-src", "https://cdn.test"),
+    )
     assert list(module.emails) == [f"{module_id}.new_photo"]
     assert [job.name for job in module.jobs] == [f"{module_id}.resize"]
     assert [events.declaration(model) for model in module.payloads] == [
