@@ -141,7 +141,10 @@ async def _modules_items(db: AsyncSession, user: User, on: Iterable[str]) -> lis
     allowed: dict[str, bool] = {}
     for module in sorted(set(on) & set(_providers)):
         try:
-            items = await _providers[module](db, user)
+            # A savepoint of its own: a database error rolls back only this
+            # module's reads, and the next module's still run (Codex on #110).
+            async with db.begin_nested():
+                items = await _providers[module](db, user)
         except Exception as error:  # one module's failure never breaks the Dashboard
             log.warning("%s's attention items failed (%s).", module, type(error).__name__)
             continue

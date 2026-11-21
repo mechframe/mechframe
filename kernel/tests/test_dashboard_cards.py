@@ -10,6 +10,7 @@ import uuid
 from typing import Any
 
 import pytest
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from harness.probe import MODULES as PROBES
@@ -30,6 +31,11 @@ async def _open(db: Any) -> bool:
 
 async def _broken(db: Any) -> bool:
     raise RuntimeError("the check fell over")
+
+
+async def _bad_query(db: Any) -> bool:
+    await db.execute(text("SELECT 1 / 0"))  # Postgres refuses it: the transaction would abort
+    return True
 
 
 def _step(key: str = "shop.connect", **fields: Any) -> setup.Step:
@@ -159,6 +165,44 @@ async def test_steps_show_by_permission_and_module_each_checked_now(db: AsyncSes
         "blog.write"
     ]
     assert await setup.for_person(db, editor_id, {"shop", "blog"}) == []
+
+
+@pytest.mark.db
+async def test_a_database_error_in_one_check_leaves_the_rest_readable(db: AsyncSession) -> None:
+    """A check whose query fails rolls back only itself: the steps after it,
+    with a permission still to read, are checked as before (Codex on #110)."""
+    setup.install(
+        setup.build(
+            [
+                _module("blog", steps=(_step(key="blog.write", done=_bad_query),)),
+                _module("shop", steps=(_step(permission="auth.audit.read", done=_done),)),
+            ]
+        )
+    )
+    admin = await _person(db, "admin")
+    found = await setup.for_person(db, admin.id, {"blog", "shop"})
+    assert [(step["key"], step["done"]) for step in found] == [
+        ("blog.write", False),
+        ("shop.connect", True),
+    ]
+
+
+@pytest.mark.db
+async def test_a_database_error_in_one_modules_items_leaves_the_rest(
+    app_factory: AppFactory, db: AsyncSession
+) -> None:
+    async def blog(db: Any, user: Any) -> list[attention.Item]:
+        await db.execute(text("SELECT 1 / 0"))
+        return []
+
+    async def shop(db: Any, user: Any) -> list[attention.Item]:
+        return [_item("shop.audit", permission="auth.audit.read")]
+
+    app_factory([])
+    attention.install(attention.build([_module("blog", needs=blog), _module("shop", needs=shop)]))
+    admin = await _person(db, "admin")
+    found = await attention.for_person(db, admin, {"blog", "shop"})
+    assert [item.key for item in found if item.key.startswith("shop.")] == ["shop.audit"]
 
 
 @pytest.mark.db

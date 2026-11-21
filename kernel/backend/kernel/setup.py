@@ -117,8 +117,12 @@ def install(steps: Mapping[str, tuple[Step, ...]]) -> None:
 
 
 async def _done(db: AsyncSession, step: Step) -> bool:
+    """The step's check, in a savepoint of its own: a database error in it
+    rolls back only the check, and the rest of the page reads on (Codex on
+    #110)."""
     try:
-        return bool(await step.done(db))
+        async with db.begin_nested():
+            return bool(await step.done(db))
     except Exception as error:  # a broken check shows the step open, never the page broken
         log.warning("Setup step %s couldn't be checked (%s).", step.key, type(error).__name__)
         return False
