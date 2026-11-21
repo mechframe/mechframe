@@ -85,7 +85,7 @@
           "kernel"
         ],
         "summary": "Site",
-        "description": "The site's name and saved identity, for the web app's home page, frame\nand `<Seo>` (K4 contract §2, addition 2). llms.txt's summary and the AI\ncrawlers' switch stay with the server.",
+        "description": "The site's name and saved identity, for the web app's home page, frame\nand `<Seo>` (K4 contract §2, addition 2), and what it asks consent for\n(hook 6). llms.txt's summary and the AI crawlers' switch stay with the\nserver.",
         "operationId": "site_api_kernel_site_get",
         "responses": {
           "200": {
@@ -7117,6 +7117,9 @@
             },
             "type": "array",
             "title": "Same As"
+          },
+          "consent": {
+            "$ref": "#/components/schemas/SiteConsent"
           }
         },
         "additionalProperties": false,
@@ -7127,10 +7130,43 @@
           "kind",
           "logo",
           "card_image",
-          "same_as"
+          "same_as",
+          "consent"
         ],
         "title": "Site",
-        "description": "The site's identity as the web app reads it (`useSite`)."
+        "description": "The site's identity as the web app reads it (`useSite`), and what it\nasks consent for (`useConsent`)."
+      },
+      "SiteConsent": {
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "ask",
+              "off"
+            ],
+            "title": "Mode"
+          },
+          "categories": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "analytics",
+                "marketing",
+                "media"
+              ]
+            },
+            "type": "array",
+            "title": "Categories"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "mode",
+          "categories"
+        ],
+        "title": "SiteConsent",
+        "description": "What the web app asks consent for (kernel.consent, hook 6): CONSENT_MODE,\nand the categories the modules on name in their CSP entries, other than\n`necessary`, in the order `analytics`, `marketing`, `media`."
       },
       "StepUp": {
         "properties": {

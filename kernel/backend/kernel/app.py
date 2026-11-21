@@ -82,6 +82,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from kernel import (
     audit,
     bot,
+    consent,
     email,
     error_tracking,
     events,
@@ -246,6 +247,7 @@ def assemble(
         vocabularies = taxonomy.build(installed)
         sources = search.build(installed)
         providers = bot.build(installed)
+        asked = consent.build(installed)
         public = server_copy.build(installed, site)
         catalog = events.build(
             [
@@ -287,6 +289,7 @@ def assemble(
     taxonomy.install(vocabularies)
     search.install(sources, language=config.search_language)
     bot.install(providers)
+    consent.install(asked)
     server_copy.install(site_name=config.site_name, site_url=config.site_url)
     # Here, not in create_app: a job in a worker of its own reads its module's
     # settings too (Codex on #63).
@@ -321,7 +324,8 @@ def create_app(
 
     policy = ContentSecurityPolicy()
     for module in installed:
-        for directive, source in module.csp:
+        # The category is the web app's to hold (kernel.consent): the policy doesn't change.
+        for directive, source, _category in consent.entries(module):
             policy.allow(directive, source, module=module.id)
 
     owns_database = database is None

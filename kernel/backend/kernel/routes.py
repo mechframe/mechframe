@@ -3,7 +3,8 @@ the staff's audit log (decision 0037), the dashboard's "Needs you" list (K4
 contract §2, addition 9), each person's notices (decision 0038), and
 moderation: reports, the queue, actions, time-outs and the moderators' log
 (decision 0039); and the terms of the vocabularies modules declare, with
-staff's changes to them (decision 0052, hook 2); and site search (hook 3)."""
+staff's changes to them (decision 0052, hook 2); site search (hook 3); and
+the site's consent categories (hook 6)."""
 
 from __future__ import annotations
 
@@ -26,7 +27,16 @@ from sqlalchemy import ColumnElement, or_, select, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from kernel import attention, audit, moderation, notifications, search, server_copy, taxonomy
+from kernel import (
+    attention,
+    audit,
+    consent,
+    moderation,
+    notifications,
+    search,
+    server_copy,
+    taxonomy,
+)
 from kernel.access import public
 from kernel.answers import Answer, AuditEntry, Id, TargetRef, When, answer
 from kernel.auth import sessions
@@ -56,8 +66,18 @@ class ModulesOn(Answer):
     on: list[str]
 
 
+class SiteConsent(Answer):
+    """What the web app asks consent for (kernel.consent, hook 6): CONSENT_MODE,
+    and the categories the modules on name in their CSP entries, other than
+    `necessary`, in the order `analytics`, `marketing`, `media`."""
+
+    mode: Literal["ask", "off"]
+    categories: list[Literal["analytics", "marketing", "media"]]
+
+
 class Site(Answer):
-    """The site's identity as the web app reads it (`useSite`)."""
+    """The site's identity as the web app reads it (`useSite`), and what it
+    asks consent for (`useConsent`)."""
 
     name: str
     description: str
@@ -65,6 +85,7 @@ class Site(Answer):
     logo: str
     card_image: str
     same_as: list[str]
+    consent: SiteConsent
 
 
 class AuditRole(Answer):
@@ -239,11 +260,13 @@ async def modules_on(request: Request) -> dict[str, Any]:
 
 
 @router.get("/site", dependencies=[Depends(public)], response_model=Site)
-async def site(db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
+async def site(request: Request, db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
     """The site's name and saved identity, for the web app's home page, frame
-    and `<Seo>` (K4 contract §2, addition 2). llms.txt's summary and the AI
-    crawlers' switch stay with the server."""
+    and `<Seo>` (K4 contract §2, addition 2), and what it asks consent for
+    (hook 6). llms.txt's summary and the AI crawlers' switch stay with the
+    server."""
     found = await server_copy.identity(db)
+    on = await request.app.state.modules.on(db)
     return {
         "name": found.name,
         "description": found.description,
@@ -251,6 +274,10 @@ async def site(db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
         "logo": found.logo,
         "card_image": found.card_image,
         "same_as": list(found.same_as),
+        "consent": {
+            "mode": request.app.state.config.consent_mode,
+            "categories": consent.categories(on),
+        },
     }
 
 

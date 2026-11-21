@@ -186,6 +186,12 @@ class KernelConfig(BaseSettings):
     #: `kernel.search_reindex` once.
     search_language: SearchLanguage = "english"
 
+    #: Consent (kernel.consent, decision 0052, hook 6): `ask` holds what a
+    #: module's CSP entry puts in a category other than `necessary` (an
+    #: analytics script, a video player) until the visitor grants it; `off`
+    #: grants every category, for a site with nothing to ask.
+    consent_mode: Literal["ask", "off"] = "ask"
+
     rate_limit_enabled: bool = True
     #: Where counts live: memory:// for one process, redis://… once a site
     #: runs more than one.
