@@ -3,5 +3,28 @@
   "mechframe": "0.1.0",
   "spec": "0.1",
   "generated_at": null,
-  "modules": []
+  "modules": [
+    {
+      "id": "media",
+      "name": "Media library",
+      "version": "0.1.0",
+      "status": "experimental",
+      "category": "media",
+      "summary": "Images uploaded once with alt text, cleaned of metadata, and placed by any module.",
+      "use_when": [
+        "The site's editors upload images for posts, pages, covers, member photos or product shots",
+        "More than one module on the site places images, and an image should be uploaded once and reused",
+        "Photos come from phones and cameras, so their location and camera details must be stripped before they're public"
+      ],
+      "avoid_when": [
+        "The site only shows audio, video or documents: media takes images only, so use the module that stores those",
+        "A single module keeps its own few images that nothing else places: storage.put in that module is enough"
+      ],
+      "requires": {
+        "kernel": "^0.1",
+        "modules": {}
+      },
+      "conflicts": []
+    }
+  ]
 }

@@ -186,6 +186,13 @@ _SEED = [
     "INSERT INTO kernel_export (id, user_id, status, storage_key, created_at, expires_at) "
     "VALUES (gen_random_uuid(), :user, 'ready', 'kernel/exports/x.zip', now(), "
     "now() + interval '7 days')",
+    "INSERT INTO media_image (id, version, file_version, content_type, sha256, width, height, "
+    "bytes, filename, "
+    "alt, uploaded_by, created_at, updated_at) VALUES ('00000000-0000-0000-0000-000000000006', 1, 1, "
+    "'image/png', repeat('a', 64), 640, 480, 1000, 'photo.png', 'A photo', :user, now(), now())",
+    "INSERT INTO media_use (id, image_id, owner, label, link, created_at) VALUES "
+    "(gen_random_uuid(), '00000000-0000-0000-0000-000000000006', 'blog.post:1', 'A post', "
+    "'/admin/blog/1', now())",
 ]
 
 
