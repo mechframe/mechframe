@@ -17,7 +17,8 @@ A site made with `mechframe new` takes the kernel's changes from MechFrame's `ma
 `mechframe upgrade kernel [--site <dir>] [--from <ref>] [--base <commit>] [--merged <path>]... [--dry-run]`
 
 - **New files** come from a Git ref of the CLI's own checkout, `--from main` by default (`git show <ref>:<path>`), never its working tree. So it works whatever branch the checkout is on. It fetches nothing, so `main` is the checkout's local `main`, and `git fetch` beforehand is the caller's job.
-- **The base** is what the site was given. The lock gains `kernel.commit`, the commit the copy came from. `new` writes it when its checkout's kernel files match `HEAD`, and `upgrade` always writes it. An older lock has no commit, so the base is the newest commit on `--from`'s history whose kernel files match every hash in the lock; `--base` names one instead. If none is found, it's refused.
+- **The base** is what the site was given. The lock gains `kernel.commit`, the commit the copy came from. `new` writes it only when every file it copies matches `HEAD`: the kernel's, the template's, the pins and the theme's `tokens.css`. `upgrade` always writes it.
+- **An older lock** has no commit. Its candidates are the commits on `--from`'s history whose kernel files match every hash in the lock. If they all hold the same template files, pins and `tokens.css`, that's the base. If they differ there, the lock can't tell them apart, so it's refused, naming the first and last candidate, until `--base` names one; a template-only commit, such as a README fix, mustn't pass for a site edit. `--base` always overrides. With no candidate at all, it's refused too.
 - **Each file is compared three ways:** L is the lock's hash, S the site's file, N the new one.
 
 | Case | Does |
@@ -65,7 +66,7 @@ No database. In `schema/lock.schema.json`, `kernel` gains an optional `commit`, 
 ## 7. Acceptance
 
 - `test_upgrade.py`: one test per row of §2's table, and that a conflict writes nothing but the diffs. Then `--merged` clears a conflict, and a second run with none left writes everything.
-- Also: an old lock's base found by its hashes, and a bad `--base` refused; `--from` read from a ref while the working tree is on another branch; `--dry-run` writing nothing; the template's files and `tokens.css` under the same rule; and the exits.
+- Also: an old lock's base found by its hashes; refused, naming its candidates, when candidates that match on the kernel differ in the template's files (a template-only commit between them), until `--base` names one; a bad `--base` refused; `new` leaving out `kernel.commit` when a copied file differs from `HEAD`; `--from` read from a ref while the working tree is on another branch; `--dry-run` writing nothing; the template's files and `tokens.css` under the same rule; and the exits.
 - The live check: `tools.site_smoke`'s site, made at one commit and upgraded to a later one, passes its tests and `mechframe check`. Then the Vibrant Mindz site takes `main`'s kernel with it, in its own session.
 
 ## 8. Open questions
@@ -79,4 +80,4 @@ None. The owner answered all four on 2026-11-21, as recommended:
 
 ## Changes after approval
 
-None yet.
+- 2026-11-21 (Codex on #108): **an older lock's base, found by its hashes, is refused when it's ambiguous.** The lock holds hashes only for the kernel's files. So several commits can match it while differing in the template's files: `4e9be32`, for one, changed only `templates/site/README.md`. Taking the newest match would make the site's older copy look like a site edit, and the fix would be kept out. Now the candidates must agree on the template's files, pins and `tokens.css`, or `--base` names one. For the same reason, `new` writes `kernel.commit` only when every file it copies matches `HEAD`, not just the kernel's. The owner's answer 1 stands; this narrows how it finds the base.
