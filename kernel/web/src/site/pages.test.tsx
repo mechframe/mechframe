@@ -4,6 +4,7 @@
  * a tie with a module's route; a more fixed module route still wins.
  */
 import { act, screen } from "@testing-library/react";
+import { memo } from "react";
 import type { Root } from "react-dom/client";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -79,6 +80,21 @@ describe("defineSite", () => {
 
   it("refuses the site's id as a module's", () => {
     expect(() => defineModule({ ...landing, id: SITE })).toThrow(/the kernel's own/);
+  });
+
+  it("takes its own header and footer, a plain component or one React wraps", () => {
+    const Header = () => <header>Ours</header>;
+    expect(() => defineSite(site({ header: Header, footer: memo(() => <footer>Ours</footer>) }))).not.toThrow();
+  });
+
+  it.each([
+    ["header", "Header"],
+    ["footer", { lazy: pageSaying("Ours") }],
+    ["header", null],
+  ] as const)("refuses a %s that isn't a component: %o", (part, value) => {
+    const given: Record<string, unknown> = { ...site() };
+    given[part] = value;
+    expect(() => defineSite(given as SiteDefinition)).toThrow(new RegExp(`The site's ${part} must be a component, such as \`${part}: `));
   });
 });
 
@@ -185,5 +201,29 @@ describe("mountApp with the site's pages", () => {
     document.body.innerHTML = '<div id="root"></div>';
     const routes = { public: [{ path: "/sign-in", lazy: pageSaying("Ours") }], member: [] };
     expect(() => mountApp({ modules: [], site: site({ routes }) })).toThrow(/takes the kernel's page/);
+  });
+
+  it("draws the site's own header and footer in the frame", async () => {
+    routedFetch({
+      "GET /api/kernel/site": {
+        status: 200,
+        body: { name: "Mounted", description: "", kind: "Organization", logo: "", card_image: "", same_as: [] },
+      },
+      "GET /api/kernel/modules": { status: 200, body: { on: [] } },
+      "GET /api/auth/session": problem(401, "kernel.not_signed_in"),
+    });
+    document.body.innerHTML = '<div id="root"></div>';
+    const header = () => <header>Our own header</header>;
+    const footer = () => <footer>Our own footer</footer>;
+    mounted.push(await mountApp({ modules: [], site: site({ header, footer }) }));
+    expect(await screen.findByRole("heading", { name: "Our own home" })).toBeInTheDocument();
+    expect(screen.getByRole("banner")).toHaveTextContent("Our own header");
+    expect(screen.getByRole("contentinfo")).toHaveTextContent("Our own footer");
+  });
+
+  it("refuses a site whose header isn't a component", () => {
+    document.body.innerHTML = '<div id="root"></div>';
+    const given = { ...site(), header: "Header" } as unknown as SiteDefinition;
+    expect(() => mountApp({ modules: [], site: given })).toThrow(/The site's header must be a component/);
   });
 });

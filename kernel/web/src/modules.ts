@@ -19,6 +19,11 @@ export type ModuleRoute = {
   lazy: () => Promise<{ default: ComponentType }>;
   /** For admin routes: the permission a user needs, such as "blog.post.write". */
   permission?: string;
+  /**
+   * A public or member page drawn edge to edge: the site frame's `<main>`
+   * drops its padding while it's open. Not for an admin route.
+   */
+  bleed?: boolean;
 };
 
 export type ModuleDefinition = {
@@ -59,6 +64,9 @@ function checkRoutes(definition: ModuleDefinition): void {
       }
       if (level === "admin" && !route.permission) {
         throw new Error(`${definition.id}'s admin route ${route.path} must name a permission.`);
+      }
+      if (level === "admin" && route.bleed) {
+        throw new Error(`${definition.id}'s admin route ${route.path} can't be bleed: the admin frame has its own layout.`);
       }
       if (level !== "admin" && (route.path === "/admin" || route.path.startsWith("/admin/"))) {
         throw new Error(`${definition.id}'s ${level} route ${route.path} is under /admin: list it as an admin route.`);
@@ -126,10 +134,47 @@ export type SiteDefinition = {
   };
   /** The kernel slots the site fills, as a module's binding does. */
   slots?: Slots;
+  /**
+   * The site's header, drawn in place of the frame's on every page in the site
+   * frame (not the sign-in or admin frames), after the frame's skip link. Its
+   * root is a `<header>`. Build it from `SiteAccountLinks`, `SlotOutlet` and
+   * `useSite`, so the modules' links and signing in still show. If it fails to
+   * draw, the frame's own is drawn instead.
+   */
+  header?: ComponentType;
+  /** The site's footer, in place of the frame's: its root is a `<footer>`, with `site.footer`'s entries where it puts them. */
+  footer?: ComponentType;
 };
+
+/** The parts of the site frame a site gives: its header and footer. */
+export type SiteFrameParts = Pick<SiteDefinition, "header" | "footer">;
+
+/** A function component, or one React wraps (memo, forwardRef, lazy), all objects with `$$typeof`. */
+function isComponent(value: unknown): boolean {
+  return typeof value === "function" || (typeof value === "object" && value !== null && "$$typeof" in value);
+}
+
+function checkFrame(site: SiteDefinition): void {
+  for (const part of ["header", "footer"] as const) {
+    const given: unknown = site[part];
+    if (given !== undefined && !isComponent(given)) {
+      const name = part === "header" ? "Header" : "Footer";
+      throw new Error(`The site's ${part} must be a component, such as \`${part}: ${name}\`.`);
+    }
+  }
+}
+
+/** The site's header and footer, as the frame reads them; none for a site that gives neither. */
+export function siteFrame(site?: SiteDefinition): SiteFrameParts {
+  return {
+    ...(site?.header ? { header: site.header } : {}),
+    ...(site?.footer ? { footer: site.footer } : {}),
+  };
+}
 
 /** The site as the router and the slots read it: a module that's always on, under the id `SITE`. */
 export function siteModule(site: SiteDefinition): ModuleDefinition {
+  checkFrame(site);
   const definition: ModuleDefinition = {
     id: SITE,
     routes: { public: site.routes.public, member: site.routes.member, admin: [] },
@@ -144,7 +189,7 @@ export function siteModule(site: SiteDefinition): ModuleDefinition {
  * Registers the site's own pages, in `src/site/site.ts`. Checks them as
  * `defineModule` checks a module's: nothing under /admin, no path given twice,
  * no route that takes one of the kernel's pages, and slot entries the kernel
- * can show.
+ * can show. A header or footer it gives must be a component.
  */
 export function defineSite(site: SiteDefinition): SiteDefinition {
   siteModule(site);

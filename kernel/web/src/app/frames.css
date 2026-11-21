@@ -83,4 +83,9 @@
   .mf-site main {
     padding: 1rem;
   }
+
+  /* A page that runs full bleed (`bleed: true` on its route): edge to edge. */
+  .mf-site main.mf-bleed {
+    padding: 0;
+  }
 }

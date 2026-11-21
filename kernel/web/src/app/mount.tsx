@@ -15,7 +15,7 @@ import { flushSync } from "react-dom";
 import { RouterProvider, createBrowserRouter } from "react-router";
 
 import { apiQueryOptions, retryUnlessRefused } from "../api/client";
-import { defineModule, siteModule, type ModuleDefinition, type SiteDefinition } from "../modules";
+import { defineModule, siteFrame, siteModule, type ModuleDefinition, type SiteDefinition } from "../modules";
 import { StepUpProvider } from "../auth/StepUp";
 import { SessionHandlers } from "../session/session";
 import { ToastProvider } from "../ui/Toast";
@@ -108,7 +108,7 @@ export function mountApp(options: AppOptions): Promise<Root> {
   if (!root) throw new Error("The page has no #root to mount the app in.");
   checkModules(options.modules);
   const modules = options.site ? [siteModule(options.site), ...options.modules] : options.modules;
-  const setup: KernelSetup = { modules, adminSections: options.adminSections ?? [] };
+  const setup: KernelSetup = { modules, adminSections: options.adminSections ?? [], frame: siteFrame(options.site) };
   const queryClient = kernelQueryClient();
   return modulesOn(queryClient).then((on) => {
     const router = createBrowserRouter(buildRoutes(setup.modules, on));

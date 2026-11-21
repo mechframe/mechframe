@@ -53,6 +53,22 @@ describe("defineModule", () => {
     expect(() => defineModule(blog({ routes }))).toThrow(/takes the kernel's page/);
   });
 
+  it("takes a public or member route that runs full bleed", () => {
+    const routes = {
+      ...blog().routes,
+      public: [{ path: "/blog", lazy: page, bleed: true }],
+      member: [{ path: "/blog/drafts", lazy: page, bleed: true }],
+    };
+    expect(() => defineModule(blog({ routes }))).not.toThrow();
+  });
+
+  it("refuses an admin route that runs full bleed", () => {
+    const routes = { ...blog().routes, admin: [{ path: "/admin/blog", lazy: page, permission: "blog.post.write", bleed: true }] };
+    expect(() => defineModule(blog({ routes }))).toThrow(
+      "blog's admin route /admin/blog can't be bleed: the admin frame has its own layout.",
+    );
+  });
+
   it.each(["public", "member"] as const)("refuses a %s route under /admin", (level) => {
     const routes = { ...blog().routes, [level]: [{ path: "/admin/mine", lazy: page }] };
     expect(() => defineModule(blog({ routes }))).toThrow(/list it as an admin route/);
