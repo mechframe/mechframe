@@ -136,7 +136,7 @@ The ten hooks the Must modules need (decision 0018), in the shapes and order of 
 | Search index | Done | [#99](https://github.com/mechframe/mechframe/pull/99) | [0052](decisions/0052-the-contract-hooks.md) | kernel.search: search.py's SEARCH and content_types[].search, the kernel table kernel_search_document (kernel_0014), the kernel hearing kernel.content.*, the kernel.search_reindex job, and GET /api/kernel/search |
 | Seed data | Done | [#102](https://github.com/mechframe/mechframe/pull/102) | [0052](decisions/0052-the-contract-hooks.md) |  |
 | Bot check | Done | [#103](https://github.com/mechframe/mechframe/pull/103) | [0052](decisions/0052-the-contract-hooks.md) |  |
-| Consent categories | Done | [#105](https://github.com/mechframe/mechframe/pull/105) | [0052](decisions/0052-the-contract-hooks.md) |  |
+| Consent categories | Done | [#107](https://github.com/mechframe/mechframe/pull/107) | [0052](decisions/0052-the-contract-hooks.md) |  |
 | Export and erase | To do |  |  |  |
 | Dashboard cards | To do |  |  |  |
 | Entitlements | To do |  |  | Waits until just before Vibrant Mindz step 5, its downloads (the owner, 2026-11-21) |
