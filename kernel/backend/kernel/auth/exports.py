@@ -30,7 +30,8 @@ from typing import Any, Literal, cast
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import RedirectResponse
-from sqlalchemy import delete, select
+from sqlalchemy import String, delete, select
+from sqlalchemy import cast as sql_cast
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from kernel import audit as audit_log
@@ -46,6 +47,7 @@ from kernel.email import queue_message
 from kernel.errors import Problem
 from kernel.models import AuditEvent
 from kernel.models import Export as ExportRow
+from kernel.models import Job as JobRow
 from kernel.ratelimit import rate_limit
 
 log = logging.getLogger(__name__)
@@ -130,7 +132,8 @@ async def ask_for_export(
     row = ExportRow(user_id=user.id, status="queued", created_at=now, expires_at=now + KEEP)
     db.add(row)
     await db.flush()
-    await jobs.enqueue(db, MAKE.name, {"export_id": str(row.id)})
+    # Keyed by the copy, so the prune can tell a live job from a lost one.
+    await jobs.enqueue(db, MAKE.name, {"export_id": str(row.id)}, key=str(row.id))
     audit.record(
         db,
         request,
@@ -248,8 +251,10 @@ async def _made(ctx: jobs.Context, export_id: uuid.UUID) -> None:
     async with ctx.sessions() as db:
         row = await db.get(ExportRow, export_id, with_for_update=True)
         user = await db.get(User, row.user_id) if row and row.user_id else None
-        if row is None or user is None:
-            await storage.delete(key)  # its account went while it was made
+        if row is None or user is None or row.status != "queued":
+            # Its account went, or it was failed meanwhile: the file goes,
+            # and nothing more is mailed (CodeRabbit on #109).
+            await storage.delete(key)
             return
         now = clock.now()
         row.status, row.storage_key, row.expires_at = "ready", key, now + KEEP
@@ -316,15 +321,22 @@ async def _prune(ctx: jobs.Context) -> None:
     ZIP and then fail to say so. While storage is off it deletes nothing: a
     row is what finds its file once storage is back (CodeRabbit on #109).
 
-    First, a copy still queued a day after it was asked for lost its job: a
-    worker that died on the last try leaves the job dead without running it
-    again. It's failed, and its owner told (CodeRabbit on #109)."""
+    First, a copy still queued a day after it was asked for, with no job of
+    its own queued or running, lost its job: a worker that died on the last
+    try leaves the job dead without running it again. It's failed, and its
+    owner told; one whose job is only late or still at work waits for it
+    (CodeRabbit on #109)."""
+    live = select(JobRow.key).where(
+        JobRow.name == MAKE.name, JobRow.state.in_(("queued", "running"))
+    )
     async with ctx.sessions() as db:
         stuck = list(
             (
                 await db.scalars(
                     select(ExportRow.id).where(
-                        ExportRow.status == "queued", ExportRow.created_at <= clock.now() - STUCK
+                        ExportRow.status == "queued",
+                        ExportRow.created_at <= clock.now() - STUCK,
+                        sql_cast(ExportRow.id, String).not_in(live),
                     )
                 )
             ).all()
