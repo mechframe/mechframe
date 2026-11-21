@@ -12,10 +12,11 @@ import json
 import shutil
 import subprocess
 from pathlib import Path
+from typing import Any
 
 import pytest
 
-from mechframe import check, lock
+from mechframe import check, lock, source
 from mechframe.__main__ import main
 from mechframe.hashes import digest
 
@@ -287,15 +288,58 @@ def test_once_every_conflict_is_merged_it_writes_everything(repo: Path, site: Pa
     ]
 
 
-def test_merged_naming_a_file_that_isnt_a_conflict_is_refused(
+def test_merged_naming_a_file_this_upgrade_doesnt_compare_is_refused(
     repo: Path, site: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     edit(repo / KERNEL_FILE, "SESSIONS = 2\n")
     commit(repo, "second")
     before = tree(site)
-    assert upgrade(repo, site, "--merged", "web/src/kernel/index.ts") == 2
+    assert upgrade(repo, site, "--merged", "backend/kernel/nowhere.py") == 2
     assert tree(site) == before
-    assert "web/src/kernel/index.ts" in capsys.readouterr().err
+    assert "backend/kernel/nowhere.py" in capsys.readouterr().err
+
+
+def test_merged_takes_a_merge_that_took_the_new_copy_whole(repo: Path, site: Path) -> None:
+    # Codex on #111: the merge settled it, so the file is no longer in conflict, and the
+    # command README.txt gives must still run.
+    edit(site / SITE_KERNEL_FILE, "SESSIONS = 'ours'\n")
+    edit(repo / KERNEL_FILE, "SESSIONS = 2\n")
+    commit(repo, "second")
+    assert upgrade(repo, site) == 1
+    edit(site / SITE_KERNEL_FILE, "SESSIONS = 2\n")  # took theirs, whole
+    assert upgrade(repo, site, "--merged", SITE_KERNEL_FILE) == 0
+    assert check.check(site, root=repo).edited == []
+
+
+def test_merged_takes_a_merge_that_deleted_a_file_the_kernel_removed(
+    repo: Path, site: Path
+) -> None:
+    edit(site / SITE_KERNEL_FILE, "SESSIONS = 'ours'\n")
+    (repo / KERNEL_FILE).unlink()
+    commit(repo, "second")
+    assert upgrade(repo, site) == 1
+    (site / SITE_KERNEL_FILE).unlink()  # the merge: gone, as the kernel has it
+    assert upgrade(repo, site, "--merged", SITE_KERNEL_FILE) == 0
+    assert SITE_KERNEL_FILE not in kernel_lock(site, repo)
+
+
+def test_the_lock_is_read_while_the_site_is_held(
+    repo: Path, site: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Codex on #111: read before the hold, an add finishing meanwhile would be written over.
+    real = lock.read
+    held: list[bool] = []
+
+    def reading(folder: Path, root: Path = source.ROOT) -> dict[str, Any]:
+        held.append((folder / ".mechframe-busy").exists())
+        return real(folder, root)
+
+    monkeypatch.setattr(lock, "read", reading)
+    edit(repo / KERNEL_FILE, "SESSIONS = 2\n")
+    commit(repo, "second")
+    assert upgrade(repo, site) == 0
+    assert held
+    assert all(held)
 
 
 # --- the base ----------------------------------------------------------------------------

@@ -453,11 +453,12 @@ def run(
         )
     if not site.is_dir():
         raise Refused(f"{site} isn't a folder: is this a MechFrame site?")
-    try:
-        data = lock.read(site, root)
-    except lock.LockError as error:
-        raise Refused("; ".join(error.problems)) from None
     with _busy(site):
+        # Read while held, so an add or remove that ends meanwhile isn't written over (Codex on #111).
+        try:
+            data = lock.read(site, root)
+        except lock.LockError as error:
+            raise Refused("; ".join(error.problems)) from None
         return _run(site, data, root, ref, base, [_normal(each) for each in merged], dry_run)
 
 
@@ -488,14 +489,20 @@ def _run(
     entries = _entries(reader, site, data, base, tip, site_name(site), unread)
     by_path = {each.path: each for each in entries}
     verdicts = [judge(each) for each in entries]
-    conflicted = {each.path for each in verdicts if each.kind == "conflict"}
-    stray = [path for path in merged if path not in conflicted]
+    # A merge may settle a file outright (the new copy taken whole, or a file the kernel
+    # removed deleted): it's no longer a conflict and follows the table, so the command
+    # README.txt gives still runs (Codex on #111). Only a path it doesn't compare is refused.
+    compared = {each.path for each in verdicts}
+    stray = [path for path in merged if path not in compared]
     if stray:
         raise Refused(
-            f"--merged {', '.join(stray)}: not a file both sides changed in this upgrade, so "
-            "there's nothing to merge. Name only the files it listed."
+            f"--merged {', '.join(stray)}: not a file this upgrade compares, so there's nothing "
+            "to merge. Name the files it listed."
         )
-    verdicts = [Verdict(each.path, "merged") if each.path in merged else each for each in verdicts]
+    verdicts = [
+        Verdict(each.path, "merged") if each.kind == "conflict" and each.path in merged else each
+        for each in verdicts
+    ]
     env = [
         gitref.objects(root, [f"{commit}:{new.TEMPLATE}/{settings.ENV}"])[0]
         for commit in (base, tip)
