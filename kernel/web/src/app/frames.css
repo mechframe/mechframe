@@ -88,4 +88,10 @@
   .mf-site main.mf-bleed {
     padding: 0;
   }
+
+  /* What the open page draws after the footer (`AfterFooter`): the holder
+     makes no box, so a sticky bar in it sticks over the whole of .mf-site. */
+  .mf-after-footer {
+    display: contents;
+  }
 }
