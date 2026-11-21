@@ -60,6 +60,10 @@ LINK_SECONDS = 300
 KEEP = timedelta(days=7)
 #: The job's tries; the last failed one marks the copy failed.
 TRIES = 5
+#: The job's time limit, and the export's own inside it: what's left gives
+#: `_failed` time to mark the copy and mail its owner.
+JOB_SECONDS = 1800
+WORK_SECONDS = 1680
 
 _stepped_up = require_recent_auth()
 
@@ -219,55 +223,63 @@ async def _mail(db: AsyncSession, user: User, name: str, **context: str | int) -
     await queue_message(db, user.email, subject, text, html)
 
 
+async def _made(ctx: jobs.Context, export_id: uuid.UUID) -> None:
+    """One try's work: collect, store, record and mail."""
+    async with ctx.sessions() as db:
+        row = await db.get(ExportRow, export_id)
+        if row is None or row.status != "queued" or row.user_id is None:
+            return  # its account went, or a run before this one finished it
+        user = await db.get(User, row.user_id)
+        if user is None:
+            return  # the row goes with its account
+        files = {
+            "kernel": await own_data(db, user),
+            **await privacy.export(db, privacy.Subject(user.id, user.email)),
+        }
+    # Made in a thread: compressing a big copy would hold the event loop
+    # (CodeRabbit on #109).
+    data = await asyncio.to_thread(privacy.archive, files, at=clock.now())
+    # Stored outside any session: an upload holds no connection.
+    key = storage_key(export_id)
+    await storage.put(key, data, content_type="application/zip", filename="your-data.zip")
+    async with ctx.sessions() as db:
+        row = await db.get(ExportRow, export_id, with_for_update=True)
+        user = await db.get(User, row.user_id) if row and row.user_id else None
+        if row is None or user is None:
+            await storage.delete(key)  # its account went while it was made
+            return
+        now = clock.now()
+        row.status, row.storage_key, row.expires_at = "ready", key, now + KEEP
+        await _mail(
+            db,
+            user,
+            "kernel.data_export_ready",
+            link=_link(export_id),
+            until=mails.when(row.expires_at),
+        )
+        audit.record_by_kernel(
+            db,
+            "auth.data_export_ready",
+            "success",
+            subject=user.id,
+            details={"export_id": str(export_id), "modules": len(files) - 1},
+        )
+        await db.commit()
+
+
 async def _make(ctx: jobs.Context, payload: dict[str, Any]) -> None:
+    """A try, under the export's own time limit, inside the job's: running out
+    of time is then an ordinary failure, and on the last try the copy is
+    marked failed and its owner told. A worker's shutdown cancels the try
+    instead, which passes through and leaves the job to its lease
+    (CodeRabbit on #109)."""
     export_id = uuid.UUID(str(payload["export_id"]))
     try:
-        async with ctx.sessions() as db:
-            row = await db.get(ExportRow, export_id)
-            if row is None or row.status != "queued" or row.user_id is None:
-                return  # its account went, or a run before this one finished it
-            user = await db.get(User, row.user_id)
-            if user is None:
-                return  # the row goes with its account
-            files = {
-                "kernel": await own_data(db, user),
-                **await privacy.export(db, privacy.Subject(user.id, user.email)),
-            }
-        # Made in a thread: compressing a big copy would hold the event loop
-        # (CodeRabbit on #109).
-        data = await asyncio.to_thread(privacy.archive, files, at=clock.now())
-        # Stored outside any session: an upload holds no connection.
-        key = storage_key(export_id)
-        await storage.put(key, data, content_type="application/zip", filename="your-data.zip")
-        async with ctx.sessions() as db:
-            row = await db.get(ExportRow, export_id, with_for_update=True)
-            user = await db.get(User, row.user_id) if row and row.user_id else None
-            if row is None or user is None:
-                await storage.delete(key)  # its account went while it was made
-                return
-            now = clock.now()
-            row.status, row.storage_key, row.expires_at = "ready", key, now + KEEP
-            await _mail(
-                db,
-                user,
-                "kernel.data_export_ready",
-                link=_link(export_id),
-                until=mails.when(row.expires_at),
-            )
-            audit.record_by_kernel(
-                db,
-                "auth.data_export_ready",
-                "success",
-                subject=user.id,
-                details={"export_id": str(export_id), "modules": len(files) - 1},
-            )
-            await db.commit()
-    except (Exception, asyncio.CancelledError):
-        # A timeout on the last try arrives as a cancellation: it's that try's
-        # failure too, and the shield lets the copy be marked and its owner told
-        # (CodeRabbit on #109).
+        async with asyncio.timeout(WORK_SECONDS):
+            await _made(ctx, export_id)
+    except Exception:
         if ctx.try_number >= TRIES:
-            await asyncio.shield(_failed(ctx, export_id))
+            await _failed(ctx, export_id)
         raise
 
 
@@ -292,20 +304,23 @@ async def _failed(ctx: jobs.Context, export_id: uuid.UUID) -> None:
         await db.commit()
 
 
-MAKE = jobs.handler("kernel.privacy_export", tries=TRIES, timeout=1800)(_make)
+MAKE = jobs.handler("kernel.privacy_export", tries=TRIES, timeout=JOB_SECONDS)(_make)
 
 
 async def _prune(ctx: jobs.Context) -> None:
     """Deletes the copies past their 7 days, with their files: each copy's
     own key, whether or not its row recorded it, since a try can store the
-    ZIP and then fail to say so. With storage off there are no files to go."""
+    ZIP and then fail to say so. While storage is off it deletes nothing: a
+    row is what finds its file once storage is back (CodeRabbit on #109)."""
+    if storage_missing(get_config()):
+        log.warning("Storage is off: the copies past their days wait for it to be back.")
+        return
     async with ctx.sessions() as db:
         gone = list(
             (
                 await db.scalars(select(ExportRow.id).where(ExportRow.expires_at <= clock.now()))
             ).all()
         )
-    files = not storage_missing(get_config())
     for export_id in gone:
         async with ctx.sessions() as db:
             # Locked and checked again: a try finishing meanwhile moves the
@@ -313,8 +328,7 @@ async def _prune(ctx: jobs.Context) -> None:
             row = await db.get(ExportRow, export_id, with_for_update=True)
             if row is None or row.expires_at > clock.now():
                 continue
-            if files:
-                await storage.delete(storage_key(export_id))
+            await storage.delete(storage_key(export_id))
             await db.execute(delete(ExportRow).where(ExportRow.id == export_id))
             await db.commit()
 
