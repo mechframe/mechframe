@@ -1,7 +1,7 @@
 # 0053: `mechframe upgrade kernel`: the new copy from a Git ref, the base from the lock's commit, whole or not at all
 
 - **Date:** 2026-11-21
-- **Status:** Decided; applied in #PR3 (contract `dev plans/contracts/mechframe-upgrade.md`, approved by the owner on 2026-11-21 as recommended, its four answers in §8)
+- **Status:** Decided; applied in #111 (contract `dev plans/contracts/mechframe-upgrade.md`, approved by the owner on 2026-11-21 as recommended, its four answers in §8)
 - **Context:** A site made with `mechframe new` holds a copy of the kernel and the template, and nothing brought the kernel's later changes into it. Vibrant Mindz needed #101's `color.field`, #105's `line-4` and #106's own header and footer. The push plan's way round was a fresh site with the site's own parts moved across (M3). SPEC 12 had left `diff` and `upgrade` for a module's second version, reading the old copy from a Git tag per version. But the kernel's version stays `0.1.0-dev.0` while it changes daily, so a tag per version can't name what a site got. The upgrade needed:
   - where the new copy comes from, when the checkout may be on another branch;
   - the base, what the site was given, for a three-way comparison;
