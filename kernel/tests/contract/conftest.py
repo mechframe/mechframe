@@ -21,6 +21,7 @@ and a call to a route the contract doesn't name raises `UnknownRoute`.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import os
 import re
 import time
@@ -123,9 +124,9 @@ _FAKE_STORAGE = {
 
 
 @contextmanager
-def _fake_storage() -> Iterator[None]:
-    from moto import mock_aws
-
+def _storage_variables() -> Iterator[None]:
+    """The storage variables set, and gone again after: never past a contract
+    test, since the rest of the run keeps storage off (the root conftest)."""
     from kernel import storage
     from kernel.config import reset_config
 
@@ -134,18 +135,7 @@ def _fake_storage() -> Iterator[None]:
     reset_config()
     storage._client.cache_clear()
     try:
-        with mock_aws():
-            client = storage._client(
-                _FAKE_STORAGE["STORAGE_ENDPOINT_URL"],
-                "auto",
-                _FAKE_STORAGE["STORAGE_ACCESS_KEY_ID"],
-                _FAKE_STORAGE["STORAGE_SECRET_ACCESS_KEY"],
-            )
-            for bucket in (_FAKE_STORAGE["STORAGE_BUCKET"], _FAKE_STORAGE["STORAGE_PUBLIC_BUCKET"]):
-                client.create_bucket(
-                    Bucket=bucket, CreateBucketConfiguration={"LocationConstraint": "auto"}
-                )
-            yield
+        yield
     finally:
         for name, value in before.items():
             if value is None:
@@ -156,28 +146,52 @@ def _fake_storage() -> Iterator[None]:
         storage._client.cache_clear()
 
 
+@contextmanager
+def _fake_storage() -> Iterator[None]:
+    """For one contract test: the variables, and an empty fake S3 with both buckets."""
+    from moto import mock_aws
+
+    from kernel import storage
+
+    with _storage_variables(), mock_aws():
+        client = storage._client(
+            _FAKE_STORAGE["STORAGE_ENDPOINT_URL"],
+            "auto",
+            _FAKE_STORAGE["STORAGE_ACCESS_KEY_ID"],
+            _FAKE_STORAGE["STORAGE_SECRET_ACCESS_KEY"],
+        )
+        for bucket in (_FAKE_STORAGE["STORAGE_BUCKET"], _FAKE_STORAGE["STORAGE_PUBLIC_BUCKET"]):
+            client.create_bucket(
+                Bucket=bucket, CreateBucketConfiguration={"LocationConstraint": "auto"}
+            )
+        yield
+
+
 @pytest_asyncio.fixture(scope="session", loop_scope="session")
 async def server(contract_database: str | None) -> AsyncIterator[httpx.AsyncBaseTransport]:
-    """One server for the whole suite; `/api/_test/reset` isolates the tests."""
+    """One server for the whole suite; `/api/_test/reset` isolates the tests.
+    It's built with storage set, so its config says storage is on; each test
+    gets the store itself (`api`)."""
     if contract_database is None:
         yield httpx.AsyncHTTPTransport()
         return
     migrated_url = contract_database
     from harness.testing import build_test_app  # the harness, not the kernel
 
-    with _fake_storage():
-        with _test_support_flag():
-            app = build_test_app(migrated_url)
-        async with app.router.lifespan_context(app):
-            yield httpx.ASGITransport(app=app, raise_app_exceptions=False)
+    with _storage_variables(), _test_support_flag():
+        app = build_test_app(migrated_url)
+    async with app.router.lifespan_context(app):
+        yield httpx.ASGITransport(app=app, raise_app_exceptions=False)
 
 
 @pytest_asyncio.fixture(loop_scope="session")
 async def api(server: httpx.AsyncBaseTransport) -> AsyncIterator[Api]:
-    async with Api(server) as client:
-        reset = await client.http.post("/api/_test/reset")
-        assert reset.status_code == 204, reset.text
-        yield client
+    in_process = not os.environ.get("CONTRACT_BASE_URL")
+    with _fake_storage() if in_process else contextlib.nullcontext():
+        async with Api(server) as client:
+            reset = await client.http.post("/api/_test/reset")
+            assert reset.status_code == 204, reset.text
+            yield client
 
 
 #: Pass as `extensions=UNCHECKED` for a probe that calls what isn't an API route
