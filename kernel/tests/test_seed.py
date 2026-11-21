@@ -373,6 +373,43 @@ async def test_a_run_that_fails_stores_no_image(
     assert stored == ["first/seed/hero.png"]
 
 
+async def test_an_upload_that_fails_after_the_commit_keeps_the_rows_and_a_rerun_stores_all(
+    rows: Database, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Storage isn't in the transaction: the rows go in first, then the images
+    in order. An upload that fails raises, keeping the rows and the images
+    stored before it; the next run stores every image again, each the bytes
+    it was, so one already in the bucket is written over with itself
+    (CodeRabbit on #102)."""
+    bucket: dict[str, bytes] = {}
+    down = {"first/seed/b.png"}
+
+    async def put(key: str, data: bytes, **options: Any) -> None:
+        if key in down:
+            raise RuntimeError("the store is down")
+        bucket[key] = data
+
+    monkeypatch.setattr(seed.storage, "put", put)
+
+    async def images(db: AsyncSession, ctx: seed.Context) -> None:
+        await _writes()(db, ctx)
+        await ctx.put_image("a", width=4, height=4)
+        await ctx.put_image("b", width=4, height=4)
+
+    async with rows.sessions() as db:
+        with pytest.raises(RuntimeError, match="the store is down"):
+            await seed.run(db, [_module("first", images)], environ=ALLOWED)
+    assert [key for key, *_ in await _all_rows(rows)] == ["first-row"]  # committed
+    assert list(bucket) == ["first/seed/a.png"]
+    first_a = bucket["first/seed/a.png"]
+
+    down.clear()
+    async with rows.sessions() as db:
+        await seed.run(db, [_module("first", images)], environ=ALLOWED)
+    assert list(bucket) == ["first/seed/a.png", "first/seed/b.png"]
+    assert bucket["first/seed/a.png"] == first_a
+
+
 async def test_put_image_builds_its_png_off_the_event_loop(
     rows: Database, monkeypatch: pytest.MonkeyPatch
 ) -> None:

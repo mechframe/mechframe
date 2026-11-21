@@ -40,9 +40,13 @@ good: it's set for the one run and cleared after it, in PowerShell
 - `await put_image(name, width=1200, height=630)`: the key of a PNG of one
   colour (drawn from the module and the name) at `<module>/seed/<name>.png`
   in the public bucket, answered at once and stored once the run commits, so
-  a run that fails stores none and overwrites nothing (CodeRabbit on #102).
-  Call it every run, as a seed draws from `random` every run: a run after one
-  whose upload failed stores it then.
+  a seed that raises stores none and overwrites nothing (CodeRabbit on #102).
+  Storage isn't in the transaction, so an upload that fails after the commit
+  raises, keeping the rows and the images stored before it; call
+  `put_image` every run, as a seed draws from `random` every run, and the
+  next run stores them all. A key is the seed's own (`<module>/seed/`) and
+  its bytes are the same each run, so an image it writes over is one an
+  earlier run stored.
 """
 
 from __future__ import annotations
@@ -281,6 +285,7 @@ async def run(
     except BaseException:
         await db.rollback()
         raise
-    # Storage isn't in the transaction: its files go once the rows are in.
+    # Storage isn't in the transaction: its files go once the rows are in. An
+    # upload that fails raises with the rows kept; the next run stores them all.
     await _store(images)
     return seeded
