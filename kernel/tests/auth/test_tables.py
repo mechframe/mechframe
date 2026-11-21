@@ -136,14 +136,21 @@ def test_keyed_hashes(monkeypatch: pytest.MonkeyPatch) -> None:
         reset_config()
 
 
-async def test_the_seeded_grants_are_the_kernel_manifests(tx: AsyncSession) -> None:
-    """SPEC 14.8: permissions are declared in manifests. The migration's seed
-    is frozen, so this holds it to kernel.json (audit F51)."""
+async def test_the_seeded_grants_are_the_manifests(tx: AsyncSession) -> None:
+    """SPEC 14.8: permissions are declared in manifests. The migrations' seeds
+    are frozen, so this holds them to kernel.json and each installed module's
+    module.json, whose migrations grant its own (audit F51; media_0001)."""
     import json
     from pathlib import Path
 
-    manifest = json.loads((Path(__file__).parents[2] / "kernel.json").read_text("utf-8"))
-    declared = {item["key"]: set(item["default_roles"]) for item in manifest["permissions"]}
+    from harness.layout import module_dirs
+
+    manifests = [Path(__file__).parents[2] / "kernel.json"]
+    manifests += [folder / "module.json" for folder in module_dirs()]
+    declared: dict[str, set[str]] = {}
+    for path in manifests:
+        for item in json.loads(path.read_text("utf-8"))["permissions"]:
+            declared[item["key"]] = set(item["default_roles"])
     # Built-in roles only: other tests add custom roles with grants of their own.
     rows = await tx.execute(
         text(
