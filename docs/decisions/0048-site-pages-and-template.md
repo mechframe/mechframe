@@ -1,7 +1,7 @@
 # 0048: The site's own pages, `kernel.load_module`, and how a site runs: always on, `backend` on the path, Railway as code
 
 - **Date:** 2026-11-20
-- **Status:** Decided; applied in K5.2 (#92). Point 5 replaces the contract's `railway.toml`: the owner's choice, 2026-11-20, checked live on a throwaway project.
+- **Status:** Decided; applied in K5.2 (#92). Point 5 replaces the contract's `railway.toml`: the owner's choice, 2026-11-20, checked live on a throwaway project. Amended 2026-11-21 (#PR2, VM Website's "For MechFrame" item 5, the owner's choice; contract `dev plans/contracts/site-frame.md`, approved as recommended): point 2 gains the site's own header and footer, and pages that run full bleed
 - **Context:** K5.2 builds `templates/site/` and `mechframe new` (contract `dev plans/contracts/k5-cli-and-site-template.md`). The owner chose a site's own pages in K5 (§8 question 4): `mountApp({ site })` and `create_app(site=...)`, always on, with server copy, and no switch on Features. The contract asked for their exact shape as change 5. Building the template also had to settle:
   - how a site's `python -m app.…` finds `backend/`;
   - what the template holds beyond the contract's table;
@@ -16,7 +16,9 @@
      - the router holds the site's routes first, so they win a tie, and never waits for the modules' switches to show them;
      - the site's slot entries show whatever modules are on;
      - the site has no admin pages: those are a module's;
-     - in the tests, `renderApp({ sitePages })` takes it (`site` there is the identity).
+     - in the tests, `renderApp({ sitePages })` takes it (`site` there is the identity);
+     - `header` and `footer` (amended 2026-11-21) are components the site frame draws in place of its own on every page in it, never in the sign-in or admin frames. They're components, not `lazy` parts: every page draws them, so a chunk to wait for would flash the frame's own first. The site's part draws its own `<header>` or `<footer>`, so it can be sticky (the owner's pick over the frame drawing the element: sticky stops at its parent's edge). `SiteAccountLinks` is the frame's account links for it. One that fails to draw is caught, and the frame's own is drawn instead;
+     - a public or member route's `bleed: true`, a module's or the site's, drops the frame's `<main>` padding while its page is open (per route, the owner's pick: a whole-site setting would leave the account and 404 pages at the window's edges). It's set as the route matches, before its code loads, and inside a module's switch, so a module that's off is the ordinary 404 page. An admin route can't be bleed.
   3. **`kernel.load_module(manifest)`** builds an `InstalledModule` from a `module.json` and its package's fixed names (decision 0009). The caller puts the package on `sys.path`. The harness's `discover` and a site's `app.installed(MODULE_IDS)` both use it.
   4. **A site's Python runs with `backend` on the path:**
      - `PYTHONPATH=backend` in a terminal (README.md);

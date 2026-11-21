@@ -23,15 +23,15 @@ import { SITE, type ModuleDefinition, type ModuleRoute } from "../modules";
 import { useModulesRead } from "../site/site";
 import { AdminFrame } from "../admin/AdminFrame";
 import { AuthFrame } from "../auth/AuthFrame";
-import { Root, SiteFrame } from "./frames";
+import { Bleed, Root, SiteFrame } from "./frames";
 import { lazyPart } from "./lazy";
 import { KERNEL_PAGES, type KernelPage } from "./pages";
 import { Home, NotFound, Pending, Unreachable } from "./pages/KernelPages";
 import { RouteError } from "./RouteError";
 import { SCREENS } from "./screens";
 
-/** A page at `/`: its module's, and whether it's a member page, behind sign-in. */
-type Owned = { module: string; page: ComponentType; member: boolean };
+/** A page at `/`: its module's, whether it's a member page, behind sign-in, and whether it runs full bleed. */
+type Owned = { module: string; page: ComponentType; member: boolean; bleed: boolean };
 
 /**
  * A module's page waits for its switch, says so if the switch can't be read,
@@ -57,7 +57,8 @@ function Loaded({ page: Page }: { page: ComponentType }) {
 
 function Owner({ owner }: { owner: Owned }) {
   const page = <Loaded page={owner.page} />;
-  return owner.member ? <RequireAuth>{page}</RequireAuth> : page;
+  const shown = owner.member ? <RequireAuth>{page}</RequireAuth> : page;
+  return owner.bleed ? <Bleed>{shown}</Bleed> : shown;
 }
 
 /**
@@ -100,11 +101,13 @@ function moduleRoute(module: ModuleDefinition, route: ModuleRoute, access: Acces
     ) : (
       page
     );
+  // Inside the switch: a module that's off is the ordinary, padded 404 page.
+  const shown = access !== "admin" && route.bleed ? <Bleed>{guarded}</Bleed> : guarded;
   return {
     path: route.path,
     caseSensitive: true, // as the server matches (cubic on #79)
     // The site's own pages have no switch: they never wait for one.
-    element: module.id === SITE ? guarded : <ModuleGate module={module.id}>{guarded}</ModuleGate>,
+    element: module.id === SITE ? shown : <ModuleGate module={module.id}>{shown}</ModuleGate>,
   };
 }
 
@@ -135,7 +138,14 @@ export function buildRoutes(given: readonly ModuleDefinition[], on?: ReadonlySet
     (["public", "member"] as const).flatMap((access) =>
       module.routes[access]
         .filter((route) => route.path === "/")
-        .map((route): Owned => ({ module: module.id, page: lazyPart(route.lazy), member: access === "member" })),
+        .map(
+          (route): Owned => ({
+            module: module.id,
+            page: lazyPart(route.lazy),
+            member: access === "member",
+            bleed: route.bleed === true,
+          }),
+        ),
     ),
   );
   return [

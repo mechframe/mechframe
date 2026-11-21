@@ -16,7 +16,7 @@ import { RouterProvider, createMemoryRouter } from "react-router";
 import type { AdminSection } from "./src/app/context";
 import { KernelProviders, drawNow } from "./src/app/mount";
 import { buildRoutes } from "./src/app/routes";
-import { siteModule, type ModuleDefinition, type SiteDefinition } from "./src/modules";
+import { siteFrame, siteModule, type ModuleDefinition, type SiteDefinition } from "./src/modules";
 import { SESSION_KEY, type SessionUser } from "./src/session/session";
 import type { Site } from "./src/site/site";
 
@@ -100,7 +100,7 @@ function allModules(options: KernelRenderOptions): ModuleDefinition[] {
 
 function drawn(router: ReturnType<typeof createMemoryRouter>, options: KernelRenderOptions): KernelRender {
   const queryClient = testQueryClient(options);
-  const setup = { modules: allModules(options), adminSections: options.adminSections ?? [] };
+  const setup = { modules: allModules(options), adminSections: options.adminSections ?? [], frame: siteFrame(options.sitePages) };
   const app = createElement(KernelProviders, { queryClient, setup, children: createElement(RouterProvider, { router, flushSync: drawNow }) });
   const result = render(options.strict ? createElement(StrictMode, null, app) : app);
   return { ...result, queryClient, router };
