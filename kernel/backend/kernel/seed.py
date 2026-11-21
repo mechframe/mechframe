@@ -37,9 +37,12 @@ good: it's set for the one run and cleared after it, in PowerShell
   never an account at that address the seed didn't make (one with a
   password, the owner role, an unverified address or not active): the run
   is refused rather than take it over (CodeRabbit on #102);
-- `await put_image(name, width=1200, height=630)`: a PNG of one colour (the
-  colour drawn from the module and the name) stored in the public bucket at
-  `<module>/seed/<name>.png`; answers the key.
+- `await put_image(name, width=1200, height=630)`: the key of a PNG of one
+  colour (drawn from the module and the name) at `<module>/seed/<name>.png`
+  in the public bucket, answered at once and stored once the run commits, so
+  a run that fails stores none and overwrites nothing (CodeRabbit on #102).
+  Call it every run, as a seed draws from `random` every run: a run after one
+  whose upload failed stores it then.
 """
 
 from __future__ import annotations
@@ -189,20 +192,22 @@ class Context:
     """What a seed is given: its module, a fixed clock, a seeded random, the
     seeded people and placeholder images."""
 
-    def __init__(self, module: str, people: _People) -> None:
+    def __init__(self, module: str, people: _People, images: dict[str, tuple[int, int]]) -> None:
         self.module = module
         self.now = NOW
         # Seeded data, never a secret: the same draws every run.
         self.random = random.Random(f"mechframe.seed:{module}")  # noqa: S311
         self._people = people
+        self._images = images
 
     async def user(self, role: str) -> uuid.UUID:
         """The seeded account holding `role` (and `member`); made the first time."""
         return await self._people.user(role)
 
     async def put_image(self, name: str, *, width: int = 1200, height: int = 630) -> str:
-        """A one-colour PNG at `<module>/seed/<name>.png` in the public bucket;
-        its key. `name` is 1 to 64 lowercase letters, digits and dashes."""
+        """The key of a one-colour PNG at `<module>/seed/<name>.png` in the
+        public bucket, stored once the run commits. `name` is 1 to 64
+        lowercase letters, digits and dashes."""
         if not (isinstance(name, str) and _NAME.fullmatch(name)):
             raise ValueError(
                 f"{name!r} isn't a seed image's name: 1 to 64 lowercase letters, digits and "
@@ -211,11 +216,17 @@ class Context:
         if not (1 <= width <= _MAX_SIDE and 1 <= height <= _MAX_SIDE):
             raise ValueError(f"A seed image is 1 to {_MAX_SIDE} pixels a side.")
         key = f"{self.module}/seed/{name}.png"
+        self._images[key] = (width, height)
+        return key
+
+
+async def _store(images: Mapping[str, tuple[int, int]]) -> None:
+    """The run's images, once its rows are in."""
+    for key, (width, height) in images.items():
         colour = hashlib.sha256(key.encode()).digest()[:3]
         # Off the event loop: at 4,000 pixels a side it's 48 MB of rows to compress.
         data = await run_in_threadpool(_png, width, height, colour)
         await storage.put(key, data, content_type="image/png", public=True)
-        return key
 
 
 def order(installed: Iterable[InstalledModule]) -> list[InstalledModule]:
@@ -260,13 +271,16 @@ async def run(
         if not inspect.iscoroutinefunction(does):
             raise ValueError(f"{ident}'s seed is `async def seed(db, ctx)`, called once a run.")
     people = _People(db)
+    images: dict[str, tuple[int, int]] = {}
     try:
         for ident, does in parts:
-            await does(db, Context(ident, people))
+            await does(db, Context(ident, people, images))
         seeded = [ident for ident, _ in parts]
         audit.record(db, ACTION, actor=None, details={"seeded": seeded})
         await db.commit()
     except BaseException:
         await db.rollback()
         raise
+    # Storage isn't in the transaction: its files go once the rows are in.
+    await _store(images)
     return seeded

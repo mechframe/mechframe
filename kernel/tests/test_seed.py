@@ -342,6 +342,37 @@ async def test_a_seeded_address_someone_else_holds_is_refused(rows: Database, ki
     assert await _seeded_people(rows) == before
 
 
+async def test_a_run_that_fails_stores_no_image(
+    rows: Database, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The images wait for the run's commit, so a seed that raises after
+    another put one leaves nothing in the bucket, and overwrites nothing
+    already there (CodeRabbit on #102)."""
+    stored: list[str] = []
+
+    async def put(key: str, data: bytes, **options: Any) -> None:
+        stored.append(key)
+
+    monkeypatch.setattr(seed.storage, "put", put)
+
+    async def images(db: AsyncSession, ctx: seed.Context) -> None:
+        assert await ctx.put_image("hero") == f"{ctx.module}/seed/hero.png"  # the key at once
+
+    async def breaks(db: AsyncSession, ctx: seed.Context) -> None:
+        raise RuntimeError("the second module's seed broke")
+
+    async with rows.sessions() as db:
+        with pytest.raises(RuntimeError, match="broke"):
+            await seed.run(
+                db, [_module("first", images), _module("second", breaks)], environ=ALLOWED
+            )
+    assert stored == []
+
+    async with rows.sessions() as db:
+        await seed.run(db, [_module("first", images)], environ=ALLOWED)
+    assert stored == ["first/seed/hero.png"]
+
+
 async def test_put_image_builds_its_png_off_the_event_loop(
     rows: Database, monkeypatch: pytest.MonkeyPatch
 ) -> None:

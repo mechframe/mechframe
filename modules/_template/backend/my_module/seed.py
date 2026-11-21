@@ -10,9 +10,10 @@ second run changes nothing. For example:
     async def seed(db: AsyncSession, ctx: seeding.Context) -> None:
         author = await ctx.user("editor")
         for number, slug in enumerate(("welcome", "second-post"), 1):
+            cover = await ctx.put_image(slug)  # every run: stored once the run commits
             if await db.scalar(select(Item.id).where(Item.slug == slug)) is None:
                 db.add(Item(slug=slug, title=f"Item {number}", author_id=author,
-                            created_at=ctx.now, cover=await ctx.put_image(slug)))
+                            created_at=ctx.now, cover=cover))
 
 `ctx.now` is a fixed instant and `ctx.random` is seeded with the module's
 id, so a seed writes the same rows each run. A module with nothing to seed
