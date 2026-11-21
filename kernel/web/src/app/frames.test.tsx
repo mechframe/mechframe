@@ -9,7 +9,7 @@ import { memo } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { renderApp, testUser } from "../../testing";
-import { SiteAccountLinks, SlotOutlet, defineModule, defineSite, useSite, type SiteDefinition } from "../../index";
+import { AfterFooter, SiteAccountLinks, SlotOutlet, defineModule, defineSite, useSite, type SiteDefinition } from "../../index";
 import { routedFetch } from "../test-fetch";
 
 function pageSaying(words: string) {
@@ -104,6 +104,8 @@ describe("the site's own header and footer", () => {
       "header.test-header",
       "main",
       "footer.test-footer",
+      // What the open page draws after the footer (AfterFooter); empty here.
+      "div.mf-after-footer",
     ]);
   });
 
@@ -253,5 +255,99 @@ describe("a page that runs full bleed", () => {
     renderApp({ path: "/drafts", sitePages: drafts, session: testUser() });
     await screen.findByRole("heading", { level: 1, name: "Drafts" });
     expect(main()).toHaveClass("mf-bleed");
+  });
+});
+
+describe("a part after the footer", () => {
+  /** A page that draws a named section after the footer for each bar. */
+  function docking(heading: string, ...bars: string[]) {
+    return () =>
+      Promise.resolve({
+        default: () => (
+          <>
+            <h1>{heading}</h1>
+            {bars.map((bar) => (
+              <AfterFooter key={bar}>
+                <section aria-label={bar}>{bar}</section>
+              </AfterFooter>
+            ))}
+          </>
+        ),
+      });
+  }
+
+  const routes: SiteDefinition["routes"] = {
+    public: [
+      { path: "/release", lazy: docking("The release", "Player") },
+      { path: "/plain", lazy: pageSaying("Plain") },
+      { path: "/two", lazy: docking("Two bars", "First", "Second") },
+    ],
+    member: [],
+  };
+
+  function holder(): Element | null {
+    return document.querySelector(".mf-after-footer");
+  }
+
+  it("is drawn after the site's footer, inside the frame and outside its main", async () => {
+    renderApp({ path: "/release", sitePages: defineSite({ routes, header: Header, footer: Footer }), strict: true });
+    await screen.findByRole("heading", { level: 1, name: "The release" });
+    const bar = screen.getByRole("region", { name: "Player" });
+    const footer = screen.getByRole("contentinfo");
+    expect(footer).toHaveClass("test-footer");
+    expect(footer.compareDocumentPosition(bar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(main()).not.toContainElement(bar);
+    expect(bar.parentElement).toBe(holder());
+    expect(holder()?.parentElement).toBe(main().parentElement);
+    expect(holder()?.parentElement).toHaveClass("mf-site");
+  });
+
+  it("is drawn after the frame's own footer when the site gives none", async () => {
+    renderApp({ path: "/release", sitePages: defineSite({ routes }) });
+    await screen.findByRole("heading", { level: 1, name: "The release" });
+    const bar = screen.getByRole("region", { name: "Player" });
+    const footer = screen.getByRole("contentinfo");
+    expect(footer).toHaveClass("mf-site-footer");
+    expect(footer.compareDocumentPosition(bar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(bar.parentElement).toBe(holder());
+  });
+
+  it("goes when its page closes, and comes back with it", async () => {
+    const { router } = renderApp({ path: "/release", sitePages: defineSite({ routes, header: Header, footer: Footer }) });
+    await screen.findByRole("heading", { level: 1, name: "The release" });
+    expect(screen.getByRole("region", { name: "Player" })).toBeInTheDocument();
+    await router.navigate("/plain");
+    await screen.findByRole("heading", { level: 1, name: "Plain" });
+    expect(screen.queryByRole("region", { name: "Player" })).toBeNull();
+    expect(holder()?.childNodes).toHaveLength(0);
+    await router.navigate("/release");
+    await screen.findByRole("heading", { level: 1, name: "The release" });
+    expect(screen.getByRole("region", { name: "Player" }).parentElement).toBe(holder());
+  });
+
+  it("keeps two parts of one page in the order they're drawn", async () => {
+    renderApp({ path: "/two", sitePages: defineSite({ routes }) });
+    await screen.findByRole("heading", { level: 1, name: "Two bars" });
+    const first = screen.getByRole("region", { name: "First" });
+    const second = screen.getByRole("region", { name: "Second" });
+    expect(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect([...(holder()?.children ?? [])]).toEqual([first, second]);
+  });
+
+  it("draws nothing on an admin page", async () => {
+    routedFetch({});
+    const posts = defineModule({
+      id: "blog",
+      routes: {
+        public: [],
+        member: [],
+        admin: [{ path: "/admin/blog", lazy: docking("Posts", "Player"), permission: "blog.post.write" }],
+      },
+    });
+    const writer = testUser({ roles: ["member", "editor"], second_factor: true, permissions: ["blog.post.write"] });
+    renderApp({ path: "/admin/blog", modules: [posts], session: writer });
+    await screen.findByRole("heading", { level: 1, name: "Posts" });
+    expect(screen.queryByRole("region", { name: "Player" })).toBeNull();
+    expect(holder()).toBeNull();
   });
 });

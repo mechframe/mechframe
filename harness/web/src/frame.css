@@ -38,3 +38,17 @@
   padding: 4rem 1.5rem;
   background: var(--mf-color-surface-raised);
 }
+
+/* The docked page (/frame-docked): taller than the window, and a bar drawn
+   after the footer (AfterFooter) that sticks at the window's foot. */
+.frame-long {
+  min-height: 150vh;
+}
+
+.frame-dock {
+  position: sticky;
+  bottom: 0;
+  padding: 1rem 1.5rem;
+  background: var(--mf-color-surface);
+  border-top: 1px solid var(--mf-color-border);
+}

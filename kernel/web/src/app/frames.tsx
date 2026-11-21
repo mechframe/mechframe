@@ -5,7 +5,8 @@
  *
  * A site may give its own header and footer (`defineSite({ header, footer })`),
  * drawn in place of the frame's, and a page may run full bleed (`bleed: true`
- * on its route): `dev plans/contracts/site-frame.md`, decision 0048.
+ * on its route): `dev plans/contracts/site-frame.md`, decision 0048. A page
+ * may draw a part after the footer (`AfterFooter`): `contracts/after-footer.md`.
  *
  * The site frame holds no heading or paragraph of its own, so a page's words
  * are the only ones the parity test compares with the server's copy.
@@ -21,6 +22,7 @@ import {
   type ComponentType,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import { Link, Outlet, useLocation, useNavigate } from "react-router";
 
 import { useSession, useSignOut } from "../session/session";
@@ -171,20 +173,41 @@ export function Bleed({ children }: { children: ReactNode }) {
   return children;
 }
 
+/** The site frame's holder after its footer; null outside the site frame, and until it's drawn. */
+const AfterFooterHolder = createContext<HTMLElement | null>(null);
+
+/**
+ * Draws its children after the site frame's footer while the page that
+ * renders it is open, such as a player docked at the window's foot
+ * (`dev plans/contracts/after-footer.md`). A portal: they stay in the page's
+ * tree. The holder makes no box, so they lay out in `.mf-site`, and a sticky
+ * bar sticks over the whole page. Outside the site frame it draws nothing.
+ * What's drawn there is outside `<main>`: give it a landmark of its own.
+ */
+export function AfterFooter({ children }: { children: ReactNode }) {
+  const holder = useContext(AfterFooterHolder);
+  return holder ? createPortal(children, holder) : null;
+}
+
 export function SiteFrame({ children }: { children?: ReactNode }) {
   const { frame } = useKernelSetup();
   const [bleeding, setBleeding] = useState(0);
   const count = useCallback((change: 1 | -1) => {
     setBleeding((open) => open + change);
   }, []);
+  // Set as the holder is attached, before paint, so a page's part shows with its first frame.
+  const [holder, setHolder] = useState<HTMLElement | null>(null);
   return (
     <div className="mf-site mf-site-look">
       <Skip />
       <Part given={frame?.header} own={<FrameHeader />} where="The site's header" />
       <main id="main" className={bleeding > 0 ? "mf-bleed" : undefined}>
-        <BleedCount.Provider value={count}>{children ?? <Outlet />}</BleedCount.Provider>
+        <AfterFooterHolder.Provider value={holder}>
+          <BleedCount.Provider value={count}>{children ?? <Outlet />}</BleedCount.Provider>
+        </AfterFooterHolder.Provider>
       </main>
       <Part given={frame?.footer} own={<FrameFooter />} where="The site's footer" />
+      <div ref={setHolder} className="mf-after-footer" />
     </div>
   );
 }

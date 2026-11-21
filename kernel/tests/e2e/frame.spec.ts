@@ -2,7 +2,9 @@
 // full bleed (dev plans/contracts/site-frame.md; decision 0048, amended), on
 // the harness's frame page (harness/web/frame.html, at /frame.html), in both
 // themes: the bleed page edge to edge and the next page's padding back, one
-// of each landmark, the skip link first, and nothing serious for axe.
+// of each landmark, the skip link first, and nothing serious for axe. And a
+// bar a page draws after the footer (contracts/after-footer.md): docked at the
+// window's foot down a long page, below the footer at its end.
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 
@@ -67,6 +69,46 @@ for (const [theme, canvas] of Object.entries(THEMES)) {
       await page.keyboard.press("Tab");
       expect(await page.evaluate(() => document.activeElement?.closest("header")?.className)).toBe("frame-header");
       await expect(page.getByRole("link", { name: "Sign in" })).toBeVisible();
+    });
+
+    test("a bar drawn after the footer rides the window's foot and settles below the footer", async ({ page }) => {
+      await open(page, theme, canvas);
+      await page.getByRole("link", { name: "A page with a docked bar" }).click();
+      await expect(page.getByRole("heading", { level: 1, name: "A docked bar" })).toBeVisible();
+      const bar = page.getByRole("region", { name: "Player" });
+      const footer = page.getByRole("contentinfo");
+      const height = await page.evaluate(() => window.innerHeight);
+      const bottom = async () => {
+        const box = await bar.boundingBox();
+        return (box?.y ?? Number.NaN) + (box?.height ?? Number.NaN);
+      };
+
+      // At the top and halfway down the long page, the bar's bottom is the window's.
+      expect(await page.evaluate(() => window.scrollY)).toBe(0);
+      expect(await bottom()).toBeCloseTo(height, 0);
+      await page.evaluate(() => {
+        window.scrollTo(0, (document.documentElement.scrollHeight - window.innerHeight) / 2);
+      });
+      expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+      expect(await bottom()).toBeCloseTo(height, 0);
+
+      // At the end, it's below the footer.
+      await page.evaluate(() => {
+        window.scrollTo(0, document.documentElement.scrollHeight);
+      });
+      const settled = await bar.boundingBox();
+      const foot = await footer.boundingBox();
+      expect(settled?.y ?? Number.NaN).toBeGreaterThanOrEqual((foot?.y ?? Number.NaN) + (foot?.height ?? Number.NaN) - 0.5);
+
+      await expect(page.getByRole("main")).toHaveCount(1);
+      await expect(footer).toHaveCount(1);
+      await expect(bar).toHaveCount(1);
+      expect(await axe(page)).toEqual([]);
+
+      // The next page has no bar.
+      await page.getByRole("link", { name: "Back to the edge-to-edge page" }).click();
+      await expect(page.getByRole("heading", { level: 1, name: "Edge to edge" })).toBeVisible();
+      await expect(page.getByRole("region", { name: "Player" })).toHaveCount(0);
     });
 
     test("axe finds nothing serious on the bleed page or the ordinary one", async ({ page }) => {
