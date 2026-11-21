@@ -3,7 +3,8 @@
 
 It seeds every module this site has that has a `seed.py`, each after those it
 requires, then the site's own (`app/site/seed.py`) last, in one transaction:
-a seed that fails keeps nothing, and a second run changes nothing. It runs as
+a seed that fails keeps nothing, and a second run leaves the same rows (it
+records another audit entry and stores the images again, the same bytes). It runs as
 the app does, from its own settings (the environment or `.env`) and its
 modules, so their listeners hear of the accounts it makes.
 

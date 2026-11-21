@@ -4,7 +4,8 @@
 A module's `seed.py` gives `async def seed(db, ctx: Context) -> None`: rows
 that show the module working, for a demo, a review or a screenshot, never a
 live site's. It MUST be idempotent: fixed ids or slugs, and a check or an
-upsert before each write, so a second run changes nothing. A module without
+upsert before each write, so a second run leaves the same rows (it records
+another audit entry, and stores the images again, below). A module without
 one takes no part. The site's own (`backend/app/site/seed.py`) has the same
 shape and runs last.
 

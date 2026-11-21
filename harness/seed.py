@@ -7,7 +7,8 @@ Seeds every module in this repo that has a `seed.py`, each after those it
 requires (`kernel.seed`), on the harness's database (DATABASE_URL). It
 refuses unless MECHFRAME_ALLOW_SEED=1 is in the environment, which is read
 from the environment only, never `.env`. Run `python -m harness.migrations
-upgrade` first. A second run changes nothing.
+upgrade` first. A second run leaves the same rows, and records another
+audit entry.
 
 The probe modules aren't seeded here: only the test support mounts them,
 and the contract suite seeds them through `POST /api/_test/seed`.
