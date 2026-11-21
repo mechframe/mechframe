@@ -92,8 +92,9 @@ describe("defineSite", () => {
     ["footer", { lazy: pageSaying("Ours") }],
     ["header", null],
   ] as const)("refuses a %s that isn't a component: %o", (part, value) => {
-    const given = { ...site(), [part]: value } as unknown as SiteDefinition;
-    expect(() => defineSite(given)).toThrow(new RegExp(`The site's ${part} must be a component, such as \`${part}: `));
+    const given: Record<string, unknown> = { ...site() };
+    given[part] = value;
+    expect(() => defineSite(given as SiteDefinition)).toThrow(new RegExp(`The site's ${part} must be a component, such as \`${part}: `));
   });
 });
 

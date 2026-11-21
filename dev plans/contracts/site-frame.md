@@ -3,7 +3,7 @@ feature: The site's own header and footer, and full-bleed pages (VM Website's "F
 status: approved
 approved: 2026-11-21 (the owner: "Approve as recommended", the three answers in §8)
 plan: VM Website docs/HANDOFF.md "For MechFrame" item 5 (the owner, 2026-11-21); SPEC 8; decision 0048
-pr: predicted at push time (the highest number plus one)
+pr: 106 (predicted at push time)
 ---
 
 # Contract: the site's own header and footer, and full-bleed pages

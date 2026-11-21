@@ -1,7 +1,7 @@
 # 0048: The site's own pages, `kernel.load_module`, and how a site runs: always on, `backend` on the path, Railway as code
 
 - **Date:** 2026-11-20
-- **Status:** Decided; applied in K5.2 (#92). Point 5 replaces the contract's `railway.toml`: the owner's choice, 2026-11-20, checked live on a throwaway project. Amended 2026-11-21 (#PR2, VM Website's "For MechFrame" item 5, the owner's choice; contract `dev plans/contracts/site-frame.md`, approved as recommended): point 2 gains the site's own header and footer, and pages that run full bleed
+- **Status:** Decided; applied in K5.2 (#92). Point 5 replaces the contract's `railway.toml`: the owner's choice, 2026-11-20, checked live on a throwaway project. Amended 2026-11-21 (#106, VM Website's "For MechFrame" item 5, the owner's choice; contract `dev plans/contracts/site-frame.md`, approved as recommended): point 2 gains the site's own header and footer, and pages that run full bleed
 - **Context:** K5.2 builds `templates/site/` and `mechframe new` (contract `dev plans/contracts/k5-cli-and-site-template.md`). The owner chose a site's own pages in K5 (§8 question 4): `mountApp({ site })` and `create_app(site=...)`, always on, with server copy, and no switch on Features. The contract asked for their exact shape as change 5. Building the template also had to settle:
   - how a site's `python -m app.…` finds `backend/`;
   - what the template holds beyond the contract's table;
