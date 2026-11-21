@@ -595,6 +595,43 @@ def test_a_file_the_site_removed_from_its_own_folders_isnt_written_again(
     assert not (site / "backend/app/site/pages.py").exists()
 
 
+def test_a_new_site_folder_file_that_needs_the_name_stops_the_run_until_the_name_is_there(
+    repo: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # CodeRabbit on #114: skipped while the lock moved on, it was never offered again.
+    site = make_site(repo, tmp_path / "unnamed", "--name", "Own Test")
+    env = site / ".env.example"
+    kept = env.read_text("utf-8")
+    env.write_text(kept.replace("SITE_NAME=", "# SITE_NAME="), encoding="utf-8")
+    write(repo / "templates/site/backend/app/site/seed.py", '"""__SITE_NAME__\'s seed."""\n')
+    edit(repo / KERNEL_FILE, "SESSIONS = 2\n")
+    commit(repo, "second")
+    lock_before = (site / lock.NAME).read_bytes()
+    capsys.readouterr()
+    assert upgrade(repo, site) == 2
+    said = capsys.readouterr().err
+    assert "backend/app/site/seed.py" in said
+    assert "SITE_NAME" in said
+    assert not (site / "backend/app/site/seed.py").exists()
+    assert (site / lock.NAME).read_bytes() == lock_before
+    assert (site / SITE_KERNEL_FILE).read_text("utf-8") != "SESSIONS = 2\n"
+    env.write_text(kept, encoding="utf-8")
+    assert upgrade(repo, site) == 0
+    assert (site / "backend/app/site/seed.py").read_text("utf-8") == '"""Own Test\'s seed."""\n'
+
+
+def test_a_new_site_folder_file_that_needs_the_name_is_the_sites_when_it_has_one(
+    repo: Path, site: Path
+) -> None:
+    env = site / ".env.example"
+    env.write_text(env.read_text("utf-8").replace("SITE_NAME=", "# SITE_NAME="), encoding="utf-8")
+    write(site / "backend/app/site/seed.py", '"""Ours."""\n')
+    write(repo / "templates/site/backend/app/site/seed.py", '"""__SITE_NAME__\'s seed."""\n')
+    commit(repo, "second")
+    assert upgrade(repo, site) == 0
+    assert (site / "backend/app/site/seed.py").read_text("utf-8") == '"""Ours."""\n'
+
+
 def test_a_site_whose_name_isnt_in_its_env_example_keeps_the_files_that_carry_it(
     repo: Path, site: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:

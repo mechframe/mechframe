@@ -357,13 +357,17 @@ def _entries(
     old, now = own_blobs(root, base), own_blobs(root, tip)
     fresh = sorted(set(now) - set(old))
     reader.load([now[path] for path in fresh])
+    needs_name: list[str] = []
     for path in fresh:
         theirs = reader.data(now[path])
+        here = site / path
         if name is None and new.NAME_MARK.encode() in theirs:
-            unread.append(path)
+            # Skipped while the lock moved on, it would never be offered again (CodeRabbit
+            # on #114): the run stops instead, unless the site has its own file there.
+            if not here.is_file():
+                needs_name.append(path)
             continue
         coming = new.written_in(theirs, path, name or "", theme)
-        here = site / path
         entries.append(
             Entry(
                 path=path,
@@ -375,6 +379,13 @@ def _entries(
                 site=digest(here) if here.is_file() else None,
                 own=True,
             )
+        )
+    if needs_name:
+        raise Refused(
+            "New in the template's site folders, and written with the site's name: "
+            + ", ".join(needs_name)
+            + ". Put SITE_NAME=<the site's name> back in .env.example, as mechframe new wrote "
+            "it, and run it again. Nothing was written."
         )
     return entries
 
