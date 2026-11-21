@@ -5,7 +5,7 @@ A public form's body carries `bot: BotProof | None` (`{website, elapsed_ms,
 token}`, each optional), which the kit's `<BotFields />` and `useBotProof()`
 fill in. Its service asks, before it stores anything:
 
-    found = await bot.verify(request, body.bot, form="contact.inquiry")
+    found = await bot.verify(request, body.bot, form="contact.inquiry", db=db)
 
 and gets `Pass()` or `Held(reason)`. A held submission is still stored, marked
 with its reason and set apart for a person to release; it never reaches
@@ -47,6 +47,7 @@ from typing import TYPE_CHECKING, Any, Protocol
 
 from fastapi import Request
 from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from kernel.settings import settings
 
@@ -158,17 +159,18 @@ def install(providers: Mapping[str, Provider]) -> None:
     _providers = dict(providers)
 
 
-async def _chosen(request: Request) -> tuple[str, Provider]:
-    """The provider the setting names, while its module is on; else the form check."""
+async def _chosen(request: Request, db: AsyncSession) -> tuple[str, Provider]:
+    """The provider the setting names, while its module is on; else the form
+    check. Read through the route's own session: a second connection could
+    wait for the one `require_module` already holds (Codex on #103)."""
     registry: ModuleRegistry = request.app.state.modules
-    async with request.app.state.database.sessions() as db:
-        choice: Any = await settings.for_module(db, SECTION)
-        named: str = choice.provider
-        if named == FORM:
-            return FORM, _FORM_CHECK
-        provider = _providers.get(named)
-        if provider is not None and named in await registry.on(db):
-            return named, provider
+    choice: Any = await settings.for_module(db, SECTION)
+    named: str = choice.provider
+    if named == FORM:
+        return FORM, _FORM_CHECK
+    provider = _providers.get(named)
+    if provider is not None and named in await registry.on(db):
+        return named, provider
     log.warning(
         "The bot check's provider isn't on; the form check judges instead.",
         extra={"provider": named},
@@ -176,12 +178,15 @@ async def _chosen(request: Request) -> tuple[str, Provider]:
     return FORM, _FORM_CHECK
 
 
-async def verify(request: Request, proof: BotProof | None, *, form: str) -> Pass | Held:
+async def verify(
+    request: Request, proof: BotProof | None, *, form: str, db: AsyncSession
+) -> Pass | Held:
     """Whether a public form's submission looks like a person's, by the
-    provider `kernel.bot` names. A submission held is still stored, set apart."""
+    provider `kernel.bot` names, read through the route's own session `db`.
+    A submission held is still stored, set apart."""
     if not (isinstance(form, str) and len(form) <= 130 and _FORM_NAME.fullmatch(form)):
         raise ValueError(f"{form!r} isn't a form's name: <module>.<form>, lowercase.")
-    named, provider = await _chosen(request)
+    named, provider = await _chosen(request, db)
     try:
         found = await provider.verify(request, proof, form)
     except Exception as error:

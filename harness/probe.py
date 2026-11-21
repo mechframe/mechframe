@@ -349,9 +349,11 @@ class Judged(Answer):
 
 
 @router.post("/inquiries", dependencies=[Depends(public)], status_code=201, response_model=Judged)
-async def send_inquiry(body: Inquiry, request: Request) -> dict[str, Any]:
+async def send_inquiry(
+    body: Inquiry, request: Request, db: AsyncSession = Depends(get_db)
+) -> dict[str, Any]:
     """A public form's submission, judged as `contact` will judge an inquiry."""
-    found = await bot.verify(request, body.bot, form="probe.inquiry")
+    found = await bot.verify(request, body.bot, form="probe.inquiry", db=db)
     return {"held": found.reason if isinstance(found, bot.Held) else None}
 
 

@@ -6,17 +6,19 @@ form check, and holding a submission it can't judge."""
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 from typing import Any
 
 import pytest
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, ValidationError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from harness.probe import MODULES as PROBES
 from kernel import BotProof, bot
 from kernel.access import public
-from kernel.db import Database
+from kernel.db import Database, get_db
 from kernel.models import ModuleState
 from kernel.modules import InstalledModule, Manifest
 from kernel.settings import settings
@@ -141,7 +143,7 @@ def test_a_provider_named_like_the_kernels_or_not_async_is_refused() -> None:
 @pytest.mark.parametrize("form", ["contact", "Contact.inquiry", "contact.", ".inquiry", ""])
 async def test_a_form_is_named_by_its_module(form: str) -> None:
     with pytest.raises(ValueError, match="isn't a form's name"):
-        await bot.verify(object(), None, form=form)  # type: ignore[arg-type]
+        await bot.verify(object(), None, form=form, db=object())  # type: ignore[arg-type]
 
 
 # --- verify, through an app ------------------------------------------------------------------
@@ -156,8 +158,10 @@ def _sender(module_id: str) -> APIRouter:
     router = APIRouter()
 
     @router.post("/send", dependencies=[Depends(public)])
-    async def send(body: Sent, request: Request) -> dict[str, str | None]:
-        found = await bot.verify(request, body.bot, form=f"{module_id}.send")
+    async def send(
+        body: Sent, request: Request, db: AsyncSession = Depends(get_db)
+    ) -> dict[str, str | None]:
+        found = await bot.verify(request, body.bot, form=f"{module_id}.send", db=db)
         return {"held": found.reason if isinstance(found, bot.Held) else None}
 
     return router
@@ -234,6 +238,27 @@ async def test_a_provider_that_fails_or_answers_neither_holds_the_submission(
             assert await _send(client, sender, token="ok") == "provider_error"
         finally:
             await _choose(database, bot.FORM)
+
+
+@pytest.mark.db
+async def test_it_reads_through_the_routes_own_session(app_factory: AppFactory) -> None:
+    """One connection is enough: the route's `require_module` holds it, so
+    `verify` reads the setting and the switches through the same session
+    rather than wait for a second (Codex on #103)."""
+    sender, _ = _ids()
+    app = app_factory(
+        [_module(sender, router=_sender(sender))],
+        db_pool_size=1,
+        db_max_overflow=0,
+        modules_cache_seconds=0,
+    )
+    async with Client(app) as client:
+        sent = client.post(
+            f"/api/{sender}/send", json={"bot": {"website": "", "elapsed_ms": 5_000}}
+        )
+        answer = await asyncio.wait_for(sent, timeout=10)
+    assert answer.status_code == 200, answer.text
+    assert answer.json() == {"held": None}
 
 
 def test_the_section_defaults_to_the_form_check() -> None:
