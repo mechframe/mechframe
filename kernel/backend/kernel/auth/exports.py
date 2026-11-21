@@ -238,10 +238,19 @@ async def _made(ctx: jobs.Context, export_id: uuid.UUID) -> None:
         user = await db.get(User, row.user_id)
         if user is None:
             return  # the row goes with its account
-        files = {
-            "kernel": await own_data(db, user),
-            **await privacy.export(db, privacy.Subject(user.id, user.email)),
-        }
+        confirmed = user.email_verified_at is not None
+        if confirmed:
+            files = {
+                "kernel": await own_data(db, user),
+                **await privacy.export(db, privacy.Subject(user.id, user.email)),
+            }
+    if not confirmed:
+        # The address went back to one not confirmed since the copy was asked
+        # for (an email change's undo can): what a module holds under it may be
+        # someone else's, so nothing is collected, and the copy is failed and
+        # its owner told (CodeRabbit on #110).
+        await _failed(ctx, export_id)
+        return
     # Made in a thread: compressing a big copy would hold the event loop
     # (CodeRabbit on #109).
     data = await asyncio.to_thread(privacy.archive, files, at=clock.now())

@@ -100,6 +100,8 @@ def test_only_the_probe_takes_part() -> None:
         (_step(why="x" * 301), "a why of 1 to 300"),
         (_step(link="https://elsewhere.test/admin"), "a path on this site"),
         (_step(link="//elsewhere.test"), "a path on this site"),
+        (_step(link="/\\elsewhere.test/setup"), "a path on this site"),
+        (_step(link="/admin/\tsetup"), "a path on this site"),
         (_step(permission="shop.nothing"), "names shop.nothing, which nothing declares"),
         (_step(done=lambda db: True), "is `async def done(db) -> bool`"),
     ],
@@ -203,6 +205,43 @@ async def test_a_database_error_in_one_modules_items_leaves_the_rest(
     admin = await _person(db, "admin")
     found = await attention.for_person(db, admin, {"blog", "shop"})
     assert [item.key for item in found if item.key.startswith("shop.")] == ["shop.audit"]
+
+
+@pytest.mark.db
+async def test_an_answer_that_isnt_a_list_costs_only_its_module(
+    app_factory: AppFactory, db: AsyncSession
+) -> None:
+    async def blog(db: Any, user: Any) -> Any:
+        return None  # forgot its return: the Dashboard reads on
+
+    async def shop(db: Any, user: Any) -> list[attention.Item]:
+        return [_item("shop.audit", permission="auth.audit.read")]
+
+    app_factory([])
+    attention.install(attention.build([_module("blog", needs=blog), _module("shop", needs=shop)]))
+    owner = await _person(db, "owner")
+    found = await attention.for_person(db, owner, {"blog", "shop"})
+    assert [item.key for item in found if not item.key.startswith("kernel.")] == ["shop.audit"]
+
+
+@pytest.mark.db
+async def test_an_item_naming_an_undeclared_permission_is_dropped_even_for_an_owner(
+    app_factory: AppFactory, db: AsyncSession
+) -> None:
+    """An owner holds every permission, so one nothing declares would reach
+    them: the item is dropped instead (CodeRabbit on #110)."""
+
+    async def shop(db: Any, user: Any) -> list[attention.Item]:
+        return [
+            _item("shop.typo", permission="shop.manag"),
+            _item("shop.ok", permission="shop.manage"),
+        ]
+
+    app_factory([])
+    attention.install(attention.build([_module("shop", needs=shop)]))
+    owner = await _person(db, "owner")
+    found = await attention.for_person(db, owner, {"shop"})
+    assert [item.key for item in found if item.key.startswith("shop.")] == ["shop.ok"]
 
 
 @pytest.mark.db

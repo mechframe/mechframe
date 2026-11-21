@@ -115,13 +115,20 @@ async def _dead_jobs(db: AsyncSession) -> int:
 Provider = Callable[[AsyncSession, "User"], Awaitable[list[Item]]]
 
 _providers: dict[str, Provider] = {}
+_declared: frozenset[str] = frozenset()
 
 
 def build(installed: Iterable[InstalledModule]) -> dict[str, Provider]:
     """Each module's `ATTENTION`, by id. ValueError for one that isn't
-    `async def ATTENTION(db, user)`."""
+    `async def ATTENTION(db, user)`. Also notes the permissions the kernel and
+    the modules declare, the only ones an item may name."""
+    from kernel import setup  # its declared permissions, the same for steps and items
+
+    modules = list(installed)
+    global _declared
+    _declared = frozenset(setup.declared(modules))
     found: dict[str, Provider] = {}
-    for module in installed:
+    for module in modules:
         if module.attention is None:
             continue
         if not inspect.iscoroutinefunction(module.attention):
@@ -145,6 +152,8 @@ async def _modules_items(db: AsyncSession, user: User, on: Iterable[str]) -> lis
             # module's reads, and the next module's still run (Codex on #110).
             async with db.begin_nested():
                 items = await _providers[module](db, user)
+            if not isinstance(items, list):  # checked here, so it costs only this module
+                raise TypeError(f"answered {type(items).__name__}, not a list of Items")
         except Exception as error:  # one module's failure never breaks the Dashboard
             log.warning("%s's attention items failed (%s).", module, type(error).__name__)
             continue
@@ -152,10 +161,12 @@ async def _modules_items(db: AsyncSession, user: User, on: Iterable[str]) -> lis
             if (
                 not isinstance(item, Item)
                 or not item.key.startswith(f"{module}.")
-                or item.permission is None
+                or item.permission not in _declared
             ):
                 log.warning(
-                    "%s gave an attention item that isn't its own Item naming a permission.", module
+                    "%s gave an attention item that isn't its own Item naming a declared "
+                    "permission.",
+                    module,
                 )
                 continue
             if item.permission not in allowed:

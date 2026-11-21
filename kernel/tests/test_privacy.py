@@ -202,10 +202,18 @@ def test_a_value_json_cant_hold_is_refused() -> None:
 # --- the job ---------------------------------------------------------------------------------
 
 
-async def _account(db: AsyncSession) -> User:
+async def _account(db: AsyncSession, *, confirmed: bool = True) -> User:
+    """A member, its address confirmed unless `confirmed` is False."""
     user_id = uuid.uuid4()
     address = f"{user_id.hex[:12]}@site.test"
-    user = User(id=user_id, email=address, email_normal=address, session_epoch=0, role_version=0)
+    user = User(
+        id=user_id,
+        email=address,
+        email_normal=address,
+        email_verified_at=clock.now() if confirmed else None,
+        session_epoch=0,
+        role_version=0,
+    )
     db.add(user)
     await db.flush()
     db.add(UserRole(user_id=user_id, role_id="member"))
@@ -283,13 +291,13 @@ async def test_running_out_of_time_on_the_last_try_marks_the_copy_failed(
     async def slow(db: Any, subject: Any) -> Any:
         await asyncio.sleep(5)
 
+    assert exports.WORK_SECONDS < exports.JOB_SECONDS  # the real budget, before it's patched
     monkeypatch.setattr(privacy, "export", slow)
     monkeypatch.setattr(exports, "WORK_SECONDS", 0.05)
     with pytest.raises(TimeoutError):
         await exports._make(_context(database, exports.TRIES), {"export_id": str(export_id)})
     await db.rollback()
     assert await _status(db, export_id) == "failed"
-    assert exports.WORK_SECONDS < exports.JOB_SECONDS
 
 
 @pytest.mark.db
@@ -447,6 +455,31 @@ async def test_a_try_finishing_after_another_made_the_copy_leaves_its_file(
     assert await _status(db, export_id) == "ready"
     assert deleted == []
     assert await _mails(db) == before
+
+
+@pytest.mark.db
+async def test_an_address_unconfirmed_when_the_try_runs_collects_nothing(
+    app_factory: AppFactory, database: Database, db: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Confirmed when asked, then put back to an unconfirmed one (an email
+    change's undo): the try collects nothing, and the copy is failed and its
+    owner told (CodeRabbit on #110)."""
+    app_factory([])
+    user = await _account(db, confirmed=False)  # the address put back, never confirmed
+    export_id = await _queued(db, user)
+    asked: list[Any] = []
+
+    async def export(db: Any, subject: Any) -> Any:
+        asked.append(subject)
+        return {}
+
+    monkeypatch.setattr(privacy, "export", export)
+    before = await _mails(db)
+    await exports._make(_context(database, 1), {"export_id": str(export_id)})
+    await db.rollback()
+    assert asked == []
+    assert await _status(db, export_id) == "failed"
+    assert await _mails(db) == before + 1
 
 
 @pytest.mark.db

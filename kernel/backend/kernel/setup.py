@@ -61,7 +61,8 @@ class Step:
     done: Callable[[AsyncSession], Awaitable[bool]] = field(repr=False, compare=False)
 
 
-def _declared(installed: Iterable[InstalledModule]) -> set[str]:
+def declared(installed: Iterable[InstalledModule]) -> set[str]:
+    """The permissions the kernel and the modules declare."""
     found = set(KERNEL_PERMISSIONS)
     for module in installed:
         for permission in module.manifest.raw.get("permissions", []):
@@ -70,7 +71,7 @@ def _declared(installed: Iterable[InstalledModule]) -> set[str]:
     return found
 
 
-def _check(module: InstalledModule, step: object, declared: set[str]) -> Step:
+def _check(module: InstalledModule, step: object, known: set[str]) -> Step:
     if not isinstance(step, Step):
         raise ValueError(f"{module.id}'s SETUP holds {step!r}: each is a kernel.setup.Step.")
     owner, dot, name = step.key.partition(".")
@@ -80,9 +81,16 @@ def _check(module: InstalledModule, step: object, declared: set[str]) -> Step:
         raise ValueError(
             f"{step.key} has a title of 1 to {MAX_TITLE} characters and a why of 1 to {MAX_WHY}."
         )
-    if not step.link.startswith("/") or step.link.startswith("//"):
+    # A backslash reads as a slash in a URL (`/\\host` is another site), and
+    # a control character as nothing (CodeRabbit on #110).
+    if (
+        not step.link.startswith("/")
+        or step.link.startswith("//")
+        or "\\" in step.link
+        or any(ord(character) < 32 or ord(character) == 127 for character in step.link)
+    ):
         raise ValueError(f"{step.key}'s link is a path on this site, such as /admin/settings.")
-    if step.permission not in declared:
+    if step.permission not in known:
         raise ValueError(f"{step.key} names {step.permission}, which nothing declares.")
     if not inspect.iscoroutinefunction(step.done):
         raise ValueError(f"{step.key}'s done is `async def done(db) -> bool`.")
@@ -95,10 +103,10 @@ def build(installed: Iterable[InstalledModule]) -> dict[str, tuple[Step, ...]]:
     permission nothing declares, or has a `done` that isn't `async`; or for
     a key given twice."""
     modules = list(installed)
-    declared = _declared(modules)
+    known = declared(modules)
     found: dict[str, tuple[Step, ...]] = {}
     for module in modules:
-        steps = tuple(_check(module, step, declared) for step in module.setup)
+        steps = tuple(_check(module, step, known) for step in module.setup)
         keys = [step.key for step in steps]
         if len(set(keys)) != len(keys):
             raise ValueError(f"{module.id}'s SETUP names a step twice.")
