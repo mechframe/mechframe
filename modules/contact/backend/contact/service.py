@@ -75,7 +75,7 @@ async def receive(
     cfg = await current(db)
     topic = next((each for each in cfg.topics if each.key == body.topic), None)
     if topic is None:
-        raise _invalid("topic", "Choose what your message is about.")
+        raise _invalid("body.topic", "Choose what your message is about.")
     held: str | None = None
     found = await bot.verify(request, body.bot, form=FORM, db=db)
     if isinstance(found, bot.Held):

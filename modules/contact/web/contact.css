@@ -1,0 +1,258 @@
+/* The contact module's screens (`dev plans/contracts/contact.md`), on the
+   theme's tokens only. Every control is at least 24px each way (WCAG 2.2's
+   target size). */
+
+/* The Contact page (VM Website's Contact board): the heading, the intro, the form. */
+.mf-contact-page {
+  max-width: 40rem;
+}
+
+.mf-contact-intro {
+  color: var(--mf-color-text-muted);
+}
+
+.mf-contact-form {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+
+.mf-contact-news {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-height: 24px;
+}
+
+.mf-contact-news input {
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  accent-color: var(--mf-color-accent);
+}
+
+.mf-contact-error {
+  margin: 0;
+  color: var(--mf-color-danger);
+}
+
+.mf-contact-sent {
+  display: grid;
+  justify-items: start;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+  padding: 1.25rem;
+  border: 1px solid var(--mf-color-border);
+  border-radius: var(--mf-radius-card);
+  background: var(--mf-color-surface);
+}
+
+.mf-contact-sent:focus-visible {
+  outline: none;
+  box-shadow: var(--mf-shadow-focus-ring);
+}
+
+.mf-contact-sent h2,
+.mf-contact-sent p {
+  margin: 0;
+}
+
+/* The Inbox (the AdminInbox board): the waiting card, the tabs, then the list
+   with the open message beside it once there's room for both. */
+.mf-contact-inbox {
+  display: grid;
+  gap: 1.125rem;
+  margin-top: 1.125rem;
+}
+
+.mf-contact-layout {
+  display: grid;
+  gap: 1.25rem;
+  margin-top: 1rem;
+}
+
+@media (min-width: 60rem) {
+  .mf-contact-layout {
+    grid-template-columns: minmax(0, 22rem) minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .mf-contact-back {
+    display: none;
+  }
+}
+
+/* On a phone, an open message is shown alone, with Back. */
+@media (max-width: 59.99rem) {
+  .mf-contact-inbox--open .mf-contact-list {
+    display: none;
+  }
+}
+
+.mf-contact-list {
+  display: grid;
+  gap: 0.75rem;
+  justify-items: start;
+}
+
+.mf-contact-list ul {
+  display: grid;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  list-style: none;
+  border: 1px solid var(--mf-color-border);
+  border-radius: var(--mf-radius-card);
+  background: var(--mf-color-surface);
+}
+
+.mf-contact-list li + li {
+  border-top: 1px solid var(--mf-color-border);
+}
+
+.mf-contact-row {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.75rem 1rem;
+  color: var(--mf-color-text);
+  text-decoration: none;
+}
+
+.mf-contact-row:hover {
+  background: var(--mf-color-neutral-tint);
+}
+
+.mf-contact-row[aria-current="true"] {
+  background: var(--mf-color-info-tint);
+}
+
+/* A row in a list its card clips draws the ring just inside its edges. */
+.mf-contact-row:focus-visible {
+  outline: none;
+  box-shadow: var(--mf-shadow-focus-ring-inset);
+}
+
+.mf-contact-row-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.mf-contact-row-name {
+  font-weight: 600;
+  color: var(--mf-color-text-strong);
+}
+
+.mf-contact-row-time,
+.mf-contact-row-line,
+.mf-contact-meta,
+.mf-contact-note,
+.mf-contact-hint {
+  font: var(--mf-type-small);
+  color: var(--mf-color-text-muted);
+}
+
+.mf-contact-row-topic {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.mf-contact-row-line {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.mf-card.mf-contact-open {
+  display: grid;
+  gap: 0.875rem;
+  padding: 1.125rem;
+}
+
+.mf-contact-open-head {
+  display: grid;
+  gap: 0.375rem;
+}
+
+.mf-contact-open-head h2,
+.mf-contact-meta,
+.mf-contact-note,
+.mf-contact-held,
+.mf-contact-hint {
+  margin: 0;
+}
+
+.mf-contact-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.mf-contact-news-pill {
+  color: var(--mf-color-text);
+}
+
+.mf-contact-held {
+  color: var(--mf-color-warning);
+}
+
+.mf-contact-body {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.mf-contact-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* The Settings section: the intro, then each topic on a line of its own. */
+.mf-contact-settings,
+.mf-contact-topics {
+  display: grid;
+  gap: 1rem;
+}
+
+.mf-contact-topics {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.mf-contact-topics legend {
+  padding: 0;
+  font-weight: 600;
+  color: var(--mf-color-text-strong);
+}
+
+.mf-contact-topics ol {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mf-contact-topic {
+  display: grid;
+  gap: 0.5rem;
+  align-items: end;
+}
+
+@media (min-width: 48rem) {
+  .mf-contact-topic {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+}
+
+.mf-contact-topic-moves {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
