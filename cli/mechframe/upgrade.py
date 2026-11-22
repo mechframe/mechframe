@@ -12,6 +12,7 @@ site's file now; and N, the new copy from `--from`'s commit.
 | S = N | writes nothing; the lock takes N |
 | all three differ | a conflict |
 | new in N, nothing there / the site's own file there | writes it / a conflict |
+| new in N in the site's own folders, nothing there / a file there | writes it / keeps the site's |
 | gone from N, S = L / S differs | deletes it / a conflict |
 | missing from the site, N = L / N differs | stays missing / a conflict |
 
@@ -28,7 +29,10 @@ The template's files (`templates/site/` with the site's name and theme written
 in, the pins, the theme's `tokens.css`) follow the same rule, except the
 site's own: `backend/app/site/`, `web/src/site/`, the two registries,
 `.env.example` and `.railway/railway.ts`. The template's new settings are
-printed instead. A run holds the site by `.mechframe-busy`, as `add` does.
+printed instead. A file new in the template's site folders since the base is
+written where the site has none, and is the site's from then on, since a
+template file may import it (VM Website's item 7). A run holds the site by
+`.mechframe-busy`, as `add` does.
 """
 
 from __future__ import annotations
@@ -53,6 +57,8 @@ OWN_FOLDERS = ("backend/app/site/", "web/src/site/")
 OWN_FILES = frozenset({registries.PYTHON, registries.WEB, settings.ENV, settings.RAILWAY})
 TOKENS = "web/src/theme/tokens.css"
 KERNEL_MANIFEST = "backend/kernel/kernel.json"
+#: The reason an add gives for a template file new in the site's own folders.
+OWN_ADDED = "the site's own from now on"
 #: The kinds of verdict that change a file in the site.
 WRITES = ("add", "write", "delete")
 _SETTING = re.compile(r"^([A-Z][A-Z0-9_]*)=", re.MULTILINE)
@@ -73,6 +79,8 @@ class Entry:
     new: str | None
     new_data: bytes | None
     site: str | None
+    #: a template file new in the site's own folders: written where there's none, never compared
+    own: bool = False
 
 
 @dataclass(frozen=True)
@@ -173,6 +181,17 @@ def template_blobs(root: Path, commit: str, theme: str) -> dict[str, str]:
             found[path] = blob
         elif path == tokens:
             found[TOKENS] = blob
+    return found
+
+
+def own_blobs(root: Path, commit: str) -> dict[str, str]:
+    """The template's files in the site's own folders at `commit`, by their paths in the site."""
+    found: dict[str, str] = {}
+    for path, blob in gitref.files(root, commit, [new.TEMPLATE]).items():
+        relative = path[len(new.TEMPLATE) + 1 :]
+        folders = PurePosixPath(relative).parts[:-1]
+        if relative.startswith(OWN_FOLDERS) and not any(part in new.LEFT_OUT for part in folders):
+            found[relative] = blob
     return found
 
 
@@ -334,6 +353,40 @@ def _entries(
                 site=digest(here) if here.is_file() else None,
             )
         )
+    # New in the site's own folders since the base: a template file may import it.
+    old, now = own_blobs(root, base), own_blobs(root, tip)
+    fresh = sorted(set(now) - set(old))
+    reader.load([now[path] for path in fresh])
+    needs_name: list[str] = []
+    for path in fresh:
+        theirs = reader.data(now[path])
+        here = site / path
+        if name is None and new.NAME_MARK.encode() in theirs:
+            # Skipped while the lock moved on, it would never be offered again (CodeRabbit
+            # on #114): the run stops instead, unless the site has its own file there.
+            if not here.is_file():
+                needs_name.append(path)
+            continue
+        coming = new.written_in(theirs, path, name or "", theme)
+        entries.append(
+            Entry(
+                path=path,
+                kernel=False,
+                base=None,
+                base_data=None,
+                new=digest_bytes(coming),
+                new_data=coming,
+                site=digest(here) if here.is_file() else None,
+                own=True,
+            )
+        )
+    if needs_name:
+        raise Refused(
+            "New in the template's site folders, and written with the site's name: "
+            + ", ".join(needs_name)
+            + ". Put SITE_NAME=<the site's name> back in .env.example, as mechframe new wrote "
+            "it, and run it again. Nothing was written."
+        )
     return entries
 
 
@@ -344,9 +397,11 @@ def judge(entry: Entry) -> Verdict:
         return Verdict(entry.path, "unchanged")
     if was is None:
         if here is None:
-            return Verdict(entry.path, "add")
+            return Verdict(entry.path, "add", OWN_ADDED if entry.own else "")
         if here == now:
             return Verdict(entry.path, "same")
+        if entry.own:
+            return Verdict(entry.path, "keep", "the site's own")
         return Verdict(
             entry.path, "conflict", "new in the kernel, and the site has a file of its own there"
         )
@@ -629,6 +684,12 @@ def lines(outcome: Outcome) -> list[str]:
         found.append(
             "New settings in the template, to add to .env.example and to .railway/railway.ts "
             "(as preserve()): " + ", ".join(outcome.settings)
+        )
+    yours = [each.path for each in outcome.verdicts if each.kind == "add" and each.why == OWN_ADDED]
+    if outcome.wrote and yours:
+        found.append(
+            "New in the template's site folders, written since there was none, and the site's "
+            "own from now on: " + ", ".join(yours)
         )
     if outcome.wrote:
         found += _next_steps(outcome)

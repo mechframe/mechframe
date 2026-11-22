@@ -528,6 +528,110 @@ def test_the_sites_own_folders_and_files_are_never_touched(
     assert "NEW_KERNEL_SETTING" in out
 
 
+def test_a_file_new_in_the_sites_own_folders_lands_where_the_site_has_none(
+    repo: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # VM Website's item 7: the template's new backend/app/seed.py imports app.site.seed,
+    # and an upgrade that never wrote the site's folders left the import broken.
+    site = make_site(repo, tmp_path / "own", "--name", "Own Test")
+    write(repo / "templates/site/backend/app/site/seed.py", '"""__SITE_NAME__\'s seed."""\n')
+    write(repo / "templates/site/web/src/site/extra.ts", "export const extra = 1;\n")
+    commit(repo, "second")
+    capsys.readouterr()
+    assert upgrade(repo, site, "--dry-run") == 0
+    out = capsys.readouterr().out
+    assert "add     backend/app/site/seed.py" in out
+    assert not (site / "backend/app/site/seed.py").exists()
+    assert upgrade(repo, site) == 0
+    assert (site / "backend/app/site/seed.py").read_text("utf-8") == '"""Own Test\'s seed."""\n'
+    assert (site / "web/src/site/extra.ts").read_text("utf-8") == "export const extra = 1;\n"
+    out = capsys.readouterr().out
+    assert "2 added" in out
+    assert "the site's own from now on: backend/app/site/seed.py, web/src/site/extra.ts" in out
+    # The site's own: the lock doesn't take them, and a later upgrade leaves them be.
+    assert "backend/app/site/seed.py" not in kernel_lock(site, repo)
+    edit(site / "backend/app/site/seed.py", '"""Ours now."""\n')
+    edit(repo / "templates/site/backend/app/site/seed.py", '"""Changed again."""\n')
+    commit(repo, "third")
+    assert upgrade(repo, site) == 0
+    assert (site / "backend/app/site/seed.py").read_text("utf-8") == '"""Ours now."""\n'
+
+
+def test_a_file_new_in_the_sites_own_folders_where_the_site_has_one_stays_the_sites(
+    repo: Path, site: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    write(site / "backend/app/site/seed.py", '"""The site\'s own seed."""\n')
+    write(repo / "templates/site/backend/app/site/seed.py", '"""The template\'s."""\n')
+    commit(repo, "second")
+    capsys.readouterr()
+    assert upgrade(repo, site) == 0  # never a conflict: the site's folders are its own
+    assert (site / "backend/app/site/seed.py").read_text("utf-8") == '"""The site\'s own seed."""\n'
+    assert not (site / PATCHES).exists()
+    assert "the site's own from now on" not in capsys.readouterr().out
+
+
+def test_a_file_gone_from_the_sites_own_folders_stays_in_the_site(
+    repo: Path, tmp_path: Path
+) -> None:
+    write(repo / "templates/site/backend/app/site/pages.py", "PAGES = 1\n")
+    commit(repo, "the template's site folders")
+    site = make_site(repo, tmp_path / "own")
+    (repo / "templates/site/backend/app/site/pages.py").unlink()
+    commit(repo, "second")
+    assert upgrade(repo, site) == 0
+    assert (site / "backend/app/site/pages.py").read_text("utf-8") == "PAGES = 1\n"
+
+
+def test_a_file_the_site_removed_from_its_own_folders_isnt_written_again(
+    repo: Path, tmp_path: Path
+) -> None:
+    write(repo / "templates/site/backend/app/site/pages.py", "PAGES = 1\n")
+    commit(repo, "the template's site folders")
+    site = make_site(repo, tmp_path / "own")
+    (site / "backend/app/site/pages.py").unlink()
+    edit(repo / KERNEL_FILE, "SESSIONS = 2\n")
+    commit(repo, "second")
+    assert upgrade(repo, site) == 0
+    assert not (site / "backend/app/site/pages.py").exists()
+
+
+def test_a_new_site_folder_file_that_needs_the_name_stops_the_run_until_the_name_is_there(
+    repo: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # CodeRabbit on #114: skipped while the lock moved on, it was never offered again.
+    site = make_site(repo, tmp_path / "unnamed", "--name", "Own Test")
+    env = site / ".env.example"
+    kept = env.read_text("utf-8")
+    env.write_text(kept.replace("SITE_NAME=", "# SITE_NAME="), encoding="utf-8")
+    write(repo / "templates/site/backend/app/site/seed.py", '"""__SITE_NAME__\'s seed."""\n')
+    edit(repo / KERNEL_FILE, "SESSIONS = 2\n")
+    commit(repo, "second")
+    lock_before = (site / lock.NAME).read_bytes()
+    capsys.readouterr()
+    assert upgrade(repo, site) == 2
+    said = capsys.readouterr().err
+    assert "backend/app/site/seed.py" in said
+    assert "SITE_NAME" in said
+    assert not (site / "backend/app/site/seed.py").exists()
+    assert (site / lock.NAME).read_bytes() == lock_before
+    assert (site / SITE_KERNEL_FILE).read_text("utf-8") != "SESSIONS = 2\n"
+    env.write_text(kept, encoding="utf-8")
+    assert upgrade(repo, site) == 0
+    assert (site / "backend/app/site/seed.py").read_text("utf-8") == '"""Own Test\'s seed."""\n'
+
+
+def test_a_new_site_folder_file_that_needs_the_name_is_the_sites_when_it_has_one(
+    repo: Path, site: Path
+) -> None:
+    env = site / ".env.example"
+    env.write_text(env.read_text("utf-8").replace("SITE_NAME=", "# SITE_NAME="), encoding="utf-8")
+    write(site / "backend/app/site/seed.py", '"""Ours."""\n')
+    write(repo / "templates/site/backend/app/site/seed.py", '"""__SITE_NAME__\'s seed."""\n')
+    commit(repo, "second")
+    assert upgrade(repo, site) == 0
+    assert (site / "backend/app/site/seed.py").read_text("utf-8") == '"""Ours."""\n'
+
+
 def test_a_site_whose_name_isnt_in_its_env_example_keeps_the_files_that_carry_it(
     repo: Path, site: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
