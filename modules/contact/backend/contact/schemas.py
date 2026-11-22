@@ -203,9 +203,11 @@ class InboxMessage(Answer):
 
 
 class InboxExport(Answer):
-    """Every message in a tab, for the Inbox's Export (a CSV made in the browser)."""
+    """A page of a tab's messages, for the Inbox's Export (a CSV made in the
+    browser): it asks for the next until `next_cursor` is null."""
 
     items: list[InboxMessage]
+    next_cursor: str | None
 
 
 class MessageStatus(BaseModel):

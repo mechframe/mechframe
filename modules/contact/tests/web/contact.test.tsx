@@ -346,6 +346,35 @@ describe("the Inbox", () => {
     expect(sentTo(sent, "GET", "/api/contact/admin/messages").some((request) => new URL(request.url).searchParams.get("cursor") === "c1")).toBe(true);
   });
 
+  it("exports every page of the tab into one CSV (Codex on #125)", async () => {
+    const made: Blob[] = [];
+    const createObjectURL = vi.fn((blob: Blob) => {
+      made.push(blob);
+      return "blob:export";
+    });
+    const revokeObjectURL = vi.fn();
+    Object.assign(URL, { createObjectURL, revokeObjectURL });
+    const sent = routed({
+      [LIST]: page([item()]),
+      "GET /api/contact/admin/messages/export": (request) =>
+        new URL(request.url).searchParams.get("cursor") === "e1"
+          ? { status: 200, body: { items: [message({ id: OTHER, name: "Sam Ito" })], next_cursor: null } }
+          : { status: 200, body: { items: [message()], next_cursor: "e1" } },
+    });
+    const user = userEvent.setup();
+    renderApp({ path: "/admin/contact?tab=new", modules: [contact], session: reader });
+    await user.click(await screen.findByRole("button", { name: "Export" }));
+    await waitFor(() => {
+      expect(made).toHaveLength(1);
+    });
+    const exports = sentTo(sent, "GET", "/api/contact/admin/messages/export");
+    expect(exports.map((request) => new URL(request.url).searchParams.get("cursor"))).toEqual([null, "e1"]);
+    expect(exports.every((request) => new URL(request.url).searchParams.get("status") === "new")).toBe(true);
+    const csv = await (made[0] as Blob).text();
+    expect(csv).toContain('"Rae Okafor"');
+    expect(csv).toContain('"Sam Ito"');
+  });
+
   it("says when a tab is empty", async () => {
     routed({ [LIST]: page([], { waiting: null, counts: { new: 0, replied: 0, archived: 0, spam: 0 } }) });
     renderApp({ path: "/admin/contact?tab=spam", modules: [contact], session: reader });

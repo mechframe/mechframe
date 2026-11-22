@@ -62,6 +62,28 @@ const COLUMNS: readonly [string, (message: InboxMessage) => string][] = [
   ["Message", (m) => m.message],
 ];
 
+type ExportPage = components["schemas"]["InboxExport"];
+
+async function exportPage(tab: Tab, cursor: string | null): Promise<ExportPage> {
+  const { data } = await api.GET("/api/contact/admin/messages/export", {
+    params: { query: cursor === null ? { status: tab } : { status: tab, cursor } },
+  });
+  if (!data) throw new Error("The export didn't answer.");
+  return data;
+}
+
+/** Every message in a tab, page after page until the export's cursor runs out (Codex on #125). */
+export async function exportAll(tab: Tab): Promise<InboxMessage[]> {
+  const found: InboxMessage[] = [];
+  let cursor: string | null = null;
+  do {
+    const page: ExportPage = await exportPage(tab, cursor);
+    found.push(...page.items);
+    cursor = page.next_cursor;
+  } while (cursor !== null);
+  return found;
+}
+
 /** The Export's CSV, made here from the export's typed answer (every API answer is JSON). */
 export function toCsv(messages: readonly InboxMessage[]): string {
   const rows = [COLUMNS.map(([header]) => cell(header)).join(",")];

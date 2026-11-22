@@ -173,7 +173,7 @@
     "/api/contact/admin/messages/export": {
       "get": {
         "summary": "Export Messages",
-        "description": "Every message in a tab, for the Inbox's Export (a CSV made in the browser); audited.",
+        "description": "A page of a whole tab for the Inbox's Export, 1,000 at a time; the first is audited.",
         "operationId": "export_messages_api_contact_admin_messages_export_get",
         "parameters": [
           {
@@ -191,6 +191,23 @@
               "type": "string",
               "default": "all",
               "title": "Status"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 80
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
             }
           }
         ],
@@ -509,15 +526,27 @@
             },
             "type": "array",
             "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "items"
+          "items",
+          "next_cursor"
         ],
         "title": "InboxExport",
-        "description": "Every message in a tab, for the Inbox's Export (a CSV made in the browser)."
+        "description": "A page of a tab's messages, for the Inbox's Export (a CSV made in the\nbrowser): it asks for the next until `next_cursor` is null."
       },
       "InboxItem": {
         "properties": {

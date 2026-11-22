@@ -110,10 +110,50 @@ async def test_a_first_topic_s_new_messages_come_first_then_newest_page_by_page(
 
 
 async def test_a_cursor_that_isn_t_one_is_a_422(db: AsyncSession) -> None:
-    for cursor in ("x", "2.1.0", "0.a.b", f"1.{10**6}.not-a-uuid"):
+    # The last: a time too far off for a timedelta (Codex on #125).
+    for cursor in ("x", "2.1.0", "0.a.b", f"1.{10**6}.not-a-uuid", f"1.{'9' * 30}.{uuid.uuid4()}"):
         with pytest.raises(Problem) as refused:
             await service.listed(db, "all", cursor)
         assert refused.value.status == 422
+        with pytest.raises(Problem) as refused:
+            await service.exported(db, "all", cursor, by=uuid.uuid4())
+        assert refused.value.status == 422
+
+
+async def test_export_pages_through_a_whole_tab_and_is_audited_once(
+    db: AsyncSession, made: list[uuid.UUID]
+) -> None:
+    """No message is left out past a page's end (Codex on #125)."""
+    actor, _ = await make_person(db)
+    mine = [
+        (await _add(db, made, status="archived", at=AHEAD + timedelta(hours=hours))).id
+        for hours in (3, 2, 1)
+    ]
+    total = (await service.counts(db))["archived"]
+
+    seen: list[str] = []
+    cursor = None
+    while True:
+        page = await service.exported(db, "archived", cursor, by=actor, limit=2)
+        await db.commit()
+        assert len(page["items"]) <= 2
+        seen += [item["id"] for item in page["items"]]
+        cursor = page["next_cursor"]
+        if cursor is None:
+            break
+
+    assert len(seen) == len(set(seen)) == total
+    assert [each for each in seen if uuid.UUID(each) in mine] == [str(each) for each in mine]
+    logged = (
+        await db.scalars(
+            select(AuditEvent).where(
+                AuditEvent.action == "contact.messages.exported", AuditEvent.actor_id == actor
+            )
+        )
+    ).all()
+    assert [(entry.details["tab"], entry.details["count"]) for entry in logged] == [
+        ("archived", total)
+    ]
 
 
 async def test_the_counts_are_each_tab_s(db: AsyncSession, made: list[uuid.UUID]) -> None:

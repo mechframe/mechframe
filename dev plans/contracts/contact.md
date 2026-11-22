@@ -118,7 +118,7 @@ Answered 2026-11-22, all four as recommended:
 
 - 2026-11-22, in the build:
   - **The event is `contact.news.requested`** (`schema/events/contact.news.requested.v1.schema.json`). An event's name is `<id>.<entity>.<action>`, the manifest schema's pattern, and `contact.news_requested` isn't.
-  - **Export is `GET /admin/messages/export?status=`.** It answers the tab's messages as JSON (`InboxExport`), and the Inbox makes the CSV in the browser, a formula cell given its leading `'` there. Every API answer is a typed object (`tests/test_openapi.py`).
+  - **Export is `GET /admin/messages/export?status=&cursor=`.** It answers a page of the tab's messages as JSON (`InboxExport`, 1,000 a page, with `next_cursor`), and the Inbox asks for every page, then makes the CSV in the browser, a formula cell given its leading `'` there. Every API answer is a typed object (`tests/test_openapi.py`). Paged rather than capped, so a busy tab is never cut short (Codex on #125); the first page is audited with the tab's count.
   - **`email_normal`, a column, is indexed** in place of an index on `lower(email)`, as `auth_user` keeps its address. The models-against-migrations check can't compare an expression index.
   - `contact_0001` depends on `kernel_0002`, the auth tables it needs, as `pages_0001` does.
   - **The answers' schema names are the module's own** (`ContactForm`, `InboxPage`, `InboxMessage` and the rest). A second `Full` or `Listed` would rename pages' in its committed OpenAPI.

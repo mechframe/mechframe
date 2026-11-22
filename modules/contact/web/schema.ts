@@ -73,7 +73,7 @@ export interface paths {
         };
         /**
          * Export Messages
-         * @description Every message in a tab, for the Inbox's Export (a CSV made in the browser); audited.
+         * @description A page of a whole tab for the Inbox's Export, 1,000 at a time; the first is audited.
          */
         get: operations["export_messages_api_contact_admin_messages_export_get"];
         put?: never;
@@ -174,11 +174,14 @@ export interface components {
         };
         /**
          * InboxExport
-         * @description Every message in a tab, for the Inbox's Export (a CSV made in the browser).
+         * @description A page of a tab's messages, for the Inbox's Export (a CSV made in the
+         *     browser): it asks for the next until `next_cursor` is null.
          */
         InboxExport: {
             /** Items */
             items: components["schemas"]["InboxMessage"][];
+            /** Next Cursor */
+            next_cursor: string | null;
         };
         /**
          * InboxItem
@@ -456,6 +459,7 @@ export interface operations {
         parameters: {
             query?: {
                 status?: "all" | "new" | "replied" | "archived" | "spam";
+                cursor?: string | null;
             };
             header?: never;
             path?: never;

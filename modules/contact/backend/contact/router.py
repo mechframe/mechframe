@@ -72,12 +72,15 @@ async def list_messages(
 
 @router.get("/admin/messages/export", response_model=InboxExport)
 async def export_messages(
-    status: Tab = "all", user: Any = Depends(MANAGE), db: AsyncSession = Depends(get_db)
+    status: Tab = "all",
+    cursor: Annotated[str | None, Query(max_length=80)] = None,
+    user: Any = Depends(MANAGE),
+    db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
-    """Every message in a tab, for the Inbox's Export (a CSV made in the browser); audited."""
-    items = await service.exported(db, status, by=user.id)
+    """A page of a whole tab for the Inbox's Export, 1,000 at a time; the first is audited."""
+    page = await service.exported(db, status, cursor, by=user.id)
     await db.commit()
-    return {"items": items}
+    return page
 
 
 @router.get(

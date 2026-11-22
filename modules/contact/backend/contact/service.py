@@ -37,8 +37,8 @@ FORM = "contact.message"
 PERMISSION = "contact.message.manage"
 NOTICE = "contact.message_received"
 PAGE = 50
-#: Most messages an export holds: years of a busy site's form.
-MAX_EXPORT = 10_000
+#: Messages in each page of an export: the Inbox asks for pages until the tab ends.
+EXPORT_PAGE = 1_000
 #: How long a message is kept after its status last changed (§8, 3).
 KEEP_SPAM = timedelta(days=30)
 KEEP_OTHERS = timedelta(days=730)
@@ -155,7 +155,8 @@ def _after(cursor: str) -> tuple[int, datetime, uuid.UUID]:
         if len(parts) != 3 or parts[0] not in ("0", "1") or not parts[1].isdigit():
             raise ValueError
         return int(parts[0]), _EPOCH + timedelta(microseconds=int(parts[1])), uuid.UUID(parts[2])
-    except ValueError:
+    except (ValueError, OverflowError):
+        # OverflowError: a time too far off for a timedelta (Codex on #125).
         raise _invalid("cursor", "Not a page of the Inbox.") from None
 
 
@@ -277,22 +278,44 @@ async def remove(db: AsyncSession, message_id: uuid.UUID, *, by: uuid.UUID) -> N
     audit.record(db, "contact.message.deleted", actor=by, target=(TYPE, message_id))
 
 
-async def exported(db: AsyncSession, tab: Tab, *, by: uuid.UUID) -> list[dict[str, Any]]:
-    """Every message in a tab, newest first, for the Inbox's Export."""
-    rows = await db.scalars(
-        select(Message)
-        .where(_in_tab(tab))
-        .order_by(Message.received_at.desc(), Message.id.desc())
-        .limit(MAX_EXPORT)
+async def exported(
+    db: AsyncSession,
+    tab: Tab,
+    cursor: str | None = None,
+    *,
+    by: uuid.UUID,
+    limit: int = EXPORT_PAGE,
+) -> dict[str, Any]:
+    """A page of a whole tab, newest first, for the Inbox's Export, which asks
+    for the next until `next_cursor` is null, so no message is left out
+    (Codex on #125). The first page is audited, with the tab's count."""
+    query = select(Message).where(_in_tab(tab))
+    if cursor is not None:
+        _, at_time, at_id = _after(cursor)
+        query = query.where(
+            sa.or_(
+                Message.received_at < at_time,
+                sa.and_(Message.received_at == at_time, Message.id < at_id),
+            )
+        )
+    rows = list(
+        await db.scalars(
+            query.order_by(Message.received_at.desc(), Message.id.desc()).limit(limit + 1)
+        )
     )
-    items = [full(message) for message in rows]
-    audit.record(
-        db,
-        "contact.messages.exported",
-        actor=by,
-        details={"tab": tab, "count": len(items)},
-    )
-    return items
+    page = rows[:limit]
+    if cursor is None:
+        total = await db.scalar(select(func.count()).select_from(Message).where(_in_tab(tab)))
+        audit.record(
+            db,
+            "contact.messages.exported",
+            actor=by,
+            details={"tab": tab, "count": int(total or 0)},
+        )
+    return {
+        "items": [full(message) for message in page],
+        "next_cursor": _cursor_of(1, page[-1]) if len(rows) > limit else None,
+    }
 
 
 # --- what's waiting, and what goes -----------------------------------------------------

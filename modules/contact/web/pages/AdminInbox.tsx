@@ -14,6 +14,7 @@ import {
   STATUS_WORDS,
   TABS,
   api,
+  exportAll,
   reasonWords,
   toCsv,
   useApiMutation,
@@ -228,9 +229,8 @@ export default function AdminInbox() {
   const exportTab = async () => {
     setExporting(true);
     try {
-      const { data } = await api.GET("/api/contact/admin/messages/export", { params: { query: { status: tab } } });
-      if (!data) throw new Error("no export");
-      download(`messages-${tab}-${new Date().toISOString().slice(0, 10)}.csv`, toCsv(data.items));
+      const messages = await exportAll(tab);
+      download(`messages-${tab}-${new Date().toISOString().slice(0, 10)}.csv`, toCsv(messages));
     } catch {
       toast({ tone: "danger", text: "The export didn't download. Try again." });
     } finally {

@@ -32,7 +32,7 @@ Use it when visitors should reach the site's people without an account, each mes
     - `GET /admin/messages/{id}`.
     - `POST /admin/messages/{id}/status`: `{status}`, audited.
     - `DELETE /admin/messages/{id}`: audited.
-    - `GET /admin/messages/export?status=`: every message in a tab, audited. The Inbox makes the CSV from it.
+    - `GET /admin/messages/export?status=&cursor=`: a whole tab, 1,000 a page, the first page audited with the tab's count. The Inbox asks for every page, then makes the CSV.
 - **The public page:** `/contact`, the heading, Settings' intro and the form. The server copy answers it with a `ContactPage` JSON-LD and lists it in the sitemap. A site's own `/contact` route wins it.
 - **For a site's own page:** `ContactForm` (`{onSent?}`), from `@/modules/contact/public` (decision 0057).
 - **Menus and pages:**
