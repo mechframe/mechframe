@@ -259,6 +259,12 @@ async def test_a_cursor_pages_on_and_a_bad_one_is_422(browser: Browser) -> None:
     assert wrong.status_code == 422, wrong.text
     tab = await browser.http.get(ADMIN, params={"status": "everything"})
     assert tab.status_code == 422
+    for limit in ("0", "101"):
+        refused = await browser.http.get(ADMIN, params={"limit": limit})
+        assert refused.status_code == 422, refused.text
+    one = await browser.http.get(ADMIN, params={"limit": "1"})
+    assert one.status_code == 200, one.text
+    assert len(one.json()["items"]) <= 1
 
 
 # --- the site's page -----------------------------------------------------------------------

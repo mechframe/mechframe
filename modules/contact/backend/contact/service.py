@@ -168,7 +168,9 @@ def first_line(text: str) -> str:
     return cut + "…"
 
 
-async def listed(db: AsyncSession, tab: Tab, cursor: str | None) -> dict[str, Any]:
+async def listed(
+    db: AsyncSession, tab: Tab, cursor: str | None, limit: int = PAGE
+) -> dict[str, Any]:
     """One page of a tab, every tab's count and the waiting item."""
     first = [topic.key for topic in (await current(db)).topics if topic.first]
     rank = _rank(first)
@@ -189,10 +191,10 @@ async def listed(db: AsyncSession, tab: Tab, cursor: str | None) -> dict[str, An
         )
     rows = (
         await db.execute(
-            query.order_by(rank, Message.received_at.desc(), Message.id.desc()).limit(PAGE + 1)
+            query.order_by(rank, Message.received_at.desc(), Message.id.desc()).limit(limit + 1)
         )
     ).all()
-    page = rows[:PAGE]
+    page = rows[:limit]
     items = [
         {
             "id": str(message.id),
@@ -205,7 +207,7 @@ async def listed(db: AsyncSession, tab: Tab, cursor: str | None) -> dict[str, An
         }
         for message, _ in page
     ]
-    next_cursor = _cursor_of(page[-1][1], page[-1][0]) if len(rows) > PAGE else None
+    next_cursor = _cursor_of(page[-1][1], page[-1][0]) if len(rows) > limit else None
     item = await waiting(db)
     return {
         "items": items,

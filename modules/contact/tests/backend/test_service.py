@@ -20,7 +20,7 @@ from contact.seed import _NAMESPACE, MESSAGES
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from kernel import Problem, clock, load_module, privacy
+from kernel import Database, Problem, clock, load_module, privacy
 from kernel import seed as seeding
 from kernel.models import AuditEvent
 
@@ -79,7 +79,7 @@ async def _every(db: AsyncSession, tab: Any) -> list[dict[str, Any]]:
     items: list[dict[str, Any]] = []
     cursor = None
     while True:
-        page = await service.listed(db, tab, cursor)
+        page = await service.listed(db, tab, cursor, 2)
         items += page["items"]
         cursor = page["next_cursor"]
         if cursor is None:
@@ -87,9 +87,8 @@ async def _every(db: AsyncSession, tab: Any) -> list[dict[str, Any]]:
 
 
 async def test_a_first_topic_s_new_messages_come_first_then_newest_page_by_page(
-    db: AsyncSession, made: list[uuid.UUID], monkeypatch: pytest.MonkeyPatch
+    db: AsyncSession, made: list[uuid.UUID]
 ) -> None:
-    monkeypatch.setattr(service, "PAGE", 2)
     booking = await _add(db, made, topic="work", topic_label="Working together", at=AHEAD)
     question = await _add(db, made, at=AHEAD + timedelta(hours=3))
     replied = await _add(db, made, topic="work", status="replied", at=AHEAD + timedelta(hours=2))
@@ -98,7 +97,9 @@ async def test_a_first_topic_s_new_messages_come_first_then_newest_page_by_page(
     mine = {m.id: m for m in (booking, question, replied, older, spam)}
 
     every = [item for item in await _every(db, "all") if uuid.UUID(item["id"]) in mine]
-    assert [item["id"] for item in every] == [str(m.id) for m in (booking, older, question, replied)]
+    assert [item["id"] for item in every] == [
+        str(m.id) for m in (booking, older, question, replied)
+    ]
     assert [item["first"] for item in every] == [True, True, False, True]
     assert every[0]["topic_label"] == "Working together"
 
@@ -304,3 +305,19 @@ def test_the_waiting_item_s_words_and_tone() -> None:
         "The oldest came in 4 days ago and hasn't had a reply.",
     )
     assert service.waiting_item(1, timedelta(days=2), top).tone == "warning"
+
+
+async def test_the_daily_job_prunes_in_a_session_of_its_own(
+    database: Database, db: AsyncSession, made: list[uuid.UUID]
+) -> None:
+    from contact.jobs import prune as daily
+
+    class Context:
+        def sessions(self) -> AsyncSession:
+            return database.sessions()
+
+    old_id = (await _add(db, made, status="spam", at=clock.now() - timedelta(days=40))).id
+    assert daily.name == "contact.prune"
+    await daily.run(Context(), {})  # type: ignore[arg-type]
+    await db.rollback()  # a fresh read: the job's own session deleted it
+    assert await db.scalar(select(Message.id).where(Message.id == old_id)) is None

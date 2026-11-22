@@ -35,7 +35,7 @@ export interface paths {
         put?: never;
         /**
          * Send Message
-         * @description MessageReceived, whether it passed or was held as spam: a bot learns nothing.
+         * @description Received, whether it passed or was held as spam: a bot learns nothing.
          */
         post: operations["send_message_api_contact_messages_post"];
         delete?: never;
@@ -415,6 +415,7 @@ export interface operations {
             query?: {
                 status?: "all" | "new" | "replied" | "archived" | "spam";
                 cursor?: string | null;
+                limit?: number;
             };
             header?: never;
             path?: never;

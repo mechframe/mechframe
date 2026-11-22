@@ -116,4 +116,11 @@ Answered 2026-11-22, all four as recommended:
 
 ## Changes after approval
 
+- 2026-11-22, in the build:
+  - **The event is `contact.news.requested`** (`schema/events/contact.news.requested.v1.schema.json`). An event's name is `<id>.<entity>.<action>`, the manifest schema's pattern, and `contact.news_requested` isn't.
+  - **Export is `GET /admin/messages/export?status=`.** It answers the tab's messages as JSON (`InboxExport`), and the Inbox makes the CSV in the browser, a formula cell given its leading `'` there. Every API answer is a typed object (`tests/test_openapi.py`).
+  - **`email_normal`, a column, is indexed** in place of an index on `lower(email)`, as `auth_user` keeps its address. The models-against-migrations check can't compare an expression index.
+  - `contact_0001` depends on `kernel_0002`, the auth tables it needs, as `pages_0001` does.
+  - **The answers' schema names are the module's own** (`ContactForm`, `InboxPage`, `InboxMessage` and the rest). A second `Full` or `Listed` would rename pages' in its committed OpenAPI.
+  - A topic Settings doesn't have is the field error `body.topic`, as the kernel keys a body's fields.
 - 2026-11-22: `notify_holders` holds by role alone, and answers the people it reached rather than a count. Overrides are per resource (SPEC 14.8), and a notice about the site as a whole has none (decision 0059).

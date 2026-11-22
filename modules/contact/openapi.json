@@ -37,7 +37,7 @@
     "/api/contact/messages": {
       "post": {
         "summary": "Send Message",
-        "description": "MessageReceived, whether it passed or was held as spam: a bot learns nothing.",
+        "description": "Received, whether it passed or was held as spam: a bot learns nothing.",
         "operationId": "send_message_api_contact_messages_post",
         "requestBody": {
           "content": {
@@ -121,6 +121,18 @@
                 }
               ],
               "title": "Cursor"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
             }
           }
         ],

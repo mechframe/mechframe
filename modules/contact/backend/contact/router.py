@@ -63,10 +63,11 @@ async def send_message(
 async def list_messages(
     status: Tab = "all",
     cursor: Annotated[str | None, Query(max_length=80)] = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = service.PAGE,
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
     """A page of a tab, newest first, a first topic's new messages before the rest."""
-    return await service.listed(db, status, cursor)
+    return await service.listed(db, status, cursor, limit)
 
 
 @router.get("/admin/messages/export", response_model=InboxExport)

@@ -5,6 +5,29 @@
   "generated_at": null,
   "modules": [
     {
+      "id": "contact",
+      "name": "Contact",
+      "version": "0.1.0",
+      "status": "experimental",
+      "category": "content",
+      "summary": "The site's contact form, and an Inbox where its people read each message, reply from their own email and set spam aside.",
+      "use_when": [
+        "Visitors should be able to write to the site's people without an account: bookings, press, commissions, questions",
+        "Each message should say what it's about, so it reaches the right person and the important ones come first",
+        "A bot's message should be set apart as spam, never reaching anyone and never silently lost"
+      ],
+      "avoid_when": [
+        "Members talk to each other or to staff in threads: that's a chat or community module",
+        "Each message should become a ticket with an owner, notes and replies sent from the site: that's a help desk",
+        "The form only takes an address for news: that's campaigns' sign-up"
+      ],
+      "requires": {
+        "kernel": "^0.1",
+        "modules": {}
+      },
+      "conflicts": []
+    },
+    {
       "id": "media",
       "name": "Media library",
       "version": "0.1.1",
