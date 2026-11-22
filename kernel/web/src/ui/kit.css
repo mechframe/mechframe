@@ -550,6 +550,203 @@
     padding-top: 1.25rem;
   }
 
+  /* --- The Markdown editor, search fields and prose (decision 0055) -------- */
+
+  /* VM Website AdminPost.dc.html: the editor is one field, so its edge is a
+     field's (color.border-control), its tabs and buttons inside. */
+  .mf-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .mf-editor-box {
+    border: 1px solid var(--mf-color-border-control);
+    border-radius: var(--mf-radius-control);
+    background: var(--mf-color-field);
+  }
+
+  .mf-editor--invalid .mf-editor-box {
+    border-color: var(--mf-color-danger);
+  }
+
+  .mf-editor-box .mf-tab-row {
+    gap: 0 1.25rem;
+    padding: 0 0.875rem;
+  }
+
+  .mf-editor-box .mf-tab-panel {
+    padding-top: 0;
+  }
+
+  .mf-editor-tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    padding: 0.625rem;
+    border-bottom: 1px solid var(--mf-color-border);
+  }
+
+  .mf-editor-tools .mf-button {
+    min-width: 2.125rem;
+    padding: 0 0.625rem;
+  }
+
+  .mf-editor-text {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 22.5rem;
+    padding: 1.125rem;
+    border: 0;
+    border-radius: 0 0 var(--mf-radius-control) var(--mf-radius-control);
+    background: transparent;
+    color: var(--mf-color-text);
+    font-family: var(--mf-font-mono);
+    font-size: 0.875rem;
+    line-height: 1.8;
+    resize: vertical;
+  }
+
+  .mf-editor-text::placeholder {
+    color: var(--mf-color-text-subtle);
+  }
+
+  .mf-editor-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1.5rem;
+  }
+
+  .mf-editor-preview-title {
+    margin: 0;
+    color: var(--mf-color-text-strong);
+    font-family: var(--mf-font-display);
+    font-size: 2.5rem;
+    font-weight: 800;
+    line-height: 0.95;
+    text-transform: uppercase;
+  }
+
+  .mf-editor-preview-wait,
+  .mf-editor-preview-note {
+    margin: 0;
+    color: var(--mf-color-text-muted);
+    font: var(--mf-type-meta);
+  }
+
+  .mf-search-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  textarea.mf-input.mf-search-description {
+    min-height: 4rem;
+  }
+
+  /* Words someone wrote, drawn in the theme's type (kernel.markdown's tags). */
+  .mf-prose {
+    color: var(--mf-color-text);
+    font: var(--mf-type-body);
+    letter-spacing: var(--mf-type-body-tracking);
+    overflow-wrap: anywhere;
+  }
+
+  .mf-prose > :first-child {
+    margin-top: 0;
+  }
+
+  .mf-prose > :last-child {
+    margin-bottom: 0;
+  }
+
+  .mf-prose :where(p, ul, ol, blockquote, pre, table, figure, hr) {
+    margin: 0 0 1em;
+  }
+
+  .mf-prose :where(h2, h3, h4, h5, h6) {
+    margin: 1.5em 0 0.5em;
+    color: var(--mf-color-text-strong);
+    line-height: 1.2;
+  }
+
+  .mf-prose h2 {
+    font-size: 1.5em;
+  }
+
+  .mf-prose h3 {
+    font-size: 1.25em;
+  }
+
+  .mf-prose :where(h4, h5, h6) {
+    font-size: 1em;
+  }
+
+  .mf-prose a {
+    color: var(--mf-color-link);
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+  }
+
+  .mf-prose a:hover {
+    color: var(--mf-color-link-hover);
+  }
+
+  .mf-prose :where(ul, ol) {
+    padding-left: 1.5em;
+  }
+
+  .mf-prose blockquote {
+    padding-left: 1em;
+    border-left: 3px solid var(--mf-color-accent);
+    color: var(--mf-color-text-strong);
+    font-size: 1.15em;
+  }
+
+  .mf-prose code {
+    font-family: var(--mf-font-mono);
+    font-size: 0.9em;
+  }
+
+  .mf-prose pre {
+    padding: 1em;
+    overflow-x: auto;
+    border: 1px solid var(--mf-color-border);
+    border-radius: var(--mf-radius-control);
+    background: var(--mf-color-well);
+  }
+
+  .mf-prose img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--mf-radius-control);
+  }
+
+  .mf-prose hr {
+    border: 0;
+    border-top: 1px solid var(--mf-color-border);
+  }
+
+  .mf-prose table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    border-collapse: collapse;
+  }
+
+  .mf-prose :where(th, td) {
+    padding: 0.5em 0.75em;
+    border-bottom: 1px solid var(--mf-color-border);
+    text-align: left;
+  }
+
+  .mf-prose th {
+    color: var(--mf-color-text-strong);
+  }
+
   /* --- Table ------------------------------------------------------------ */
 
   /* Positioned, so a visually hidden header (People's "Actions") is placed

@@ -104,8 +104,9 @@ for (const [theme, canvas] of Object.entries(THEMES)) {
           return { back, fill, boundary: Math.max(ratio(edge, back), ratio(fill, back)) };
         };
         const label = (element: Element) =>
-          `${element.tagName.toLowerCase()} ${element.getAttribute("aria-label") ?? element.textContent.trim().slice(0, 30)} (${element.getAttribute("data-kit-boundary") ?? "switch"})`;
-        const controls = [...document.querySelectorAll("[data-kit-boundary], .mf-switch")];
+          `${element.tagName.toLowerCase()} ${element.getAttribute("aria-label") ?? element.textContent.trim().slice(0, 30)} (${element.getAttribute("data-kit-boundary") ?? (element.classList.contains("mf-editor-box") ? "editor" : "switch")})`;
+        // The Markdown editor's box is its field's edge: the text inside has none (decision 0055).
+        const controls = [...document.querySelectorAll("[data-kit-boundary], .mf-switch, .mf-editor-box")];
         const boundaries = controls.map((element) => ({ control: label(element), ratio: drawn(element).boundary }));
         const knobs = [...document.querySelectorAll(".mf-switch")].map((track) => {
           const knob = track.querySelector(".mf-switch-knob");
@@ -115,8 +116,8 @@ for (const [theme, canvas] of Object.entries(THEMES)) {
         });
         return [...boundaries, ...knobs];
       });
-      // Three filled buttons (the passkey's among them), six fields, a pressed chip, two switches, and their knobs.
-      expect(measured).toHaveLength(14);
+      // Three filled buttons (the passkey's among them), six fields, a pressed chip, two switches, the editor, and the knobs.
+      expect(measured).toHaveLength(15);
       const short = measured.filter((each) => each.ratio < 3).map((each) => `${each.control}: ${each.ratio.toFixed(2)}:1`);
       expect(short).toEqual([]);
     });
@@ -152,6 +153,30 @@ for (const [theme, canvas] of Object.entries(THEMES)) {
       expect([...new Set(fills.drawn)]).toEqual([fills.field]);
       // The boards fill a field with the page colour (VM Website Dev 05, 2026-11-21).
       if (theme === "vibrant-mindz") expect(fills.field).toBe(canvas);
+    });
+
+    test("the Markdown editor's buttons type their change, so Ctrl Z takes it back, and Preview draws the words", async ({ page }) => {
+      await open(page, theme, canvas);
+      const writing = page.locator('[data-kit="writing"]');
+      const body = writing.getByRole("textbox", { name: "Page body" });
+      const before = await body.inputValue();
+      await body.evaluate((area: HTMLTextAreaElement) => {
+        area.focus();
+        area.setSelectionRange(area.value.length - 6, area.value.length - 1);
+      });
+      await writing.getByRole("button", { name: "Bold" }).click();
+      await expect(body).toHaveValue(before.replace("music", "**music**"));
+      await expect(body).toBeFocused();
+      await page.keyboard.press("ControlOrMeta+z");
+      await expect(body).toHaveValue(before);
+      await body.evaluate((area: HTMLTextAreaElement) => {
+        area.setSelectionRange(area.value.length - 6, area.value.length - 1);
+      });
+      await page.keyboard.press("ControlOrMeta+b");
+      await expect(body).toHaveValue(before.replace("music", "**music**"));
+      await writing.getByRole("tab", { name: "Preview" }).click();
+      await expect(writing.getByRole("heading", { level: 2, name: "Who we are" })).toBeVisible();
+      expect(await axe(page)).toEqual([]);
     });
 
     test("focus is the admin's ring, with a gap on a filled or pressed control, on every switch and over a selected tab's edge; the site keeps its outline", async ({ page }) => {
@@ -192,7 +217,8 @@ for (const [theme, canvas] of Object.entries(THEMES)) {
       // An admin field, a select and a text area too: the ring met a field's edge (#5C6584) at 2.2:1
       // in Vibrant Mindz (VM Website, the owner, 2026-11-21). The site's fields keep the outline, below.
       for (const name of ["Site name", "Time zone", "Description"]) {
-        const field = page.getByLabel(name, { exact: true });
+        // The first: the search fields' Description comes later (decision 0055).
+        const field = page.getByLabel(name, { exact: true }).first();
         await field.focus();
         await page.keyboard.press("Shift+Tab");
         await page.keyboard.press("Tab");

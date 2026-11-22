@@ -794,9 +794,9 @@
    "step": "Step 1: media, pages, blog, embeds, contact, campaigns",
    "status": "next",
    "status_label": "Next",
-   "prs": "#116",
-   "decisions": "",
-   "note": "media in review (#116); pages, blog, embeds, contact and campaigns to come"
+   "prs": "#116 #118",
+   "decisions": "0054 0055",
+   "note": "media landed (#116); the kernel's Markdown and its editor for pages and blog (#118); pages, blog, embeds, contact and campaigns to come"
   },
   {
    "milestone": "MechFrame v1.0",
@@ -881,6 +881,20 @@
    "prs": "",
    "decisions": "",
    "note": ""
+  },
+  {
+   "milestone": "After v1.0",
+   "phase_order": 11,
+   "phase_id": "site-more",
+   "phase": "Vibrant Mindz site, after launch",
+   "gate": "",
+   "step_order": 3,
+   "step": "pages: VybeSite's builder, its sections, designs and layout",
+   "status": "todo",
+   "status_label": "To do",
+   "prs": "",
+   "decisions": "",
+   "note": "the owner, 2026-11-21: ported after the Markdown pages (dev plans/contracts/pages.md)"
   },
   {
    "milestone": "After v1.0",

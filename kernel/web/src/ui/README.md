@@ -28,6 +28,9 @@ The behavior is ported from VybeSite; the look is drawn from the Vibrant Mindz a
 | `RouteFocus`, `ScrollMemory`, `landOn`, `reveal` | Focus and scroll on a move between pages, and landing on a `#place` |
 | `Icon`, `ICON_NAMES` | The kit's icon set; `IconName` is one of its names |
 | `QrCode` | A value as a QR code for a phone's camera (uqr's grid, one SVG path): dark on light in every theme, named by its `label`, with what it holds shown beside it as words |
+| `MarkdownEditor` | Someone's Markdown (decision 0055; VM Website `AdminPost.dc.html`): Write and Preview tabs over one text, Bold, Italic, Heading, Quote and Link, Ctrl B and Ctrl I, and a module's own `tools` after them. Preview asks the module's route for the HTML `kernel.markdown.render` makes, so it shows what the page will. A button's change is typed in, so Ctrl Z takes it back |
+| `Prose` | The server's cleaned HTML of someone's Markdown, in the theme's type; a link to a page here moves inside the app |
+| `SearchFields` | Search and sharing: the title in search results and the description, each showing what an empty one becomes |
 
 ## The site's look
 

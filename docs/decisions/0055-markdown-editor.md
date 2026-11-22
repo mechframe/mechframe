@@ -1,0 +1,15 @@
+# 0055: The kernel makes Markdown into HTML, and the kit has its editor
+
+- **Status:** Decided; applied in its own PR, before the `pages` module. The owner chose it on 2026-11-21 ("Kernel, own PR first"), over the kernel's part landing in pages' PR or the editor living in `pages`, with `blog` requiring `pages` for it (`dev plans/contracts/pages.md`, §8, 2).
+- **Context:** The Vibrant Mindz boards say "Pages use the same editor as blog posts, with the same Search and sharing fields" (`AdminPages.dc.html`, `AdminPost.dc.html`). `campaigns`, `comments` and `community` write Markdown too. SPEC 15 already says Markdown is rendered on the server and its HTML cleaned with nh3, but the kernel had no renderer, and modules may import each other only through a `public.py` they require.
+- **Decision:**
+  1. `kernel.markdown.render(text)` is python-markdown with VybeSite's extensions (`extra`, `sane_lists`), cleaned by nh3 to `server_copy.cleaned`'s allowlist, which now keeps a link's and an image's `title` and a list's `start`. An `h1` becomes an `h2`, since the page has its own. `plain(text)` gives the words alone, a space between blocks, for the search index and an empty description; `excerpt(words, limit)` cuts them at a word.
+  2. A module renders per read rather than storing HTML, so a rule changed here reaches every body at once, and caps a body's length itself.
+  3. The kit's `MarkdownEditor` is the board's Write and Preview tabs over one text, with Bold, Italic, Heading, Quote and Link, and Ctrl B and Ctrl I. Preview asks the module's own route for `render`'s HTML, so it shows what the page will. A module adds its own buttons with `tools`, a component given the editor's ways in (`wrap`, `insert`, `selected`): `blog`'s writing help and images, `embeds`' Embed.
+  4. A button's change is typed in with `document.execCommand("insertText")`, deprecated but the only call that keeps the browser's undo; where it fails, the editor sets the text and puts the selection back.
+  5. The kit's `Prose` draws the server's cleaned HTML in the theme's type, a link to a page on the site moving inside the app; `SearchFields` is Search and sharing, each empty field showing what it becomes.
+- **Rejected:**
+  - Rendering in the browser (VybeSite's react-markdown) beside a server renderer for crawlers and mail: two renderers drift, and SPEC 15 puts it on the server.
+  - markdown-it-py, a CommonMark parser that can refuse raw HTML: python-markdown is VybeSite's, whose body tests are ported (`kernel/tests/test_markdown.py`), and nh3 cleans raw HTML either way.
+  - Storing each body's HTML beside its Markdown: a new rule would need every row rewritten.
+- **Consequences:** `markdown` joins the runtime requirements. python-markdown expands a tab, so `java<tab>script:` reaches nh3 as `java    script:`, which a browser reads as a path on the site, never a script (the tests read addresses as a browser's URL parser does). An inline style, a table cell's alignment among them, is dropped, as the CSP refuses it.

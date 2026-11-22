@@ -26,11 +26,14 @@ import {
   Input,
   LinkButton,
   LoadError,
+  MarkdownEditor,
   Pill,
+  Prose,
   QrCode,
   SaveBar,
   ScrollMemory,
   SaveConflict,
+  SearchFields,
   SectionHistory,
   Select,
   Switch,
@@ -83,6 +86,39 @@ function Toaster() {
     >
       Show a note
     </Button>
+  );
+}
+
+const PROSE =
+  "<h2>Who we are</h2><p>A crew from Boston making <strong>music</strong>, <em>poetry</em> and art. " +
+  'See <a href="#site-look">the credits</a>.</p><blockquote><p>Sample words only.</p></blockquote>' +
+  "<ul><li>One</li><li>Two</li></ul>";
+
+function Writing() {
+  const [body, setBody] = useState("## Who we are\n\nA crew from Boston making music.");
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  return (
+    <div className="kit-stack" data-kit="writing">
+      <MarkdownEditor
+        label="Page body"
+        value={body}
+        onChange={setBody}
+        preview={() => Promise.resolve(PROSE)}
+        previewTitle="About"
+        previewNote="This is how the page looks on the site."
+        hint="Markdown works here: ## for a heading, **bold**, _italic_ and links."
+      />
+      <SearchFields
+        title={title}
+        description={description}
+        onTitle={setTitle}
+        onDescription={setDescription}
+        fallbackTitle="About | UI kit"
+        fallbackDescription="A crew from Boston making music."
+        hint="Left empty, these use the title and the page's opening words."
+      />
+    </div>
   );
 }
 
@@ -237,6 +273,9 @@ function AdminLook() {
         <LoadError what="The jobs" error="The server didn't answer." onRetry={() => undefined} />
       </div>
 
+      <h3>Writing</h3>
+      <Writing />
+
       <h3>Saving</h3>
       <div className="kit-stack">
         <SaveConflict
@@ -301,6 +340,8 @@ function SiteLook() {
       </div>
       <h3>A QR code</h3>
       <QrCode value="otpauth://totp/UI%20kit:ann.example%40mechframe.test?secret=JBSWY3DPEHPK3PXP&issuer=UI%20kit" label="A sample QR code" size={160} />
+      <h3>Someone's words</h3>
+      <Prose html={PROSE} />
       <h3>The account's cards</h3>
       <Card title="Signed-in devices" description="Anywhere your account is open right now." actions={<Button>Sign out everywhere else</Button>}>
         <p>

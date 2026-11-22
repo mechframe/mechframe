@@ -9,8 +9,8 @@ Updated 2026-11-20, `main` at `b543642`. Progress counts steps, not effort: each
 | Milestone | Done | In review | Next | To do | Waiting | Later | Progress |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
 | MechFrame v1.0 | 48 | 0 | 1 | 6 | 3 | 3 | ███████░░░ 78% (48 of 61) |
-| After v1.0 | 0 | 0 | 0 | 85 | 0 | 3 | ░░░░░░░░░░ 0% (0 of 88) |
-| Everything | 48 | 0 | 1 | 91 | 3 | 6 | ███░░░░░░░ 32% (48 of 149) |
+| After v1.0 | 0 | 0 | 0 | 86 | 0 | 3 | ░░░░░░░░░░ 0% (0 of 89) |
+| Everything | 48 | 0 | 1 | 92 | 3 | 6 | ███░░░░░░░ 32% (48 of 150) |
 
 ## MechFrame v1.0
 
@@ -151,7 +151,7 @@ Gate: v1.0 is frozen when blog, chat (community) and payments pass the quality g
 | Step | Status | PRs | Decisions | Note |
 | --- | --- | --- | --- | --- |
 | Step 0: scaffold, moderation permission, custom roles | Done | [#55](https://github.com/mechframe/mechframe/pull/55), [#56](https://github.com/mechframe/mechframe/pull/56) | [0029](decisions/0029-vibrant-mindz-order.md), [0031](decisions/0031-moderation-permission.md) |  |
-| Step 1: media, pages, blog, embeds, contact, campaigns | Next | [#116](https://github.com/mechframe/mechframe/pull/116) |  | media in review (#116); pages, blog, embeds, contact and campaigns to come |
+| Step 1: media, pages, blog, embeds, contact, campaigns | Next | [#116](https://github.com/mechframe/mechframe/pull/116), [#118](https://github.com/mechframe/mechframe/pull/118) | [0054](decisions/0054-route-body-limits.md), [0055](decisions/0055-markdown-editor.md) | media landed (#116); the kernel's Markdown and its editor for pages and blog (#118); pages, blog, embeds, contact and campaigns to come |
 | Step 2: discography, audio player, featured | To do |  |  |  |
 | Step 3: roster, portfolio, reactions, comments | To do |  |  |  |
 | Step 4: community | To do |  |  |  |
@@ -161,11 +161,15 @@ Gate: v1.0 is frozen when blog, chat (community) and payments pass the quality g
 
 The rest of the Vibrant Mindz site, the module waves, the framework tools and the TypeScript port study (decision 0018, SPEC 19).
 
-### Vibrant Mindz site, after launch · 0 of 2 done
+### Vibrant Mindz site, after launch · 0 of 3 done
 
 The beat store and the apparel designer.
 
-To do: `Step 6: licensing, the beat store`, `Step 7: print on demand, the apparel designer`.
+| Step | Status | PRs | Decisions | Note |
+| --- | --- | --- | --- | --- |
+| Step 6: licensing, the beat store | To do |  |  |  |
+| Step 7: print on demand, the apparel designer | To do |  |  |  |
+| pages: VybeSite's builder, its sections, designs and layout | To do |  |  | the owner, 2026-11-21: ported after the Markdown pages (dev plans/contracts/pages.md) |
 
 ### Wave 1: foundations every site uses · 0 of 16 done
 

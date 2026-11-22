@@ -163,7 +163,7 @@
       "gate_passed": false,
       "items": [
         {"name": "Step 0: scaffold, moderation permission, custom roles", "status": "done", "prs": [55, 56], "decisions": ["0029", "0031"]},
-        {"name": "Step 1: media, pages, blog, embeds, contact, campaigns", "status": "next", "prs": [116], "note": "media in review (#116); pages, blog, embeds, contact and campaigns to come"},
+        {"name": "Step 1: media, pages, blog, embeds, contact, campaigns", "status": "next", "prs": [116, 118], "decisions": ["0054", "0055"], "note": "media landed (#116); the kernel's Markdown and its editor for pages and blog (#118); pages, blog, embeds, contact and campaigns to come"},
         {"name": "Step 2: discography, audio player, featured", "status": "todo"},
         {"name": "Step 3: roster, portfolio, reactions, comments", "status": "todo"},
         {"name": "Step 4: community", "status": "todo"},
@@ -177,7 +177,8 @@
       "goal": "The beat store and the apparel designer.",
       "items": [
         {"name": "Step 6: licensing, the beat store", "status": "todo"},
-        {"name": "Step 7: print on demand, the apparel designer", "status": "todo"}
+        {"name": "Step 7: print on demand, the apparel designer", "status": "todo"},
+        {"name": "pages: VybeSite's builder, its sections, designs and layout", "status": "todo", "note": "the owner, 2026-11-21: ported after the Markdown pages (dev plans/contracts/pages.md)"}
       ]
     },
     {

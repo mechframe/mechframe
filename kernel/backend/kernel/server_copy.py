@@ -256,7 +256,12 @@ def time(when: date | datetime, text: Any = None) -> Html:
 
 
 _SCHEMES = {"http", "https", "mailto", "tel"}
-_ATTRIBUTES = {"a": {"href"}, "img": {"src", "alt", "width", "height"}, "time": {"datetime"}}
+_ATTRIBUTES = {
+    "a": {"href", "title"},
+    "img": {"src", "alt", "title", "width", "height"},
+    "ol": {"start"},  # a list that starts at 3 (kernel.markdown)
+    "time": {"datetime"},
+}
 #: What `cleaned` keeps of HTML made elsewhere: no h1, the page has its own.
 _POST_TAGS = {
     "h2", "h3", "h4", "h5", "h6", "p", "br", "hr", "ul", "ol", "li", "a", "em", "strong",

@@ -9,6 +9,7 @@ pytest-cov>=7.1  # line coverage, held to the floor in SPEC.md section 16
 ruff>=0.14
 black>=25.1
 mypy>=1.15  # strict on the kernel (SPEC.md section 16)
+types-Markdown>=3.7  # kernel.markdown checked strict (decision 0055)
 jsonschema>=4.23  # tools/validate_schemas.py
 moto[s3]>=5.1.0  # an in-process S3 for kernel.storage's tests (the owner's choice, decision 0032)
 pip-audit>=2.10.1  # checks both .txt files for known vulnerabilities, in CI too
