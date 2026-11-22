@@ -80,8 +80,11 @@ export function VideoPlaylist({ items, autoplay = true, onPlay, ref, label = "Vi
   const ready = useRef(false);
   // The video asked for last, loaded once the player is there and ready; null once it's gone (Codex on #127).
   const wanted = useRef<string | null>(null);
-  // The selection, kept within a list that shrinks (CodeRabbit on #127).
+  // The selection, kept within a list that shrinks, and kept there if it grows again (CodeRabbit on #127).
   const at = Math.min(current, Math.max(videos.length - 1, 0));
+  if (videos.length > 0 && current !== at) setCurrent(at);
+  // Counts the player's teardowns: a load begun before one is forgotten when it answers (CodeRabbit on #127).
+  const attempt = useRef(0);
   // Playing needs both: a visitor's Play, and media still granted.
   const live = started && media.granted;
   // What the player's events read when they come, after this render.
@@ -115,10 +118,12 @@ export function VideoPlaylist({ items, autoplay = true, onPlay, ref, label = "Vi
     if (gone) {
       setStarted(false);
       setPlaying(false);
+      setFailed(false);
     }
   }
   useEffect(() => {
     if (!gone) return;
+    attempt.current += 1;
     wanted.current = null;
     ready.current = false;
     player.current?.destroy();
@@ -141,12 +146,13 @@ export function VideoPlaylist({ items, autoplay = true, onPlay, ref, label = "Vi
     media.grant();
     setStarted(true);
     setFailed(false);
+    const mine = attempt.current;
     loadYouTube()
       .then((api) => {
         const frame = stage.current?.querySelector<HTMLElement>(".mf-playlist-frame");
         // The row picked last, not this click's, and none once media is withdrawn (Codex on #127).
         const videoId = wanted.current;
-        if (!frame || !videoId || player.current) return;
+        if (attempt.current !== mine || !frame || !videoId || player.current) return;
         // YouTube swaps the element it's given for its iframe: one of its own, not React's.
         const host = document.createElement("div");
         frame.append(host);
@@ -184,6 +190,7 @@ export function VideoPlaylist({ items, autoplay = true, onPlay, ref, label = "Vi
         });
       })
       .catch(() => {
+        if (attempt.current !== mine) return;
         setStarted(false);
         setFailed(true);
       });

@@ -294,6 +294,40 @@ describe("VideoPlaylist", () => {
     expect(player().loaded).toEqual(["aaaaaaaaaaa"]);
   });
 
+  it("keeps the selection it was clamped to when the list grows again (CodeRabbit on #127)", async () => {
+    renderWithKernel(
+      <Changing lists={{ "Just one": [{ url: "https://youtu.be/aaaaaaaaaaa", title: "First" }], All: ITEMS }} />,
+    );
+    await userEvent.click(row("Third"));
+    await userEvent.click(screen.getByRole("button", { name: "Just one" }));
+    await userEvent.click(screen.getByRole("button", { name: "All" }));
+    expect(row("First")).toHaveAttribute("aria-current", "true");
+    expect(row("Third")).not.toHaveAttribute("aria-current");
+  });
+
+  it("forgets a failed load once the list empties, and one that fails after (CodeRabbit on #127)", async () => {
+    delete window.YT;
+    renderWithKernel(<Changing lists={{ None: [], All: ITEMS }} />);
+    const fail = () => {
+      act(() => {
+        document.head.querySelector(`script[src="${IFRAME_API}"]`)?.dispatchEvent(new Event("error"));
+      });
+    };
+    await userEvent.click(screen.getByRole("button", { name: "Play First" }));
+    fail();
+    expect(await screen.findByText(/YouTube's player didn't load/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "None" }));
+    await userEvent.click(screen.getByRole("button", { name: "All" }));
+    expect(screen.queryByText(/YouTube's player didn't load/)).toBeNull();
+
+    await userEvent.click(screen.getByRole("button", { name: "Play First" }));
+    await userEvent.click(screen.getByRole("button", { name: "None" }));
+    fail();
+    await act(() => Promise.resolve());
+    await userEvent.click(screen.getByRole("button", { name: "All" }));
+    expect(screen.queryByText(/YouTube's player didn't load/)).toBeNull();
+  });
+
   it("lets its player go while the list has no video, and makes a new one after (CodeRabbit on #127)", async () => {
     renderWithKernel(<Changing lists={{ None: [], All: ITEMS }} />);
     await userEvent.click(screen.getByRole("button", { name: "Play First" }));
