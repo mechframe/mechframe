@@ -5,6 +5,8 @@ import { defineConfig } from "vitest/config";
 
 const kernel = fileURLToPath(new URL("./kernel/web/index.ts", import.meta.url));
 const testing = fileURLToPath(new URL("./kernel/web/testing.ts", import.meta.url));
+// Another module's public surface, as `@/modules/<id>/public` (SPEC 7, decision 0057).
+const modules = fileURLToPath(new URL("./modules/", import.meta.url));
 
 // One Vitest run for every workspace: the kernel's web half, the harness and
 // each module's web binding (modules/*/web, its tests in modules/*/tests/web).
@@ -15,6 +17,7 @@ export default defineConfig({
     alias: [
       { find: /^@\/kernel\/testing$/, replacement: testing },
       { find: /^@\/kernel$/, replacement: kernel },
+      { find: /^@\/modules\/([a-z][a-z0-9-]*)\/public$/, replacement: `${modules}$1/web/public.ts` },
     ],
   },
   test: {

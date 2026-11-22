@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mechframe.local/schema/events/blog.post.published.v1.schema.json",
+  "additionalProperties": false,
+  "description": "A post went live for the first time, with its writer's choices for it.",
+  "properties": {
+    "post_id": {
+      "format": "uuid",
+      "title": "Post Id",
+      "type": "string"
+    },
+    "slug": {
+      "title": "Slug",
+      "type": "string"
+    },
+    "title": {
+      "title": "Title",
+      "type": "string"
+    },
+    "path": {
+      "title": "Path",
+      "type": "string"
+    },
+    "allow_comments": {
+      "title": "Allow Comments",
+      "type": "boolean"
+    },
+    "post_to_community": {
+      "title": "Post To Community",
+      "type": "boolean"
+    },
+    "email_subscribers": {
+      "title": "Email Subscribers",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "post_id",
+    "slug",
+    "title",
+    "path",
+    "allow_comments",
+    "post_to_community",
+    "email_subscribers"
+  ],
+  "title": "blog.post.published (v1)",
+  "type": "object"
+}

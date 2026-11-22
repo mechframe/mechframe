@@ -56,7 +56,7 @@ Also check:
   `grep -rnE "^\s*(from|import) (blog|shop|comments)\b" modules/<id>/backend` (your names in the group). Every hit must be `<other>.public`.
 - Imports from the kernel come only from `kernel` (its `__init__`), never `kernel.<private module>`.
 - No foreign key into another module's tables (read the migrations).
-- The web binding imports only `@/kernel` and other modules' `public.ts`; no business logic in it.
+- The web binding imports only `@/kernel` and other modules' `public.ts`, as `@/modules/<other>/public` with `<other>` in `requires.modules` (decision 0057); no business logic in it. `grep -rn "@/modules/" modules/<id>/web` lists them, each `@/modules/<other>/public`, and no relative import climbs out of `web/`.
 
 ## 5. Data and security
 

@@ -794,9 +794,9 @@
    "step": "Step 1: media, pages, blog, embeds, contact, campaigns",
    "status": "next",
    "status_label": "Next",
-   "prs": "#116 #118 #119 #121",
-   "decisions": "0054 0055 0056",
-   "note": "media landed (#116); the kernel's Markdown and its editor for pages and blog (#118); media and the admin kit drawn to the boards (#119); pages, its menus loaded into nav.public and the new nav.footer (#121); blog, embeds, contact and campaigns to come"
+   "prs": "#116 #118 #119 #121 #123",
+   "decisions": "0054 0055 0056 0057",
+   "note": "media landed (#116); the kernel's Markdown and its editor for pages and blog (#118); media and the admin kit drawn to the boards (#119); pages, its menus loaded into nav.public and the new nav.footer (#121); blog, with its categories, covers, related posts and board, and a module's web reaching another's public.ts as @/modules/<id>/public (#123, decision 0057); blog's AI writing help, generated covers and social posting, embeds, contact and campaigns to come"
   },
   {
    "milestone": "MechFrame v1.0",

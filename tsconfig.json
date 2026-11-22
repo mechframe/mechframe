@@ -2,7 +2,11 @@
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "types": ["vite/client", "node", "@testing-library/jest-dom/vitest"],
-    "paths": { "@/kernel": ["./kernel/web/index.ts"], "@/kernel/testing": ["./kernel/web/testing.ts"] }
+    "paths": {
+      "@/kernel": ["./kernel/web/index.ts"],
+      "@/kernel/testing": ["./kernel/web/testing.ts"],
+      "@/modules/*/public": ["./modules/*/web/public.ts"]
+    }
   },
   "include": [
     "kernel/web/**/*.ts",

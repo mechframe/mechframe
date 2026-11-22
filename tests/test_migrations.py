@@ -198,6 +198,16 @@ _SEED = [
     "'## Who we are', :user, now(), now(), 'published', now())",
     "INSERT INTO pages_move (address, page_id, created_at) VALUES "
     "('/about-us', '00000000-0000-0000-0000-000000000007', now())",
+    "INSERT INTO blog_post (id, version, title, slug, summary, body, cover_id, author_id, "
+    "created_at, updated_at, status, published_at) VALUES "
+    "('00000000-0000-0000-0000-000000000008', 1, 'Ten years', 'ten-years', 'A decade', "
+    "'## Then', '00000000-0000-0000-0000-000000000006', :user, now(), now(), 'published', now()), "
+    "('00000000-0000-0000-0000-000000000009', 1, 'Salt', 'salt', '', 'A poem', NULL, NULL, "
+    "now(), now(), 'published', now())",
+    "INSERT INTO blog_slug_move (slug, post_id, created_at) VALUES "
+    "('ten-years-on', '00000000-0000-0000-0000-000000000008', now())",
+    "INSERT INTO blog_post_related (post_id, related_id, position) VALUES "
+    "('00000000-0000-0000-0000-000000000008', '00000000-0000-0000-0000-000000000009', 0)",
 ]
 
 

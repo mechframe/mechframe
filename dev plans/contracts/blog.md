@@ -1,9 +1,9 @@
 ---
 feature: The blog module, posts with their editor, categories, covers and AI writing help (Vibrant Mindz step 1; M4's second job)
-status: draft (the owner's answers to five questions in §8; two smaller ones still to ask, before the AI PR and social posting)
+status: approved for the first PR, the blog itself (the owner's go-ahead, 2026-11-22); §8's 6 and 7 still to ask, before the AI PR and social posting
 plan: `docs/plans/vibrant-mindz-backend/extraction/blog.md`; `dev plans/2026-11-21-vibrant-mindz-push-plan.md` (M4); the canvas's AdminBlog and AdminPost boards (`C:\DEV\VM Website\design\site\AdminBlog.dc.html`, `AdminPost.dc.html`) and the site's Blog and Post boards (`Blog.dc.html`, `Post.dc.html`)
-approved: not yet; answered 2026-11-22: the order of PRs, where AI help lives, what a cover is, two extras, and who writes (§8)
-pr: four, after `pages`: the blog, then the kernel's AI writing help, then generated covers, then social posting (§8); numbers predicted at push time
+approved: 2026-11-22 for the first PR ("blog's first PR, the blog itself, to its contract"); answered the same day: the order of PRs, where AI help lives, what a cover is, two extras, and who writes (§8)
+pr: four, after `pages`: the blog (#123, with decision 0057), then the kernel's AI writing help (decision 0058), then generated covers, then social posting (§8)
 ---
 
 # Contract: `blog`
@@ -72,3 +72,15 @@ Still to ask, each with its recommendation:
 
 6. **The Anthropic key** (before the AI PR): `ANTHROPIC_API_KEY` in the host's variables only, typed by the owner, as every other key here; nothing AI shows without it. VybeSite also lets an admin save one in Settings → AI, encrypted.
 7. **Social posting's home and key** (before its PR): VybeSite posts through Buffer, its key saved in Settings → Company channels. Recommended: a `social` module any module can share through (blog first, then releases and products), its Buffer token in the host's variables; the other way is inside blog. Creating the Buffer account is the owner's.
+
+## 9. Changes as it was built (#123)
+
+- **The vocabulary's key is `blog_category`,** not `blog.category`: a key is lowercase letters, digits and underscores (hook 2). A writer chooses an existing term; only staff holding `kernel.taxonomy.manage` make them, on the board's Categories card through the kernel's term routes. The seed makes News, Poetry and Rap battles; a site starts with none.
+- **Three more routes:** `GET /categories` (public: each category with its live posts, the Blog board's filters), `GET /admin/categories` (each with all its posts, the Categories card) and `GET /admin/authors` (the Author field: every active owner, and everyone whose role holds `blog.post.write`).
+- **The answers,** each a typed object (`tests/test_openapi.py`): the lists are `{items, next_cursor}` and take `limit`, the admin's adding `needs_cover`, the soonest scheduled post with no cover, for the board's note. A live post also answers `reading_minutes` (the boards' "n min read"), its search words filled in, `related` and `allow_comments`; `{moved}` is the post's path, `/blog/<slug>`.
+- **A slug left out is made from the title,** VybeSite's way (an apostrophe dropped), numbered when another post has it. A live post's slug may change and leaves a move, as a page's does; VybeSite kept a published post's address fixed.
+- **Readers see an author's display name only,** never an address: `author` is null when they have none. Staff see the address in its place.
+- **`blog.post.published` goes once a post,** the first time it goes live: blog hears the kernel's `kernel.content.published` for its type, so a scheduled post going live counts too, and `announced_at` keeps it to once. Its payload is `{post_id, slug, title, path, allow_comments, post_to_community, email_subscribers}`.
+- **The board's Comments column** waits for `comments` (step 3).
+- **A module's web reaches another's `public.ts` as `@/modules/<id>/public`** (decision 0057, SPEC 7): blog's is the first, for media's `ImagePicker` and `Picture`. The kernel's AI writing help is decision 0058.
+- **The e2e server runs with storage off,** so its post has no cover: covers are held by the contract suite (media's fake S3) and the web tests.
