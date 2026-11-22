@@ -84,7 +84,7 @@ for (const [theme, canvas] of Object.entries(THEMES)) {
       await page.evaluate(async (name) => {
         document.documentElement.dataset.theme = name;
         document.body.getBoundingClientRect();
-        await Promise.all(document.getAnimations().map((animation) => animation.finished));
+        await Promise.all(document.getAnimations().map((animation) => animation.finished.catch(() => undefined)));
       }, theme);
       const background = await page.evaluate(() => getComputedStyle(document.documentElement).backgroundColor);
       expect(background).toBe(canvas);
