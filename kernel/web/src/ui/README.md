@@ -1,4 +1,4 @@
-﻿# The UI kit
+# The UI kit
 
 Every part a kernel screen or a module's page is built from (K4 contract Â§4 item 4, change 15). `@/kernel` exports all of it. Use a part before writing a component of your own (SPEC 16).
 

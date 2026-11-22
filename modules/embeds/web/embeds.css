@@ -1,0 +1,298 @@
+/* embeds' players, the editor's dialog and the playlist player
+   (`dev plans/contracts/embeds.md`), on the theme's tokens only. A player's
+   shape is a class, never a style, for the CSP. */
+
+/* A link as its provider's player: the facade or the iframe, then the words. */
+.mf-embed {
+  margin: var(--mf-space-6) 0;
+}
+
+.mf-embed-player,
+.mf-embed-facade {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-radius: var(--mf-radius-card);
+  background: var(--mf-color-well);
+}
+
+.mf-embed--video .mf-embed-player,
+.mf-embed--video .mf-embed-facade {
+  aspect-ratio: 16 / 9;
+}
+
+.mf-embed--short .mf-embed-player,
+.mf-embed--short .mf-embed-facade {
+  aspect-ratio: 9 / 16;
+  max-width: 22rem;
+}
+
+.mf-embed--strip-120 .mf-embed-player {
+  height: 120px;
+}
+.mf-embed--strip-152 .mf-embed-player {
+  height: 152px;
+}
+.mf-embed--strip-166 .mf-embed-player {
+  height: 166px;
+}
+.mf-embed--strip-352 .mf-embed-player {
+  height: 352px;
+}
+.mf-embed--strip-450 .mf-embed-player {
+  height: 450px;
+}
+
+.mf-embed-facade {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: var(--mf-space-2);
+  padding: var(--mf-space-6);
+  border: 1px solid var(--mf-color-border);
+  box-sizing: border-box;
+}
+
+.mf-embed-from {
+  margin: 0;
+  font: var(--mf-type-meta);
+  letter-spacing: var(--mf-type-meta-tracking);
+  color: var(--mf-color-text-muted);
+}
+
+.mf-embed-words {
+  margin: 0;
+  font: var(--mf-type-section-title);
+  color: var(--mf-color-text-strong);
+}
+
+.mf-embed-note {
+  margin: 0;
+  font: var(--mf-type-small);
+  color: var(--mf-color-text-muted);
+}
+
+.mf-embed-caption {
+  margin-top: var(--mf-space-2);
+  font: var(--mf-type-small);
+}
+
+/* The editor's dialog. */
+.mf-embed-form {
+  display: grid;
+  gap: var(--mf-space-4);
+}
+
+.mf-embed-found {
+  margin: 0;
+  min-height: 1.25rem;
+  font: var(--mf-type-small);
+  color: var(--mf-color-text-muted);
+}
+
+/* The playlist player: the stage and its bar, the list beside them at the
+   stage's height, stacked under 980px with the list 420px tall. */
+.mf-playlist {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: var(--mf-space-4);
+  padding: var(--mf-space-4);
+  border: 1px solid var(--mf-color-border);
+  border-radius: var(--mf-radius-card);
+  background: var(--mf-color-surface);
+}
+
+.mf-playlist-main {
+  min-width: 0;
+}
+
+.mf-playlist-stage {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: var(--mf-radius-md);
+  background: var(--mf-color-well);
+}
+
+.mf-playlist-frame,
+.mf-playlist-frame > *,
+.mf-playlist-facade,
+.mf-playlist-poster,
+.mf-playlist-thumb {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.mf-playlist-poster,
+.mf-playlist-thumb {
+  object-fit: cover;
+}
+
+.mf-playlist-facade {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: var(--mf-space-3);
+  padding: var(--mf-space-6);
+  box-sizing: border-box;
+}
+
+.mf-playlist-caption,
+.mf-playlist-play,
+.mf-playlist-failed {
+  position: relative;
+}
+
+.mf-playlist-caption {
+  margin: 0;
+  padding: var(--mf-space-1) var(--mf-space-2);
+  border-radius: var(--mf-radius-sm);
+  background: var(--mf-color-surface);
+  font: var(--mf-type-section-title);
+  color: var(--mf-color-text-strong);
+}
+
+.mf-playlist-failed {
+  margin: 0;
+  padding: var(--mf-space-2);
+  border-radius: var(--mf-radius-sm);
+  background: var(--mf-color-surface);
+  font: var(--mf-type-small);
+}
+
+.mf-playlist-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mf-space-2);
+  margin-top: var(--mf-space-3);
+}
+
+.mf-playlist-now {
+  margin: 0;
+  font: var(--mf-type-body);
+  font-weight: 600;
+  color: var(--mf-color-text-strong);
+}
+
+.mf-playlist-controls {
+  display: flex;
+  gap: var(--mf-space-2);
+}
+
+.mf-playlist-side {
+  position: relative;
+  min-height: 0;
+}
+
+.mf-playlist-list {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mf-playlist-row {
+  display: flex;
+  align-items: center;
+  gap: var(--mf-space-3);
+  width: 100%;
+  min-height: 2.75rem;
+  padding: var(--mf-space-2) var(--mf-space-3);
+  border: 1px solid transparent;
+  border-radius: var(--mf-radius-md);
+  background: none;
+  font: var(--mf-type-body);
+  color: var(--mf-color-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.mf-playlist-row:hover {
+  background: var(--mf-color-neutral-tint);
+}
+
+.mf-playlist-row:focus-visible {
+  outline: none;
+  box-shadow: var(--mf-shadow-focus-ring);
+}
+
+.mf-playlist-row[aria-current="true"] {
+  border-color: var(--mf-color-accent);
+  background: var(--mf-color-neutral-tint);
+  color: var(--mf-color-text-strong);
+}
+
+.mf-playlist-number {
+  min-width: 1.5rem;
+  font: var(--mf-type-meta);
+  color: var(--mf-color-text-muted);
+}
+
+.mf-playlist-title {
+  flex: 1;
+}
+
+.mf-playlist-eq {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 0.875rem;
+}
+
+.mf-playlist-eq > span {
+  width: 3px;
+  height: 100%;
+  background: var(--mf-color-accent);
+  animation: mf-playlist-eq var(--mf-motion-slow) var(--mf-motion-easing-in-out) infinite alternate;
+}
+
+.mf-playlist-eq > span:nth-child(2) {
+  animation-delay: var(--mf-motion-fast);
+}
+
+.mf-playlist-eq > span:nth-child(3) {
+  animation-delay: var(--mf-motion-base);
+}
+
+@keyframes mf-playlist-eq {
+  from {
+    transform: scaleY(0.3);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mf-playlist-eq > span {
+    animation: none;
+  }
+}
+
+@media (max-width: 980px) {
+  .mf-playlist {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mf-playlist-side {
+    height: 420px;
+  }
+}
+
+@media (max-width: 600px) {
+  .mf-playlist-caption {
+    display: none;
+  }
+
+  .mf-playlist-now {
+    flex-basis: 100%;
+  }
+}

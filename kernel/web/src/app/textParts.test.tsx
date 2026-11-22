@@ -1,4 +1,4 @@
-﻿// The kit's text parts from the slots (decision 0060): the kernel's entries
+// The kit's text parts from the slots (decision 0060): the kernel's entries
 // and the modules on fill editor.tools and prose.embed.
 import { screen, within } from "@testing-library/react";
 import { useState } from "react";

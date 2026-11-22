@@ -117,3 +117,13 @@ None. The links live in the pages' and posts' own text. The migration ID `embeds
 
 1. **YouTube's thumbnails before a visitor plays:** none before `media` is granted (the owner, 2026-11-22, as recommended). Until then, the poster if one is set, or the site's own frame with the title. Once a visitor has played anything, the thumbnails show. Fetching them sooner would tell Google the visitor's address before any consent.
 2. **The main lane's answer (Dev 34, 2026-11-22):** both kernel changes go in this PR, with `main` merged first. `editor.tools` takes kernel entries too, for the AI. Decision 0060 is embeds'. The main lane holds 0058 (the AI) and 0061 (the account's name field), and migrations `kernel_0016` and `kernel_0017`. `campaigns` takes 0062 and up.
+
+## Changes after approval
+
+2026-11-22, in the build:
+- **The list's two copies:** `mechframe add` copies a module's `backend/<id>/` and `web/` and nothing at its root. So `providers.json` lives in `backend/embeds/` with its twin in `web/`, which a test holds equal, as VybeSite's two were. The cases live in `tests/providers.cases.json`.
+- **The facade's button** is Play for a video and Listen for audio, named with the words ("Play: The spring tour").
+- **The playlist stops after its last video,** with Autoplay on. Prev and Next still wrap.
+- **The editor's dialog has no form of its own**, since the editor may sit inside a page's form. Enter in either field inserts.
+- **`Prose` keeps its HTML object the same for the same text.** React sets the HTML again whenever that object is a new one, which took the players out (found by the kit's test).
+- **`lazyPart` takes a part given props** (`LazyOf<Props>`), for the two text slots.

@@ -1,0 +1,71 @@
+{
+  "providers": [
+    {
+      "id": "youtube",
+      "name": "YouTube",
+      "verb": "Watch",
+      "frame_host": "https://www.youtube-nocookie.com",
+      "allow": "accelerometer; clipboard-write; encrypted-media; fullscreen; gyroscope; picture-in-picture; web-share",
+      "hosts": ["youtube.com", "www.youtube.com", "m.youtube.com", "music.youtube.com", "youtu.be",
+                "youtube-nocookie.com", "www.youtube-nocookie.com"],
+      "kinds": {
+        "video": {"shape": "video", "words": "A video on YouTube", "player": "https://www.youtube-nocookie.com/embed/{id}"},
+        "short": {"shape": "short", "words": "A short on YouTube", "player": "https://www.youtube-nocookie.com/embed/{id}"},
+        "playlist": {"shape": "video", "words": "A playlist on YouTube",
+                     "player": "https://www.youtube-nocookie.com/embed/videoseries?list={id}"}
+      }
+    },
+    {
+      "id": "soundcloud",
+      "name": "SoundCloud",
+      "verb": "Listen",
+      "frame_host": "https://w.soundcloud.com",
+      "allow": "",
+      "hosts": ["soundcloud.com", "www.soundcloud.com", "m.soundcloud.com"],
+      "not_profiles": ["charts", "connect", "discover", "feed", "imprint", "jobs", "messages", "mobile", "notifications",
+                       "pages", "people", "pro", "search", "settings", "signin", "stations", "stream", "tags",
+                       "terms-of-use", "upload", "you"],
+      "profile_tabs": ["albums", "comments", "followers", "following", "groups", "likes", "playlists",
+                       "popular-tracks", "reposts", "sets", "spotlight", "tracks"],
+      "kinds": {
+        "track": {"shape": "strip-166", "words": "A track on SoundCloud",
+                  "player": "https://w.soundcloud.com/player/?url={id}&visual=false&show_comments=false"},
+        "set": {"shape": "strip-450", "words": "A playlist on SoundCloud",
+                "player": "https://w.soundcloud.com/player/?url={id}&visual=false&show_comments=false"}
+      }
+    },
+    {
+      "id": "spotify",
+      "name": "Spotify",
+      "verb": "Listen",
+      "frame_host": "https://open.spotify.com",
+      "allow": "clipboard-write; encrypted-media; fullscreen; picture-in-picture",
+      "hosts": ["open.spotify.com"],
+      "kinds": {
+        "track": {"shape": "strip-152", "words": "A track on Spotify", "player": "https://open.spotify.com/embed/track/{id}"},
+        "episode": {"shape": "strip-152", "words": "An episode on Spotify",
+                    "player": "https://open.spotify.com/embed/episode/{id}"},
+        "album": {"shape": "strip-352", "words": "An album on Spotify", "player": "https://open.spotify.com/embed/album/{id}"},
+        "playlist": {"shape": "strip-352", "words": "A playlist on Spotify",
+                     "player": "https://open.spotify.com/embed/playlist/{id}"},
+        "artist": {"shape": "strip-352", "words": "An artist on Spotify",
+                   "player": "https://open.spotify.com/embed/artist/{id}"},
+        "show": {"shape": "strip-352", "words": "A show on Spotify", "player": "https://open.spotify.com/embed/show/{id}"}
+      }
+    },
+    {
+      "id": "bandcamp",
+      "name": "Bandcamp",
+      "verb": "Listen",
+      "frame_host": "https://bandcamp.com",
+      "allow": "",
+      "hosts": [],
+      "kinds": {
+        "album": {"shape": "strip-120", "words": "An album on Bandcamp",
+                  "player": "https://bandcamp.com/EmbeddedPlayer/album={id}/size=large/bgcol=ffffff/linkcol=0687f5/tracklist=false/artwork=small/transparent=true/"},
+        "track": {"shape": "strip-120", "words": "A track on Bandcamp",
+                  "player": "https://bandcamp.com/EmbeddedPlayer/track={id}/size=large/bgcol=ffffff/linkcol=0687f5/tracklist=false/artwork=small/transparent=true/"}
+      }
+    }
+  ]
+}

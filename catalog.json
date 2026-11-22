@@ -53,6 +53,29 @@
       "conflicts": []
     },
     {
+      "id": "embeds",
+      "name": "Embeds",
+      "version": "0.1.0",
+      "status": "experimental",
+      "category": "media",
+      "summary": "YouTube, SoundCloud, Spotify and Bandcamp players from a pasted link, loaded only once a visitor plays.",
+      "use_when": [
+        "Writers put videos and tracks from YouTube, SoundCloud, Spotify or Bandcamp in pages and posts by pasting a link",
+        "Nothing from those providers should load, or set its cookies, until a visitor chooses to play",
+        "A page plays a list of YouTube videos in one player, one after another"
+      ],
+      "avoid_when": [
+        "The site's own audio or video files are played, or previews must be tagged and the full file never reachable: that's audio-player and media",
+        "A video should be for members or buyers only: a provider's player can't keep it private",
+        "An admin chooses what plays in a homepage player: that list is featured's, which can use this module's playlist player"
+      ],
+      "requires": {
+        "kernel": "^0.1",
+        "modules": {}
+      },
+      "conflicts": []
+    },
+    {
       "id": "media",
       "name": "Media library",
       "version": "0.1.1",

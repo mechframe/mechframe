@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Prose (decision 0055): the HTML the server made from someone's Markdown
  * (`kernel.markdown.render`, cleaned by nh3), drawn in the theme's type. It
  * only ever takes HTML from the API: never a string made in the browser.
