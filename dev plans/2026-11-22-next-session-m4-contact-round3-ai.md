@@ -17,13 +17,13 @@ MechFrame: website modules on a FastAPI + Postgres kernel (`CLAUDE.md`, `SPEC.md
 ## 3. State (verify it)
 
 - **main:** `f560ed5`: contact 0.1.1 (#129) and embeds (#127, the text slots `editor.tools` and `prose.embed`) landed after the handoff (#130). No PR is open; VM Website knows of #129. Check with `git log -1 origin/main` and `gh pr list`.
-- **Uncommitted, on purpose:** this file's item 2b and `dev plans/2026-11-22-site-mypy-modules.md` (and its `dev plans/README.md` line), added after the handoff. Commit them with round 3's PR.
+- **Committed with round 3 (#131):** this file's item 2b, `dev plans/2026-11-22-site-mypy-modules.md` and its `dev plans/README.md` line, all added after the handoff.
 - **The ledger** points at the rows from `96a6ccc`; republish from `main`'s `rows.json` (made at `f560ed5`). Its old assets, and the rest, are in `docs/HANDOFF.md`.
 
 ## 4. The job, in order
 
 1. **Republish the ledger** (`dev plans/progress-ledger/README.md`).
-2. **Media's round 3** (`dev plans/2026-11-22-media-round-3.md`): two items, its own PR, every admin page checked after.
+2. **Media's round 3**, #131 (`dev plans/done/2026-11-22-media-round-3.md`, with its result): two items, its own PR, every admin page checked after.
 2b. **A site's mypy can't see its modules** (`dev plans/2026-11-22-site-mypy-modules.md`, from VM Website): a template fix, its own small PR.
 3. **Blog's AI PR** (decision 0058). Write its contract first, `dev plans/contracts/kernel-ai.md`, for the owner to approve:
    - `ai.client()` (SPEC 6);

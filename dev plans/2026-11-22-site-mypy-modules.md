@@ -13,7 +13,7 @@ VM Website's own fix, in its `pyproject.toml`:
 ## What to decide and build
 
 - **The template's answer, for every site.** VM Website suggests the CLI write the override's module list on `mechframe add` and `remove`, next to `app/modules.py` and the lock. The alternative is one static line, with no list to keep: `mypy_path` plus following modules normally, since each module already passes strict mypy here. Check that a module's own code passes under the template's mypy settings, overrides included, before choosing the static line.
-- **The test, seen failing first:** a site made with `blog`, with a file in `backend/app/site/` that imports `blog.public`, through `mechframe check` or the CLI's tests. `tools.site_smoke` covers it end to end.
+- **The test, seen failing first:** a site made with `blog`, with a file in `backend/app/site/` that imports `blog.public`, through `mechframe check` or the CLI's tests. `tools.site_smoke` doesn't cover it: its second pass adds only the CLI's fixture modules, which have no `public.py`.
 - `mechframe check`, `templates/README.md` and the site's `CLAUDE.md`/`AGENTS.md` stay true.
 
 ## Two notes from VM Website, both as designed
