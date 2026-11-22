@@ -42,7 +42,8 @@ export function wrap({ value, start, end }: Selection, before: string, after: st
 
 /** `prefix` at the start of each line the selection touches; off again when every one has it. */
 export function prefixLines({ value, start, end }: Selection, prefix: string): Change {
-  const from = value.lastIndexOf("\n", start - 1) + 1;
+  // At offset 0 the line starts there: lastIndexOf with -1 would search index 0 (Codex on #118).
+  const from = start === 0 ? 0 : value.lastIndexOf("\n", start - 1) + 1;
   const stop = value.indexOf("\n", end > start && value[end - 1] === "\n" ? end - 1 : end);
   const to = stop === -1 ? value.length : stop;
   const lines = value.slice(from, to).split("\n");

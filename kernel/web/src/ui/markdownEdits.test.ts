@@ -68,6 +68,13 @@ describe("prefixLines", () => {
     expect(applied(at.value, prefixLines(at, "## "))).toBe("## One\nTwo");
   });
 
+  it("marks the first line when the text starts with an empty one and the caret is at its start (Codex on #118)", () => {
+    const at = { value: "\nTwo", start: 0, end: 0 };
+    expect(applied(at.value, prefixLines(at, "## "))).toBe("## \nTwo");
+    const both = { value: "\nTwo", start: 0, end: 4 };
+    expect(applied(both.value, prefixLines(both, "> "))).toBe("> \n> Two");
+  });
+
   it("marks the first line and the last", () => {
     const first = sel("[]One\nTwo");
     expect(applied(first.value, prefixLines(first, "## "))).toBe("## One\nTwo");
