@@ -123,6 +123,30 @@ async def test_a_rolled_back_upload_or_replace_takes_its_new_files_back(
     assert bucket.under(f"media/{kept_id}/") == before  # the old version's files stay
 
 
+async def test_a_retried_replace_keeps_its_files_from_the_rolled_back_try(
+    db: AsyncSession, bucket: Bucket
+) -> None:
+    """CodeRabbit on #116: a rolled-back replace's cleanup runs later, and a retry
+    that wrote the same keys and committed lost its files to it."""
+    image, _ = await service.upload(db, unique_image(size=(600, 400)), filename="a.png", by=None)
+    await db.commit()
+    image_id = image.id
+    await _settled()
+
+    bucket.gate = asyncio.Event()  # the rolled-back try's cleanup waits
+    await service.replace(db, image_id, unique_image(size=(600, 400)), filename="try.png", by=None)
+    await db.rollback()
+    retried = await service.replace(
+        db, image_id, unique_image(size=(600, 400)), filename="retry.png", by=None
+    )
+    await db.commit()
+    kept = service.keys(retried)
+    bucket.gate.set()
+    await _settled()
+
+    assert [key for key in kept if key in bucket.files] == kept
+
+
 async def test_an_upload_whose_audit_entry_fails_takes_its_files_back(
     db: AsyncSession, bucket: Bucket, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -234,10 +258,12 @@ async def test_a_replace_keeps_the_id_and_takes_the_old_files_after_the_commit(
     await db.commit()
     await _settled()
 
-    assert (replaced.id, replaced.file_version, replaced.version) == (image.id, 2, 2)
+    assert (replaced.id, replaced.version) == (image.id, 2)
+    assert replaced.file_version > 1
+    version = replaced.file_version
     assert bucket.under(f"media/{image.id}/") == [
-        f"media/{image.id}/2-480.jpg",
-        f"media/{image.id}/2.jpg",
+        f"media/{image.id}/{version}-480.jpg",
+        f"media/{image.id}/{version}.jpg",
     ]
     assert [each.owner for each in await service.uses_of(db, image.id)] == ["blog.post:1"]
 

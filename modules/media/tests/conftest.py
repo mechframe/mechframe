@@ -5,6 +5,7 @@ test, so tests sharing the database never meet (isolation by unique keys)."""
 
 from __future__ import annotations
 
+import asyncio
 import io
 import uuid
 from collections.abc import AsyncIterator
@@ -47,6 +48,8 @@ class Bucket:
     files: dict[str, bytes] = field(default_factory=dict)
     deleted: list[str] = field(default_factory=list)
     on: bool = True
+    #: While set and not open, deletes wait for it: a cleanup held back.
+    gate: asyncio.Event | None = None
 
     def under(self, prefix: str) -> list[str]:
         return sorted(key for key in self.files if key.startswith(prefix))
@@ -68,6 +71,8 @@ def bucket(monkeypatch: pytest.MonkeyPatch) -> Bucket:
         return storage.StoredFile(key=key, size=len(data), content_type="image/png", inline=True)
 
     async def delete(key: str, **_: object) -> None:
+        if found.gate is not None:
+            await found.gate.wait()
         found.files.pop(key, None)
         found.deleted.append(key)
 

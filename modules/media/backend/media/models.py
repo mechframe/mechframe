@@ -20,6 +20,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    Sequence,
     String,
     UniqueConstraint,
 )
@@ -28,6 +29,9 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from kernel import Base
 
+#: Each replace's file version, never one given before, even by a try that
+#: rolled back: its cleanup can't take a later try's files (CodeRabbit on #116).
+FILE_VERSIONS = Sequence("media_file_version_seq", start=2, metadata=Base.metadata)
 #: The longest alt text, as VybeSite's library has it.
 MAX_ALT = 250
 #: The longest file name kept as a label.

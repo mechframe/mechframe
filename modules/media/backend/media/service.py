@@ -24,7 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from kernel import Problem, audit, storage
 from media import pictures
-from media.models import MAX_FILENAME, MediaImage, MediaUse
+from media.models import FILE_VERSIONS, MAX_FILENAME, MediaImage, MediaUse
 
 #: A page of the library.
 PAGE = 40
@@ -388,10 +388,12 @@ async def replace(
             extra={"id": str(other.id)},
         )
     old = keys(image)
-    stored = await put_files(image.id, image.file_version + 1, prepared)
+    # A version no try has had, rolled back or not (CodeRabbit on #116).
+    version = int(await db.scalar(select(FILE_VERSIONS.next_value())) or 0)
+    stored = await put_files(image.id, version, prepared)
     until_committed(db, stored)  # before anything else can fail (CodeRabbit on #116)
     try:
-        image.file_version += 1
+        image.file_version = version
         image.version += 1
         image.content_type = prepared.content_type
         image.sha256 = prepared.sha256

@@ -95,7 +95,8 @@ async def test_an_editor_uploads_lists_describes_replaces_and_deletes(browser: B
     )
     assert replaced.status_code == 200, replaced.text
     assert replaced.json()["id"] == image["id"]
-    assert replaced.json()["url"].endswith(f"/media/{image['id']}/2.jpg")
+    assert replaced.json()["url"] != image["url"]
+    assert replaced.json()["url"].endswith(".jpg")
     assert (replaced.json()["alt"], replaced.json()["version"]) == ("A red door", 3)
 
     gone = await browser.http.delete(f"{LIST}/{image['id']}")

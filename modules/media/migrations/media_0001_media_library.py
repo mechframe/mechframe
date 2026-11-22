@@ -19,7 +19,7 @@ branch_labels: str | Sequence[str] | None = ("media",)
 depends_on: str | Sequence[str] | None = "kernel_0002"
 
 # True when this migration drops or rewrites data: the CLI asks before running it
-# (SPEC.md section 10). Upgrading adds two empty tables and two grants.
+# (SPEC.md section 10). Upgrading adds two empty tables, a sequence and two grants.
 destructive = False
 
 PERMISSIONS = ("media.image.upload", "media.image.manage")
@@ -92,6 +92,8 @@ def upgrade() -> None:
         sa.UniqueConstraint("image_id", "owner", name="uq_media_use_image_id_owner"),
     )
     op.create_index(op.f("ix_media_use_owner"), "media_use", ["owner"])
+    # Each replace's file version: never reused, since nextval isn't rolled back.
+    op.execute(sa.schema.CreateSequence(sa.Sequence("media_file_version_seq", start=2)))
     op.bulk_insert(
         _grants,
         [{"role_id": role, "permission": key} for key in PERMISSIONS for role in ROLES],
@@ -101,6 +103,7 @@ def upgrade() -> None:
 def downgrade() -> None:
     # Every grant of them goes, a custom role's too: without the module, nothing declares them.
     op.execute(sa.delete(_grants).where(_grants.c.permission.in_(PERMISSIONS)))
+    op.execute(sa.schema.DropSequence(sa.Sequence("media_file_version_seq")))
     op.drop_index(op.f("ix_media_use_owner"), table_name="media_use")
     op.drop_table("media_use")
     op.drop_index("ix_media_image_uploaded_by", table_name="media_image")
