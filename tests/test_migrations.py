@@ -208,6 +208,10 @@ _SEED = [
     "('ten-years-on', '00000000-0000-0000-0000-000000000008', now())",
     "INSERT INTO blog_post_related (post_id, related_id, position) VALUES "
     "('00000000-0000-0000-0000-000000000008', '00000000-0000-0000-0000-000000000009', 0)",
+    "INSERT INTO contact_message (id, received_at, name, email, email_normal, topic, topic_label, "
+    "message, wants_news, status, held_reason, status_at, notified_at, user_id) VALUES "
+    "(gen_random_uuid(), now(), 'Rae', 'Rae@example.com', 'rae@example.com', 'work', "
+    "'Working together', 'Can you play?', true, 'spam', 'links', now(), NULL, :user)",
 ]
 
 

@@ -1,0 +1,122 @@
+{
+  "id": "contact",
+  "name": "Contact",
+  "version": "0.1.0",
+  "status": "experimental",
+  "category": "content",
+  "summary": "The site's contact form, and an Inbox where its people read each message, reply from their own email and set spam aside.",
+  "use_when": [
+    "Visitors should be able to write to the site's people without an account: bookings, press, commissions, questions",
+    "Each message should say what it's about, so it reaches the right person and the important ones come first",
+    "A bot's message should be set apart as spam, never reaching anyone and never silently lost"
+  ],
+  "avoid_when": [
+    "Members talk to each other or to staff in threads: that's a chat or community module",
+    "Each message should become a ticket with an owner, notes and replies sent from the site: that's a help desk",
+    "The form only takes an address for news: that's campaigns' sign-up"
+  ],
+  "requires": {
+    "kernel": "^0.1",
+    "modules": {}
+  },
+  "conflicts": [],
+  "permissions": [
+    {
+      "key": "contact.message.manage",
+      "description": "Read the contact form's messages, mark, archive, delete and export them",
+      "default_roles": [
+        "admin"
+      ]
+    }
+  ],
+  "settings": [
+    {
+      "key": "intro",
+      "type": "string",
+      "default": "Send a message and we'll reply by email.",
+      "secret": false,
+      "description": "The line under the Contact page's heading"
+    },
+    {
+      "key": "topics",
+      "type": "json",
+      "default": [
+        {
+          "key": "question",
+          "label": "A question",
+          "first": false
+        },
+        {
+          "key": "work",
+          "label": "Working together",
+          "first": true
+        },
+        {
+          "key": "press",
+          "label": "Press",
+          "first": false
+        },
+        {
+          "key": "other",
+          "label": "Something else",
+          "first": false
+        }
+      ],
+      "secret": false,
+      "description": "What a message can be about, in the form's order; a first topic's new messages come first in the Inbox"
+    }
+  ],
+  "env": [],
+  "routes": {
+    "api": "/api/contact",
+    "public": [
+      "/contact"
+    ],
+    "member": [],
+    "admin": [
+      "/admin/contact"
+    ]
+  },
+  "tables": [
+    "contact_message"
+  ],
+  "events": {
+    "emits": [
+      "contact.news.requested"
+    ],
+    "listens": []
+  },
+  "slots": [
+    "nav.footer",
+    "nav.admin",
+    "admin.settings.section"
+  ],
+  "bindings": [
+    "web"
+  ],
+  "jobs": [
+    {
+      "name": "prune",
+      "schedule": "20 3 * * *"
+    }
+  ],
+  "notifications": [
+    {
+      "key": "contact.message_received",
+      "description": "A message came in through the contact form",
+      "default": "both"
+    }
+  ],
+  "vocabularies": [],
+  "content_types": [],
+  "data_hooks": {
+    "export": true,
+    "delete": true
+  },
+  "source": {
+    "from": "VybeSite",
+    "commit": "f659d7c",
+    "path": "backend/app/routers/contact_form.py, backend/app/schemas/contact_form.py, backend/app/services/contact_filter.py, backend/app/services/contact_alerts.py, frontend/src/pages/admin/ContactInbox.tsx, frontend/src/site/components/ContactForm.tsx",
+    "license": "proprietary"
+  }
+}

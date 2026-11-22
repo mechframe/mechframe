@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mechframe.local/schema/events/contact.news.requested.v1.schema.json",
+  "additionalProperties": false,
+  "properties": {
+    "message_id": {
+      "format": "uuid",
+      "title": "Message Id",
+      "type": "string"
+    },
+    "email": {
+      "maxLength": 254,
+      "title": "Email",
+      "type": "string"
+    },
+    "name": {
+      "maxLength": 200,
+      "title": "Name",
+      "type": "string"
+    }
+  },
+  "required": [
+    "message_id",
+    "email",
+    "name"
+  ],
+  "title": "contact.news.requested (v1)",
+  "type": "object"
+}

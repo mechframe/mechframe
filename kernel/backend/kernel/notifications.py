@@ -17,6 +17,11 @@ address; an account that isn't `active` gets nothing. Nothing goes out if the
 change rolls back. A caller's bug (a key nobody declares, a link off the site,
 a value the template needs) is ValueError, before anything is written.
 
+**`notify_holders`** gives one notice to everyone who holds a permission:
+each active account with the owner's role or a role that grants it, once,
+through `notify` (decision 0059). Overrides are per resource (SPEC.md 14.8),
+so they play no part: a notice about the site as a whole goes by role.
+
 **Every notice email** carries a footer (`kernel.notification_footer`, a
 template a site can reword) with the unsubscribe and settings links, and the
 one-click headers of RFC 8058. The unsubscribe token names the person and the
@@ -43,12 +48,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from kernel import clock, email, jobs
 from kernel.auth.hashing import keyed_hash, same
-from kernel.auth.models import User
+from kernel.auth.models import RolePermission, User, UserRole
+from kernel.auth.permissions import OWNER
 from kernel.errors import Problem
 from kernel.models import Notification, NotificationPreference
 
 #: A key: a module's id, a dot, a name (module.schema.json's pattern).
 KEY = re.compile(r"([a-z][a-z0-9]*(?:-[a-z0-9]+)*)\.[a-z][a-z0-9_]*")
+#: A permission: `<id>.<resource>.<action>` (module.schema.json's pattern).
+PERMISSION = re.compile(r"[a-z][a-z0-9]*(?:-[a-z0-9]+)*\.[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*")
+MAX_PERMISSION = 128
 MAX_KEY = 100
 MAX_LINK = 500
 #: A link is a path on this site: printable ASCII after one slash, no second
@@ -243,6 +252,43 @@ async def notify(
             )
         )
     return Sent(in_site, by_email)
+
+
+async def notify_holders(
+    db: AsyncSession,
+    permission: str,
+    key: str,
+    context: Mapping[str, str | int],
+    *,
+    link: str | None = None,
+) -> list[uuid.UUID]:
+    """`notify` for every active account holding `permission`: an owner, or
+    anyone with a role that grants it, each once and as they chose for `key`,
+    in the caller's transaction (decision 0059). Returns the people it reached,
+    in the site or by email, in id order."""
+    if not (
+        isinstance(permission, str)
+        and len(permission) <= MAX_PERMISSION
+        and PERMISSION.fullmatch(permission)
+    ):
+        raise ValueError(f"{permission!r} isn't a permission: <id>.<resource>.<action>.")
+    _kind(key)  # an unknown key is refused before anyone is read
+    granting = select(RolePermission.role_id).where(RolePermission.permission == permission)
+    people = await db.scalars(
+        select(UserRole.user_id)
+        .join(User, User.id == UserRole.user_id)
+        .where(
+            User.status == "active", or_(UserRole.role_id == OWNER, UserRole.role_id.in_(granting))
+        )
+        .distinct()
+        .order_by(UserRole.user_id)
+    )
+    reached = []
+    for person in people.all():
+        sent = await notify(db, person, key, context, link=link)
+        if sent.in_site or sent.email:
+            reached.append(person)
+    return reached
 
 
 async def _queue(

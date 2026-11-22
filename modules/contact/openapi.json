@@ -1,0 +1,890 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Contact",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/contact/form": {
+      "get": {
+        "summary": "Read Form",
+        "description": "The Contact page's intro and the topics a message can be about.",
+        "operationId": "read_form_api_contact_form_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactForm"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/contact/messages": {
+      "post": {
+        "summary": "Send Message",
+        "description": "Received, whether it passed or was held as spam: a bot learns nothing.",
+        "operationId": "send_message_api_contact_messages_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewContactMessage"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageReceived"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/contact/admin/messages": {
+      "get": {
+        "summary": "List Messages",
+        "description": "A page of a tab, newest first, a first topic's new messages before the rest.",
+        "operationId": "list_messages_api_contact_admin_messages_get",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "new",
+                "replied",
+                "archived",
+                "spam"
+              ],
+              "type": "string",
+              "default": "all",
+              "title": "Status"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 80
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InboxPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/contact/admin/messages/export": {
+      "get": {
+        "summary": "Export Messages",
+        "description": "A page of a whole tab for the Inbox's Export, 1,000 at a time; the first is audited.",
+        "operationId": "export_messages_api_contact_admin_messages_export_get",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "new",
+                "replied",
+                "archived",
+                "spam"
+              ],
+              "type": "string",
+              "default": "all",
+              "title": "Status"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 80
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InboxExport"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/contact/admin/messages/{message_id}": {
+      "get": {
+        "summary": "Read Message",
+        "description": "One message, opened. Opening it changes nothing: it stays new until it's answered.",
+        "operationId": "read_message_api_contact_admin_messages__message_id__get",
+        "parameters": [
+          {
+            "name": "message_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Message Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InboxMessage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete Message",
+        "description": "Gone for good: for a sender who asks to be forgotten.",
+        "operationId": "delete_message_api_contact_admin_messages__message_id__delete",
+        "parameters": [
+          {
+            "name": "message_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Message Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/contact/admin/messages/{message_id}/status": {
+      "post": {
+        "summary": "Change Status",
+        "description": "To another tab: Mark as replied, Archive, Spam, or Not spam (back to new).",
+        "operationId": "change_status_api_contact_admin_messages__message_id__status_post",
+        "parameters": [
+          {
+            "name": "message_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Message Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MessageStatus"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InboxMessage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "BotProof": {
+        "properties": {
+          "website": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Website"
+          },
+          "elapsed_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 10000000000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Elapsed Ms"
+          },
+          "token": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 4096
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "BotProof",
+        "description": "What a public form sends for the bot check; every field optional."
+      },
+      "ContactForm": {
+        "properties": {
+          "intro": {
+            "type": "string",
+            "title": "Intro"
+          },
+          "topics": {
+            "items": {
+              "$ref": "#/components/schemas/ContactTopic"
+            },
+            "type": "array",
+            "title": "Topics"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "intro",
+          "topics"
+        ],
+        "title": "ContactForm",
+        "description": "What the Contact page's form shows."
+      },
+      "ContactTopic": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "key",
+          "label"
+        ],
+        "title": "ContactTopic"
+      },
+      "InboxCounts": {
+        "properties": {
+          "new": {
+            "type": "integer",
+            "title": "New"
+          },
+          "replied": {
+            "type": "integer",
+            "title": "Replied"
+          },
+          "archived": {
+            "type": "integer",
+            "title": "Archived"
+          },
+          "spam": {
+            "type": "integer",
+            "title": "Spam"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "new",
+          "replied",
+          "archived",
+          "spam"
+        ],
+        "title": "InboxCounts"
+      },
+      "InboxExport": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/InboxMessage"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "InboxExport",
+        "description": "A page of a tab's messages, for the Inbox's Export (a CSV made in the\nbrowser): it asks for the next until `next_cursor` is null."
+      },
+      "InboxItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "topic_label": {
+            "type": "string",
+            "title": "Topic Label"
+          },
+          "first_line": {
+            "type": "string",
+            "title": "First Line"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "new",
+              "replied",
+              "archived",
+              "spam"
+            ],
+            "title": "Status"
+          },
+          "first": {
+            "type": "boolean",
+            "title": "First"
+          },
+          "received_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Received At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "topic_label",
+          "first_line",
+          "status",
+          "first",
+          "received_at"
+        ],
+        "title": "InboxItem",
+        "description": "A message in the Inbox's list."
+      },
+      "InboxMessage": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "topic_label": {
+            "type": "string",
+            "title": "Topic Label"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "wants_news": {
+            "type": "boolean",
+            "title": "Wants News"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "new",
+              "replied",
+              "archived",
+              "spam"
+            ],
+            "title": "Status"
+          },
+          "held_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Held Reason"
+          },
+          "received_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Received At"
+          },
+          "status_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Status At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "email",
+          "topic_label",
+          "message",
+          "wants_news",
+          "status",
+          "held_reason",
+          "received_at",
+          "status_at"
+        ],
+        "title": "InboxMessage",
+        "description": "One message, opened."
+      },
+      "InboxPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/InboxItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/InboxCounts"
+          },
+          "waiting": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InboxWaiting"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items",
+          "next_cursor",
+          "counts",
+          "waiting"
+        ],
+        "title": "InboxPage",
+        "description": "One page of a tab, with every tab's count and the waiting item."
+      },
+      "InboxWaiting": {
+        "properties": {
+          "tone": {
+            "type": "string",
+            "enum": [
+              "info",
+              "warning",
+              "danger"
+            ],
+            "title": "Tone"
+          },
+          "what": {
+            "type": "string",
+            "title": "What"
+          },
+          "why": {
+            "type": "string",
+            "title": "Why"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "to": {
+            "type": "string",
+            "title": "To"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "tone",
+          "what",
+          "why",
+          "label",
+          "to"
+        ],
+        "title": "InboxWaiting",
+        "description": "The \"Needs you\" item for new messages, as the Dashboard shows it."
+      },
+      "MessageReceived": {
+        "properties": {
+          "received": {
+            "type": "boolean",
+            "title": "Received"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "received"
+        ],
+        "title": "MessageReceived",
+        "description": "The same answer whether the message passed or was held (hook 5)."
+      },
+      "MessageStatus": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "new",
+              "replied",
+              "archived",
+              "spam"
+            ],
+            "title": "Status"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "MessageStatus"
+      },
+      "NewContactMessage": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Name"
+          },
+          "email": {
+            "type": "string",
+            "maxLength": 318,
+            "title": "Email"
+          },
+          "topic": {
+            "type": "string",
+            "maxLength": 40,
+            "title": "Topic"
+          },
+          "message": {
+            "type": "string",
+            "maxLength": 5000,
+            "title": "Message"
+          },
+          "wants_news": {
+            "type": "boolean",
+            "title": "Wants News",
+            "default": false
+          },
+          "bot": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BotProof"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "email",
+          "topic",
+          "message"
+        ],
+        "title": "NewContactMessage",
+        "description": "A visitor's message. `bot` is the kit's `useBotProof()` (hook 5)."
+      },
+      "Problem": {
+        "title": "Problem",
+        "description": "RFC 9457 problem details (SPEC 7): `type` is `urn:mechframe:problem:<code>`, `code` is stable, and field errors are in `errors` by dotted path. Some problems carry more members, such as `retry_after`.",
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "errors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "required": [
+          "type",
+          "title",
+          "status",
+          "detail",
+          "code"
+        ],
+        "additionalProperties": true
+      }
+    }
+  }
+}

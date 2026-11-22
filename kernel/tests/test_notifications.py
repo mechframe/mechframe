@@ -30,7 +30,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from kernel import clock, email, jobs, notifications
 from kernel.app import create_app
 from kernel.auth import sessions
-from kernel.auth.models import User
+from kernel.auth.models import Role, RolePermission, User, UserRole
 from kernel.db import Database
 from kernel.email import Captured, CapturingMailer, Checked, LogMailer, Template
 from kernel.models import ModuleState, Notification, NotificationPreference
@@ -116,7 +116,13 @@ async def site(migrated_url: str) -> AsyncIterator[Site]:
     await app.state.database.dispose()
 
 
-async def _person(db: AsyncSession, *, verified: bool = True, status: str = "active") -> User:
+async def _person(
+    db: AsyncSession,
+    *,
+    verified: bool = True,
+    status: str = "active",
+    roles: tuple[str, ...] = (),
+) -> User:
     user_id = uuid.uuid4()
     address = f"{user_id.hex[:12]}@site.test"
     user = User(
@@ -129,8 +135,21 @@ async def _person(db: AsyncSession, *, verified: bool = True, status: str = "act
         role_version=0,
     )
     db.add(user)
+    if roles:
+        await db.flush()
+        db.add_all(UserRole(user_id=user_id, role_id=role) for role in roles)
     await db.commit()
     return user
+
+
+async def _role(db: AsyncSession, *permissions: str) -> str:
+    """A site's own role holding only `permissions`."""
+    role_id = f"test-{uuid.uuid4().hex[:10]}"
+    db.add(Role(id=role_id, name=role_id, builtin=False))
+    await db.flush()
+    db.add_all(RolePermission(role_id=role_id, permission=held) for held in permissions)
+    await db.commit()
+    return role_id
 
 
 async def _notices(db: AsyncSession, user_id: uuid.UUID) -> list[Notification]:
@@ -757,3 +776,70 @@ async def test_an_email_the_checks_refuse_adds_no_notice_either(
         await notifications.notify(db, ana_id, site.key("reply"), _reply(), link="/x")
     assert list(db.new) == []
     await db.rollback()
+
+
+# --- notify_holders: everyone who holds a permission (decision 0059) --------------------
+
+
+async def test_notify_holders_reaches_each_active_holder_once_and_no_one_else(
+    site: Site, db: AsyncSession
+) -> None:
+    permission = f"{site.module}.inbox.read"
+    granting = await _role(db, permission)
+    another = await _role(db, permission)
+    elsewhere = await _role(db, f"{site.module}.other.read")
+    holder = await _person(db, roles=(granting,))
+    twice = await _person(db, roles=(granting, another, "owner"))
+    owner = await _person(db, roles=("owner",))
+    without = await _person(db, roles=(elsewhere,))
+    member = await _person(db, roles=("member",))
+    suspended = await _person(db, status="suspended", roles=(granting,))
+    mine = {p.id for p in (holder, twice, owner, without, member, suspended)}
+
+    reached = await notifications.notify_holders(
+        db, permission, site.key("reply"), _reply(), link="/admin/inbox/1"
+    )
+    await db.commit()
+
+    assert len(reached) == len(set(reached))
+    assert set(reached) & mine == {holder.id, twice.id, owner.id}
+    for person in (holder, twice, owner):
+        notices = await _notices(db, person.id)
+        assert [(n.key, n.link) for n in notices] == [(site.key("reply"), "/admin/inbox/1")]
+    for person in (without, member, suspended):
+        assert await _notices(db, person.id) == []
+    assert [m.subject for m in await site.mail(holder.email)] == ["Ben replied on Spring tour"]
+
+
+async def test_notify_holders_counts_only_who_it_reached(site: Site, db: AsyncSession) -> None:
+    """Someone who turned the key off in the site and by email holds the
+    permission still, but nothing reached them."""
+    permission = f"{site.module}.inbox.read"
+    role = await _role(db, permission)
+    quiet = await _person(db, roles=(role,))
+    db.add(
+        NotificationPreference(user_id=quiet.id, key=site.key("reply"), in_site=False, email=False)
+    )
+    await db.commit()
+    reached = await notifications.notify_holders(
+        db, permission, site.key("reply"), _reply(), link="/x"
+    )
+    await db.commit()
+    assert quiet.id not in reached
+    assert await _notices(db, quiet.id) == []
+
+
+@pytest.mark.parametrize("permission", ["", "inbox", "Contact.message.manage", "a.b"])
+async def test_notify_holders_refuses_a_permission_that_isn_t_one(
+    site: Site, db: AsyncSession, permission: str
+) -> None:
+    with pytest.raises(ValueError, match="permission"):
+        await notifications.notify_holders(db, permission, site.key("reply"), _reply())
+    assert list(db.new) == []
+
+
+async def test_notify_holders_refuses_a_key_nobody_declares_before_reading_anyone(
+    site: Site, db: AsyncSession
+) -> None:
+    with pytest.raises(ValueError, match="declares"):
+        await notifications.notify_holders(db, f"{site.module}.inbox.read", "nobody.key", {})
