@@ -22,3 +22,15 @@ VM Website's own fix, in its `pyproject.toml`:
 - `kernel.server_copy`'s `Pages.page()` receives the address asked (`/blog/<slug>`), not the pattern. Its docstring already says so (`server_copy.py`, `Pages.page`). Nothing to change.
 
 Done means a new site with a module whose site code imports that module's `public` passes `python -m mypy`, CI's site smoke stays green, and VM Website Dev 10 gets the PR number.
+
+## Result (2026-11-22, session M4e)
+
+**The static line.** The template's `pyproject.toml` has `mypy_path = "backend,backend/modules"`, and mypy follows a module normally, as it already followed the kernel: no override list, so `mechframe add` and `remove` write nothing more.
+- Checked before choosing it: a scratch site with all five built modules (media, pages, blog, contact, embeds), a file in `backend/app/site/` importing each module's 45 Python files, passes the site's strict mypy, so a module's own code passes under the template's settings as it does here.
+- A module is still third-party to the site's ruff: `from blog import public` sorts with `sqlalchemy`, as `known-first-party` names only `app` and `kernel`. Left as it is, so VM Website's imports stay sorted.
+
+**The test,** seen failing first with VM Website's `import-not-found` for `blog`: `tests/test_site_template.py`'s `test_a_sites_mypy_sees_its_modules_public_surface`. It makes a site with this checkout's media and blog, adds a Blog page of its own in `backend/app/site/` that imports `blog.public`, and runs the site's `python -m mypy`, ruff and black. It's the first test on a PR that runs a site's mypy (about 2 minutes here; `tools.site_smoke` runs it on main's pushes, with the fixture modules only). The same file's `_run` now reads its subprocesses' output as UTF-8, since this session's full run had failed reading Black's emoji as cp1252.
+
+**For VM Website:** `mechframe upgrade kernel` brings the new `mypy_path`. VM Website edited the same file, so the upgrade stops on `pyproject.toml` as a conflict with a diff for an agent: take the template's `mypy_path` and drop the `follow_imports = "silent"` override, so the modules are checked again in the site, then `--merged pyproject.toml`.
+
+**Left for blog's next version:** the note that `blog.public`'s dates are ISO text goes in blog's `MODULE.md` with blog's next version (blog's AI PR), not here, since changing a module's files means a new version.

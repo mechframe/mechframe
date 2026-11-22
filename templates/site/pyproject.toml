@@ -69,9 +69,13 @@ extend-immutable-calls = [
 known-first-party = ["app", "kernel"]
 
 # --- types ---------------------------------------------------------------------
+# The site's own code, and what it imports followed in strictly: the kernel from
+# `backend`, and a module by its own name from `backend/modules`, as `app` puts
+# that folder on `sys.path` (`from blog import public`, SPEC 7). Every module
+# passes these settings where MechFrame keeps it, so no module is skipped.
 [tool.mypy]
 python_version = "3.12"
-mypy_path = "backend"
+mypy_path = "backend,backend/modules"
 files = ["backend/app", "backend/tests"]
 explicit_package_bases = true
 plugins = ["pydantic.mypy"]

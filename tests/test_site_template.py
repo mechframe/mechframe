@@ -4,7 +4,8 @@ dependencies are MechFrame's, it deploys behind Railway's proxy with a real
 client address, and its own Python tests and lint pass. With the CLI's
 fixture modules added (`mechframe add`, the K5 contract §4 item 4), its
 registries import and build, every setting is in `.railway/railway.ts`, its
-tests pass again and `mechframe check` is clean.
+tests pass again and `mechframe check` is clean. With this checkout's media and
+blog added, its strict mypy follows a page of its own into `blog.public`.
 
 The site's tests run here in a subprocess, with this repo's Python (the
 site's pins are this repo's), so every pull request runs them; the database
@@ -294,7 +295,10 @@ def _run(
         cwd=site,
         env=env,
         capture_output=True,
-        text=True,
+        # UTF-8 whatever the locale: under PYTHONIOENCODING=utf-8 a Windows parent
+        # read Black's "All done! ✨" as cp1252 and failed on it (round 3's full run).
+        encoding="utf-8",
+        errors="replace",
         timeout=600,
         check=False,
     )
@@ -372,6 +376,47 @@ def test_a_site_with_modules_is_linted_clean_and_passes_its_tests(site_with_modu
     assert found.returncode == 0, found.stdout[-4000:] + found.stderr[-2000:]
     if os.environ.get("MECHFRAME_REQUIRE_DB") == "1":
         assert " skipped" not in found.stdout, found.stdout[-2000:]
+
+
+#: A site's own page reading a module's public surface (SPEC 7), as VM Website's
+#: Blog page reads blog's: what `backend/app/site/` may import from a module.
+BLOG_PAGE = '''"""The site's own Blog page, from blog's public reads."""
+
+from __future__ import annotations
+
+from blog import public as blog
+from sqlalchemy.ext.asyncio import AsyncSession
+
+
+async def newest_titles(db: AsyncSession) -> list[str]:
+    return [card.title for card in await blog.newest(db, 3)]
+'''
+
+
+@pytest.fixture(scope="module")
+def site_with_blog(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """A new site with this checkout's media and blog added, and a page of its own
+    that imports `blog.public`."""
+    folder = tmp_path_factory.mktemp("made") / "with-blog"
+    assert main(["new", str(folder), "--name", "Test Site"]) == 0
+    for module_id in ("media", "blog"):
+        modules.add(folder, module_id, root=ROOT)
+    (folder / "backend" / "app" / "site" / "blog_page.py").write_text(BLOG_PAGE, "utf-8")
+    return folder
+
+
+def test_a_sites_mypy_sees_its_modules_public_surface(site_with_blog: Path) -> None:
+    """The site's strict mypy finds a module's package by its own name, as `app`
+    puts `backend/modules` on `sys.path`, and follows it into the module's copy
+    (VM Website's item, 2026-11-22: `import-not-found` for `blog` before)."""
+    found = _run(site_with_blog, "-m", "mypy")
+    assert found.returncode == 0, found.stdout[-4000:] + found.stderr[-2000:]
+    for command in (
+        ("-m", "ruff", "check", "backend/app"),
+        ("-m", "black", "--check", "backend/app"),
+    ):
+        found = _run(site_with_blog, *command)
+        assert found.returncode == 0, found.stdout + found.stderr
 
 
 async def _jobs_named(url: str, name: str) -> int:
