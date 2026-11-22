@@ -264,6 +264,14 @@ export interface components {
              */
             updated_at: string;
         };
+        /**
+         * Menu
+         * @description The live pages in one menu, in order.
+         */
+        Menu: {
+            /** Items */
+            items: components["schemas"]["MenuLink"][];
+        };
         /** MenuLink */
         MenuLink: {
             /** Title */
@@ -333,6 +341,14 @@ export interface components {
             in_footer?: boolean | null;
             /** Menu Order */
             menu_order?: number | null;
+        };
+        /**
+         * PageList
+         * @description Every page, newest edit first: a site's handful of fixed pages, not paged.
+         */
+        PageList: {
+            /** Items */
+            items: components["schemas"]["Listed"][];
         };
         /** Preview */
         Preview: {
@@ -441,7 +457,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MenuLink"][];
+                    "application/json": components["schemas"]["Menu"];
                 };
             };
             /** @description What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected` */
@@ -479,7 +495,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Listed"][];
+                    "application/json": components["schemas"]["PageList"];
                 };
             };
             /** @description A problem (RFC 9457) */

@@ -44,6 +44,12 @@ class MenuLink(Answer):
     address: str
 
 
+class Menu(Answer):
+    """The live pages in one menu, in order."""
+
+    items: list[MenuLink]
+
+
 class Listed(Answer):
     """A page in the admin's list."""
 
@@ -59,6 +65,12 @@ class Listed(Answer):
     updated_at: When
     #: Who changed it last, by name or address; null once their account is gone.
     updated_by: str | None
+
+
+class PageList(Answer):
+    """Every page, newest edit first: a site's handful of fixed pages, not paged."""
+
+    items: list[Listed]
 
 
 class Full(Listed):

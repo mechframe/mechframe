@@ -20,7 +20,7 @@ export const ONE = "/api/pages/admin/pages/{page_id}";
 /** The live pages in the header's menu or the footer's, as a link slot holds them (decision 0056). */
 export async function menu(place: "header" | "footer"): Promise<LinkEntry[]> {
   const { data } = await api.GET("/api/pages/menu", { params: { query: { place } } });
-  return (data ?? []).map((link) => ({ label: link.title, to: link.address }));
+  return (data?.items ?? []).map((link) => ({ label: link.title, to: link.address }));
 }
 
 /** The HTML the site would draw for `body`, saved or not. */

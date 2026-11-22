@@ -14,8 +14,8 @@ Use it for pages the site's people write and change themselves, chosen page by p
 
 - **Routes**, under `/api/pages`:
   - `GET /page?address=/about` (public): the live page, `{title, address, html, search_title, search_description, updated_at}`, the search words filled in from the title and the body when left empty; `{moved}` for an address a live page left; 404 `pages.page_not_found` otherwise;
-  - `GET /menu?place=header` or `footer` (public): the live pages in that menu, in order;
-  - `GET /admin/pages`, `POST /admin/pages` (409 `pages.address_taken`, naming who answers the address), `GET` and `PATCH /admin/pages/{id}` (with `version`; 409 `pages.changed` with the page as it is now), `POST /admin/preview`: `pages.page.write`;
+  - `GET /menu?place=header` or `footer` (public): `{items}`, the live pages in that menu, in order;
+  - `GET /admin/pages` (`{items}`, every page, not paged), `POST /admin/pages` (409 `pages.address_taken`, naming who answers the address), `GET` and `PATCH /admin/pages/{id}` (with `version`; 409 `pages.changed` with the page as it is now), `POST /admin/preview`: `pages.page.write`;
   - `POST /admin/pages/{id}/publish` (`{at?}`, a time with its zone to schedule it), `POST /admin/pages/{id}/unpublish`, `DELETE /admin/pages/{id}`: `pages.page.publish`.
 - **Public pages:** `/:address`, the least fixed pattern there is, so any other module's or the site's page wins its address. The server copy answers each live page with its head, its words under one `h1`, a `WebPage` JSON-LD, and lists it in the sitemap and `llms.txt`.
 - **Menus:** `nav.public` and `nav.footer`, loaded from `GET /menu` (decision 0056). A site with its own header and footer places them with `SlotOutlet name="nav.public"` and `SlotOutlet name="nav.footer"`.

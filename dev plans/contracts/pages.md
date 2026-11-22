@@ -21,8 +21,8 @@ The fixed pages a site's people write themselves: About, Credits, Privacy, Terms
 | Route | Access | Does |
 | --- | --- | --- |
 | `GET /page?address=/about` | public | The live page: `{title, address, html, search_title, search_description, updated_at}`; 404, or `{moved: "/new"}` for an old address |
-| `GET /menu?place=header` (or `footer`) | public | The live pages in that menu, in order: `[{title, address}]` |
-| `GET /admin/pages` | `pages.page.write` | Every page, newest edit first: title, address, status, menus, `updated_at`, `updated_by` |
+| `GET /menu?place=header` (or `footer`) | public | The live pages in that menu, in order: `{items: [{title, address}]}` |
+| `GET /admin/pages` | `pages.page.write` | `{items}`: every page, newest edit first: title, address, status, menus, `updated_at`, `updated_by` |
 | `POST /admin/pages` `{title, address, body, ...}` | `pages.page.write` | 201, a draft. 409 `pages.address_taken`, naming who answers the address |
 | `GET /admin/pages/{id}` | `pages.page.write` | The page with its Markdown, its `version` and its moves |
 | `PATCH /admin/pages/{id}` `{..., version}` | `pages.page.write` | Saves it; a live page changes on the site at once (§8, 3). 409 `pages.changed` on a stale `version`, with the page now |
@@ -79,3 +79,8 @@ SPEC 4 to 9 and 16; `skills/mechframe-module-extractor/SKILL.md` and `module-con
 2. **Where the shared editor lives:** the kernel, in its own PR first (as recommended).
 3. **Saving a live page:** Save changes the site at once (as recommended): the panel says Live, its button Update, and Preview shows the words before they're saved; Unpublish takes it down. `blog` does the same.
 4. **Menus:** header and footer (recommended was footer only), so the slots take links a module loads (decision 0056).
+
+## 9. Changes after approval
+
+- 2026-11-22, in #121: `GET /menu` and `GET /admin/pages` answer `{items: [...]}`, not a bare list, since every answer of the API is a typed object (`tests/test_openapi.py`). The admin's list isn't paged: a site's fixed pages are a handful.
+- 2026-11-22, in #121: the kernel exports its `NotFound` page, which the public page draws for an address with no live page.

@@ -131,7 +131,7 @@ async def test_an_editor_writes_saves_publishes_unpublishes_and_deletes(browser:
 
     listed = await browser.http.get(ADMIN)
     assert listed.status_code == 200
-    assert page["id"] in [each["id"] for each in listed.json()]
+    assert page["id"] in [each["id"] for each in listed.json()["items"]]
 
     down = await browser.http.post(f"{ADMIN}/{page['id']}/unpublish")
     assert (down.status_code, down.json()["status"]) == (200, "draft")
@@ -219,8 +219,8 @@ async def test_each_menu_lists_its_live_pages_in_order(browser: Browser) -> None
         await _publish(browser, each["id"])
     browser.forget()
 
-    footer = (await browser.http.get("/api/pages/menu", params={"place": "footer"})).json()
-    header = (await browser.http.get("/api/pages/menu", params={"place": "header"})).json()
+    footer = (await browser.http.get("/api/pages/menu", params={"place": "footer"})).json()["items"]
+    header = (await browser.http.get("/api/pages/menu", params={"place": "header"})).json()["items"]
     ours = {first["address"], second["address"], draft["address"]}
 
     assert [link for link in footer if link["address"] in ours] == [

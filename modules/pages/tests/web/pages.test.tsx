@@ -27,7 +27,7 @@ function routed(answers: Answers) {
     "fetch",
     vi.fn(async (request: Request) => {
       sent.push(request.clone());
-      const all: Answers = { [MENU]: { status: 200, body: [] }, ...answers };
+      const all: Answers = { [MENU]: { status: 200, body: { items: [] } }, ...answers };
       const found = all[`${request.method} ${new URL(request.url).pathname}`];
       if (!found) throw new TypeError("Failed to fetch");
       const answer = typeof found === "function" ? await found(request) : found;
@@ -138,8 +138,8 @@ describe("the menus (decision 0056)", () => {
     const sent = routed({
       [MENU]: (request) =>
         new URL(request.url).searchParams.get("place") === "header"
-          ? { status: 200, body: [{ title: "Press kit", address: "/press-kit" }] }
-          : { status: 200, body: [{ title: "Credits", address: "/credits" }] },
+          ? { status: 200, body: { items: [{ title: "Press kit", address: "/press-kit" }] } }
+          : { status: 200, body: { items: [{ title: "Credits", address: "/credits" }] } },
       "GET /api/pages/page": problem(404, "pages.page_not_found"),
     });
     renderApp({ path: "/nowhere", modules: [pages] });
@@ -155,10 +155,7 @@ describe("the menus (decision 0056)", () => {
 describe("the admin's list", () => {
   it("shows each page with its address, its state and its menus, and asks for a privacy page", async () => {
     routed({
-      [LIST]: {
-        status: 200,
-        body: [listed(full({ status: "published" })), listed(full({ id: "2", title: "Press kit", address: "/press-kit", in_footer: false }))],
-      },
+      [LIST]: { status: 200, body: { items: [listed(full({ status: "published" })), listed(full({ id: "2", title: "Press kit", address: "/press-kit", in_footer: false }))] } },
     });
     renderApp({ path: "/admin/pages", modules: [pages], session: editor });
 
@@ -177,7 +174,7 @@ describe("the admin's list", () => {
   });
 
   it("says nothing of privacy once its page is live", async () => {
-    routed({ [LIST]: { status: 200, body: [listed(full({ title: "Privacy", address: "/privacy", status: "published" }))] } });
+    routed({ [LIST]: { status: 200, body: { items: [listed(full({ title: "Privacy", address: "/privacy", status: "published" }))] } } });
     renderApp({ path: "/admin/pages", modules: [pages], session: editor });
     expect(await screen.findByText("/privacy")).toBeInTheDocument();
     expect(screen.queryByText("There's no privacy page yet")).toBeNull();
@@ -327,7 +324,7 @@ describe("the editor", () => {
   });
 
   it("asks before leaving with changes", async () => {
-    routed({ [`GET ${ONE}`]: { status: 200, body: full() }, [LIST]: { status: 200, body: [] } });
+    routed({ [`GET ${ONE}`]: { status: 200, body: full() }, [LIST]: { status: 200, body: { items: [] } } });
     renderApp({ path: `/admin/pages/${ID}`, modules: [pages], session: editor });
     await userEvent.type(await screen.findByRole("textbox", { name: "Title" }), "!");
     await userEvent.click(within(screen.getByRole("navigation", { name: "Admin" })).getByRole("link", { name: "Pages" }));

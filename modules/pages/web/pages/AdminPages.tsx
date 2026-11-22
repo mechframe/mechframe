@@ -75,12 +75,12 @@ export default function AdminPages() {
         <LoadError what="The pages" error={listed.error} onRetry={() => void listed.refetch()} />
       ) : listed.data ? (
         <div className="mf-pages-list">
-          <PrivacyNote pages={listed.data} />
+          <PrivacyNote pages={listed.data.items} />
           <Table
             caption="Pages"
             captionHidden
             columns={COLUMNS}
-            rows={listed.data}
+            rows={listed.data.items}
             rowKey={(page) => page.id}
             empty="No pages yet. New page writes the first."
           />

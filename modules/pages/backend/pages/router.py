@@ -15,12 +15,12 @@ from pages import service
 from pages.models import MAX_ADDRESS, Page
 from pages.schemas import (
     Full,
-    Listed,
     LivePage,
-    MenuLink,
+    Menu,
     Moved,
     NewPage,
     PageChange,
+    PageList,
     Preview,
     PreviewBody,
     Publish,
@@ -56,20 +56,19 @@ async def read_page(
     return {"moved": await service.moved_to(db, found)}
 
 
-@router.get("/menu", response_model=list[MenuLink], dependencies=[Depends(public)])
+@router.get("/menu", response_model=Menu, dependencies=[Depends(public)])
 async def read_menu(
     place: Literal["header", "footer"], db: AsyncSession = Depends(get_db)
-) -> list[dict[str, str]]:
+) -> dict[str, Any]:
     """The live pages in the header's menu or the footer's, in their order."""
-    return [
-        {"title": page.title, "address": page.address} for page in await service.menu(db, place)
-    ]
+    pages = await service.menu(db, place)
+    return {"items": [{"title": page.title, "address": page.address} for page in pages]}
 
 
-@router.get("/admin/pages", response_model=list[Listed], dependencies=[Depends(WRITE)])
-async def list_pages(db: AsyncSession = Depends(get_db)) -> list[dict[str, Any]]:
+@router.get("/admin/pages", response_model=PageList, dependencies=[Depends(WRITE)])
+async def list_pages(db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
     """Every page, newest edit first."""
-    return await service.every(db)
+    return {"items": await service.every(db)}
 
 
 @router.post("/admin/pages", response_model=Full, status_code=201)

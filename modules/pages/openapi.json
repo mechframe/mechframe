@@ -93,11 +93,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/MenuLink"
-                  },
-                  "title": "Response Read Menu Api Pages Menu Get"
+                  "$ref": "#/components/schemas/Menu"
                 }
               }
             }
@@ -136,11 +132,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/Listed"
-                  },
-                  "type": "array",
-                  "title": "Response List Pages Api Pages Admin Pages Get"
+                  "$ref": "#/components/schemas/PageList"
                 }
               }
             }
@@ -788,6 +780,24 @@
         "title": "LivePage",
         "description": "A live page as the site draws it."
       },
+      "Menu": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/MenuLink"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "Menu",
+        "description": "The live pages in one menu, in order."
+      },
       "MenuLink": {
         "properties": {
           "title": {
@@ -1002,6 +1012,24 @@
         ],
         "title": "PageChange",
         "description": "What a save changes: only the fields it sends, with the `version` it read."
+      },
+      "PageList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Listed"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "PageList",
+        "description": "Every page, newest edit first: a site's handful of fixed pages, not paged."
       },
       "Preview": {
         "properties": {
