@@ -42,6 +42,28 @@ describe("wrap", () => {
   });
 });
 
+describe("wrap with one character (Italic's *; CodeRabbit on #118)", () => {
+  const italic = (marked: string) => {
+    const at = sel(marked);
+    return after(at, wrap(at, "*", "*", "italic words"));
+  };
+
+  it("wraps inside a word, where an underscore wouldn't make emphasis", () => {
+    expect(italic("a[b]c")).toBe("a*[b]*c");
+  });
+
+  it("takes an odd run of stars as italic and an even one as bold only", () => {
+    expect(italic("*[word]*")).toBe("[word]");
+    expect(italic("**[word]**")).toBe("***[word]***");
+    expect(italic("***[word]***")).toBe("**[word]**");
+  });
+
+  it("reads a selection's own stars the same way", () => {
+    expect(italic("[*word*]")).toBe("[word]");
+    expect(italic("[**word**]")).toBe("*[**word**]*");
+  });
+});
+
 describe("prefixLines", () => {
   it("marks the caret's line and keeps the caret in its words", () => {
     const at = sel("One\nTw[]o\nThree");

@@ -84,7 +84,17 @@ describe("MarkdownEditor", () => {
     await userEvent.keyboard("{Control>}b{/Control}");
     expect(body().value).toBe("**word**");
     await userEvent.keyboard("{Control>}i{/Control}");
-    expect(body().value).toBe("**_word_**");
+    expect(body().value).toBe("***word***");
+  });
+
+  it("refuses a button's change that would pass the text's limit (CodeRabbit on #118)", async () => {
+    render(<Editor start="word" maxLength={4} />);
+    select(0, 4);
+    await userEvent.click(screen.getByRole("button", { name: "Bold" }));
+    expect(body().value).toBe("word");
+    select(0, 2);
+    await userEvent.click(screen.getByRole("button", { name: "Italic" }));
+    expect(body().value).toBe("word");
   });
 
   it("gives a module's tools the editor's ways in", async () => {
@@ -156,7 +166,7 @@ describe("MarkdownEditor", () => {
     select(0, 2);
     await userEvent.click(screen.getByRole("button", { name: "Italic" }));
     await waitFor(() => {
-      expect(body().value).toBe("_ab_");
+      expect(body().value).toBe("*ab*");
     });
     expect(body().value.slice(body().selectionStart, body().selectionEnd)).toBe("ab");
   });

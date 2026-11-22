@@ -93,8 +93,10 @@ export function MarkdownEditor({
       const at = { value: area.value, start: area.selectionStart, end: area.selectionEnd };
       const next = change(at);
       area.focus();
-      area.setSelectionRange(next.from, next.to);
       const want = applied(at.value, next);
+      // A change the text's limit refuses, as typing would be (CodeRabbit on #118); a shorter one goes.
+      if (maxLength !== undefined && want.length > maxLength && want.length > at.value.length) return;
+      area.setSelectionRange(next.from, next.to);
       if (typeIn(next.insert) && area.value === want) {
         area.setSelectionRange(next.select[0], next.select[1]);
       } else {
@@ -102,7 +104,7 @@ export function MarkdownEditor({
         onChange(want);
       }
     },
-    [onChange],
+    [onChange, maxLength],
   );
 
   // A change the browser couldn't type: its selection, once the text is drawn.
@@ -133,7 +135,8 @@ export function MarkdownEditor({
     const key = event.key.toLowerCase();
     if (key !== "b" && key !== "i") return;
     event.preventDefault();
-    ways.wrap(key === "b" ? "**" : "_", key === "b" ? "**" : "_", key === "b" ? "bold words" : "italic words");
+    // Italic is one star: an underscore makes no emphasis inside a word (CodeRabbit on #118).
+    ways.wrap(key === "b" ? "**" : "*", key === "b" ? "**" : "*", key === "b" ? "bold words" : "italic words");
   };
 
   const write = (
@@ -154,7 +157,7 @@ export function MarkdownEditor({
           aria-label="Italic"
           title="Italic (Ctrl I)"
           onClick={() => {
-            ways.wrap("_", "_", "italic words");
+            ways.wrap("*", "*", "italic words");
           }}
         >
           <i aria-hidden="true">I</i>

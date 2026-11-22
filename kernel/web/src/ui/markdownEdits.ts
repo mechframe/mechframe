@@ -21,8 +21,37 @@ export function applied(value: string, change: Change): string {
   return value.slice(0, change.from) + change.insert + value.slice(change.to);
 }
 
+/** How many of `mark` run back from `at` (`back`) or on from it. */
+function run(value: string, at: number, mark: string, back: boolean): number {
+  let count = 0;
+  while (back ? value[at - count - 1] === mark : value[at + count] === mark) count += 1;
+  return count;
+}
+
+/**
+ * One character either side (Italic's `*`): an odd run of it is the mark, an
+ * even run another's (Bold's `**`), so italic never takes half a bold away
+ * (CodeRabbit on #118).
+ */
+function wrapOne({ value, start, end }: Selection, mark: string, placeholder: string): Change {
+  const words = value.slice(start, end);
+  if (words && run(value, start, mark, true) % 2 === 1 && run(value, end, mark, false) % 2 === 1) {
+    return { from: start - 1, to: end + 1, insert: words, select: [start - 1, end - 1] };
+  }
+  const lead = run(words, 0, mark, false);
+  const trail = run(words, words.length, mark, true);
+  if (words.length > 2 && lead < words.length && lead % 2 === 1 && trail % 2 === 1) {
+    const bare = words.slice(1, -1);
+    return { from: start, to: end, insert: bare, select: [start, start + bare.length] };
+  }
+  const text = words || placeholder;
+  return { from: start, to: end, insert: mark + text + mark, select: [start + 1, start + 1 + text.length] };
+}
+
 /** `before` and `after` around the selection, or around `placeholder` when nothing is selected; off again when they're there. */
-export function wrap({ value, start, end }: Selection, before: string, after: string, placeholder: string): Change {
+export function wrap(selection: Selection, before: string, after: string, placeholder: string): Change {
+  if (before === after && before.length === 1) return wrapOne(selection, before, placeholder);
+  const { value, start, end } = selection;
   const words = value.slice(start, end);
   const outside =
     value.slice(start - before.length, start) === before && value.slice(end, end + after.length) === after;

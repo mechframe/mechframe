@@ -94,6 +94,13 @@ def test_an_h1_becomes_an_h2_since_the_page_has_its_own(text: str) -> None:
     assert out.endswith("</h2>")
 
 
+def test_an_h1_with_a_quoted_angle_bracket_becomes_an_h2_whole() -> None:
+    # The tag's end is the first > outside its quotes (CodeRabbit on #118).
+    out = markdown.render('<h1 title="a > b">Title</h1>')
+    assert out == "<h2>Title</h2>"
+    assert markdown.render("<h1 title='x>y' class=\"z\">Pasted</h1>") == "<h2>Pasted</h2>"
+
+
 def test_an_h1_written_as_code_stays_code() -> None:
     out = markdown.render("`<h1>`")
     assert out == "<p><code>&lt;h1&gt;</code></p>"
@@ -165,6 +172,14 @@ def test_plain_gives_the_words_with_a_space_between_blocks() -> None:
     assert markdown.plain(text) == "About us We make music & art. One Two"
 
 
+def test_plain_spaces_every_block_the_allowlist_keeps_and_joins_inline_words() -> None:
+    # A section and an article are blocks too (CodeRabbit on #118).
+    nested = "<div><section>alpha</section><section>beta</section></div>"
+    assert markdown.plain(nested) == "alpha beta"
+    assert markdown.plain("<article><section>a</section><section>b</section></article>") == "a b"
+    assert markdown.plain("al<strong>pha</strong>") == "alpha"
+
+
 def test_plain_keeps_an_images_alt_out_and_a_links_words_in() -> None:
     assert markdown.plain("See [the credits](/credits). ![A photo](https://x.example/p.png)") == (
         "See the credits."
@@ -185,3 +200,14 @@ def test_excerpt_cuts_at_a_word_within_the_limit(text: str, limit: int, made: st
     out = markdown.excerpt(text, limit)
     assert out == made
     assert len(out) <= limit
+
+
+def test_excerpt_of_one_character_is_the_ellipsis() -> None:
+    assert markdown.excerpt("One two", 1) == "\u2026"
+
+
+@pytest.mark.parametrize("limit", [0, -1, -160])
+def test_excerpt_refuses_a_limit_below_one(limit: int) -> None:
+    # A zero or negative limit can't hold the ellipsis (CodeRabbit on #118).
+    with pytest.raises(ValueError, match="at least 1"):
+        markdown.excerpt("One two", limit)

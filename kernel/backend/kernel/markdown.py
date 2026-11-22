@@ -37,11 +37,13 @@ from kernel import server_copy
 #: VybeSite's extensions (`render_service.MARKDOWN_EXTENSIONS`).
 EXTENSIONS = ("extra", "sane_lists")
 
-#: An h1 tag, opening or closing, with any attributes: the page has its own.
-_H1 = re.compile(r"<(/?)h1(?:\s[^>]*)?>", re.IGNORECASE)
+#: An h1 tag, opening or closing, with any attributes, a quoted value's `>`
+#: included (CodeRabbit on #118): the page has its own.
+_H1 = re.compile(r"""<(/?)h1(?:\s(?:[^>"']|"[^"]*"|'[^']*')*)?>""", re.IGNORECASE)
 #: Where one block ends and the next begins, so `plain` puts a space there.
 _BLOCK = re.compile(
-    r"<(/?)(p|h[1-6]|li|ul|ol|blockquote|pre|table|tr|td|th|hr|br|figure|figcaption)\b",
+    r"<(/?)(p|h[1-6]|li|ul|ol|blockquote|pre|table|thead|tbody|tr|td|th|hr|br|figure|figcaption"
+    r"|section|article)\b",
     re.IGNORECASE,
 )
 _SPACES = re.compile(r"\s+")
@@ -66,7 +68,10 @@ def plain(text: str) -> str:
 
 def excerpt(words: str, limit: int = 160) -> str:
     """`words`, or as many of them as fit in `limit` with an ellipsis after,
-    cut where a word ends when one does."""
+    cut where a word ends when one does. A limit below 1 can't hold the
+    ellipsis, so it's refused (CodeRabbit on #118)."""
+    if limit < 1:
+        raise ValueError(f"An excerpt's limit is at least 1, not {limit}.")
     words = _SPACES.sub(" ", words).strip()
     if len(words) <= limit:
         return words

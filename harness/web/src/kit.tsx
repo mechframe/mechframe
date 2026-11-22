@@ -107,7 +107,7 @@ function Writing() {
         preview={() => Promise.resolve(PROSE)}
         previewTitle="About"
         previewNote="This is how the page looks on the site."
-        hint="Markdown works here: ## for a heading, **bold**, _italic_ and links."
+        hint="Markdown works here: ## for a heading, **bold**, *italic* and links."
       />
       <SearchFields
         title={title}
