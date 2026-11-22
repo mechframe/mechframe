@@ -21,8 +21,8 @@
     "typecheck": "tsc -p tsconfig.json",
     "dev": "npm run dev --workspace harness/web",
     "build": "npm run build --workspace harness/web",
-    "api:types": "openapi-typescript kernel/openapi.json -o kernel/web/src/api/schema.ts",
-    "api:check": "openapi-typescript kernel/openapi.json -o kernel/web/src/api/schema.ts --check"
+    "api:types": "openapi-typescript kernel/openapi.json -o kernel/web/src/api/schema.ts && openapi-typescript modules/media/openapi.json -o modules/media/web/schema.ts",
+    "api:check": "openapi-typescript kernel/openapi.json -o kernel/web/src/api/schema.ts --check && openapi-typescript modules/media/openapi.json -o modules/media/web/schema.ts --check"
   },
   "dependencies": {
     "@tanstack/react-query": "5.107.1",

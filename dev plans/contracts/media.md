@@ -80,3 +80,6 @@ SPEC 4 to 8 and 16; `skills/mechframe-module-extractor/SKILL.md` and `module-con
 - 2026-11-21 (the build): **the grants are in `media_0001`.** Nothing reads a manifest's `default_roles`, so the migration grants admin and editor both permissions, as the kernel's own migrations do, and its downgrade takes them back.
 - 2026-11-21 (the build): **the seed stores its own files.** `ctx.put_image` gives one key per name, where a library image needs its smaller copies under the library's keys. Each seed image has a fixed id, so a rerun writes the same keys.
 - 2026-11-21 (the build): **`python-multipart`** joins `requirements.in` beside Pillow: FastAPI's `File` and `UploadFile` need it, and the kernel took no uploads before.
+- 2026-11-21 (the build; the owner chose it the same day, "Per route limit"): **its upload routes take 16 MB.** The kernel refused any body over MAX_BODY_BYTES (1 MB) before media read it, which its HTTP tests found. A module's `BODY_LIMITS` now lets named routes take more while it's on (decision 0054).
+- 2026-11-21 (the build): **an image's address while the public bucket is off is 503 `media.storage_off`**, as an upload is, not a 500.
+- 2026-11-21 (the build): **the admin page's filter is one chip, "No alt text"**, not the board's All, Images, Audio, Video and Documents tabs: images are the only kind (§8, 1).

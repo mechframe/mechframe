@@ -29,6 +29,10 @@ async def _settled() -> None:
         await asyncio.sleep(0)
 
 
+async def _call(read: object, image: MediaImage) -> None:
+    read(image)  # type: ignore[operator]
+
+
 async def _problem(coroutine: object) -> Problem:
     with pytest.raises(Problem) as raised:
         await coroutine  # type: ignore[misc]
@@ -96,6 +100,18 @@ async def test_with_the_public_bucket_off_an_upload_is_503(
 
     assert (refused.code, refused.status) == ("media.storage_off", 503)
     assert not service.storage_on()
+
+
+async def test_with_the_public_bucket_off_an_images_address_is_503_not_500(
+    db: AsyncSession, bucket: Bucket
+) -> None:
+    image, _ = await service.upload(db, unique_image(), filename="a.png", by=None)
+    await db.commit()
+    bucket.on = False
+
+    for read in (service.url, service.srcset):
+        refused = await _problem(_call(read, image))
+        assert (refused.code, refused.status) == ("media.storage_off", 503)
 
 
 async def test_a_failed_insert_takes_its_files_back(

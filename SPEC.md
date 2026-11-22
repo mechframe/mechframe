@@ -907,6 +907,7 @@ All eleven were answered on 2026-11-12, and the sections above already reflect t
 
 | Date | Change |
 | --- | --- |
+| 2026-11-21 | The first module, `media` (`dev plans/contracts/media.md`): the library every module picks images from, its `public.py` and `public.ts` (no section's words change but the change log) |
 | 2026-11-21 | A module's routes may take a larger body than MAX_BODY_BYTES: `__init__.py`'s `BODY_LIMITS`, at most 64 MB, while it's on (decision 0054; media's uploads) (7) |
 | 2026-11-21 | `mechframe upgrade kernel` writes a template file new in the site's own folders where the site has none, and names it (decision 0053, amended; VM Website's "For MechFrame" item 7: #111's `backend/app/seed.py` imports `app.site.seed`) (12) |
 | 2026-11-21 | A part after the site's footer (decision 0048, amended; `dev plans/contracts/after-footer.md`; VM Website's "For MechFrame" item 6): `<AfterFooter>`, drawn after the site frame's footer while its page is open (8) |

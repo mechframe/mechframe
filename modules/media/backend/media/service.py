@@ -71,14 +71,22 @@ def keys(image: MediaImage) -> list[str]:
     return [file_key(image.id, image.file_version, image.content_type, each) for each in widths]
 
 
+def _public(key: str) -> str:
+    """A file's address in the public bucket; 503 `media.storage_off` while it's off."""
+    try:
+        return storage.public_url(key)
+    except storage.StorageNotConfigured:
+        raise _storage_off() from None
+
+
 def url(image: MediaImage) -> str:
-    return storage.public_url(file_key(image.id, image.file_version, image.content_type))
+    return _public(file_key(image.id, image.file_version, image.content_type))
 
 
 def srcset(image: MediaImage) -> str:
     """Each smaller copy below the image's width, then itself, for `<img srcset>`."""
     sized = [
-        f"{storage.public_url(file_key(image.id, image.file_version, image.content_type, width))} {width}w"
+        f"{_public(file_key(image.id, image.file_version, image.content_type, width))} {width}w"
         for width in pictures.widths_below(image.width)
     ]
     return ", ".join([*sized, f"{url(image)} {image.width}w"])

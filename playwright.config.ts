@@ -1,4 +1,5 @@
-// Playwright for the kernel's end-to-end tests (K4 contract §7): Chromium,
+// Playwright for the kernel's end-to-end tests (K4 contract §7) and each
+// module's (`modules/<id>/tests/e2e/`, the owner's OK, 2026-11-21): Chromium,
 // against the harness with its test support and the built web app
 // (`python -m harness.e2e`). Run `npm run build`, then `npm run e2e`, with
 // TEST_DATABASE_URL pointing at a Postgres server's admin URL. Locally before
@@ -9,7 +10,9 @@ const port = Number(process.env.E2E_PORT ?? "8765");
 const python = process.env.E2E_PYTHON ?? (process.platform === "win32" ? ".venv\\Scripts\\python.exe" : "python");
 
 export default defineConfig({
-  testDir: "kernel/tests/e2e",
+  testDir: ".",
+  testMatch: ["kernel/tests/e2e/**/*.spec.ts", "modules/*/tests/e2e/**/*.spec.ts"],
+  testIgnore: ["modules/_*/**", "**/node_modules/**", ".claude/**"],
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   reporter: "list",
