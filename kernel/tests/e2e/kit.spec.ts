@@ -155,6 +155,57 @@ for (const [theme, canvas] of Object.entries(THEMES)) {
       if (theme === "vibrant-mindz") expect(fills.field).toBe(canvas);
     });
 
+    test("the admin's labels take the boards' normal line height, and long text keeps its own (media's round 2)", async ({ page }) => {
+      await open(page, theme, canvas);
+      const lines = await page.evaluate(() => {
+        const look = document.querySelector(".mf-admin-look");
+        if (!look) throw new Error("no admin look on the kit page");
+        // Someone's words inside the admin, as a post's or a page's preview draws them.
+        const prose = document.createElement("div");
+        prose.className = "mf-prose";
+        prose.textContent = "Someone's words.";
+        look.append(prose);
+        const theirs = document.createElement("div");
+        theirs.style.font = "var(--mf-type-body)";
+        document.body.append(theirs);
+        const parts = [".mf-button", ".mf-switch-label", ".mf-attention-why", ".mf-table", ".mf-search-input", ".mf-input", ".mf-editor-text"];
+        const drawn = Object.fromEntries(
+          parts.map((part) => {
+            const found = look.querySelector(part);
+            if (!found) throw new Error(`no ${part} in the admin look`);
+            const style = getComputedStyle(found);
+            return [part, style.lineHeight === "normal" ? "normal" : String(Math.round((parseFloat(style.lineHeight) / parseFloat(style.fontSize)) * 100) / 100)];
+          }),
+        );
+        const result = { drawn, prose: getComputedStyle(prose).lineHeight, theirs: getComputedStyle(theirs).lineHeight };
+        prose.remove();
+        theirs.remove();
+        return result;
+      });
+      expect(lines.drawn).toEqual({
+        ".mf-button": "normal",
+        ".mf-switch-label": "normal",
+        ".mf-attention-why": "normal",
+        ".mf-table": "normal",
+        ".mf-search-input": "normal",
+        ".mf-input": "1.45",
+        ".mf-editor-text": "1.8",
+      });
+      expect(lines.prose).not.toBe("normal");
+      expect(lines.prose).toBe(lines.theirs);
+    });
+
+    test("the search box has no fill, its words the boards' 14px (media's round 2)", async ({ page }) => {
+      await open(page, theme, canvas);
+      const search = await page.evaluate(() => {
+        const box = document.querySelector(".mf-admin-look .mf-search");
+        const input = box?.querySelector(".mf-search-input");
+        if (!box || !input) throw new Error("no search box in the admin look");
+        return { fill: getComputedStyle(box).backgroundColor, size: getComputedStyle(input).fontSize };
+      });
+      expect(search).toEqual({ fill: "rgba(0, 0, 0, 0)", size: "14px" });
+    });
+
     test("the Markdown editor's buttons type their change, so Ctrl Z takes it back, and Preview draws the words", async ({ page }) => {
       await open(page, theme, canvas);
       const writing = page.locator('[data-kit="writing"]');

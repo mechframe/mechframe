@@ -10,12 +10,12 @@
   white-space: nowrap;
 }
 
-/* VM Website's AdminMedia board (canvas version 82): the library, then the
-   image's panel in a 320px column once there's room for both. */
+/* VM Website's AdminMedia board (canvas version 82): the search row across the
+   page, then the library and the image's panel in a 320px column once there's
+   room for both, the panel level with the grid (media's round 2). */
 .mf-media-layout {
   display: grid;
   gap: 1.25rem;
-  margin-top: 1.125rem;
 }
 
 @media (min-width: 60rem) {
@@ -30,7 +30,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 0.75rem;
-  margin-bottom: 0.875rem;
+  margin: 1.125rem 0 0.875rem;
 }
 
 .mf-media-grid {
@@ -42,17 +42,17 @@
   list-style: none;
 }
 
-/* One card per image: its picture square, its file name under it, then its pill. */
+/* One card per image: its picture square, its file name under it, then its pill,
+   each the card's width (the board's pill spans the tile). */
 .mf-media-thumb {
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
   gap: 0.5rem;
   width: 100%;
   padding: 0.5rem;
   border: 2px solid var(--mf-color-border);
-  border-radius: var(--mf-radius-control);
+  border-radius: var(--mf-radius-md);
   background: var(--mf-color-surface);
   color: var(--mf-color-text-strong);
   font: inherit;
@@ -81,6 +81,11 @@
   white-space: nowrap;
 }
 
+/* The board's pill on a tile: the kit's, in 12px words. */
+.mf-media-thumb .mf-pill {
+  font-size: 0.75rem;
+}
+
 /* The panel: no title, a square preview, then its parts 12px apart. */
 .mf-card.mf-media-panel {
   display: flex;
@@ -107,6 +112,14 @@ textarea.mf-input.mf-media-alt {
   margin: 0;
   color: var(--mf-color-warning);
   font: var(--mf-type-meta);
+  font-weight: normal;
+  line-height: normal;
+}
+
+/* "Only decoration" in the board's words: 16px, not the kit's 14px label in 600. */
+.mf-media-describe .mf-switch-label {
+  font-size: 1rem;
+  font-weight: normal;
 }
 
 .mf-media-facts {
@@ -115,6 +128,7 @@ textarea.mf-input.mf-media-alt {
   gap: 0.75rem;
   margin: 0;
   font: var(--mf-type-small);
+  line-height: normal;
 }
 
 .mf-media-facts > div {
@@ -143,13 +157,13 @@ textarea.mf-input.mf-media-alt {
   gap: 0.25rem;
 }
 
+/* Where it's used, in the theme's info colour as the board draws it. */
 .mf-media-uses a {
-  color: var(--mf-color-link);
+  color: var(--mf-color-info);
   text-decoration: none;
 }
 
 .mf-media-uses a:hover {
-  color: var(--mf-color-link-hover);
   text-decoration: underline;
 }
 

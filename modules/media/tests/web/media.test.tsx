@@ -83,6 +83,17 @@ describe("the admin page", () => {
     expect(screen.getByRole("searchbox", { name: "Search files" })).toBeInTheDocument();
   });
 
+  it("puts the search row above the library and the panel both, so the panel starts level with the grid (the board; media's round 2)", async () => {
+    routed({ [LIST]: { status: 200, body: { items: [DOOR, DESCRIBED], next_cursor: null, missing_alt: 1 } } });
+    renderWithKernel(<AdminMedia />, { path: "/admin/media", session: staff });
+
+    const search = await screen.findByRole("searchbox", { name: "Search files" });
+    const library = screen.getByRole("region", { name: "The library" });
+    expect(within(library).queryByRole("searchbox")).not.toBeInTheDocument();
+    expect(within(library).queryByRole("button", { name: "No alt text" })).not.toBeInTheDocument();
+    expect(search.compareDocumentPosition(library) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it("draws each image as the board's card: the picture, its file name under it, then the pill (VM Website's AdminMedia board)", async () => {
     routed({ [LIST]: { status: 200, body: { items: [DOOR, DESCRIBED], next_cursor: null, missing_alt: 1 } } });
     renderWithKernel(<AdminMedia />, { path: "/admin/media", session: staff });
@@ -108,11 +119,12 @@ describe("the admin page", () => {
     await userEvent.click(await screen.findByRole("button", { name: /door\.png/ }));
 
     expect(await screen.findByRole("link", { name: "Hello, a post" })).toHaveAttribute("href", "/admin/blog/1");
-    // The board's panel: no title, the alt text a three-line box with its hint under it.
+    // The board's panel: no title, the alt text its 64px box (two lines, the rest its least
+    // height; three made it 81) with its hint under it.
     expect(screen.queryByRole("heading", { name: "door.png" })).not.toBeInTheDocument();
     const alt = screen.getByRole("textbox", { name: /Alt text/ });
     expect(alt.tagName).toBe("TEXTAREA");
-    expect(alt).toHaveAttribute("rows", "3");
+    expect(alt).toHaveAttribute("rows", "2");
     expect(alt).toHaveAccessibleDescription("Screen readers skip this image until it has alt text.");
     expect(alt.compareDocumentPosition(screen.getByText("Screen readers skip this image until it has alt text.")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByRole("button", { name: "Copy link" }).querySelector("svg")).toBeNull();
