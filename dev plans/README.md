@@ -2,7 +2,7 @@
 
 Session prompts and working plans, the owner's convention across `C:\DEV`. Each session ends with two starting prompts saved here (`CLAUDE.md`, "Two lanes", since 2026-11-22): `<date>-next-session-<topic>.md` for the main lane and `<date>-side-lane-<topic>.md` for the side lane, in a worktree. When a prompt's session is done, it moves to `done/`, so the ones left here are the jobs. Durable decisions go in `docs/decisions/`, not here.
 
-`2026-11-22-media-round-3.md` is the two ways Admin › Media still differs from its board after round 2 (#126; round 2's queue and result are in `done/`), sent by VM Website Dev 10 with the owner's OK: the main lane's job after landing #129. The jobs now are `2026-11-22-next-session-m4-contact-round3-ai.md` (the main lane) and `2026-11-22-side-lane-m5-embeds-campaigns.md` (the side lane).
+Media's rounds 2 and 3 against its board (#126 and #131) are done: their queues and results are in `done/`. `2026-11-22-site-mypy-modules.md` is VM Website's next item, also with the owner's OK: a site's mypy can't see its modules' public surface, a template fix after round 3. The jobs now are `2026-11-22-next-session-m4-contact-round3-ai.md` (the main lane) and `2026-11-22-side-lane-m5-embeds-campaigns.md` (the side lane).
 
 `progress-ledger/` is the source of the visual progress ledger, https://claude.ai/artifact/48auLkb7Ajmyn2SNAni9rm: its page (`index.html`) and the rows `python -m tools.progress` makes from `docs/progress.json` (`rows.json`); its README says how to republish it.
 

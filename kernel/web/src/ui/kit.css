@@ -377,7 +377,10 @@
     flex: none;
   }
 
+  /* 16px over the why's 14px, as the boards draw it, whatever the theme's body size (media's
+     round 3: Vibrant Mindz's type.body is 15px). */
   .mf-attention-what {
+    font-size: 1rem;
     font-weight: 600;
     color: var(--mf-color-text-strong);
   }

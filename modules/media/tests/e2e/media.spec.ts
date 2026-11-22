@@ -26,8 +26,8 @@ for (const [name, canvas] of Object.entries(THEMES)) {
   });
 }
 
-// The page against its board (VM Website's AdminMedia, canvas version 82; media's round 2,
-// `dev plans/2026-11-22-media-round-2.md`). The e2e server has no storage, so the library's
+// The page against its board (VM Website's AdminMedia, canvas version 82; media's rounds 2 and 3,
+// `dev plans/done/2026-11-22-media-round-2.md` and `-round-3.md`). The e2e server has no storage, so the library's
 // answers and its pictures are stubbed here; the layout is the browser's own.
 const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64");
 
@@ -98,6 +98,9 @@ for (const [name, canvas] of Object.entries(THEMES)) {
         pillWidth: pill.getBoundingClientRect().width,
         pillSize: getComputedStyle(pill).fontSize,
         altHeight: one(".mf-media-alt").getBoundingClientRect().height,
+        // Round 3: the board's box draws no resize handle, and its alert's "what" is 16px.
+        altResize: getComputedStyle(one(".mf-media-alt")).resize,
+        alertWhat: getComputedStyle(one(".mf-attention-what")).fontSize,
         hintWeight: getComputedStyle(one(".mf-media-hint")).fontWeight,
         decoration: { size: decoration.fontSize, weight: decoration.fontWeight },
         usedIn: getComputedStyle(one(".mf-media-uses a")).color,
@@ -117,6 +120,8 @@ for (const [name, canvas] of Object.entries(THEMES)) {
     expect(Math.abs(drawn.pillWidth - drawn.tileInside)).toBeLessThanOrEqual(1);
     expect(drawn.pillSize).toBe("12px");
     expect(drawn.altHeight).toBeCloseTo(64, 0);
+    expect(drawn.altResize).toBe("none");
+    expect(drawn.alertWhat).toBe("16px");
     expect(drawn.hintWeight).toBe("400");
     expect(drawn.decoration).toEqual({ size: "16px", weight: "400" });
     expect(drawn.usedIn).toBe(drawn.info);
