@@ -201,16 +201,17 @@ async def test_two_moves_both_go_to_where_the_page_is_now_and_never_chain(
     assert isinstance(await service.live(db, first), Page)
 
 
-async def test_a_live_page_at_a_moves_address_wins_and_an_unpublished_page_sends_no_one(
-    db: AsyncSession,
-) -> None:
+async def test_a_page_taking_a_moves_address_ends_the_move_there(db: AsyncSession) -> None:
+    """The address a page holds is its own, live or not: a move another page left
+    there stops, so the page's unpublish answers 404 (CodeRabbit on #121)."""
     moved = await _live(db)
     left = moved.address
     await service.change(db, moved.id, 1, {"address": address()}, by=None, routes=None)
     await db.commit()
+    assert isinstance(await service.live(db, left), Move)
 
     taker = await _new(db, address=left)
-    assert isinstance(await service.live(db, left), Move)  # a draft there doesn't win yet
+    assert await service.live(db, left) is None  # a draft holds it: no redirect
     await service.publish(db, taker.id, None, by=None)
     await db.commit()
     found = await service.live(db, left)
@@ -218,8 +219,19 @@ async def test_a_live_page_at_a_moves_address_wins_and_an_unpublished_page_sends
     assert found.id == taker.id
 
     await service.unpublish(db, taker.id, by=None)
-    await service.unpublish(db, moved.id, by=None)
     await db.commit()
+    assert await service.live(db, left) is None
+    assert left not in await service.moves_of(db, moved.id)
+
+
+async def test_a_page_moved_onto_a_moves_address_ends_that_move_too(db: AsyncSession) -> None:
+    moved = await _live(db)
+    left = moved.address
+    await service.change(db, moved.id, 1, {"address": address()}, by=None, routes=None)
+    other = await _new(db)
+    await service.change(db, other.id, 1, {"address": left}, by=None, routes=None)
+    await db.commit()
+    assert await service.moves_of(db, moved.id) == []
     assert await service.live(db, left) is None
 
 

@@ -393,6 +393,73 @@ describe("the editor", () => {
     expect(title).toHaveValue("My title");
   });
 
+  it("closes the question once every field is kept as theirs, sending nothing more (CodeRabbit on #121)", async () => {
+    let patches = 0;
+    routed({
+      [`GET ${ONE}`]: { status: 200, body: full() },
+      [`PATCH ${ONE}`]: () => {
+        patches += 1;
+        return problem(409, "pages.changed", { page: full({ title: "Their title", version: 2 }) });
+      },
+    });
+    renderApp({ path: `/admin/pages/${ID}`, modules: [pages], session: editor });
+
+    const title = await screen.findByRole("textbox", { name: "Title" });
+    await userEvent.clear(title);
+    await userEvent.type(title, "My title");
+    await userEvent.click(screen.getAllByRole("button", { name: "Save draft" })[0] as HTMLElement);
+    await userEvent.click(await screen.findByRole("radio", { name: "Use theirs" }));
+    await userEvent.click(screen.getByRole("button", { name: /Save with these choices/ }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole("radio", { name: "Use theirs" })).toBeNull();
+    });
+    expect(title).toHaveValue("Their title");
+    expect(patches).toBe(1);
+  });
+
+  it("shows their change to a field you didn't touch once a save is merged with theirs (CodeRabbit on #121)", async () => {
+    let patches = 0;
+    routed({
+      [`GET ${ONE}`]: { status: 200, body: full({ title: "A", body: "X" }) },
+      [`PATCH ${ONE}`]: () => {
+        patches += 1;
+        return problem(409, "pages.changed", { page: full({ title: "B", body: "Y", version: 2 }) });
+      },
+    });
+    renderApp({ path: `/admin/pages/${ID}`, modules: [pages], session: editor });
+
+    const title = await screen.findByRole("textbox", { name: "Title" });
+    await userEvent.clear(title);
+    await userEvent.type(title, "B");
+    await userEvent.click(screen.getAllByRole("button", { name: "Save draft" })[0] as HTMLElement);
+
+    await waitFor(() => {
+      expect(screen.getByRole("textbox", { name: "Page body" })).toHaveValue("Y");
+    });
+    expect(title).toHaveValue("B");
+    expect(screen.queryByText(/not saved/)).toBeNull();
+    expect(patches).toBe(1); // theirs already says what you meant: nothing more to send
+  });
+
+  it("has the site's menus read again after a save (CodeRabbit on #121)", async () => {
+    routed({
+      [`GET ${ONE}`]: { status: 200, body: full() },
+      [`PATCH ${ONE}`]: { status: 200, body: full({ title: "About us", version: 2 }) },
+    });
+    const { queryClient } = renderApp({ path: `/admin/pages/${ID}`, modules: [pages], session: editor });
+    const menu = ["kernel", "slot-links", "pages", "nav.footer"];
+    queryClient.setQueryData(menu, [{ label: "About", to: "/about" }]);
+
+    const title = await screen.findByRole("textbox", { name: "Title" });
+    await userEvent.type(title, " us");
+    await userEvent.click(screen.getAllByRole("button", { name: "Save draft" })[0] as HTMLElement);
+
+    await waitFor(() => {
+      expect(queryClient.getQueryState(menu)?.isInvalidated).toBe(true);
+    });
+  });
+
   it("asks before leaving with changes", async () => {
     routed({ [`GET ${ONE}`]: { status: 200, body: full() }, [LIST]: { status: 200, body: { items: [] } } });
     renderApp({ path: `/admin/pages/${ID}`, modules: [pages], session: editor });

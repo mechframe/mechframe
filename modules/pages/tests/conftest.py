@@ -1,20 +1,19 @@
 """Fixtures for the pages module's tests: a session on the migrated test
-database (the root conftest's `migrated_url`), the kernel's lifecycle and
-search holding pages' type as an app with pages on does, people to write the
-pages, and addresses unique to each test, so tests sharing the database
-never meet (isolation by unique keys)."""
+database (the root conftest's `migrated_url`), people to write the pages, and
+addresses unique to each test, so tests sharing the database never meet
+(isolation by unique keys). The backend's own fixtures are in
+`backend/conftest.py`; the contract suite reads only the running app."""
 
 from __future__ import annotations
 
 import uuid
 from collections.abc import AsyncIterator
 
-import pytest
 import pytest_asyncio
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from kernel import Database, audit, lifecycle, search
+from kernel import Database
 
 
 @pytest_asyncio.fixture(loop_scope="session")
@@ -28,19 +27,6 @@ async def database(migrated_url: str) -> AsyncIterator[Database]:
 async def db(database: Database) -> AsyncIterator[AsyncSession]:
     async with database.sessions() as session:
         yield session
-
-
-@pytest.fixture(autouse=True)
-def pages_installed(monkeypatch: pytest.MonkeyPatch) -> None:
-    """The audit log takes pages' actions, and the lifecycle and search know
-    its type, as an app with pages on does (`audit.install`, `lifecycle.install`,
-    `search.install`)."""
-    from pages.lifecycle import PUBLISHABLE
-    from pages.search import SEARCH
-
-    monkeypatch.setattr(audit, "_owners", audit._owners | {"pages"})
-    monkeypatch.setattr(lifecycle, "_publishable", {"pages.page": PUBLISHABLE[0]})
-    monkeypatch.setattr(search, "_sources", {"pages.page": SEARCH[0]})
 
 
 def address() -> str:

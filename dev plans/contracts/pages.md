@@ -84,3 +84,5 @@ SPEC 4 to 9 and 16; `skills/mechframe-module-extractor/SKILL.md` and `module-con
 
 - 2026-11-22, in #121: `GET /menu` and `GET /admin/pages` answer `{items: [...]}`, not a bare list, since every answer of the API is a typed object (`tests/test_openapi.py`). The admin's list isn't paged: a site's fixed pages are a handful.
 - 2026-11-22, in #121: the kernel exports its `NotFound` page, which the public page draws for an address with no live page.
+- 2026-11-22, in #121 (CodeRabbit): the address a page holds is its own, live or not, so a page that takes an address ends any move there; a draft or an unpublished page's address answers 404, never another page's 301.
+- 2026-11-22, in #121 (Codex and CodeRabbit): each new page reads the loaded menus again once they're a minute old, and an editor's save, publish, unpublish or delete has the site's menus read again at once.

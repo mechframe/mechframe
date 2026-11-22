@@ -35,7 +35,7 @@ export { ADMIN_SECTIONS } from "./src/slots/sidebar";
 export { useSession, useSignOut } from "./src/session/session";
 export type { Session, SessionUser } from "./src/session/session";
 export { RequireAuth, RequirePermission } from "./src/guards/guards";
-export { useSlot, SlotOutlet } from "./src/slots/slots";
+export { SLOT_LINKS, useSlot, SlotOutlet } from "./src/slots/slots";
 export { useModuleEnabled, useSite } from "./src/site/site";
 export type { Site } from "./src/site/site";
 // A third-party script or iframe held for the visitor's consent (hook 6, decision 0052).

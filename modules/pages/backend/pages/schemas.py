@@ -90,10 +90,15 @@ class Preview(Answer):
     html: str
 
 
+#: What breaks a line besides a control character: NEL and the line and
+#: paragraph separators, which str.splitlines() reads as line ends (CodeRabbit on #121).
+_BREAKS = frozenset(chr(code) for code in (0x85, 0x2028, 0x2029))
+
+
 def _one_line(value: str | None) -> str | None:
     if value is None:
         return None
-    if any(ord(each) < 32 or ord(each) == 127 for each in value):
+    if any(ord(each) < 32 or ord(each) == 127 or each in _BREAKS for each in value):
         raise ValueError("One line, with no line breaks.")
     return value.strip()
 
@@ -111,6 +116,14 @@ class _Fields(BaseModel):
     def _titled(cls, value: str | None) -> str | None:
         if value is not None and not value:
             raise ValueError("A page needs a title.")
+        return value
+
+    @field_validator("body", check_fields=False)
+    @classmethod
+    def _storable(cls, value: str | None) -> str | None:
+        # Postgres's text holds no NUL: refused here, a field's error, not at the flush.
+        if value is not None and chr(0) in value:
+            raise ValueError("A page's words can't hold a NUL character.")
         return value
 
 

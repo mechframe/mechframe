@@ -22,6 +22,7 @@ import {
   Pill,
   SaveBar,
   SaveConflict,
+  SLOT_LINKS,
   SearchFields,
   Select,
   UnsavedDialog,
@@ -132,9 +133,11 @@ function Editor({ saved: first, start }: { saved: Full | null; start: Form }) {
     });
   }
 
+  /** The page as the server has it now, and the list and the site's menus read again (CodeRabbit on #121). */
   function remember(page: Full) {
     queryClient.setQueryData(["get", ONE, { params: { path: { page_id: page.id } } }], page);
     void queryClient.invalidateQueries({ queryKey: ["get", LIST] });
+    void queryClient.invalidateQueries({ queryKey: [...SLOT_LINKS, "pages"] });
   }
 
   /** Saves what changed; the page as the server now has it, or throws why not. */
@@ -248,6 +251,7 @@ function Editor({ saved: first, start }: { saved: Full | null; start: Form }) {
     await api.DELETE(ONE, { params: { path: { page_id: saved.id } } });
     queryClient.removeQueries({ queryKey: ["get", ONE, { params: { path: { page_id: saved.id } } }] });
     await queryClient.invalidateQueries({ queryKey: ["get", LIST] });
+    void queryClient.invalidateQueries({ queryKey: [...SLOT_LINKS, "pages"] });
     guard.release();
     toast({ tone: "success", text: `${saved.title} is deleted.` });
     void navigate("/admin/pages");
@@ -304,7 +308,11 @@ function Editor({ saved: first, start }: { saved: Full | null; start: Form }) {
             const next = merged(formOf(saved ?? conflict.theirs), conflict.mine, conflict.theirs, keep);
             setSaved(conflict.theirs);
             setForm(next);
-            void act(() => save(next, conflict.theirs), "Saved.");
+            // A resolution may send nothing (every field kept as theirs): it's done all the same (CodeRabbit on #121).
+            void act(async () => {
+              await save(next, conflict.theirs);
+              setConflict(null);
+            }, "Saved.");
           }}
           onCancel={() => {
             setConflict(null);

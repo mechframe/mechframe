@@ -252,6 +252,8 @@ async def create(
             await db.flush()
     except IntegrityError:
         raise _taken(fields["address"]) from None
+    # The address a page holds is its own, live or not: a move there ends (CodeRabbit on #121).
+    await db.execute(delete(Move).where(Move.address == page.address))
     audit.record(db, "pages.page.created", actor=by, target=(CONTENT_TYPE, page.id))
     return page
 
@@ -310,8 +312,9 @@ async def change(
     except IntegrityError:
         raise _taken(address) from None
     if address != old:
-        # Its own address is never a move of its own; the one it left is, while it's live.
-        await db.execute(delete(Move).where(Move.address == address, Move.page_id == page.id))
+        # The address a page holds is its own, live or not: a move there ends
+        # (CodeRabbit on #121); the one it left is a move, while it's live.
+        await db.execute(delete(Move).where(Move.address == address))
         if page.status == lifecycle.PUBLISHED:
             await _leave(db, page, old)
     if page.status == lifecycle.PUBLISHED:

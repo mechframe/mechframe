@@ -297,7 +297,7 @@ export interface components {
              * Body
              * @default
              */
-            body: string;
+            body?: string;
             /** Search Title */
             search_title?: string | null;
             /** Search Description */
@@ -306,17 +306,17 @@ export interface components {
              * In Header
              * @default false
              */
-            in_header: boolean;
+            in_header?: boolean;
             /**
              * In Footer
              * @default false
              */
-            in_footer: boolean;
+            in_footer?: boolean;
             /**
              * Menu Order
              * @default 0
              */
-            menu_order: number;
+            menu_order?: number;
         };
         /**
          * PageChange
@@ -412,13 +412,6 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["LivePage"] | components["schemas"]["Moved"];
                 };
-            };
-            /** @description No live page is at that address */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
             };
             /** @description What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected` */
             422: {

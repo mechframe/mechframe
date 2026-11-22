@@ -41,7 +41,6 @@ def _routes(request: Request) -> server_copy.Routes | None:
     "/page",
     response_model=LivePage | Moved,
     dependencies=[Depends(public)],
-    responses={404: {"description": "No live page is at that address"}},
 )
 async def read_page(
     address: Annotated[str, Query(max_length=MAX_ADDRESS + 1)],
