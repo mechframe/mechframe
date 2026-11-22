@@ -280,14 +280,18 @@ def test_a_body_limit_the_kernel_cant_keep_is_refused_at_the_start(
     assert says in str(refused.value)
 
 
-def test_two_body_limits_that_can_match_one_route_are_refused_at_the_start(app_factory: AppFactory) -> None:
+def test_two_body_limits_that_can_match_one_route_are_refused_at_the_start(
+    app_factory: AppFactory,
+) -> None:
     """CodeRabbit on #116: which applied hung on their order."""
     limits = (("POST", "/items/{item_id}", 4096), ("POST", "/items/import", 8192))
     with pytest.raises(ValueError, match="BODY_LIMITS") as refused:
         app_factory([_uploading_module(limits)])
     assert "both match" in str(refused.value)
     # The same paths under different methods don't meet.
-    app_factory([_uploading_module((("POST", "/items/{item_id}", 4096), ("PUT", "/items/import", 8192)))])
+    app_factory(
+        [_uploading_module((("POST", "/items/{item_id}", 4096), ("PUT", "/items/import", 8192)))]
+    )
 
 
 def test_the_kernels_permissions_match_its_manifest() -> None:
