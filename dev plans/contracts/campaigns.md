@@ -1,6 +1,6 @@
 ---
 feature: The campaigns module, the site's newsletter and release announcements (Vibrant Mindz step 1; M5's third job)
-status: draft, for the owner's approval
+status: draft; §8, 1 to 4 answered by the owner on 2026-11-22, 5 still to ask
 plan: `docs/plans/vibrant-mindz-backend/extraction/campaigns.md`; `dev plans/2026-11-21-vibrant-mindz-push-plan.md` (M5); the canvas's AdminNewsletter board (`C:\DEV\VM Website\design\site\AdminNewsletter.dc.html`), the newsletter sections on Music, Blog and Videos, Contact's news box and AdminPost's "Email it to subscribers"
 approved:
 pr: one, after `embeds`' (#127), numbered at push time
@@ -52,15 +52,17 @@ They're edited in the Settings section "Newsletter".
 | `POST /admin/emails/{id}/cancel` | email.manage | Back to a draft while it's `scheduled`; once it's sending, it stops queueing the rest. Audited |
 | `DELETE /admin/emails/{id}` | email.manage | A draft only. 204, audited |
 | `GET /admin/subscribers?status=&cursor=` | subscriber.manage | The Subscribers tab: `{items: [{id, email, name, source, status, since}], next_cursor, counts}` |
+| `POST /admin/subscribers/{id}/set-aside` `{why, detail?}` | subscriber.manage | Sets an address aside by hand: an address that bounced where nothing reads bounces, or one a person asked to stop by other means. Audited |
 | `DELETE /admin/subscribers/{id}` | subscriber.manage | Removes a person who asks to be forgotten, keeping a set-aside row so they're never emailed again. Audited with no address |
 | `GET /admin/set-aside?cursor=` | subscriber.manage | The Set aside tab: `{items: [{email, why, since}], next_cursor}` |
-| `POST /webhooks/<provider>` | the provider, signed | Bounces and complaints (§8, 1). The signature is checked first and fails closed without the secret. A replayed delivery is refused. A permanent bounce or a complaint sets the address aside |
+| `POST /webhooks/resend` | Resend, signed | Only for a site that sends by Resend, because its host blocks SMTP: bounces and complaints. The signature is checked first and fails closed without the secret. A replayed delivery is refused. A permanent bounce or a complaint sets the address aside |
 
 **Sending:**
 - `send` fixes the audience: every `subscribed` address not set aside, one `campaigns_delivery` row each, unique per email and address, so a job that runs twice sends nobody twice.
 - The job `campaigns.send` runs a batch a minute, 100 by default. For each recipient it checks again that they're still subscribed and not set aside, then hands the message to the kernel's mail queue with its own unsubscribe link and RFC 8058's headers.
 - The email is `sent` once every row is queued. Its "Sent to" counts the rows queued.
 - A scheduled email starts at its time: a scheduled job looks each minute for one that's due.
+- **Bounces by SMTP** (§8, 5): the job `campaigns.bounces` reads the bounce mailbox every 15 minutes while its three variables are set. It takes each bounce report (RFC 3464) and spam report (RFC 5965), sets the address aside by VybeSite's classifier, and moves the message to a folder of read ones. A permanent recipient failure (`5.1.x` about the recipient) or a spam report sets the address aside; a soft bounce, and a block that's about the sender, don't. Without the variables, the Newsletter page says "Bounces aren't being read" under Set aside.
 
 **The email:**
 - The body is Markdown made HTML by `kernel.markdown.render`, with a plain-text part from `kernel.markdown.plain`, in a single-column frame with inline styles (§5).
@@ -126,7 +128,7 @@ The branch is `campaigns`, migration `campaigns_0001`, with `depends_on` `kernel
 ## 4. Files
 
 `modules/campaigns/`, laid out as `contact` is:
-- **Backend:** `models`, `schemas`, `service`, `sending`, `render`, `webhooks`, `router`, `events`, `emails` (`campaigns.confirm` and the email's frame), `jobs`, `dashboard`, `privacy`, `seed` and `server_copy`.
+- **Backend:** `models`, `schemas`, `service`, `sending`, `render`, `bounces` (the mailbox reader and the classifier), `webhooks` (Resend's), `router`, `events`, `emails` (`campaigns.confirm` and the email's frame), `jobs`, `dashboard`, `privacy`, `seed` and `server_copy`.
 - **Web:** `module.web.ts`, `public.ts`, `NewsletterSignup.tsx`, and the pages `AdminNewsletter`, `AdminEmail`, `ConfirmPage`, `UnsubscribePage` and `NewsletterSettings`.
 - **Tests:** `tests/backend`, `contract`, `web` and `e2e`.
 
@@ -158,6 +160,7 @@ The kernel's addition is `email.queue_message` in SPEC 6's table, its test, and 
 - An address set aside or unsubscribed mid-send is skipped. A scheduled email starts at its time, and cancel stops it. A test goes only to the person asking.
 - No postal address is 409 before anything is queued.
 - A webhook with a bad or missing signature is refused, and a replay too. A permanent bounce and a complaint set the address aside; a soft bounce doesn't.
+- The bounce reader, against a fake mailbox: each of the classifier's cases from real bounce and spam reports, a message read once, nothing done without its variables, and a mailbox that can't be reached leaving the rest of the job's work alone.
 
 **Events:**
 - `contact.news.requested` makes a pending subscriber and its confirmation, once.
@@ -169,18 +172,18 @@ The kernel's addition is `email.queue_message` in SPEC 6's table, its test, and 
 - **Web:** the Newsletter page (each tab, the cards, the attention card, empty tabs), the editor (draft, test, schedule, sent), `NewsletterSignup` (open, sent, closed, field error), and the confirm and unsubscribe pages, in both themes and axe clean.
 - `validate_schemas`, `module-contract-lint` and the brand check pass. `mechframe add campaigns`, then `mechframe check`, passes on a new site.
 
-## 8. For the owner
+## 8. The owner's answers, and what's still to ask
 
-1. **Which service sends the newsletter.** The site's other mail goes by SMTP, or Resend where the host blocks SMTP, as Railway's Hobby plan does (decision 0033).
-   - **Recommended:** the same Resend account, with its webhooks for bounces and complaints (the board's Set aside), sending from a subdomain such as `news.<the site's domain>` so the newsletter's reputation never touches sign-in mail. You'd add the subdomain's DNS records and the webhook's secret yourself.
-   - The other choices: Mailgun, as VybeSite does (another account and key); or a newsletter service that keeps the list itself (Buttondown, Mailchimp), where this module would only pass sign-ups on. SMTP alone can't tell the site about bounces.
-2. **Confirming a sign-up.** Anyone can type anyone's address into a form.
-   - **Recommended:** a confirmation email first (double opt-in) for the newsletter form and the contact box, with "Check your inbox" after the form. A person isn't mailed until they click it.
-   - The other choice is VybeSite's: subscribed at once.
-3. **"Email it to subscribers" on a post.**
-   - **Recommended:** the post's email (its title, summary and link) goes out as soon as the post goes live, since the writer chose it on the post.
-   - The other choice: it waits as a draft in Newsletter, to check and send.
-4. **Who may send to the list.**
-   - **Recommended:** owner and admin, for both permissions, since one send reaches everyone.
-   - The other choice: editors too, for writing and sending emails.
-5. **For later, not a choice:** the newsletter's postal address (a P.O. box works) goes in Settings → Newsletter before the first send. It's an item for the content intake.
+Answered 2026-11-22:
+
+1. **The sending service:** the site's own mailer, by SMTP, with Resend only where the host blocks SMTP (the owner: "I don't want to use resend unless SMTP isn't an option"), as decision 0033 has it for all the site's mail. It's not a separate newsletter account.
+2. **Confirming a sign-up:** a confirmation email first (double opt-in) for the newsletter form and the contact box, with "Check your inbox" after the form. A person isn't mailed until they click it. (Agreed, as recommended.)
+3. **"Email it to subscribers" on a post:** the post's email (its title, summary and link) goes out as soon as the post goes live. (Agreed.)
+4. **Who may send to the list:** owner and admin, for both permissions. (Agreed.)
+
+Still to ask:
+
+5. **How bounces reach the site by SMTP.** SMTP takes a message and answers "accepted". A bounce comes back later, as an email to the sending address's bounce mailbox, and the site never hears of it. The board's Set aside tab and its "addresses bounced" card need it.
+   - **Recommended:** the module reads that bounce mailbox over IMAP every 15 minutes. It reads the standard bounce reports (RFC 3464) and spam reports (RFC 5965) and sets the address aside by the classifier lifted from VybeSite. It's on only once you put the mailbox's login in the host's variables (`CAMPAIGNS_BOUNCE_IMAP_HOST`, `_USERNAME`, `_PASSWORD`). Until then, Set aside holds unsubscribes and addresses set aside by hand, and the Newsletter page says bounces aren't being read. This works with any SMTP provider. A site that has to send by Resend uses its webhook instead.
+   - The other choice: leave bounces for a later PR. Set aside then holds only unsubscribes and hand set-asides, and the bounce card waits.
+6. **For later, not a choice:** the newsletter's postal address (a P.O. box works) goes in Settings → Newsletter before the first send. It's an item for the content intake.
