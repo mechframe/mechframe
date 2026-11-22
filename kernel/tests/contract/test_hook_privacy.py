@@ -72,7 +72,11 @@ async def test_the_copy_holds_the_kernels_file_and_the_probes_only(api: Api) -> 
     assert parse_qs(urlsplit(location).query)["X-Amz-Expires"] == ["300"]
 
     found = await _zip(api, location)
-    assert found.namelist() == ["kernel.json", "probe.json"]  # never probe-addon's
+    names = found.namelist()
+    # The kernel's first, the probe's, each other installed module's (media's), never probe-addon's.
+    assert names[0] == "kernel.json"
+    assert "probe.json" in names
+    assert "probe-addon.json" not in names
     kernel = json.loads(found.read("kernel.json"))
     assert kernel["account"][0]["email"] == person.email
     assert kernel["activity"][0]["action"] == "auth.data_export_requested"  # newest first

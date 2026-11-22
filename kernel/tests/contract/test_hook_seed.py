@@ -64,7 +64,9 @@ async def test_seeding_twice_leaves_the_same_rows(api: Api) -> None:
     owner = await api.make_user(roles=["owner"], totp=True)
     await api.signed_in_as(owner)
 
-    assert await _seed(api, allow=True) == {"seeded": ["probe"]}  # probe-addon has no seed
+    seeded = (await _seed(api, allow=True))["seeded"]
+    assert "probe" in seeded  # with each real module that seeds (media)
+    assert "probe-addon" not in seeded  # it has no seed
     once = await _rows(api)
     assert once["notes"] == SEEDED
     assert [(slug, status) for slug, status, _ in once["shown"]] == [
@@ -75,5 +77,7 @@ async def test_seeding_twice_leaves_the_same_rows(api: Api) -> None:
     assert once["terms"] == [("seeded", "Seeded")]
     assert once["people"] == [(EDITOR, ["editor", "member"], True)]
 
-    assert await _seed(api, allow=True) == {"seeded": ["probe"]}
+    seeded = (await _seed(api, allow=True))["seeded"]
+    assert "probe" in seeded
+    assert "probe-addon" not in seeded
     assert await _rows(api) == once

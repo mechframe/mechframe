@@ -72,7 +72,8 @@ async def test_steps_and_items_show_only_to_their_permissions_holders(api: Api) 
     assert ITEM in await _needs(admin)
     assert STEP in await _steps(admin)
     assert ITEM not in await _needs(editor)
-    assert await _steps(editor) == {}
+    # None of the kernel's or the probe's: a real module's step (media's) may name a permission an editor holds.
+    assert [key for key in await _steps(editor) if key.startswith(("kernel.", "probe."))] == []
 
 
 async def test_a_module_switched_off_lists_neither(api: Api) -> None:
