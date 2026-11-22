@@ -307,6 +307,15 @@ async def test_the_authors_are_those_who_may_write(browser: Browser) -> None:
     assert (refused.status_code, refused.json()["code"]) == (422, "blog.author_not_allowed")
 
 
+async def test_a_new_post_names_its_writer_unless_it_names_no_one(browser: Browser) -> None:
+    """Codex on #123: an author left out is the writer; one sent as null is no one."""
+    writer = await browser.as_new("member", "editor")
+    named = await _post(browser)
+    assert named["author"]["id"] == writer.id
+    nobody = await _post(browser, author_id=None)
+    assert nobody["author"] is None
+
+
 async def test_related_posts_are_live_ones_shown_in_order(browser: Browser) -> None:
     await browser.as_new("member", "editor")
     one, two = await _post(browser, title="One"), await _post(browser, title="Two")

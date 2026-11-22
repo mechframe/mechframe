@@ -646,7 +646,8 @@ async def _flushed(db: AsyncSession, slug: str) -> None:
 
 
 async def create(db: AsyncSession, fields: dict[str, Any], *, by: uuid.UUID | None) -> Post:
-    """A new post, a draft. Its slug, left out, is made from its title."""
+    """A new post, a draft, from the fields sent. Its slug, left out, is made
+    from its title; its author, left out, is the writer."""
     title: str = fields["title"]
     if fields.get("slug"):
         slug = fields["slug"]
@@ -659,7 +660,11 @@ async def create(db: AsyncSession, fields: dict[str, Any], *, by: uuid.UUID | No
     cover = _uuid(fields["cover_id"], "cover_id") if fields.get("cover_id") else None
     if cover is not None:
         await _check_cover(db, cover)
-    author = _uuid(fields["author_id"], "author_id") if fields.get("author_id") else by
+    # Left out, the writer; sent as null, no one (Codex on #123).
+    if "author_id" in fields:
+        author = _uuid(fields["author_id"], "author_id") if fields["author_id"] else None
+    else:
+        author = by
     if author is not None and author != by:
         await _check_author(db, author)
     related = [_uuid(each, "related") for each in fields.get("related") or []]

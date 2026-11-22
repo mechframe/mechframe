@@ -86,7 +86,8 @@ async def new_post(
     body: NewPost, user: Any = Depends(WRITE), db: AsyncSession = Depends(get_db)
 ) -> dict[str, Any]:
     """A draft; 409 `blog.slug_taken` for a slug another post has."""
-    post = await service.create(db, body.model_dump(), by=user.id)
+    # Only the fields sent: an author left out is the writer, one sent as null no one.
+    post = await service.create(db, body.model_dump(exclude_unset=True), by=user.id)
     shown = await service.full(db, post)
     await db.commit()
     return shown
