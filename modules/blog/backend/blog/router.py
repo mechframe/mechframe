@@ -61,12 +61,7 @@ async def read_post(slug: str, db: AsyncSession = Depends(get_db)) -> dict[str, 
 @router.get("/categories", response_model=BlogCategoryList, dependencies=[Depends(public)])
 async def list_categories(db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
     """Every category, in the order staff set, with its live posts."""
-    found = await service.counted(db, live=True)
-    return {
-        "items": [
-            {"slug": each["slug"], "label": each["label"], "posts": each["posts"]} for each in found
-        ]
-    }
+    return {"items": await service.live_categories(db)}
 
 
 @router.get("/admin/posts", response_model=PostList, dependencies=[Depends(WRITE)])

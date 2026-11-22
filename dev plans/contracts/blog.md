@@ -67,10 +67,10 @@ Answered 2026-11-22:
 3. **What a generated cover is:** VybeSite's, as recommended: Claude draws an SVG cover from the post (the brand's colours, a wordmark if ticked), cleaned, then made a PNG on the server and stored in the media library as any image, with alt text.
 4. **VybeSite's extras now:** related posts and social posting; the claims list checks later.
 5. **Who writes** (answered 2026-11-22, as recommended): "Anyone with blog writing permissions should be able to write and publish." `blog.post.write` and `blog.post.publish` both go to owner, admin and editor, the Author field naming any of them; a site that wants authors who can't publish adds a custom role with only `blog.post.write`.
+6. **The Anthropic key** (answered 2026-11-22, not as recommended: "Host variable or Settings"): `ANTHROPIC_API_KEY` in the host's variables, typed by the owner, or one an admin saves in Settings → AI, encrypted, as VybeSite does; nothing AI shows without one. The AI PR's contract (`dev plans/contracts/kernel-ai.md`) says which wins when both are there.
 
 Still to ask, each with its recommendation:
 
-6. **The Anthropic key** (before the AI PR): `ANTHROPIC_API_KEY` in the host's variables only, typed by the owner, as every other key here; nothing AI shows without it. VybeSite also lets an admin save one in Settings → AI, encrypted.
 7. **Social posting's home and key** (before its PR): VybeSite posts through Buffer, its key saved in Settings → Company channels. Recommended: a `social` module any module can share through (blog first, then releases and products), its Buffer token in the host's variables; the other way is inside blog. Creating the Buffer account is the owner's.
 
 ## 9. Changes as it was built (#123)
@@ -85,3 +85,4 @@ Still to ask, each with its recommendation:
 - **A module's web reaches another's `public.ts` as `@/modules/<id>/public`** (decision 0057, SPEC 7): blog's is the first, for media's `ImagePicker` and `Picture`. The kernel's AI writing help is decision 0058.
 - **From the reviews on #123:** a new post sent with `author_id: null` names no one (Codex); every page of the kernel's terms is read, and a category deleted as a post is saved isn't made again; the downgrade takes the posts' terms, search documents and covers' uses (`depends_on` `kernel_0014` and `media_0001`); and the editor leaves an untyped address to the server, keeps what's typed while a save is on its way, and shows a publish that landed (CodeRabbit).
 - **The e2e server runs with storage off,** so its post has no cover: covers are held by the contract suite (media's fake S3) and the web tests.
+- **Its public surface** (blog 0.1.1, #127; asked by VM Website Dev 09 through Dev 32, placed before the AI PR by the owner, 2026-11-22): `web/public.ts` gives a site's own Blog and Post pages `usePosts`, `usePost`, `useCategories`, `isMoved`, `pathOf`, `day` and the answers' types, and blog's own pages read through the same hooks (`web/reads.ts`); `blog.public` gives a site's server copy `posts`, `newest`, `post`, `categories` and `path`, each the API's answer as its Pydantic model. The categories' public read is one function, `service.live_categories`, for the route and `blog.public` both.
