@@ -1,6 +1,6 @@
 ---
 feature: The campaigns module, the site's newsletter and release announcements (Vibrant Mindz step 1; M5's third job)
-status: draft; §8, 1 to 4 answered by the owner on 2026-11-22, 5 still to ask
+status: draft; §8, 1 to 5 answered by the owner on 2026-11-22; 7, the send pace's default, still to ask
 plan: `docs/plans/vibrant-mindz-backend/extraction/campaigns.md`; `dev plans/2026-11-21-vibrant-mindz-push-plan.md` (M5); the canvas's AdminNewsletter board (`C:\DEV\VM Website\design\site\AdminNewsletter.dc.html`), the newsletter sections on Music, Blog and Videos, Contact's news box and AdminPost's "Email it to subscribers"
 approved:
 pr: one, after `embeds`' (#127), numbered at push time
@@ -33,6 +33,7 @@ Both go to owner and admin (§8, 4), granted in `campaigns_0001`.
 - `signups_open`: a bool, true by default. It's the board's "Sign-ups open" pill; while it's off, the forms say sign-ups are closed.
 - `postal_address`: ≤ 300 characters. US law (CAN-SPAM) puts a postal address in every newsletter; a P.O. box will do. Nothing sends until it's set, and the Newsletter page says so.
 - `footer_note`: ≤ 300 characters, by default "You're getting this because you asked for news from ${site_name}."
+- `send_per_hour`: how many newsletter messages may go out in an hour, 1 to 10,000. Its default waits on §8, 7.
 
 They're edited in the Settings section "Newsletter".
 
@@ -59,10 +60,10 @@ They're edited in the Settings section "Newsletter".
 
 **Sending:**
 - `send` fixes the audience: every `subscribed` address not set aside, one `campaigns_delivery` row each, unique per email and address, so a job that runs twice sends nobody twice.
-- The job `campaigns.send` runs a batch a minute, 100 by default. For each recipient it checks again that they're still subscribed and not set aside, then hands the message to the kernel's mail queue with its own unsubscribe link and RFC 8058's headers.
+- The job `campaigns.send` runs each minute and queues a sixtieth of `send_per_hour`, at least one. The pace keeps a send under the mailbox's limit with room left for the site's own mail, since sign-in links and the contact form's notices go out through the same mailbox. For each recipient it checks again that they're still subscribed and not set aside, then hands the message to the kernel's mail queue with its own unsubscribe link and RFC 8058's headers.
 - The email is `sent` once every row is queued. Its "Sent to" counts the rows queued.
 - A scheduled email starts at its time: a scheduled job looks each minute for one that's due.
-- **Bounces by SMTP** (§8, 5): the job `campaigns.bounces` reads the bounce mailbox every 15 minutes while its three variables are set. It takes each bounce report (RFC 3464) and spam report (RFC 5965), sets the address aside by VybeSite's classifier, and moves the message to a folder of read ones. A permanent recipient failure (`5.1.x` about the recipient) or a spam report sets the address aside; a soft bounce, and a block that's about the sender, don't. Without the variables, the Newsletter page says "Bounces aren't being read" under Set aside.
+- **Bounces by SMTP** (§8, 5): the job `campaigns.bounces` reads the bounce mailbox every 15 minutes while its three variables are set. It takes each bounce report (RFC 3464) and spam report (RFC 5965), sets the address aside by VybeSite's classifier, and moves the message to a folder of read ones. On Spacemail, and most mailbox hosts, a bounce comes back to the sending mailbox itself, so the reader logs in to that same mailbox. It looks at headers only to find bounce and spam reports. It opens nothing else and marks nothing else read, so the mailbox's other mail stays as it was. A permanent recipient failure (`5.1.x` about the recipient) or a spam report sets the address aside; a soft bounce, and a block that's about the sender, don't. Without the variables, the Newsletter page says "Bounces aren't being read" under Set aside.
 
 **The email:**
 - The body is Markdown made HTML by `kernel.markdown.render`, with a plain-text part from `kernel.markdown.plain`, in a single-column frame with inline styles (§5).
@@ -180,10 +181,9 @@ Answered 2026-11-22:
 2. **Confirming a sign-up:** a confirmation email first (double opt-in) for the newsletter form and the contact box, with "Check your inbox" after the form. A person isn't mailed until they click it. (Agreed, as recommended.)
 3. **"Email it to subscribers" on a post:** the post's email (its title, summary and link) goes out as soon as the post goes live. (Agreed.)
 4. **Who may send to the list:** owner and admin, for both permissions. (Agreed.)
+5. **How bounces reach the site by SMTP:** the module reads the bounce mailbox over IMAP, in this PR. The site sends by Spaceship's Spacemail, a mailbox host, so its bounces come back as bounce reports to the sending mailbox (the owner, 2026-11-22). The reader is on once the owner puts the mailbox's login in the host's variables (`CAMPAIGNS_BOUNCE_IMAP_HOST`, `_USERNAME`, `_PASSWORD`). Until then, Set aside holds unsubscribes and addresses set aside by hand, and the Newsletter page says bounces aren't being read. A site that has to send by Resend uses its webhook instead.
 
 Still to ask:
 
-5. **How bounces reach the site by SMTP.** SMTP takes a message and answers "accepted". A bounce comes back later, as an email to the sending address's bounce mailbox, and the site never hears of it. The board's Set aside tab and its "addresses bounced" card need it.
-   - **Recommended:** the module reads that bounce mailbox over IMAP every 15 minutes. It reads the standard bounce reports (RFC 3464) and spam reports (RFC 5965) and sets the address aside by the classifier lifted from VybeSite. It's on only once you put the mailbox's login in the host's variables (`CAMPAIGNS_BOUNCE_IMAP_HOST`, `_USERNAME`, `_PASSWORD`). Until then, Set aside holds unsubscribes and addresses set aside by hand, and the Newsletter page says bounces aren't being read. This works with any SMTP provider. A site that has to send by Resend uses its webhook instead.
-   - The other choice: leave bounces for a later PR. Set aside then holds only unsubscribes and hand set-asides, and the bounce card waits.
 6. **For later, not a choice:** the newsletter's postal address (a P.O. box works) goes in Settings → Newsletter before the first send. It's an item for the content intake.
+7. **The send pace's default:** the owner's Spacemail plan's sending limit, per hour and per day. `send_per_hour` defaults to well under it, so the site's own mail always has room.
