@@ -794,9 +794,9 @@
    "step": "Step 1: media, pages, blog, embeds, contact, campaigns",
    "status": "next",
    "status_label": "Next",
-   "prs": "#116 #118 #119 #121 #123 #125 #126 #128",
+   "prs": "#116 #118 #119 #121 #123 #125 #126 #128 #129",
    "decisions": "0054 0055 0056 0057 0059",
-   "note": "media landed (#116); the kernel's Markdown and its editor for pages and blog (#118); media and the admin kit drawn to the boards (#119), and again in round 2, the admin's labels in the boards' normal line height (#126); pages, its menus loaded into nav.public and the new nav.footer (#121); blog, with its categories, covers, related posts and board, and a module's web reaching another's public.ts as @/modules/<id>/public (#123, decision 0057), and its public surface for a site's own Blog and Post pages (#128); contact, its form, its Inbox and the kernel's notify_holders telling the Inbox's readers (#125, decision 0059); blog's AI writing help, generated covers and social posting, embeds and campaigns to come"
+   "note": "media landed (#116); the kernel's Markdown and its editor for pages and blog (#118); media and the admin kit drawn to the boards (#119), and again in round 2, the admin's labels in the boards' normal line height (#126); pages, its menus loaded into nav.public and the new nav.footer (#121); blog, with its categories, covers, related posts and board, and a module's web reaching another's public.ts as @/modules/<id>/public (#123, decision 0057), and its public surface for a site's own Blog and Post pages (#128); contact, its form, its Inbox and the kernel's notify_holders telling the Inbox's readers (#125, decision 0059), and its reads and send in public.ts for a site's own form (#129); blog's AI writing help, generated covers and social posting, embeds and campaigns to come"
   },
   {
    "milestone": "MechFrame v1.0",
