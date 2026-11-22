@@ -78,8 +78,23 @@ describe("the admin page", () => {
     expect(await screen.findByRole("heading", { level: 1, name: "Media" })).toBeInTheDocument();
     expect(await screen.findByText("1 image has no alt text")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Fix the first" })).toHaveAttribute("href", "/admin/media?missing_alt=1");
-    expect(screen.getByRole("button", { name: "door.png, 1000 × 600, no alt text" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "A mixing desk, 1000 × 600" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "door.png, no alt text" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "studio.png: A mixing desk" })).toBeInTheDocument();
+    expect(screen.getByRole("searchbox", { name: "Search files" })).toBeInTheDocument();
+  });
+
+  it("draws each image as the board's card: the picture, its file name under it, then the pill (VM Website's AdminMedia board)", async () => {
+    routed({ [LIST]: { status: 200, body: { items: [DOOR, DESCRIBED], next_cursor: null, missing_alt: 1 } } });
+    renderWithKernel(<AdminMedia />, { path: "/admin/media", session: staff });
+
+    const door = await screen.findByRole("button", { name: "door.png, no alt text" });
+    const parts = [...door.children].map((part) => (part.tagName === "IMG" ? "picture" : part.textContent));
+    expect(parts).toEqual(["picture", "door.png", "No alt text"]);
+    const studio = screen.getByRole("button", { name: "studio.png: A mixing desk" });
+    expect([...studio.children].map((part) => (part.tagName === "IMG" ? "picture" : part.textContent))).toEqual([
+      "picture",
+      "studio.png",
+    ]);
   });
 
   it("opens an image beside the list, with what it is and where it's used, and holds Delete while it's used", async () => {
@@ -90,9 +105,17 @@ describe("the admin page", () => {
     });
     renderWithKernel(<AdminMedia />, { path: "/admin/media", session: staff });
 
-    await userEvent.click(await screen.findByRole("button", { name: /door\.png, 1000 × 600/ }));
+    await userEvent.click(await screen.findByRole("button", { name: /door\.png/ }));
 
     expect(await screen.findByRole("link", { name: "Hello, a post" })).toHaveAttribute("href", "/admin/blog/1");
+    // The board's panel: no title, the alt text a three-line box with its hint under it.
+    expect(screen.queryByRole("heading", { name: "door.png" })).not.toBeInTheDocument();
+    const alt = screen.getByRole("textbox", { name: /Alt text/ });
+    expect(alt.tagName).toBe("TEXTAREA");
+    expect(alt).toHaveAttribute("rows", "3");
+    expect(alt).toHaveAccessibleDescription("Screen readers skip this image until it has alt text.");
+    expect(alt.compareDocumentPosition(screen.getByText("Screen readers skip this image until it has alt text.")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Copy link" }).querySelector("svg")).toBeNull();
     expect(screen.getByText("1000 × 600, 47 KB")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Delete" })).toBeDisabled();
     expect(screen.getByText("A file that's in use can't be deleted until it's removed from those pages.")).toBeInTheDocument();

@@ -839,8 +839,9 @@
       display: none;
     }
 
+    /* After the breadcrumb, as the boards draw it at 390: only the hidden search pushed it right. */
     .mf-admin-notices {
-      margin-left: auto;
+      margin-left: 0;
     }
 
     .mf-admin-main {

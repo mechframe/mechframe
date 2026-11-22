@@ -77,6 +77,7 @@ REQUIRED: tuple[str, ...] = (
     "radius.control",
     "radius.card",
     "radius.pill",
+    "opacity.55",
     "layout.sidebar",
     "motion.fast",
     "motion.base",

@@ -151,7 +151,7 @@ Gate: v1.0 is frozen when blog, chat (community) and payments pass the quality g
 | Step | Status | PRs | Decisions | Note |
 | --- | --- | --- | --- | --- |
 | Step 0: scaffold, moderation permission, custom roles | Done | [#55](https://github.com/mechframe/mechframe/pull/55), [#56](https://github.com/mechframe/mechframe/pull/56) | [0029](decisions/0029-vibrant-mindz-order.md), [0031](decisions/0031-moderation-permission.md) |  |
-| Step 1: media, pages, blog, embeds, contact, campaigns | Next | [#116](https://github.com/mechframe/mechframe/pull/116), [#118](https://github.com/mechframe/mechframe/pull/118) | [0054](decisions/0054-route-body-limits.md), [0055](decisions/0055-markdown-editor.md) | media landed (#116); the kernel's Markdown and its editor for pages and blog (#118); pages, blog, embeds, contact and campaigns to come |
+| Step 1: media, pages, blog, embeds, contact, campaigns | Next | [#116](https://github.com/mechframe/mechframe/pull/116), [#118](https://github.com/mechframe/mechframe/pull/118), [#119](https://github.com/mechframe/mechframe/pull/119) | [0054](decisions/0054-route-body-limits.md), [0055](decisions/0055-markdown-editor.md) | media landed (#116); the kernel's Markdown and its editor for pages and blog (#118); media and the admin kit drawn to the boards (#119); pages, blog, embeds, contact and campaigns to come |
 | Step 2: discography, audio player, featured | To do |  |  |  |
 | Step 3: roster, portfolio, reactions, comments | To do |  |  |  |
 | Step 4: community | To do |  |  |  |

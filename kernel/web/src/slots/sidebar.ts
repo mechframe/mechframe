@@ -5,7 +5,8 @@
  * entry with no section sits under Dashboard. A group with nothing the person
  * may open isn't shown. The kernel's own carry the boards' icons (VM Website
  * `AdminDashboard.dc.html`): Dashboard's grid, People and access's lock,
- * Settings' gear.
+ * Settings' gear. A site that gives no sections of its own gets the boards'
+ * (`ADMIN_SECTIONS`), so a module's group has its icon too.
  */
 import type { AdminSection } from "../app/context";
 import type { Placed } from "./slots";
@@ -15,6 +16,17 @@ export type SidebarItem = { label: string; to: string; icon?: IconName };
 export type SidebarGroup = { label?: string; icon?: IconName; items: SidebarItem[] };
 
 type KernelItem = SidebarItem & { permission?: string };
+
+/** The boards' module sections, in their order, each with its icon (VM Website's admin boards' sidebar). */
+export const ADMIN_SECTIONS: readonly AdminSection[] = [
+  { label: "Homepage", icon: "home" },
+  { label: "Music", icon: "music" },
+  { label: "Beats", icon: "beats" },
+  { label: "Marketplace", icon: "shop" },
+  { label: "Collective", icon: "people" },
+  { label: "Community", icon: "chat" },
+  { label: "Content", icon: "document" },
+];
 
 const PEOPLE: KernelItem[] = [
   { label: "People", to: "/admin/people", permission: "auth.user.manage" },

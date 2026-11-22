@@ -2757,6 +2757,8 @@ export interface components {
             verified: boolean;
             /** Second Factor */
             second_factor: boolean;
+            /** Name */
+            name?: string | null;
         };
         /** Verified */
         Verified: {

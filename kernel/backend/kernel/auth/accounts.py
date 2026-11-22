@@ -87,4 +87,5 @@ async def view(db: AsyncSession, user: User, *, declared: Iterable[str] = ()) ->
         "permissions": await permissions_of(db, user.id, roles, declared),
         "verified": user.email_verified_at is not None,
         "second_factor": await has_second_factor(db, user.id),
+        "name": user.display_name or None,
     }

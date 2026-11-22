@@ -7825,6 +7825,17 @@
           "second_factor": {
             "type": "boolean",
             "title": "Second Factor"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
           }
         },
         "additionalProperties": false,

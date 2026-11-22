@@ -16,10 +16,11 @@ import {
   Dialog,
   EmptyState,
   Field,
-  Input,
   LoadError,
   Pill,
+  SearchBox,
   Switch,
+  TextArea,
   UnsavedDialog,
   useToast,
   useUnsavedGuard,
@@ -27,7 +28,6 @@ import {
 
 import { LIBRARY, useApiQuery, type Image } from "../api";
 import { useLibrary } from "../components/library";
-import { nameOf } from "../components/ImagePicker";
 import { Picture } from "../components/Picture";
 import { ACCEPT, deleteImage, describeImage, replaceImage, tooLarge, uploadImage } from "../components/upload";
 import "../media.css";
@@ -36,6 +36,14 @@ const ONE = "/api/media/admin/images/{image_id}";
 
 function missingAlt(image: Image): boolean {
   return !image.decorative && !image.alt?.trim();
+}
+
+/** A tile's name: the file name it shows first, then what's in it, or that nothing says so yet. */
+function tileName(image: Image): string {
+  const alt = image.alt?.trim();
+  if (missingAlt(image)) return `${image.filename}, no alt text`;
+  if (image.decorative) return `${image.filename}: only decoration`;
+  return alt ? `${image.filename}: ${alt}` : image.filename;
 }
 
 function kilobytes(bytes: number): string {
@@ -122,9 +130,13 @@ export default function AdminMedia() {
       <div className="mf-media-layout">
         <section aria-label="The library" className="mf-media-library">
           <div className="mf-media-filters">
-            <Field id="media-search" label="Search files">
-              <Input type="search" value={q} onChange={(event) => { setQ(event.target.value); }} />
-            </Field>
+            <SearchBox
+              label="Search files"
+              value={q}
+              onChange={(event) => {
+                setQ(event.target.value);
+              }}
+            />
             <Chip
               pressed={onlyMissing}
               onPressedChange={(pressed) => {
@@ -148,12 +160,13 @@ export default function AdminMedia() {
                     type="button"
                     className="mf-media-thumb"
                     aria-pressed={shown === image.id}
-                    aria-label={nameOf(image) + (missingAlt(image) ? ", no alt text" : "")}
+                    aria-label={tileName(image)}
                     onClick={() => {
                       choose(image.id);
                     }}
                   >
                     <Picture image={{ ...image, decorative: true }} sizes="10rem" />
+                    <span className="mf-media-thumb-name">{image.filename}</span>
                     {missingAlt(image) ? <Pill tone="warning">No alt text</Pill> : null}
                   </button>
                 </li>
@@ -216,6 +229,7 @@ type PanelProps = { id: string; onDirty: (dirty: boolean) => void; onGone: () =>
 
 function Panel({ id, onDirty, onGone, onChanged }: PanelProps) {
   const fields = useId();
+  const hintId = `${fields}-alt-hint`;
   const one = useApiQuery("get", ONE, { params: { path: { image_id: id } } });
   const queryClient = useQueryClient();
   const toast = useToast();
@@ -321,24 +335,28 @@ function Panel({ id, onDirty, onGone, onChanged }: PanelProps) {
   }
 
   return (
-    <Card title={image.filename} className="mf-media-panel">
-      <Picture image={{ ...image, decorative: true }} sizes="24rem" className="mf-media-preview" />
-      <form onSubmit={(event) => void save(event)} noValidate>
-        <Field
-          id={`${fields}-alt`}
-          label="Alt text: what's in the picture, for screen readers"
-          hint={missingAlt(image) ? "Screen readers skip this image until it has alt text." : undefined}
-          error={problem ?? undefined}
-        >
-          <Input
+    <Card className="mf-media-panel">
+      <Picture image={{ ...image, decorative: true }} sizes="20rem" className="mf-media-preview" />
+      <form className="mf-media-describe" onSubmit={(event) => void save(event)} noValidate>
+        <Field id={`${fields}-alt`} label="Alt text: what's in the picture, for screen readers" error={problem ?? undefined}>
+          <TextArea
+            className="mf-media-alt"
+            rows={3}
             value={shownAlt}
             maxLength={250}
             disabled={shownDecorative || busy}
+            aria-describedby={missingAlt(image) ? hintId : undefined}
             onChange={(event) => {
               edit({ alt: event.target.value });
             }}
           />
         </Field>
+        {/* Under the box, as the board draws it (VM Website's AdminMedia board). */}
+        {missingAlt(image) ? (
+          <p id={hintId} className="mf-media-hint">
+            Screen readers skip this image until it has alt text.
+          </p>
+        ) : null}
         <Switch
           label="Only decoration"
           checked={shownDecorative}
@@ -347,40 +365,49 @@ function Panel({ id, onDirty, onGone, onChanged }: PanelProps) {
             edit({ decorative: on });
           }}
         />
-        <Button type="submit" variant="primary" disabled={busy}>
-          {busy ? "Saving…" : "Save"}
-        </Button>
+        <div>
+          <Button type="submit" variant="primary" disabled={busy}>
+            {busy ? "Saving…" : "Save"}
+          </Button>
+        </div>
       </form>
       <dl className="mf-media-facts">
-        <dt>File</dt>
-        <dd>{image.filename}</dd>
-        <dt>Size</dt>
-        <dd>
-          {image.width} × {image.height}, {kilobytes(image.bytes)}
-        </dd>
-        <dt>Added</dt>
-        <dd>
-          {new Date(image.created_at).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}
-          {image.uploaded_by ? ` by ${image.uploaded_by}` : ""}
-        </dd>
-        <dt>Used in</dt>
-        <dd>
-          {uses.length ? (
-            <ul role="list" className="mf-media-uses">
-              {uses.map((use) => (
-                <li key={use.link}>
-                  <a href={use.link}>{use.label}</a>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            "Nowhere yet"
-          )}
-        </dd>
+        <div>
+          <dt>File</dt>
+          <dd>{image.filename}</dd>
+        </div>
+        <div>
+          <dt>Size</dt>
+          <dd>
+            {image.width} × {image.height}, {kilobytes(image.bytes)}
+          </dd>
+        </div>
+        <div>
+          <dt>Added</dt>
+          <dd>
+            {new Date(image.created_at).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}
+            {image.uploaded_by ? ` by ${image.uploaded_by}` : ""}
+          </dd>
+        </div>
+        <div>
+          <dt>Used in</dt>
+          <dd>
+            {uses.length ? (
+              <ul role="list" className="mf-media-uses">
+                {uses.map((use) => (
+                  <li key={use.link}>
+                    <a href={use.link}>{use.label}</a>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              "Nowhere yet"
+            )}
+          </dd>
+        </div>
       </dl>
       <div className="mf-media-actions">
         <Button
-          icon="link"
           onClick={() => {
             void navigator.clipboard.writeText(image.url).then(() => { toast({ tone: "success", text: "The link is copied." }); });
           }}

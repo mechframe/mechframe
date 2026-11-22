@@ -80,6 +80,15 @@ describe("the sidebar", () => {
     expect(within(pages).getByRole("link", { name: "Features" })).toHaveAttribute("aria-current", "page");
   });
 
+  it("shows a person's name in place of the address once the account has one (VM Website's AdminMedia board)", async () => {
+    routedFetch(NOTHING);
+    renderApp({ path: "/admin", session: { ...admin, name: "Big Haas" } });
+    const rail = await screen.findByRole("complementary", { name: "Admin sections" });
+    expect(within(rail).getByText("Big Haas", { selector: ".mf-admin-person-name" })).toBeInTheDocument();
+    expect(within(rail).getByText("BH")).toBeInTheDocument();
+    expect(within(rail).queryByText("ann.example@mechframe.test")).not.toBeInTheDocument();
+  });
+
   it("shows who is signed in: initials, email and roles, and View site", async () => {
     routedFetch(NOTHING);
     renderApp({ path: "/admin", session: admin });
@@ -89,6 +98,7 @@ describe("the sidebar", () => {
     expect(within(rail).getByText("AE")).toBeInTheDocument();
     expect(within(rail).getByRole("link", { name: "View site" })).toHaveAttribute("href", "/");
     expect(initials("bo@site.test")).toBe("B");
+    expect(initials("Big Haas")).toBe("BH");
     expect(initials("cy_place+tag@site.test")).toBe("CP");
     expect(roleWords(["member"])).toBe("Member");
     expect(roleWords(["member", "owner", "editor"])).toBe("Owner, Editor");

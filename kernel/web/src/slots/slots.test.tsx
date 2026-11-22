@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { renderWithKernel, testUser } from "../../testing";
 import { defineModule } from "../modules";
 import { SESSION_KEY } from "../session/session";
-import { adminSidebar } from "./sidebar";
+import { ADMIN_SECTIONS, adminSidebar } from "./sidebar";
 import { SlotOutlet, useSlot, type Placed } from "./slots";
 
 const part = (words: string) => () => Promise.resolve({ default: () => <span>{words}</span> });
@@ -207,6 +207,15 @@ describe("the admin sidebar's order", () => {
     expect(groups.map((group) => [group.label, group.icon, group.items.length])).toEqual([
       [undefined, undefined, 1],
       ["Content", "document", 1],
+    ]);
+  });
+
+  it("has the boards' sections for a site that gives none, so a module's group has its icon (VM Website's AdminMedia board)", () => {
+    const groups = adminSidebar([entry("media", "Content"), entry("music", "Music")], ADMIN_SECTIONS, () => false);
+    expect(groups.map((group) => [group.label, group.icon])).toEqual([
+      [undefined, undefined],
+      ["Music", "music"],
+      ["Content", "document"],
     ]);
   });
 

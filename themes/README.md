@@ -60,6 +60,7 @@ Every theme defines these; the kit styles itself with them. `tools/themes.py`'s 
 | `radius.control` | Buttons and inputs |
 | `radius.card` | Cards |
 | `radius.pill` | Pills and chips |
+| `opacity.55` | A control that can't be used yet: a disabled button, switch and chip |
 | `layout.sidebar` | The admin sidebar's width |
 | `motion.fast` | A quick change: colour, border, background |
 | `motion.base` | An ordinary change: a transform, a panel |

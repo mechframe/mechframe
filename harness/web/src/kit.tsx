@@ -33,6 +33,7 @@ import {
   SaveBar,
   ScrollMemory,
   SaveConflict,
+  SearchBox,
   SearchFields,
   SectionHistory,
   Select,
@@ -138,8 +139,9 @@ function AdminLook() {
           Save and go live
         </Button>
         <Button>Discard</Button>
-        <Button size="small" icon="external">
+        <Button size="small">
           View site
+          <Icon name="external" />
         </Button>
         <Button disabled>Not now</Button>
         <LinkButton to="/kit.html#tabs">Go to the tabs</LinkButton>
@@ -199,6 +201,7 @@ function AdminLook() {
         </Field>
         <BotFields {...bot.fields} />
       </div>
+      <SearchBox label="Search files" />
       <div className="kit-stack">
         <Switch label="Open sign-up" hint="Anyone can make an account." checked={on} onChange={setOn} />
         <Switch label="Direct messages" checked={false} onChange={() => undefined} />

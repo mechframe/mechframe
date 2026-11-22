@@ -116,29 +116,34 @@ function Brand() {
   );
 }
 
-/** "ann.example@…" → "AE"; "bo@…" → "B". */
-export function initials(email: string): string {
-  const name = email.split("@")[0] ?? "";
-  const parts = name.split(/[._+-]+/).filter(Boolean);
+/** "Big Haas" → "BH"; "ann.example@…" → "AE"; "bo@…" → "B". */
+export function initials(nameOrEmail: string): string {
+  const name = nameOrEmail.includes("@") ? (nameOrEmail.split("@")[0] ?? "") : nameOrEmail;
+  const parts = name.split(/[\s._+-]+/).filter(Boolean);
   return parts
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() ?? "")
     .join("");
 }
 
-/** The signed-in person's card: their roles by name once the roles read is in (K4.7), by id before it or without it. */
+/**
+ * The signed-in person's card: their name, or their address until the account
+ * has one, over their roles by name once the roles read is in (K4.7), by id
+ * before it or without it.
+ */
 function Person() {
   const session = useSession();
   const named = useRoles();
   if (session.status !== "signed-in") return null;
   const { email, roles } = session.user;
+  const called = session.user.name ?? email;
   return (
     <div className="mf-admin-person">
       <span className="mf-admin-avatar" aria-hidden="true">
-        {initials(email)}
+        {initials(called)}
       </span>
       <span className="mf-admin-person-words">
-        <span className="mf-admin-person-name">{email}</span>
+        <span className="mf-admin-person-name">{called}</span>
         <span className="mf-admin-person-role">{roleWords(roles, named.data?.roles)}</span>
       </span>
       <Link to="/" className="mf-admin-person-site" aria-label="View site" title="View site">

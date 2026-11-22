@@ -86,7 +86,7 @@
 
   .mf-button:disabled {
     cursor: not-allowed;
-    opacity: 0.55;
+    opacity: var(--mf-opacity-55);
   }
 
   /* --- Field ------------------------------------------------------------ */
@@ -208,7 +208,7 @@
 
   .mf-switch:disabled {
     cursor: not-allowed;
-    opacity: 0.55;
+    opacity: var(--mf-opacity-55);
   }
 
   /* --- Card ------------------------------------------------------------- */
@@ -325,7 +325,7 @@
 
   .mf-chip:disabled {
     cursor: not-allowed;
-    opacity: 0.55;
+    opacity: var(--mf-opacity-55);
   }
 
   .mf-chip[aria-pressed="true"] {
@@ -341,7 +341,6 @@
 
     box-sizing: border-box;
     display: flex;
-    flex-wrap: wrap;
     align-items: flex-start;
     gap: 0.875rem;
     padding: 1rem 1.125rem;
@@ -364,12 +363,18 @@
     color: var(--mf-tone);
   }
 
+  /* The words narrow beside the action rather than the action dropping under them, at 390 too
+     (VM Website AdminMedia.dc.html). */
   .mf-attention-words {
     display: flex;
-    flex: 1 1 14rem;
+    flex: 1;
     flex-direction: column;
     gap: 0.1875rem;
     min-width: 0;
+  }
+
+  .mf-attention > .mf-button {
+    flex: none;
   }
 
   .mf-attention-what {
@@ -634,6 +639,38 @@
     margin: 0;
     color: var(--mf-color-text-muted);
     font: var(--mf-type-meta);
+  }
+
+  /* --- The search box (SearchBox; VM Website AdminMedia.dc.html) -------- */
+
+  .mf-search {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    width: 320px;
+    max-width: 100%;
+    height: 38px;
+    padding: 0 0.75rem;
+    border: 1px solid var(--mf-color-border-control);
+    border-radius: var(--mf-radius-control);
+    background: var(--mf-color-field);
+    color: var(--mf-color-text-muted);
+  }
+
+  .mf-search-input {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--mf-color-text-strong);
+    font: var(--mf-type-small);
+  }
+
+  .mf-search-input::placeholder {
+    color: var(--mf-color-text-subtle);
   }
 
   .mf-search-fields {
@@ -1279,6 +1316,16 @@
      ring's line at 2.2:1 in Vibrant Mindz. The site's fields keep their outline (frames.css). */
   .mf-admin-look :where(.mf-button--primary, .mf-switch, .mf-input, [aria-pressed="true"]):focus-visible {
     box-shadow: var(--mf-shadow-focus-ring-gap);
+  }
+
+  /* A field drawn as a box round its control (the search box, the Markdown editor): the box takes
+     the field's ring, and the control inside none of its own. */
+  .mf-admin-look :where(.mf-search, .mf-editor-box):has(:where(input, textarea):focus-visible) {
+    box-shadow: var(--mf-shadow-focus-ring-gap);
+  }
+
+  .mf-admin-look :where(.mf-search-input, .mf-editor-text):focus-visible {
+    box-shadow: none;
   }
 
   .mf-admin-look :where(.mf-table-scroll, .mf-pick):focus-visible {

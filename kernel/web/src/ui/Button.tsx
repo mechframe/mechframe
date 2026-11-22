@@ -23,7 +23,7 @@ export type ButtonLook = {
   variant?: "primary" | "secondary" | "strong" | undefined;
   /** `small` is the top bar's and a Needs-you item's: 34px against 38px; `large` is sign-in's 54px. */
   size?: "medium" | "small" | "large" | undefined;
-  /** An icon after the words. */
+  /** An icon before the words, as every board draws an action's (Upload, Copy link). One for leaving the page, View site's, goes after them as a child. */
   icon?: IconName | undefined;
 };
 
@@ -36,8 +36,8 @@ export function buttonClass({ variant = "secondary", size = "medium" }: ButtonLo
 function Words({ children, icon }: { children: ReactNode; icon: IconName | undefined }) {
   return (
     <>
-      {children}
       {icon ? <Icon name={icon} size={16} /> : null}
+      {children}
     </>
   );
 }

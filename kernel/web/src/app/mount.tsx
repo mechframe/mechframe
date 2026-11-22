@@ -18,6 +18,7 @@ import { apiQueryOptions, retryUnlessRefused } from "../api/client";
 import { defineModule, siteFrame, siteModule, type ModuleDefinition, type SiteDefinition } from "../modules";
 import { StepUpProvider } from "../auth/StepUp";
 import { SessionHandlers } from "../session/session";
+import { ADMIN_SECTIONS } from "../slots/sidebar";
 import { ToastProvider } from "../ui/Toast";
 import { KernelContext, type AdminSection, type KernelSetup } from "./context";
 import { buildRoutes } from "./routes";
@@ -27,7 +28,7 @@ export type AppOptions = {
   modules: ModuleDefinition[];
   /** The site's own pages and slots (`src/site/site.ts`, `defineSite`): always on, and first in a tie. */
   site?: SiteDefinition;
-  /** The admin sidebar's order and icons for module sections. */
+  /** The admin sidebar's order and icons for module sections; the boards' (`ADMIN_SECTIONS`) when none are given. */
   adminSections?: AdminSection[];
   /** Where to mount; the page's `#root` by default. */
   root?: HTMLElement;
@@ -108,7 +109,7 @@ export function mountApp(options: AppOptions): Promise<Root> {
   if (!root) throw new Error("The page has no #root to mount the app in.");
   checkModules(options.modules);
   const modules = options.site ? [siteModule(options.site), ...options.modules] : options.modules;
-  const setup: KernelSetup = { modules, adminSections: options.adminSections ?? [], frame: siteFrame(options.site) };
+  const setup: KernelSetup = { modules, adminSections: options.adminSections ?? ADMIN_SECTIONS, frame: siteFrame(options.site) };
   const queryClient = kernelQueryClient();
   return modulesOn(queryClient).then((on) => {
     const router = createBrowserRouter(buildRoutes(setup.modules, on));

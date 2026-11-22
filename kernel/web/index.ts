@@ -28,6 +28,7 @@ export { mountApp } from "./src/app/mount";
 export { AfterFooter, SiteAccountLinks } from "./src/app/frames";
 export type { AppOptions } from "./src/app/mount";
 export type { AdminSection } from "./src/app/context";
+export { ADMIN_SECTIONS } from "./src/slots/sidebar";
 
 export { useSession, useSignOut } from "./src/session/session";
 export type { Session, SessionUser } from "./src/session/session";

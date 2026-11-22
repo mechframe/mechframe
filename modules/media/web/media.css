@@ -10,15 +10,17 @@
   white-space: nowrap;
 }
 
+/* VM Website's AdminMedia board (canvas version 82): the library, then the
+   image's panel in a 320px column once there's room for both. */
 .mf-media-layout {
   display: grid;
-  gap: var(--mf-space-6);
-  margin-top: var(--mf-space-6);
+  gap: 1.25rem;
+  margin-top: 1.125rem;
 }
 
-@media (min-width: 64rem) {
+@media (min-width: 60rem) {
   .mf-media-layout {
-    grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem);
+    grid-template-columns: minmax(0, 1fr) 320px;
     align-items: start;
   }
 }
@@ -26,66 +28,103 @@
 .mf-media-filters {
   display: flex;
   flex-wrap: wrap;
-  align-items: end;
-  gap: var(--mf-space-3);
-  margin-bottom: var(--mf-space-4);
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.875rem;
 }
 
 .mf-media-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
-  gap: var(--mf-space-3);
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.75rem;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
+/* One card per image: its picture square, its file name under it, then its pill. */
 .mf-media-thumb {
-  position: relative;
-  display: grid;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
   width: 100%;
-  aspect-ratio: 4 / 3;
-  padding: 0;
-  overflow: hidden;
-  border: 1px solid var(--mf-color-border);
-  border-radius: var(--mf-radius-md);
-  background: var(--mf-color-well);
+  padding: 0.5rem;
+  border: 2px solid var(--mf-color-border);
+  border-radius: var(--mf-radius-control);
+  background: var(--mf-color-surface);
+  color: var(--mf-color-text-strong);
+  font: inherit;
+  text-align: left;
   cursor: pointer;
 }
 
 .mf-media-thumb[aria-pressed="true"] {
   border-color: var(--mf-color-accent);
-  box-shadow: 0 0 0 2px var(--mf-color-accent);
 }
 
 .mf-media-thumb img {
+  display: block;
   width: 100%;
-  height: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1;
   object-fit: cover;
+  border-radius: calc(var(--mf-radius-control) - 2px);
 }
 
-.mf-media-thumb .mf-pill {
-  position: absolute;
-  bottom: var(--mf-space-2);
-  left: var(--mf-space-2);
+.mf-media-thumb-name {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 0.75rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The panel: no title, a square preview, then its parts 12px apart. */
+.mf-card.mf-media-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.125rem;
 }
 
 .mf-media-preview {
   display: block;
   width: 100%;
   height: auto;
-  margin-bottom: var(--mf-space-4);
-  border-radius: var(--mf-radius-md);
+  aspect-ratio: 1 / 1;
+  margin-bottom: 0.125rem;
+  object-fit: cover;
+  border-radius: var(--mf-radius-control);
+}
+
+textarea.mf-input.mf-media-alt {
+  min-height: 4rem;
+}
+
+.mf-media-hint {
+  margin: 0;
+  color: var(--mf-color-warning);
+  font: var(--mf-type-meta);
 }
 
 .mf-media-facts {
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: var(--mf-space-2) var(--mf-space-4);
-  margin: var(--mf-space-4) 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0;
+  font: var(--mf-type-small);
+}
+
+.mf-media-facts > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
 }
 
 .mf-media-facts dt {
+  flex: none;
   color: var(--mf-color-text-muted);
 }
 
@@ -94,6 +133,24 @@
   margin: 0;
   padding: 0;
   list-style: none;
+  text-align: right;
+}
+
+.mf-media-uses {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+}
+
+.mf-media-uses a {
+  color: var(--mf-color-link);
+  text-decoration: none;
+}
+
+.mf-media-uses a:hover {
+  color: var(--mf-color-link-hover);
+  text-decoration: underline;
 }
 
 .mf-media-actions,
@@ -101,12 +158,13 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--mf-space-3);
-  margin-top: var(--mf-space-4);
+  gap: 0.5rem;
 }
 
 .mf-media-muted {
+  margin: 0;
   color: var(--mf-color-text-muted);
+  font-size: 0.75rem;
 }
 
 .mf-media-problem {
@@ -115,5 +173,5 @@
 
 .mf-media-describe {
   display: grid;
-  gap: var(--mf-space-4);
+  gap: 0.75rem;
 }

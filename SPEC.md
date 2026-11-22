@@ -908,6 +908,7 @@ All eleven were answered on 2026-11-12, and the sections above already reflect t
 
 | Date | Change |
 | --- | --- |
+| 2026-11-22 | The admin and the kit to the boards (decisions 0042 and 0044, amended; VM Website Dev 08's check of media against its board, with the owner's OK, 2026-11-21 and 22): an action's icon before its words; the kit's `SearchBox`; a Needs-you item's action beside its words at 390; the required token `opacity.55`; the session's `name` on the person card; the boards' admin sections when a site gives none; the bell after the breadcrumb under 960px; media 0.1.1 drawn to its board (8) |
 | 2026-11-22 | Markdown made HTML on the server, `kernel.markdown` (decision 0055, `dev plans/contracts/pages.md`): `render`, `plain` and `excerpt`; `cleaned` keeps a link's and an image's `title` and a list's `start`; the kit's `MarkdownEditor`, `Prose` and `SearchFields` (6, 8, 15) |
 | 2026-11-21 | The first module, `media` (`dev plans/contracts/media.md`): the library every module picks images from, its `public.py` and `public.ts` (no section's words change but the change log) |
 | 2026-11-21 | A module's routes may take a larger body than MAX_BODY_BYTES: `__init__.py`'s `BODY_LIMITS`, at most 64 MB, while it's on (decision 0054; media's uploads) (7) |

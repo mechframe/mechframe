@@ -28,6 +28,9 @@ class UserView(Answer):
     permissions: list[str]
     verified: bool
     second_factor: bool
+    #: What the person is called, once the account has a name; the admin's
+    #: person card shows it over the roles, and the address until then.
+    name: str | None = None
 
 
 class SignedIn(Answer):

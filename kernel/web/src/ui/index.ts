@@ -42,6 +42,8 @@ export type { SaveBarProps } from "./SaveBar";
 export { SaveConflict, resolveConflict, settingsConflict } from "./SaveConflict";
 export type { Choices, FieldConflict, SaveConflictProps, SettingsConflict } from "./SaveConflict";
 export { ScrollMemory } from "./ScrollMemory";
+export { SearchBox } from "./SearchBox";
+export type { SearchBoxProps } from "./SearchBox";
 export { SEARCH_DESCRIPTION_MAX, SEARCH_TITLE_MAX, SearchFields } from "./SearchFields";
 export type { SearchFieldsProps } from "./SearchFields";
 export { StatCard } from "./StatCard";

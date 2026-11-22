@@ -47,10 +47,12 @@ describe("Button", () => {
     expect(clicked).toHaveBeenCalledOnce();
   });
 
-  it("puts an icon after its words, hidden from a screen reader", () => {
-    render(<Button icon="external">View site</Button>);
-    const button = screen.getByRole("button", { name: "View site" });
-    expect(button.lastElementChild).toHaveAttribute("aria-hidden", "true");
+  it("puts an icon before its words, as every board draws it, hidden from a screen reader", () => {
+    render(<Button icon="upload">Upload</Button>);
+    const button = screen.getByRole("button", { name: "Upload" });
+    expect(button.firstChild).toBe(button.firstElementChild);
+    expect(button.firstElementChild).toHaveAttribute("aria-hidden", "true");
+    expect(button.lastChild?.textContent).toBe("Upload");
   });
 });
 

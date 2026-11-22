@@ -187,6 +187,7 @@ async def test_signing_in_answers_with_the_account_and_sets_both_cookies(site: S
         "permissions": [],
         "verified": True,
         "second_factor": False,
+        "name": None,
     }
     assert response.json() == {"status": "signed_in", "user": user}
     for name in (sessions.SESSION_COOKIE, sessions.DEVICE_COOKIE):
@@ -195,6 +196,18 @@ async def test_signing_in_answers_with_the_account_and_sets_both_cookies(site: S
             assert attribute in header, (name, attribute)
         assert "domain=" not in header
     assert (await site.http.get("/api/auth/session")).json() == {"user": user}
+
+
+async def test_the_account_answers_with_its_name_once_it_has_one(site: Site) -> None:
+    # The admin's person card shows it over the roles (VM Website's AdminMedia board).
+    person = await _person(site)
+    async with site.db() as db:
+        user = await db.get(User, person.id)
+        assert user is not None
+        user.display_name = "Big Haas"
+        await db.commit()
+    assert (await _sign_in(site.http, person)).json()["user"]["name"] == "Big Haas"
+    assert (await site.http.get("/api/auth/session")).json()["user"]["name"] == "Big Haas"
 
 
 async def test_the_address_is_matched_whatever_its_case_and_spaces(site: Site) -> None:

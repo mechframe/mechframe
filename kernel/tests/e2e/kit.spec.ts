@@ -104,9 +104,9 @@ for (const [theme, canvas] of Object.entries(THEMES)) {
           return { back, fill, boundary: Math.max(ratio(edge, back), ratio(fill, back)) };
         };
         const label = (element: Element) =>
-          `${element.tagName.toLowerCase()} ${element.getAttribute("aria-label") ?? element.textContent.trim().slice(0, 30)} (${element.getAttribute("data-kit-boundary") ?? (element.classList.contains("mf-editor-box") ? "editor" : "switch")})`;
+          `${element.tagName.toLowerCase()} ${element.getAttribute("aria-label") ?? element.textContent.trim().slice(0, 30)} (${element.getAttribute("data-kit-boundary") ?? (element.classList.contains("mf-editor-box") ? "editor" : element.classList.contains("mf-search") ? "search" : "switch")})`;
         // The Markdown editor's box is its field's edge: the text inside has none (decision 0055).
-        const controls = [...document.querySelectorAll("[data-kit-boundary], .mf-switch, .mf-editor-box")];
+        const controls = [...document.querySelectorAll("[data-kit-boundary], .mf-switch, .mf-editor-box, .mf-search")];
         const boundaries = controls.map((element) => ({ control: label(element), ratio: drawn(element).boundary }));
         const knobs = [...document.querySelectorAll(".mf-switch")].map((track) => {
           const knob = track.querySelector(".mf-switch-knob");
@@ -116,8 +116,8 @@ for (const [theme, canvas] of Object.entries(THEMES)) {
         });
         return [...boundaries, ...knobs];
       });
-      // Three filled buttons (the passkey's among them), six fields, a pressed chip, two switches, the editor, and the knobs.
-      expect(measured).toHaveLength(15);
+      // Three filled buttons (the passkey's among them), six fields, a pressed chip, two switches, the editor, the search box, and the knobs.
+      expect(measured).toHaveLength(16);
       const short = measured.filter((each) => each.ratio < 3).map((each) => `${each.control}: ${each.ratio.toFixed(2)}:1`);
       expect(short).toEqual([]);
     });
@@ -224,6 +224,17 @@ for (const [theme, canvas] of Object.entries(THEMES)) {
         await page.keyboard.press("Tab");
         await expect(field).toBeFocused();
         expect((await focusedShadow(page)).shadow, name).toBe(gap);
+      }
+
+      // A field drawn as a box round its control takes the ring on the box, the control inside none.
+      for (const [name, box] of [["Search files", ".mf-search"], ["Page body", ".mf-editor-box"]] as const) {
+        const control = page.getByRole(name === "Search files" ? "searchbox" : "textbox", { name, exact: true });
+        await control.focus();
+        await page.keyboard.press("Shift+Tab");
+        await page.keyboard.press("Tab");
+        await expect(control).toBeFocused();
+        expect((await focusedShadow(page)).shadow, name).toBe("none");
+        expect(await control.evaluate((element, selector) => getComputedStyle(element.closest(selector) as Element).boxShadow, box), name).toBe(gap);
       }
 
       await page.getByRole("tab", { name: "Site" }).focus();
