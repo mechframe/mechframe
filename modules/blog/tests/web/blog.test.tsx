@@ -341,7 +341,10 @@ describe("the editor", () => {
       expect(router.state.location.pathname).toBe(`/admin/blog/${ID}`);
     });
     const made = sent.find((each) => each.method === "POST" && each.url.endsWith("/admin/posts")) as Request;
-    expect(await json(made)).toMatchObject({ title: "Don't stop", slug: "dont-stop", author_id: ME, category: null, cover_id: null, related: [] });
+    const sentBody = await json(made);
+    expect(sentBody).toMatchObject({ title: "Don't stop", author_id: ME, category: null, cover_id: null, related: [] });
+    // An address that followed the title is the server's to make, numbered when taken (CodeRabbit on #123).
+    expect(sentBody).not.toHaveProperty("slug");
     await waitFor(() => {
       expect(screen.getByRole("heading", { level: 1, name: "Edit post" })).toBeInTheDocument();
     });
@@ -465,6 +468,136 @@ describe("the editor", () => {
     await userEvent.click(screen.getAllByRole("button", { name: "Save draft" })[0] as HTMLElement);
     expect(await screen.findByText(/An address is lowercase letters, digits and single hyphens/)).toBeInTheDocument();
     expect(sent.some((each) => each.method === "PATCH")).toBe(false);
+  });
+});
+
+describe("the review on #123 (CodeRabbit)", () => {
+  it("sends a new post's address once the writer has typed it", async () => {
+    const sent = routed({
+      "POST /api/blog/admin/posts": { status: 201, body: full({ slug: "my-own" }) },
+      [`GET ${ONE}`]: { status: 200, body: full({ slug: "my-own" }) },
+    });
+    renderApp({ path: "/admin/blog/new", modules: [blog], session: editor });
+    await userEvent.type(await screen.findByRole("textbox", { name: "Title" }), "Ten years");
+    const address = screen.getByRole("textbox", { name: "Address" });
+    await userEvent.clear(address);
+    await userEvent.type(address, "my-own");
+    await userEvent.click(screen.getAllByRole("button", { name: "Save draft" })[0] as HTMLElement);
+    await waitFor(() => {
+      expect(sent.some((each) => each.method === "POST")).toBe(true);
+    });
+    expect(await json(sent.find((each) => each.method === "POST") as Request)).toMatchObject({ slug: "my-own" });
+  });
+
+  it("keeps a field typed back to its saved value while the save waits, and asks about it", async () => {
+    let answer: (value: Answer) => void = () => undefined;
+    let patches = 0;
+    routed({
+      [`GET ${ONE}`]: { status: 200, body: full({ title: "A" }) },
+      [`PATCH ${ONE}`]: () => {
+        patches += 1;
+        return patches === 1
+          ? new Promise<Answer>((resolve) => {
+              answer = resolve;
+            })
+          : { status: 200, body: full({ title: "A", version: 3 }) };
+      },
+    });
+    renderApp({ path: `/admin/blog/${ID}`, modules: [blog], session: editor });
+
+    const title = await screen.findByRole("textbox", { name: "Title" });
+    await userEvent.clear(title);
+    await userEvent.type(title, "B");
+    await userEvent.click(screen.getAllByRole("button", { name: "Save draft" })[0] as HTMLElement);
+    await waitFor(() => {
+      expect(patches).toBe(1);
+    });
+    await userEvent.clear(title);
+    await userEvent.type(title, "A");
+    answer(problem(409, "blog.changed", { post: full({ title: "B", version: 2 }) }));
+
+    // Theirs is B and yours is A again: that's a choice, not theirs by default.
+    expect(await screen.findByRole("radio", { name: "Keep mine" })).toBeInTheDocument();
+    expect(title).toHaveValue("A");
+  });
+
+  it("keeps what's typed while the save waits through the conflict's choice", async () => {
+    let answer: (value: Answer) => void = () => undefined;
+    let patches = 0;
+    const sent = routed({
+      [`GET ${ONE}`]: { status: 200, body: full() },
+      [`PATCH ${ONE}`]: () => {
+        patches += 1;
+        return patches === 1
+          ? new Promise<Answer>((resolve) => {
+              answer = resolve;
+            })
+          : { status: 200, body: full({ title: "My title", summary: "Typed while it waited.", version: 3 }) };
+      },
+    });
+    renderApp({ path: `/admin/blog/${ID}`, modules: [blog], session: editor });
+
+    const title = await screen.findByRole("textbox", { name: "Title" });
+    await userEvent.clear(title);
+    await userEvent.type(title, "My title");
+    await userEvent.click(screen.getAllByRole("button", { name: "Save draft" })[0] as HTMLElement);
+    await waitFor(() => {
+      expect(patches).toBe(1);
+    });
+    const summary = screen.getByRole("textbox", { name: "Summary" });
+    await userEvent.clear(summary);
+    await userEvent.type(summary, "Typed while it waited.");
+    answer(problem(409, "blog.changed", { post: full({ title: "Their title", version: 2 }) }));
+
+    await userEvent.click(await screen.findByRole("radio", { name: "Keep mine" }));
+    await userEvent.click(screen.getByRole("button", { name: /Save with these choices/ }));
+    await waitFor(() => {
+      expect(patches).toBe(2);
+    });
+    const second = sent.filter((each) => each.method === "PATCH")[1] as Request;
+    expect(await json(second)).toEqual({ version: 2, title: "My title", summary: "Typed while it waited." });
+  });
+
+  it("shows a post as live once its publish lands, even while it asks about a field", async () => {
+    let answer: (value: Answer) => void = () => undefined;
+    routed({
+      [`GET ${ONE}`]: { status: 200, body: full() },
+      [`POST ${ONE}/publish`]: () =>
+        new Promise<Answer>((resolve) => {
+          answer = resolve;
+        }),
+    });
+    renderApp({ path: `/admin/blog/${ID}`, modules: [blog], session: editor });
+
+    const title = await screen.findByRole("textbox", { name: "Title" });
+    await userEvent.click(screen.getByRole("button", { name: "Publish" }));
+    // Typed while the publish is on its way, and someone else saved the title too.
+    await userEvent.type(title, "!");
+    answer({ status: 200, body: full({ title: "Their title", status: "published", published_at: "2026-11-22T12:00:00+00:00", version: 2 }) });
+    expect(await screen.findByText("Their title")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Back to the form" }));
+    expect(await screen.findByText("Live. Saving changes the post on the site at once.")).toBeInTheDocument();
+  });
+
+  it("keeps All posts while a filter is on, with one category or none", async () => {
+    routed({
+      "GET /api/blog/categories": { status: 200, body: { items: [{ slug: "news", label: "News", posts: 2 }] } },
+      "GET /api/blog/posts": { status: 200, body: { items: [card()], next_cursor: null } },
+    });
+    const { router } = renderApp({ path: "/blog?category=news", modules: [blog] });
+    await userEvent.click(await screen.findByRole("button", { name: "All posts", pressed: false }));
+    await waitFor(() => {
+      expect(router.state.location.search).toBe("");
+    });
+  });
+
+  it("fixes the announcement's switches once a post has gone live", async () => {
+    routed({ [`GET ${ONE}`]: { status: 200, body: full({ status: "published", published_at: "2026-11-20T12:00:00+00:00" }) } });
+    renderApp({ path: `/admin/blog/${ID}`, modules: [blog], session: editor });
+    expect(await screen.findByRole("switch", { name: "Post it in Community" })).toBeDisabled();
+    expect(screen.getByRole("switch", { name: "Email it to subscribers" })).toBeDisabled();
+    expect(screen.getByRole("switch", { name: "Allow comments" })).toBeEnabled();
+    expect(screen.getAllByText("Sent when it first went live.").length).toBe(2);
   });
 });
 

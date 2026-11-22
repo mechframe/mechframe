@@ -21,10 +21,6 @@
       "title": "Path",
       "type": "string"
     },
-    "allow_comments": {
-      "title": "Allow Comments",
-      "type": "boolean"
-    },
     "post_to_community": {
       "title": "Post To Community",
       "type": "boolean"
@@ -39,7 +35,6 @@
     "slug",
     "title",
     "path",
-    "allow_comments",
     "post_to_community",
     "email_subscribers"
   ],

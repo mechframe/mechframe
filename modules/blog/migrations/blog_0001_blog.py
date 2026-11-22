@@ -1,7 +1,8 @@
 """The blog (`dev plans/contracts/blog.md` §3): `blog_post`, one row per post
 with the kernel's lifecycle columns; `blog_slug_move`, a slug a live post
 left; and `blog_post_related`, the posts a post lists under its body. Its
-categories are the kernel's taxonomy (`kernel_0013`), so this depends on it.
+categories, search documents and covers' uses live in the kernel's tables
+(`kernel_0013`, `kernel_0014`) and media's, so this depends on them.
 Admins and editors are granted `blog.post.write` and `blog.post.publish`; an
 owner holds every permission.
 
@@ -20,7 +21,9 @@ from kernel import lifecycle
 revision: str = "blog_0001"
 down_revision: str | Sequence[str] | None = None
 branch_labels: str | Sequence[str] | None = ("blog",)
-depends_on: str | Sequence[str] | None = "kernel_0013"
+#: The taxonomy (kernel_0013) and search (kernel_0014), and media: the
+#: downgrade takes back what the posts left in their tables.
+depends_on: str | Sequence[str] | None = ("kernel_0014", "media_0001")
 
 # True when this migration drops or rewrites data: the CLI asks before running it
 # (SPEC.md section 10). Upgrading adds three empty tables and four grants.
@@ -128,6 +131,12 @@ def upgrade() -> None:
 def downgrade() -> None:
     # Every grant of them goes, a custom role's too: without the module, nothing declares them.
     op.execute(sa.delete(_grants).where(_grants.c.permission.in_(PERMISSIONS)))
+    # What the posts left in the kernel's tables and media's, which hold no
+    # foreign key to them: their terms, their search documents and their
+    # covers' uses (CodeRabbit on #123).
+    op.execute("DELETE FROM kernel_term_link WHERE content_type = 'blog.post'")
+    op.execute("DELETE FROM kernel_search_document WHERE content_type = 'blog.post'")
+    op.execute("DELETE FROM media_use WHERE owner LIKE 'blog.post:%'")
     op.drop_index(op.f("ix_blog_post_related_related_id"), table_name="blog_post_related")
     op.drop_table("blog_post_related")
     op.drop_index(op.f("ix_blog_slug_move_post_id"), table_name="blog_slug_move")

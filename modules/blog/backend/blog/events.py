@@ -5,7 +5,9 @@ whether it was published at once or went live on its schedule: blog hears
 the kernel's `kernel.content.published` for its own type and says it with
 the post's After publishing choices, for `community` to post it and
 `campaigns` to mail it. `announced_at` keeps it to once: a post unpublished
-and published again, or a delivery tried twice, says nothing more.
+and published again, or a delivery tried twice, says nothing more. The two
+choices can't change once a post has gone live (`service.change`), so a
+delivery late or tried again sends what the writer chose.
 """
 
 from __future__ import annotations
@@ -29,7 +31,7 @@ class PostPublished(events.Payload):
     title: str
     #: Its page: /blog/<slug>.
     path: str
-    allow_comments: bool
+    #: As they stood when it first went live: a live post's save can't change them.
     post_to_community: bool
     email_subscribers: bool
 
@@ -51,7 +53,6 @@ async def _announce(ctx: jobs.Context, event: events.Event) -> None:
                 slug=post.slug,
                 title=post.title,
                 path=f"/blog/{post.slug}",
-                allow_comments=post.allow_comments,
                 post_to_community=post.post_to_community,
                 email_subscribers=post.email_subscribers,
             ),

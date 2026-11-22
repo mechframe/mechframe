@@ -156,22 +156,33 @@ export function problems(form: Form, isNew: boolean): Partial<Record<FormField, 
 }
 
 /**
+ * The fields the person changed: those that differ from `base`, and any typed
+ * after `sent` went, even back to what's saved (CodeRabbit on #123), so a save
+ * that crossed someone else's never takes theirs for one of them unasked.
+ */
+export function mineOf(now: Form, base: Form, sent?: Form): FormField[] {
+  const found = new Set(changed(now, base));
+  if (sent) for (const field of changed(now, sent)) found.add(field);
+  return [...found];
+}
+
+/**
  * A save someone else got to first, as the kit's SaveConflict reads it: each
  * field both changed since `base`, to different values. Fields only they
  * changed are theirs, and only you, yours, with nothing to ask.
  */
-export function conflictOf(detail: string, base: Form, mine: Form, theirs: Full): SettingsConflict {
+export function conflictOf(detail: string, base: Form, mine: Form, theirs: Full, fields: readonly FormField[] = changed(mine, base)): SettingsConflict {
   const now = formOf(theirs);
-  const conflicts: FieldConflict[] = changed(mine, base)
+  const conflicts: FieldConflict[] = fields
     .filter((field) => !same(field, now[field], base[field]) && !same(field, now[field], mine[field]))
     .map((field) => ({ field, yours: mine[field], theirs: now[field] }));
   return { detail, version: theirs.version, conflicts, at: theirs.updated_at };
 }
 
 /** The form to save again: theirs, with each field the person changed kept as theirs only where they chose so. */
-export function merged(base: Form, mine: Form, theirs: Full, keepTheirs: ReadonlySet<string>): Form {
+export function merged(base: Form, mine: Form, theirs: Full, keepTheirs: ReadonlySet<string>, fields: readonly FormField[] = changed(mine, base)): Form {
   const next: Form = { ...formOf(theirs) };
-  for (const field of changed(mine, base)) {
+  for (const field of fields) {
     if (!keepTheirs.has(field)) (next as Record<FormField, unknown>)[field] = mine[field];
   }
   return next;

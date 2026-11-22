@@ -75,7 +75,8 @@ export default function Blog() {
         path={category ? `/blog?category=${category}` : "/blog"}
       />
       <h1>{named ? `Blog: ${named.label}` : "Blog"}</h1>
-      {shown.length > 1 ? (
+      {/* All posts stays while a filter is on, however few categories have posts (CodeRabbit on #123). */}
+      {shown.length > 1 || category ? (
         <div className="mf-blog-chips" role="group" aria-label="Show posts from">
           <Chip
             pressed={!category}

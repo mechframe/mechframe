@@ -596,3 +596,76 @@ async def test_publishing_and_scheduling_go_through_the_lifecycle(db: AsyncSessi
     back = await service.unpublish(db, post_id, by=None)
     await db.commit()
     assert (back.status, back.publish_at) == (lifecycle.DRAFT, None)
+
+
+# --- the review on #123 ----------------------------------------------------------------------
+
+
+async def test_every_page_of_categories_is_read(db: AsyncSession) -> None:
+    """CodeRabbit on #123: more categories than one page of the kernel's terms."""
+    await _category(db)  # the vocabulary's row
+    vocabulary = await db.scalar(
+        text("SELECT id FROM kernel_vocabulary WHERE key = 'blog_category'")
+    )
+    mark = uuid.uuid4().hex[:8]
+    await db.execute(
+        text(
+            "INSERT INTO kernel_term (id, vocabulary_id, slug, label, position) "
+            "SELECT gen_random_uuid(), :vocabulary, 'zz-' || :mark || '-' || n, 'Many ' || n, 100000 "
+            "FROM generate_series(1, :count) AS n"
+        ),
+        {"vocabulary": vocabulary, "mark": mark, "count": service.MAX_CATEGORIES + 1},
+    )
+    await db.commit()
+    last = f"zz-{mark}-99"  # the last by slug, so on the second page
+    slugs = {term["slug"] for term in await service.terms(db)}
+    assert last in slugs
+    post = await _new(db, category=last)
+    assert (await service.categories_of(db, [post.id]))[post.id] == {
+        "slug": last,
+        "label": "Many 99",
+    }
+
+
+async def test_a_category_deleted_as_a_post_is_saved_isnt_made_again(
+    db: AsyncSession, database: Database, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """CodeRabbit on #123: staff delete it between the check and the tagging."""
+    term = await _category(db)
+    real = taxonomy.tag
+
+    async def deleted_first(*args: Any, **kwargs: Any) -> Any:
+        async with database.sessions() as other:
+            await other.execute(text("DELETE FROM kernel_term WHERE slug = :slug"), {"slug": term})
+            await other.commit()
+        return await real(*args, **kwargs)
+
+    monkeypatch.setattr(taxonomy, "tag", deleted_first)
+    with pytest.raises(Problem) as refused:
+        await service.create(db, {"title": "X", "category": term}, by=None)
+    await db.rollback()
+    assert (refused.value.code, refused.value.status) == ("blog.category_not_found", 422)
+    again = await db.scalar(
+        text("SELECT count(*) FROM kernel_term WHERE slug = :slug"), {"slug": term}
+    )
+    assert again == 0
+
+
+async def test_the_announcement_choices_are_fixed_once_a_post_has_gone_live(
+    db: AsyncSession,
+) -> None:
+    """CodeRabbit on #123: they're sent as they stood when it first went live."""
+    post = await _live(db, post_to_community=True)
+    post_id, version = post.id, post.version
+    for name in ("post_to_community", "email_subscribers"):
+        with pytest.raises(Problem) as refused:
+            await service.change(db, post_id, version, {name: name == "email_subscribers"}, by=None)
+        await db.rollback()
+        assert (refused.value.code, refused.value.status) == ("blog.announced", 422)
+    same = await _save(
+        db, await service.get(db, post_id), post_to_community=True, allow_comments=False
+    )
+    assert (same.post_to_community, same.allow_comments) == (True, False)
+    draft = await _new(db)
+    changed = await _save(db, draft, email_subscribers=True)
+    assert changed.email_subscribers is True

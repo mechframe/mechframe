@@ -61,7 +61,7 @@ WORDS_A_MINUTE = 200
 #: Who may be named a post's author: those holding this, through a role.
 WRITE = "blog.post.write"
 _SLUG = re.compile(SLUG_PATTERN)
-#: The categories a site has: a few, so one read takes them all.
+#: The categories read in one page of the kernel's terms.
 MAX_CATEGORIES = 500
 
 #: The kernel's people and their roles, read for the names authors go by and
@@ -240,13 +240,37 @@ async def terms(db: AsyncSession) -> list[dict[str, Any]]:
     found = taxonomy.vocabulary(VOCABULARY)
     if found is None:
         return []
-    listed = await taxonomy.listed(db, found, cursor=None, limit=MAX_CATEGORIES)
-    return list(listed["items"])
+    out: list[dict[str, Any]] = []
+    cursor: str | None = None
+    while True:  # every page, not the first (CodeRabbit on #123)
+        listed = await taxonomy.listed(db, found, cursor=cursor, limit=MAX_CATEGORIES)
+        out.extend(listed["items"])
+        cursor = listed["next_cursor"]
+        if cursor is None:
+            return out
 
 
-async def _check_category(db: AsyncSession, slug: str) -> None:
-    if slug not in {term["slug"] for term in await terms(db)}:
-        raise _invalid("category", "blog.category_not_found", "There's no such category.")
+def _no_category() -> Problem:
+    return _invalid("category", "blog.category_not_found", "There's no such category.")
+
+
+async def _check_category(db: AsyncSession, slug: str) -> str:
+    """The id of the category `slug`, or 422: a writer never makes one."""
+    found = next((term for term in await terms(db) if term["slug"] == slug), None)
+    if found is None:
+        raise _no_category()
+    return str(found["id"])
+
+
+async def _file(
+    db: AsyncSession, post_id: uuid.UUID, slug: str | None, term_id: str | None
+) -> None:
+    """Files the post under `slug`, the term `term_id` that was checked. If
+    staff deleted it since, tagging would make it again: 422 instead, and the
+    caller's transaction rolls back (CodeRabbit on #123)."""
+    tagged = await taxonomy.tag(db, CONTENT_TYPE, post_id, VOCABULARY, [slug] if slug else [])
+    if slug and [str(term.id) for term in tagged] != [term_id]:
+        raise _no_category()
 
 
 async def categories_of(
@@ -655,8 +679,7 @@ async def create(db: AsyncSession, fields: dict[str, Any], *, by: uuid.UUID | No
     else:
         slug = await unique_slug(db, slug_for(title))
     category = fields.get("category")
-    if category is not None:
-        await _check_category(db, category)
+    term_id = await _check_category(db, category) if category is not None else None
     cover = _uuid(fields["cover_id"], "cover_id") if fields.get("cover_id") else None
     if cover is not None:
         await _check_cover(db, cover)
@@ -692,12 +715,28 @@ async def create(db: AsyncSession, fields: dict[str, Any], *, by: uuid.UUID | No
     # The slug a post holds is its own, live or not: a move there ends.
     await db.execute(delete(SlugMove).where(SlugMove.slug == slug))
     if category is not None:
-        await taxonomy.tag(db, CONTENT_TYPE, post.id, VOCABULARY, [category])
+        await _file(db, post.id, category, term_id)
     await _place_cover(db, post)
     if related:
         await _replace_related(db, post.id, related)
     audit.record(db, "blog.post.created", actor=by, target=(CONTENT_TYPE, post.id))
     return post
+
+
+#: Sent with `blog.post.published` as they stood when the post first went live.
+ANNOUNCED = ("post_to_community", "email_subscribers")
+
+
+def _keep_announced(post: Post, fields: dict[str, Any]) -> None:
+    """Refuses a change to what went out with the post's first publish
+    (CodeRabbit on #123): sent once, it can't change after."""
+    for name in ANNOUNCED:
+        if fields.get(name) is not None and fields[name] != getattr(post, name):
+            raise _invalid(
+                name,
+                "blog.announced",
+                "This went with the post when it first went live, so it can't change now.",
+            )
 
 
 async def _leave(db: AsyncSession, post: Post, old: str) -> None:
@@ -735,8 +774,11 @@ async def change(
     slug = fields.get("slug") or old_slug  # null leaves it as it is
     if slug != old_slug:
         await _free(db, slug, post.id)
-    if "category" in fields and fields["category"] is not None:
-        await _check_category(db, fields["category"])
+    term_id = None
+    if fields.get("category") is not None:
+        term_id = await _check_category(db, fields["category"])
+    if post.published_at is not None:
+        _keep_announced(post, fields)
     if fields.get("cover_id") is not None:
         fields["cover_id"] = _uuid(fields["cover_id"], "cover_id")
         if fields["cover_id"] != old_cover:
@@ -769,8 +811,7 @@ async def change(
         if post.status == lifecycle.PUBLISHED:
             await _leave(db, post, old_slug)
     if "category" in fields:
-        category = fields["category"]
-        await taxonomy.tag(db, CONTENT_TYPE, post.id, VOCABULARY, [category] if category else [])
+        await _file(db, post.id, fields["category"], term_id)
     if post.cover_id != old_cover or post.title != old_title:
         await _place_cover(db, post)
     await _prune_related(db, post.id)

@@ -10,7 +10,7 @@ A post sits in one category, a term of the kernel's `blog_category` (hook 2): a 
 
 The body is made HTML on the server (`kernel.markdown.render`) on every read and drawn with the kit's `Prose`; the server's copy says the same words to crawlers that run no JavaScript, with the cover as `og:image` and a `BlogPosting` JSON-LD.
 
-The After publishing switches are stored for the modules that act on them: Allow comments for `comments`, and Post it in Community and Email it to subscribers sent with `blog.post.published` for `community` and `campaigns`. That event goes out once a post, the first time it goes live, whether at once or on its schedule.
+The After publishing switches are stored for the modules that act on them: Allow comments for `comments`, and Post it in Community and Email it to subscribers sent with `blog.post.published` for `community` and `campaigns`. That event goes out once a post, the first time it goes live, whether at once or on its schedule. Those two switches are fixed from then on, so the event says what the writer chose (a save that changes one answers 422 `blog.announced`); Allow comments can change any time.
 
 ## Use when / avoid when
 
@@ -24,15 +24,15 @@ Use it for dated writing with an author, a category and a cover, drafted and sch
   - `GET /categories` (public): `{items}`, each category with its live posts;
   - `GET /admin/posts?q=&status=&cursor=` (`{items, next_cursor, needs_cover}`, 50 a page, newest edit first), `POST /admin/posts` (409 `blog.slug_taken`), `GET` and `PATCH /admin/posts/{id}` (with `version`; 409 `blog.changed` with the post as it is now), `POST /admin/preview`, `GET /admin/categories` and `GET /admin/authors`: `blog.post.write`;
   - `POST /admin/posts/{id}/publish` (`{at?}`, a time with its zone to schedule it), `POST /admin/posts/{id}/unpublish`, `DELETE /admin/posts/{id}`: `blog.post.publish`;
-  - 422 `blog.category_not_found`, `blog.cover_not_found`, `blog.author_not_allowed` and `blog.related_refused` for a field that can't be kept.
+  - 422 `blog.category_not_found`, `blog.cover_not_found`, `blog.author_not_allowed`, `blog.related_refused` and `blog.announced` for a field that can't be kept.
 - **Public pages:** `/blog`, the latest post first and larger, the rest as cards, filtered by category; `/blog/:slug`, the post. The server copy answers both, and lists every live post in the sitemap and `llms.txt`.
 - **Menus:** Blog in `nav.public`.
 - **The admin pages:** `/admin/blog`, the board (the note for a scheduled post with no cover, Search posts, All, Live, Scheduled and Drafts, the table, Categories), and `/admin/blog/:id` (`new` for a new post), the editor: Title, the kit's `MarkdownEditor`, Publish, Details (Category, Author, Address, Summary, Cover image through media's `ImagePicker`), Related posts, Search and sharing (`SearchFields`) and After publishing. Under Content in the sidebar.
-- **Tables:** `blog_post`, `blog_slug_move` and `blog_post_related` (migration `blog_0001`, after the kernel's `kernel_0013`).
+- **Tables:** `blog_post`, `blog_slug_move` and `blog_post_related` (migration `blog_0001`, after the kernel's `kernel_0014` and media's `media_0001`; its downgrade takes the posts' terms, search documents and covers' uses with it).
 - **Permissions:**
   - `blog.post.write` (list, write, save, preview) and `blog.post.publish` (publish, schedule, unpublish, delete);
   - both go to admin and editor, granted in the migration; an owner holds every permission. A site that wants writers who can't publish gives a role of its own `blog.post.write` alone.
-- **Events:** emits `blog.post.published` (`{post_id, slug, title, path, allow_comments, post_to_community, email_subscribers}`), heard from the kernel's `kernel.content.published`.
+- **Events:** emits `blog.post.published` (`{post_id, slug, title, path, post_to_community, email_subscribers}`), heard from the kernel's `kernel.content.published`.
 - **Hooks:**
   - lifecycle: `blog.post`, drafted, scheduled and published;
   - taxonomy: `blog_category`, flat, one term a post;

@@ -54,6 +54,7 @@ import {
   conflictOf,
   formOf,
   merged,
+  mineOf,
   openingWords,
   problems,
   rebased,
@@ -115,7 +116,8 @@ function Editor({ saved: first, start }: { saved: Full | null; start: Form }) {
   const [busy, setBusy] = useState(false);
   const [refused, setRefused] = useState<unknown>(null);
   const [checked, setChecked] = useState<Partial<Record<FormField, string>>>({});
-  const [conflict, setConflict] = useState<{ said: SettingsConflict; theirs: Full; mine: Form } | null>(null);
+  // `mine` is the form when the conflict came, typing since the save included; `fields` what the person changed.
+  const [conflict, setConflict] = useState<{ said: SettingsConflict; theirs: Full; mine: Form; fields: FormField[] } | null>(null);
   const [scheduling, setScheduling] = useState(false);
   const [at, setAt] = useState("");
   const [deleting, setDeleting] = useState(false);
@@ -132,6 +134,8 @@ function Editor({ saved: first, start }: { saved: Full | null; start: Form }) {
   const dirty = edits.length > 0;
   const status = saved?.status ?? "draft";
   const live = status === "published";
+  // Post it in Community and Email it go with the first publish, then can't change.
+  const announced = Boolean(saved?.published_at);
   const names = useMemo(() => {
     const found = new Map<string, string>();
     for (const each of categories.data?.items ?? []) found.set(each.slug, each.label);
@@ -162,7 +166,9 @@ function Editor({ saved: first, start }: { saved: Full | null; start: Form }) {
     if (Object.keys(found).length > 0) throw new Error("Some fields need fixing first: they're marked.");
     setRefused(null);
     if (onto === null) {
-      const { data } = await api.POST(LIST, { body: body(from, Object.keys(from) as FormField[]) as NewPost });
+      // An address that followed the title is left out, so the server numbers it when taken (CodeRabbit on #123).
+      const sending = (Object.keys(from) as FormField[]).filter((field) => field !== "slug" || slugTyped);
+      const { data } = await api.POST(LIST, { body: body(from, sending) as NewPost });
       if (!data) throw new Error("The site answered without the post.");
       remember(data);
       setSaved(data);
@@ -187,14 +193,18 @@ function Editor({ saved: first, start }: { saved: Full | null; start: Form }) {
     } catch (error) {
       if (error instanceof ApiProblem && error.code === "blog.changed") {
         const theirs = error.extra.post as Full;
-        const conflicting = conflictOf(error.detail, formOf(onto), from, theirs);
+        // The form as it is now, typing since the save went included (CodeRabbit on #123).
+        const latest = formNow.current;
+        const fields = mineOf(latest, formOf(onto), from);
+        const conflicting = conflictOf(error.detail, formOf(onto), latest, theirs, fields);
         if (conflicting.conflicts.length === 0) {
           // They changed only what you didn't: theirs, with yours on top, saved again.
+          const next = merged(formOf(onto), latest, theirs, new Set(), fields);
           setSaved(theirs);
-          setForm((now) => merged(formOf(onto), now, theirs, new Set()));
-          return save(merged(formOf(onto), from, theirs, new Set()), theirs);
+          setForm(next);
+          return save(next, theirs);
         }
-        setConflict({ said: conflicting, theirs, mine: from });
+        setConflict({ said: conflicting, theirs, mine: latest, fields });
       }
       throw error;
     }
@@ -211,9 +221,14 @@ function Editor({ saved: first, start }: { saved: Full | null; start: Form }) {
       return;
     }
     const before = formOf(held);
-    const conflicting = conflictOf("Someone saved this post since you opened it. Here is how it reads now.", before, formNow.current, answer);
+    const latest = formNow.current;
+    const fields = changed(latest, before);
+    const conflicting = conflictOf("Someone saved this post since you opened it. Here is how it reads now.", before, latest, answer, fields);
     if (conflicting.conflicts.length > 0) {
-      setConflict({ said: conflicting, theirs: answer, mine: formNow.current });
+      // The publish or unpublish happened: the panel says so while the fields wait on a
+      // choice, and the fields' merge base stays the one this editor had (CodeRabbit on #123).
+      setSaved({ ...held, status: answer.status, publish_at: answer.publish_at, published_at: answer.published_at });
+      setConflict({ said: conflicting, theirs: answer, mine: latest, fields });
       return;
     }
     setForm((now) => merged(before, now, answer, new Set()));
@@ -319,7 +334,7 @@ function Editor({ saved: first, start }: { saved: Full | null; start: Form }) {
           format={(field, value) => said(field as FormField, value, names)}
           onResolve={(choices) => {
             const keep = new Set(Object.entries(choices).filter(([, choice]) => choice === "theirs").map(([field]) => field));
-            const next = merged(formOf(saved ?? conflict.theirs), conflict.mine, conflict.theirs, keep);
+            const next = merged(formOf(saved ?? conflict.theirs), conflict.mine, conflict.theirs, keep, conflict.fields);
             setSaved(conflict.theirs);
             setForm(next);
             void act(async () => {
@@ -577,7 +592,8 @@ function Editor({ saved: first, start }: { saved: Full | null; start: Form }) {
               />
               <Switch
                 label={LABELS.post_to_community}
-                hint={community ? "In Community, with a link back, when it first goes live." : "Kept for when the site has Community."}
+                hint={announced ? "Sent when it first went live." : community ? "In Community, with a link back, when it first goes live." : "Kept for when the site has Community."}
+                disabled={announced}
                 checked={form.post_to_community}
                 onChange={(on) => {
                   set("post_to_community", on);
@@ -585,7 +601,8 @@ function Editor({ saved: first, start }: { saved: Full | null; start: Form }) {
               />
               <Switch
                 label={LABELS.email_subscribers}
-                hint={campaigns ? "As a newsletter, when it first goes live." : "Kept for when the site has a newsletter."}
+                hint={announced ? "Sent when it first went live." : campaigns ? "As a newsletter, when it first goes live." : "Kept for when the site has a newsletter."}
+                disabled={announced}
                 checked={form.email_subscribers}
                 onChange={(on) => {
                   set("email_subscribers", on);
