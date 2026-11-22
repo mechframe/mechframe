@@ -3,7 +3,7 @@ feature: The pages module, the site's fixed pages such as About and Credits (Vib
 status: approved
 plan: `docs/plans/vibrant-mindz-backend/extraction/pages.md`; `dev plans/2026-11-21-vibrant-mindz-push-plan.md` (M4); the canvas's AdminPages and AdminPost boards (`C:\DEV\VM Website\design\site\AdminPages.dc.html`, `AdminPost.dc.html`)
 approved: 2026-11-21 (the owner's four answers in §8: 2 and 3 as recommended; 1 for now, with VybeSite's builder to follow; 4, header and footer)
-pr: the kernel's editor first (decision 0055), then `pages` (decision 0056); numbers predicted at push time
+pr: the kernel's editor first (decision 0055, #118), then `pages` (decision 0056, #121)
 ---
 
 # Contract: `pages`
