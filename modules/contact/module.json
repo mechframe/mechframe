@@ -1,7 +1,7 @@
 {
   "id": "contact",
   "name": "Contact",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "status": "experimental",
   "category": "content",
   "summary": "The site's contact form, and an Inbox where its people read each message, reply from their own email and set spam aside.",

@@ -10,10 +10,10 @@ The binding directives are in `C:\DEV\CLAUDE.md` and `C:\DEV\DIRECTIVES.md`, whi
 - **Path:** `C:\DEV\AI-DevKit`. **Remote:** `https://github.com/mechframe/mechframe` (decision 0034), **public** (decision 0011). Never commit secrets, client material or private notes; private notes go in `docs/private/` (gitignored).
 - **The contract:** `SPEC.md`. Every module, the kernel and the CLI follow it. Read the sections you touch before every change.
 
-## Current state (2026-11-22; the kernel closed, #96; hooks 1 to 8, #97 to #110; media, #116; the kernel's Markdown, #118; pages, #121; blog, #123)
+## Current state (2026-11-22; the kernel closed, #96; hooks 1 to 8, #97 to #110; media, #116; the kernel's Markdown, #118; pages, #121; blog, #123; contact, #125; media's round 2, #126; blog 0.1.1, #128)
 
 - **The kernel is done**, K0 to K5 (#1 to #96), with K2's steps 9 to 11 waiting until the site needs them (decision 0029). **Hooks 1 to 8** of the ten are in (#97 to #110, decision 0052); entitlements and profile tabs wait until just before Vibrant Mindz's step 5 and wave 2b. `mechframe upgrade kernel` is in (#111, #114; decision 0053).
-- **Modules:** `media` (#116; 0.1.1 drawn to its board, #119), `pages` (#121: Markdown pages, moves that never chain, the header's and footer's menus through link slots a module loads and `nav.footer`, decision 0056) and `blog` (#123: posts with categories from the kernel's taxonomy, covers from media, related posts, the board and the editor; `dev plans/contracts/blog.md`). A module's web reaches another's `public.ts` as `@/modules/<id>/public` (decision 0057). **Next, main lane:** media's round 2 (`dev plans/2026-11-22-media-round-2.md`, the owner's line-height choice in it), then blog's AI writing help (decision 0058; ask §8's 6 first), covers and social posting. **Side lane:** M5, contact, embeds and campaigns (AI DevKit Development 33 WT, in a worktree; decision 0059). Two lanes run at once ("Two lanes", below).
+- **Modules:** `media` (#116; drawn to its board, #119 and #126, now 0.1.2), `pages` (#121: Markdown pages, moves that never chain, the header's and footer's menus through link slots and `nav.footer`, decision 0056), `blog` (#123: posts with categories, covers from media, related posts; 0.1.1, #128, its public surface for a site's own Blog and Post pages) and `contact` (#125, the side lane: the form, the Inbox, decision 0059's `notify_holders`; 0.1.1 with its reads and send in `public.ts`, #129, open). A module's web reaches another's `public.ts` as `@/modules/<id>/public` (decision 0057). **Next, main lane:** land #129, media's round 3 (`dev plans/2026-11-22-media-round-3.md`), then blog's AI writing help (decision 0058; its contract `dev plans/contracts/kernel-ai.md` first) and the account's name field (decision 0061). **Side lane:** embeds (#127, decision 0060), then campaigns (0062 and up; AI DevKit Development 35 WT, in a worktree). Two lanes run at once ("Two lanes", below).
 - **The kernel's Markdown** (#118, decision 0055): `kernel.markdown` (`render`, `plain`, `excerpt`) and the kit's `MarkdownEditor`, `Prose` and `SearchFields`, for pages first and blog next. #119 added the kit's `SearchBox`, an action's icon before its words, the required token `opacity.55`, the session's `name` on the person card and the boards' admin sections by default (decisions 0042 and 0044, amended).
 - **Progress** is one record, `docs/progress.json`, made into `docs/PROGRESS.md` and the owner's visual ledger (#61). v1.0: 78% (48 of 61 steps).
 - **The first real site** is the new Vibrant Mindz site (`docs/plans/vibrant-mindz-module-plan.md`), built in its own session (`C:\DEV\VM Website`) from MechFrame's `main`; its checks against the boards send items here, the owner's calls relayed.
@@ -24,11 +24,12 @@ The binding directives are in `C:\DEV\CLAUDE.md` and `C:\DEV\DIRECTIVES.md`, whi
 
 ## Last Completed Task
 
-2026-11-22, 08:30 to about noon Eastern (Claude Code, the owner's machine): session M4c.
+2026-11-22, about 10:50 Eastern to 14:00 (Claude Code, the owner's machine): session M4d, the main lane.
 
-- **#123, `blog`**, landed at `c821437`: the module to its contract's first PR (§9 for what changed as it was built), and decision 0057 (`@/modules/<id>/public` in the repo's and the template's configs; SPEC 7).
-- **Two lanes** became this project's standing rule (the owner): a main lane and a side lane in a worktree, two prompts at every session end, and CI gating the side lane's PR.
-- **Media's round 2** from VM Website is recorded (`dev plans/2026-11-22-media-round-2.md`), with the owner's choice for its line height (match the boards, keep 1.5 for prose), as the next main session's first job.
+- **#126, media's round 2**, landed at `e558bf4`: VM Website's ten items, the admin's labels and panels in the boards' normal line height with prose keeping its own (decisions 0042 and 0044, amended), media 0.1.2, and an e2e check of the page against its board in both themes.
+- **#128, blog 0.1.1**, landed at `96a6ccc`: blog's public surface for a site's own pages (`@/modules/blog/public`, `blog.public`), and the e2e helper's cancelled-fade fix.
+- **#129, contact 0.1.1**, pushed: its reads and send in `public.ts`, and "Message sent" taking focus once drawn.
+- **The owner's answers:** blog's public surface and contact 0.1.1 before blog's AI; the Anthropic key in the host's variables or Settings; a person's name as an account field now.
 
 ## Read order
 

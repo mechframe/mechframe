@@ -4,11 +4,11 @@
 // (hook 5), and thanks the sender the same whether the server passed the
 // message or held it. A site builds its own Contact page around it as
 // `@/modules/contact/public` (decision 0057).
-import { useId, useRef, useState, type SubmitEvent } from "react";
+import { useEffect, useId, useRef, useState, type SubmitEvent } from "react";
 
 import { ApiProblem, BotFields, Button, Field, Input, LoadError, Select, TextArea, useBotProof, useModuleEnabled } from "@/kernel";
 
-import { useApiMutation, useApiQuery } from "./api";
+import { fieldErrors, useContactForm, useSendMessage } from "./reads";
 import "./contact.css";
 
 export type ContactFormProps = {
@@ -22,16 +22,6 @@ type Errors = Partial<Record<keyof Values | "form", string[]>>;
 const EMPTY: Values = { name: "", email: "", topic: "", message: "", wants_news: false };
 const ORDER = ["name", "email", "topic", "message"] as const;
 
-/** The server's field errors (`body.email`) by the form's own names. */
-function fieldErrors(problem: ApiProblem): Errors {
-  const found: Errors = {};
-  for (const [path, said] of Object.entries(problem.errors)) {
-    const name = path.replace(/^body\./, "") as keyof Values;
-    if ((ORDER as readonly string[]).includes(name)) found[name] = said;
-  }
-  return found;
-}
-
 function checked(values: Values): Errors {
   const found: Errors = {};
   if (!values.name.trim()) found.name = ["Enter your name."];
@@ -42,8 +32,8 @@ function checked(values: Values): Errors {
 }
 
 export function ContactForm({ onSent }: ContactFormProps) {
-  const form = useApiQuery("get", "/api/contact/form");
-  const send = useApiMutation("post", "/api/contact/messages");
+  const form = useContactForm();
+  const send = useSendMessage();
   const news = useModuleEnabled("campaigns");
   const bot = useBotProof();
   const [values, setValues] = useState<Values>(EMPTY);
@@ -52,6 +42,11 @@ export function ContactForm({ onSent }: ContactFormProps) {
   const thanks = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const ids = useId();
+  // The thanks take focus once they're drawn: a frame asked for on success could run before
+  // React drew them on a loaded machine, and focus nothing (contact's e2e under load).
+  useEffect(() => {
+    if (sent) thanks.current?.focus();
+  }, [sent]);
 
   const set = <K extends keyof Values>(name: K, value: Values[K]) => {
     setValues((now) => ({ ...now, [name]: value }));
@@ -76,12 +71,11 @@ export function ContactForm({ onSent }: ContactFormProps) {
         onSuccess: () => {
           setSent(true);
           onSent?.();
-          requestAnimationFrame(() => thanks.current?.focus());
         },
         onError: (error) => {
           if (error instanceof ApiProblem && error.status === 422) {
             const said = fieldErrors(error);
-            setErrors(Object.keys(said).length ? said : { form: [error.detail] });
+            setErrors(ORDER.some((name) => said[name]) ? said : { form: [error.detail] });
             focusFirst(said);
           } else if (error instanceof ApiProblem && error.status === 429) {
             setErrors({ form: ["Too many messages in a short time. Please wait an hour and try again."] });
