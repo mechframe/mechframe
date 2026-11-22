@@ -34,6 +34,9 @@ export { MarkdownEditor } from "./MarkdownEditor";
 export type { MarkdownEditorProps, MarkdownTools } from "./MarkdownEditor";
 export { Prose } from "./Prose";
 export type { ProseProps } from "./Prose";
+// What the kernel and the modules on add to every editor and Prose (decision 0060).
+export { TextPartsContext, useTextParts } from "./textParts";
+export type { EditorToolPart, ProseEmbedPart, TextParts } from "./textParts";
 export { QrCode } from "./QrCode";
 export type { QrCodeProps } from "./QrCode";
 export { RouteFocus } from "./RouteFocus";

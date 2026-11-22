@@ -13,8 +13,12 @@
  * A button's change is typed in as the browser types, so Ctrl Z takes it
  * back; where the browser can't, the text is set and the selection put back.
  * Ctrl B and Ctrl I (⌘ on a Mac) are Bold and Italic in the text.
+ *
+ * After `tools` come the buttons the kernel and the modules on add to every
+ * editor (`editor.tools`, decision 0060), each left out if it fails.
  */
 import {
+  Suspense,
   useCallback,
   useEffect,
   useId,
@@ -27,11 +31,13 @@ import {
 } from "react";
 
 import { Button } from "./Button";
+import { ErrorBoundary } from "./ErrorBoundary";
 import { Icon } from "./Icon";
 import { LoadError } from "./LoadError";
 import { Prose } from "./Prose";
 import { Tabs } from "./Tabs";
 import { applied, link, prefixLines, wrap, type Change, type Selection } from "./markdownEdits";
+import { useTextParts } from "./textParts";
 import { shows } from "./words";
 
 /** The editor's ways in, for a module's `tools`. */
@@ -78,6 +84,7 @@ export function MarkdownEditor({
   tools: Tools,
 }: MarkdownEditorProps) {
   const made = useId();
+  const { tools: added } = useTextParts();
   const text = useRef<HTMLTextAreaElement>(null);
   const [tab, setTab] = useState("write");
   const pending = useRef<readonly [number, number] | null>(null);
@@ -190,6 +197,13 @@ export function MarkdownEditor({
           <Icon name="link" />
         </Button>
         {Tools ? <Tools editor={ways} /> : null}
+        {added.map(({ key, Part }) => (
+          <ErrorBoundary key={key} where={`The editor's button ${key}`} fallback={() => null}>
+            <Suspense fallback={null}>
+              <Part editor={ways} />
+            </Suspense>
+          </ErrorBoundary>
+        ))}
       </div>
       <textarea
         ref={text}

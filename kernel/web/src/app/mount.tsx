@@ -22,6 +22,7 @@ import { ADMIN_SECTIONS } from "../slots/sidebar";
 import { ToastProvider } from "../ui/Toast";
 import { KernelContext, type AdminSection, type KernelSetup } from "./context";
 import { buildRoutes } from "./routes";
+import { TextPartsFromSlots } from "./textParts";
 
 export type AppOptions = {
   /** Every module's binding (`module.web.ts`'s default export). */
@@ -34,7 +35,11 @@ export type AppOptions = {
   root?: HTMLElement;
 };
 
-/** What every page shares: the query cache, the setup the slots read, the session's handlers, the step-up dialog, the toasts. */
+/**
+ * What every page shares: the query cache, the setup the slots read, the
+ * session's handlers, the step-up dialog, the toasts, and the kit's text
+ * parts (decision 0060).
+ */
 export function KernelProviders({
   queryClient,
   setup,
@@ -49,7 +54,9 @@ export function KernelProviders({
       <KernelContext.Provider value={setup}>
         <SessionHandlers>
           <StepUpProvider>
-            <ToastProvider>{children}</ToastProvider>
+            <ToastProvider>
+              <TextPartsFromSlots>{children}</TextPartsFromSlots>
+            </ToastProvider>
           </StepUpProvider>
         </SessionHandlers>
       </KernelContext.Provider>

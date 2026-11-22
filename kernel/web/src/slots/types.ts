@@ -2,18 +2,29 @@
  * The kernel's slots, typed (K4 contract §2): what a module's binding may put
  * in each, by name. `defineModule` takes them; `useSlot` and `SlotOutlet`
  * read them. A link slot's entries may also be loaded from the module's own
- * API (`LinkLoaders`, decision 0056).
+ * API (`LinkLoaders`, decision 0056). The text slots' parts are given props,
+ * and the kit draws them in every editor and every Prose (decision 0060).
  */
 import type { ComponentType } from "react";
 
 import { safeNext as onThisSite } from "../guards/next";
 import type { IconName } from "../ui/icons";
+import type { MarkdownTools } from "../ui/MarkdownEditor";
 
 /** An icon's name: one of the UI kit's set (`ICON_NAMES`; contract change 10). */
 export type { IconName };
 
 /** Loads a part, so each module's parts are their own chunk. */
 export type Lazy = () => Promise<{ default: ComponentType }>;
+
+/** Loads a part that's given `Props`. */
+export type LazyOf<Props> = () => Promise<{ default: ComponentType<Props> }>;
+
+/** A button after the editor's own, given its ways in (`editor.tools`). `id` names it within its module. */
+export type EditorToolEntry = { id: string; lazy: LazyOf<{ editor: MarkdownTools }>; permission?: string };
+
+/** A player for the links it `claims`, alone in their paragraph (`prose.embed`), given the link and its words. */
+export type ProseEmbedEntry = { claims: (href: string) => boolean; lazy: LazyOf<{ href: string; words: string }> };
 
 /** A link in a menu. `to` is a path on this site. */
 export type LinkEntry = {
@@ -39,6 +50,10 @@ export type Slots = {
   "admin.settings.section"?: { id: string; title: string; lazy: Lazy; permission?: string }[];
   "account.section"?: { id: string; title: string; lazy: Lazy }[];
   "site.footer"?: { lazy: Lazy }[];
+  /** Every MarkdownEditor's added buttons, after the kernel's own (decision 0060). */
+  "editor.tools"?: EditorToolEntry[];
+  /** Every Prose's players (decision 0060). */
+  "prose.embed"?: ProseEmbedEntry[];
 };
 
 export type SlotName = keyof Slots;
@@ -55,10 +70,18 @@ export const SLOT_NAMES = [
   "admin.settings.section",
   "account.section",
   "site.footer",
+  "editor.tools",
+  "prose.embed",
 ] as const satisfies readonly SlotName[];
 
+/** The slots the kit draws in its text, their parts given props: never a `SlotOutlet`. */
+export const TEXT_SLOTS = ["editor.tools", "prose.embed"] as const satisfies readonly SlotName[];
+
 export type LinkSlotName = (typeof LINK_SLOTS)[number];
-export type PartSlotName = Exclude<SlotName, LinkSlotName>;
+export type TextSlotName = (typeof TEXT_SLOTS)[number];
+export type PartSlotName = Exclude<SlotName, LinkSlotName | TextSlotName>;
+/** The slots a `SlotOutlet` can show. */
+export type OutletSlotName = Exclude<SlotName, TextSlotName>;
 
 /**
  * A link slot's entries loaded from the module's own API (decision 0056): each

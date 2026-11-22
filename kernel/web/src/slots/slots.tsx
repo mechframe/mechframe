@@ -13,7 +13,15 @@ import { useKernelSetup } from "../app/context";
 import { lazyPart } from "../app/lazy";
 import { useSession } from "../session/session";
 import { SITE, useModulesOn } from "../site/site";
-import { LINK_SLOTS, linkFits, type Lazy, type LinkSlotName, type SlotEntryOf, type SlotName } from "./types";
+import {
+  LINK_SLOTS,
+  linkFits,
+  type Lazy,
+  type LinkSlotName,
+  type OutletSlotName,
+  type SlotEntryOf,
+  type SlotName,
+} from "./types";
 
 /** Where TanStack Query keeps a module's loaded links: `[...SLOT_LINKS, module, slot]`. */
 export const SLOT_LINKS = ["kernel", "slot-links"] as const;
@@ -96,7 +104,7 @@ function isLinkSlot(name: SlotName): name is LinkSlotName {
  * Shows the slot `name`: a list of links for a menu, else each part in turn,
  * each in an error boundary of its own so one part failing leaves the rest.
  */
-export function SlotOutlet({ name, label }: { name: SlotName; label?: string }) {
+export function SlotOutlet({ name, label }: { name: OutletSlotName; label?: string }) {
   const entries = useSlot(name);
   // Bumped by Try again, so the parts are made again here: one whose code
   // didn't arrive gets a fresh load (lazyPart forgot the failed one).

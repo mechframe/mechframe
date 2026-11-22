@@ -302,7 +302,9 @@
           "admin.dashboard.widget",
           "admin.settings.section",
           "account.section",
-          "site.footer"
+          "site.footer",
+          "editor.tools",
+          "prose.embed"
         ]
       }
     },

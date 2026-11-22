@@ -6,12 +6,13 @@
  */
 import { lazy as reactLazy, type ComponentType, type LazyExoticComponent } from "react";
 
-import type { Lazy } from "../slots/types";
+import type { LazyOf } from "../slots/types";
 
-const made = new WeakMap<Lazy, LazyExoticComponent<ComponentType>>();
+const made = new WeakMap<object, unknown>();
 
-export function lazyPart(load: Lazy): LazyExoticComponent<ComponentType> {
-  let part = made.get(load);
+/** The part `load` loads, given `Props` (none for a page or a plain slot's part). */
+export function lazyPart<Props extends object>(load: LazyOf<Props>): LazyExoticComponent<ComponentType<Props>> {
+  let part = made.get(load) as LazyExoticComponent<ComponentType<Props>> | undefined;
   if (!part) {
     part = reactLazy(() =>
       load().catch((error: unknown) => {

@@ -20,7 +20,18 @@ export {
 export type { ApiClientOptions, KernelPaths, ProblemBody } from "./src/api/client";
 export { defineModule, defineSite } from "./src/modules";
 export type { ModuleDefinition, ModuleRoute, SiteDefinition } from "./src/modules";
-export type { AdminLinkEntry, IconName, Lazy, LinkEntry, LinkLoaders, SlotName, Slots } from "./src/slots/types";
+export type {
+  AdminLinkEntry,
+  EditorToolEntry,
+  IconName,
+  Lazy,
+  LazyOf,
+  LinkEntry,
+  LinkLoaders,
+  ProseEmbedEntry,
+  SlotName,
+  Slots,
+} from "./src/slots/types";
 
 export { mountApp } from "./src/app/mount";
 // The frame's account links, for a site's own header (`defineSite({ header })`, decision 0048),
