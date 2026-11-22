@@ -127,25 +127,27 @@ export default function AdminMedia() {
           action={{ label: "Fix the first", to: "/admin/media?missing_alt=1" }}
         />
       ) : null}
+      {/* The search row spans the library and the panel both, so the panel starts level with the
+          grid (the board; media's round 2). */}
+      <div className="mf-media-filters">
+        <SearchBox
+          label="Search files"
+          value={q}
+          onChange={(event) => {
+            setQ(event.target.value);
+          }}
+        />
+        <Chip
+          pressed={onlyMissing}
+          onPressedChange={(pressed) => {
+            setSearch(pressed ? { missing_alt: "1" } : {});
+          }}
+        >
+          No alt text
+        </Chip>
+      </div>
       <div className="mf-media-layout">
         <section aria-label="The library" className="mf-media-library">
-          <div className="mf-media-filters">
-            <SearchBox
-              label="Search files"
-              value={q}
-              onChange={(event) => {
-                setQ(event.target.value);
-              }}
-            />
-            <Chip
-              pressed={onlyMissing}
-              onPressedChange={(pressed) => {
-                setSearch(pressed ? { missing_alt: "1" } : {});
-              }}
-            >
-              No alt text
-            </Chip>
-          </div>
           {listed.isError ? (
             <LoadError what="the library" error={listed.error} onRetry={() => void listed.refetch()} />
           ) : library.loaded && items.length === 0 ? (
@@ -167,7 +169,14 @@ export default function AdminMedia() {
                   >
                     <Picture image={{ ...image, decorative: true }} sizes="10rem" />
                     <span className="mf-media-thumb-name">{image.filename}</span>
-                    {missingAlt(image) ? <Pill tone="warning">No alt text</Pill> : null}
+                    {/* The space keeps the visible words "door.png No alt text", which the name
+                        holds (WCAG 2.5.3); a flex column draws none of it. */}
+                    {missingAlt(image) ? (
+                      <>
+                        {" "}
+                        <Pill tone="warning">No alt text</Pill>
+                      </>
+                    ) : null}
                   </button>
                 </li>
               ))}
@@ -341,7 +350,7 @@ function Panel({ id, onDirty, onGone, onChanged }: PanelProps) {
         <Field id={`${fields}-alt`} label="Alt text: what's in the picture, for screen readers" error={problem ?? undefined}>
           <TextArea
             className="mf-media-alt"
-            rows={3}
+            rows={2}
             value={shownAlt}
             maxLength={250}
             disabled={shownDecorative || busy}

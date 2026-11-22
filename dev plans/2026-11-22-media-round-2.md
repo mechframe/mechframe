@@ -33,3 +33,9 @@ VM Website Dev 09 measured Admin › Media against the canvas's board (version 8
 ## Done means
 
 Each item matches its board in both themes (the kit's are tokens, never a theme's hex), media's web tests and e2e pass, axe is clean, and the reply to VM Website names the PR.
+
+## Result (2026-11-22, session M4d, #126)
+
+All ten, in one PR. The kit: inside `.mf-admin-look` the root and each kit, admin and Settings part whose `font` sets type.body or type.small take `line-height: normal` (same layer, one class more specific; `.mf-prose`, `.mf-editor-text` and `.mf-input` keep theirs), and `.mf-search` has no fill, its words type.small. Media 0.1.2: the search row above both columns, the tile's corner `radius.md`, the pill the tile's width in 12px, the alt box two lines at its 64px least height, the hint 400, "Only decoration" 16px 400, "Used in" `color.info`, the facts in normal. Checked in a browser by `modules/media/tests/e2e/media.spec.ts` ("draws to its board", both themes, the library stubbed) and the kit page's two new checks; the whole end-to-end suite (97) passes, axe clean. Axe found one more on the way: the missing-alt tile's visible words ("…webpNo alt text", two inline spans) weren't in its name (WCAG 2.5.3); a space between them fixes it.
+
+Not changed: pages' `.mf-pages-address` and `.mf-pages-by` and blog's `.mf-blog-count` set type.small in their own stylesheets, so they keep 1.5 until those pages' own parity rounds.
