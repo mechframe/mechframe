@@ -16,7 +16,8 @@
     "vitest.config.ts",
     "vitest.setup.ts",
     "playwright.config.ts",
-    "kernel/tests/e2e/**/*.ts"
+    "kernel/tests/e2e/**/*.ts",
+    "modules/*/tests/e2e/**/*.ts"
   ],
   "exclude": ["node_modules", "modules/_template"]
 }
