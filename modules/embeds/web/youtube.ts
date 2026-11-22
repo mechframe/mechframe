@@ -44,6 +44,8 @@ export function loadYouTube(): Promise<YouTubeApi> {
     const before = window.onYouTubeIframeAPIReady;
     window.onYouTubeIframeAPIReady = () => {
       before?.();
+      // Kept only while it loads: once here, `window.YT` answers.
+      loading = null;
       if (window.YT) resolve(window.YT);
     };
     const script = document.createElement("script");

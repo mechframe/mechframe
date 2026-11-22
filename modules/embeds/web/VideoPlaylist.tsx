@@ -76,6 +76,10 @@ export function VideoPlaylist({ items, autoplay = true, onPlay, ref, label = "Vi
   const [failed, setFailed] = useState(false);
   const stage = useRef<HTMLDivElement>(null);
   const player = useRef<YouTubePlayer | null>(null);
+  // The video asked for last while YouTube's script loads; null once media is withdrawn (Codex on #127).
+  const wanted = useRef<string | null>(null);
+  // Playing needs both: a visitor's Play, and media still granted.
+  const live = started && media.granted;
   // What the player's events read when they come, after this render.
   const now = useRef({ current, rolling, count: videos.length, onPlay, ids: videos.map((video) => video.id) });
   useEffect(() => {
@@ -96,6 +100,15 @@ export function VideoPlaylist({ items, autoplay = true, onPlay, ref, label = "Vi
     [],
   );
 
+  // Media withdrawn, here or in another tab: the player goes, and a load on its way makes none (Codex on #127).
+  useEffect(() => {
+    if (media.granted) return;
+    wanted.current = null;
+    player.current?.destroy();
+    player.current = null;
+    stage.current?.querySelector(".mf-playlist-frame")?.replaceChildren();
+  }, [media.granted]);
+
   const shown = videos[Math.min(current, videos.length - 1)];
   if (!shown) return null;
 
@@ -107,19 +120,22 @@ export function VideoPlaylist({ items, autoplay = true, onPlay, ref, label = "Vi
       player.current.loadVideoById(video.id);
       return;
     }
+    wanted.current = video.id;
     media.grant();
     setStarted(true);
     setFailed(false);
     loadYouTube()
       .then((api) => {
         const frame = stage.current?.querySelector<HTMLElement>(".mf-playlist-frame");
-        if (!frame || player.current) return;
+        // The row picked last, not this click's, and none once media is withdrawn (Codex on #127).
+        const videoId = wanted.current;
+        if (!frame || !videoId || player.current) return;
         // YouTube swaps the element it's given for its iframe: one of its own, not React's.
         const host = document.createElement("div");
         frame.append(host);
         player.current = new api.Player(host, {
           host: NOCOOKIE,
-          videoId: video.id,
+          videoId,
           width: "100%",
           height: "100%",
           playerVars: { autoplay: 1, rel: 0, playsinline: 1 },
@@ -158,7 +174,7 @@ export function VideoPlaylist({ items, autoplay = true, onPlay, ref, label = "Vi
       <div className="mf-playlist-main">
         <div className="mf-playlist-stage" ref={stage}>
           <div className="mf-playlist-frame" />
-          {started ? null : (
+          {live ? null : (
             <div className="mf-playlist-facade">
               {shown.poster ? <img className="mf-playlist-poster" src={shown.poster} alt="" /> : null}
               {media.granted ? <img className="mf-playlist-thumb" src={thumbnail(shown.id)} alt="" /> : null}
@@ -231,7 +247,7 @@ export function VideoPlaylist({ items, autoplay = true, onPlay, ref, label = "Vi
               >
                 <span className="mf-playlist-number">{at + 1}</span>
                 <span className="mf-playlist-title">{video.title}</span>
-                {at === current && playing ? <Equalizer /> : null}
+                {at === current && playing && live ? <Equalizer /> : null}
               </button>
             </li>
           ))}

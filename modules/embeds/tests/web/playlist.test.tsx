@@ -7,7 +7,7 @@ import userEvent from "@testing-library/user-event";
 import { createRef } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { CONSENT_COOKIE } from "@/kernel";
+import { CONSENT_COOKIE, useConsent } from "@/kernel";
 import { renderWithKernel } from "@/kernel/testing";
 import { VideoPlaylist, type PlaylistItem, type VideoPlaylistHandle } from "@/modules/embeds/public";
 
@@ -66,8 +66,30 @@ beforeEach(() => {
 
 afterEach(() => {
   delete window.YT;
+  delete window.onYouTubeIframeAPIReady;
+  document.head.querySelectorAll(`script[src="${IFRAME_API}"]`).forEach((script) => {
+    script.remove();
+  });
   document.cookie = `${CONSENT_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax; Secure`;
 });
+
+/** A banner's Withdraw for media, beside the player. */
+function Withdraw() {
+  const media = useConsent("media");
+  return (
+    <button type="button" onClick={media.withdraw}>
+      Withdraw media
+    </button>
+  );
+}
+
+/** YouTube's script arriving: the API there, and its ready call made. */
+function youTubeArrives() {
+  act(() => {
+    window.YT = { Player: FakePlayer, PlayerState: STATE };
+    window.onYouTubeIframeAPIReady?.();
+  });
+}
 
 describe("VideoPlaylist", () => {
   it("shows the facade first, with the site's poster and no thumbnail of YouTube's before media is granted", () => {
@@ -161,6 +183,50 @@ describe("VideoPlaylist", () => {
     expect(row("First").querySelector(".mf-playlist-eq")).toBeNull();
     unmount();
     expect(player().destroyed).toBe(true);
+  });
+
+  it("takes the player away and shows the facade again when media is withdrawn (Codex on #127)", async () => {
+    renderWithKernel(
+      <>
+        <VideoPlaylist items={ITEMS} />
+        <Withdraw />
+      </>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Play First" }));
+    player().say(STATE.PLAYING);
+    await userEvent.click(screen.getByRole("button", { name: "Withdraw media" }));
+    expect(player().destroyed).toBe(true);
+    expect(screen.getByRole("button", { name: "Play First" })).toBeInTheDocument();
+    expect(row("First").querySelector(".mf-playlist-eq")).toBeNull();
+  });
+
+  it("makes no player when media is withdrawn while YouTube's script loads (Codex on #127)", async () => {
+    delete window.YT;
+    renderWithKernel(
+      <>
+        <VideoPlaylist items={ITEMS} />
+        <Withdraw />
+      </>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Play First" }));
+    await userEvent.click(screen.getByRole("button", { name: "Withdraw media" }));
+    youTubeArrives();
+    await act(() => Promise.resolve());
+    expect(FakePlayer.made).toHaveLength(0);
+    expect(screen.getByRole("button", { name: "Play First" })).toBeInTheDocument();
+  });
+
+  it("plays the row picked last while YouTube's script loads (Codex on #127)", async () => {
+    delete window.YT;
+    renderWithKernel(<VideoPlaylist items={ITEMS} />);
+    await userEvent.click(screen.getByRole("button", { name: "Play First" }));
+    await userEvent.click(row("Second"));
+    youTubeArrives();
+    await act(() => Promise.resolve());
+    expect(FakePlayer.made).toHaveLength(1);
+    expect(player().options.videoId).toBe("bbbbbbbbbbb");
+    expect(player().loaded).toEqual([]);
+    expect(row("Second")).toHaveAttribute("aria-current", "true");
   });
 
   it("draws nothing for a list with no video it can play", () => {
