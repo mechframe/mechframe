@@ -70,7 +70,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from collections.abc import AsyncIterator, Iterable, Mapping
+import re
+from collections.abc import AsyncIterator, Callable, Iterable, Mapping
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import Literal
@@ -317,6 +318,50 @@ def assemble(
     return Assembled(config, installed, registry, checked, declared, public)
 
 
+#: The most a module's route may take (decision 0054): media's uploads ask for 16 MB.
+MAX_ROUTE_BODY_BYTES = 64 * 1024 * 1024
+_BODY_METHODS = ("POST", "PUT", "PATCH")
+_PATH_PART = re.compile(r"\\{[a-z_][a-z0-9_]*\\}")
+
+
+def _larger_bodies(
+    installed: Iterable[InstalledModule], modules_on: Callable[[], frozenset[str]]
+) -> Callable[[str, str], int | None]:
+    """The limit a module's route takes over the site's MAX_BODY_BYTES while
+    the module is on (its `__init__.py`'s BODY_LIMITS, decision 0054), by
+    method and path. ValueError at the start for an entry the kernel can't keep."""
+    routes: list[tuple[str, str, re.Pattern[str], int]] = []
+    for module in installed:
+        for entry in module.body_limits:
+            method, path, size = entry
+            where = f"{module.id}'s BODY_LIMITS entry {entry!r}"
+            if method not in _BODY_METHODS:
+                raise ValueError(f"{where}: its method is POST, PUT or PATCH.")
+            if not (isinstance(path, str) and path.startswith("/")):
+                raise ValueError(f"{where}: its path starts with /, under /api/{module.id}.")
+            if (
+                isinstance(size, bool)
+                or not isinstance(size, int)
+                or not 0 < size <= MAX_ROUTE_BODY_BYTES
+            ):
+                raise ValueError(f"{where}: its limit is 1 to {MAX_ROUTE_BODY_BYTES:,} bytes.")
+            shape = _PATH_PART.sub("[^/]+", re.escape(path))
+            routes.append(
+                (module.id, method, re.compile(f"/api/{re.escape(module.id)}{shape}"), size)
+            )
+
+    def larger(method: str, path: str) -> int | None:
+        if not routes:
+            return None
+        on = modules_on()
+        for owner, wanted, pattern, size in routes:
+            if method == wanted and owner in on and pattern.fullmatch(path):
+                return size
+        return None
+
+    return larger
+
+
 def create_app(
     *,
     modules: Iterable[InstalledModule] = (),
@@ -427,7 +472,11 @@ def create_app(
     # Starlette runs the last added outermost.
     app.add_middleware(UnexpectedErrors)
     app.add_middleware(SessionCookies)
-    app.add_middleware(BodyLimit, max_bytes=config.max_body_bytes)
+    app.add_middleware(
+        BodyLimit,
+        max_bytes=config.max_body_bytes,
+        larger=_larger_bodies(installed, registry.on_cached),
+    )
     origins = [config.site_url] + (config.cors_origins_list if config.debug else [])
     app.add_middleware(SameOriginWrites, origins=origins)
     if config.cors_origins_list:

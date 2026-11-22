@@ -195,6 +195,91 @@ async def test_a_body_over_the_limit_is_refused(app_factory: AppFactory) -> None
         assert (streamed.status_code, streamed.json()["code"]) == (413, "kernel.too_large")
 
 
+def _uploading_module(
+    limits: tuple[tuple[str, str, int], ...], module_id: str = "probe"
+) -> InstalledModule:
+    router = APIRouter()
+
+    @router.post("/echo", dependencies=[Depends(public)])
+    async def echo(body: dict[str, str]) -> dict[str, int]:
+        return {"keys": len(body)}
+
+    @router.put("/items/{item_id}/file", dependencies=[Depends(public)])
+    async def item_file(item_id: str, body: dict[str, str]) -> dict[str, int]:
+        return {"keys": len(body)}
+
+    @router.post("/other", dependencies=[Depends(public)])
+    async def other(body: dict[str, str]) -> dict[str, int]:
+        return {"keys": len(body)}
+
+    return InstalledModule(manifest(module_id), router=router, body_limits=limits)
+
+
+async def test_a_modules_route_may_take_a_larger_body_than_the_site(
+    app_factory: AppFactory,
+) -> None:
+    """A module's BODY_LIMITS (media's uploads, decision 0054): the named routes
+    take up to their own limit, every other keeps the site's."""
+    limits = (("POST", "/echo", 4096), ("PUT", "/items/{item_id}/file", 4096))
+    app = app_factory([_uploading_module(limits)], max_body_bytes=1024)
+    middling = {"text": "x" * 2000}
+    async with Client(app) as client:
+        assert (await client.post("/api/probe/echo", json=middling)).status_code == 200
+        assert (await client.put("/api/probe/items/7/file", json=middling)).status_code == 200
+        other = await client.post("/api/probe/other", json=middling)
+        assert (other.status_code, other.json()["code"]) == (413, "kernel.too_large")
+        wrong_method = await client.put("/api/probe/echo", json=middling)
+        assert wrong_method.status_code == 413
+        deeper = await client.put("/api/probe/items/7/file/x", json=middling)
+        assert deeper.status_code == 413
+
+        too_big = await client.post("/api/probe/echo", json={"text": "x" * 5000})
+        assert (too_big.status_code, too_big.json()["code"]) == (413, "kernel.too_large")
+        assert "4,096 bytes" in too_big.json()["detail"]
+
+        async def chunks(count: int) -> AsyncIterator[bytes]:
+            yield b'{"text": "'
+            for _ in range(count):
+                yield b"x" * 100
+            yield b'"}'
+
+        headers = {"Content-Type": "application/json"}
+        streamed = await client.post("/api/probe/echo", content=chunks(20), headers=headers)
+        assert streamed.status_code == 200
+        overflowing = await client.post("/api/probe/echo", content=chunks(50), headers=headers)
+        assert overflowing.status_code == 413
+
+
+async def test_a_larger_body_needs_its_module_on(app_factory: AppFactory) -> None:
+    limits = (("POST", "/echo", 4096),)
+    app = app_factory(
+        [_uploading_module(limits), _uploading_module((), "other")],
+        max_body_bytes=1024,
+        modules="other",
+    )
+    async with Client(app) as client:
+        response = await client.post("/api/probe/echo", json={"text": "x" * 2000})
+        assert (response.status_code, response.json()["code"]) == (413, "kernel.too_large")
+
+
+@pytest.mark.parametrize(
+    ("limit", "says"),
+    [
+        (("GET", "/echo", 4096), "POST, PUT or PATCH"),
+        (("POST", "echo", 4096), "starts with /"),
+        (("POST", "/echo", 0), "bytes"),
+        (("POST", "/echo", 65 * 1024 * 1024), "bytes"),
+        (("POST", "/echo", True), "bytes"),
+    ],
+)
+def test_a_body_limit_the_kernel_cant_keep_is_refused_at_the_start(
+    app_factory: AppFactory, limit: tuple[str, str, int], says: str
+) -> None:
+    with pytest.raises(ValueError, match="BODY_LIMITS") as refused:
+        app_factory([_uploading_module((limit,))])
+    assert says in str(refused.value)
+
+
 def test_the_kernels_permissions_match_its_manifest() -> None:
     """Keys, words and order: the Roles page lists them as the manifest has
     them, and a site never receives the manifest (K4.7)."""

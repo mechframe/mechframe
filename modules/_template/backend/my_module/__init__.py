@@ -14,9 +14,15 @@ settings section `kernel.bot` can name (hook 5, decision 0052): an object
 with `async def verify(request, proof, form) -> bot.Pass | bot.Held`. Only a
 module that is one (bot-shield) gives it; leave it None. A module with a
 public form doesn't add one: its service calls `bot.verify`.
+
+`BODY_LIMITS` names the routes that take a larger body than the site's
+MAX_BODY_BYTES (1 MB) while the module is on, such as an upload: (method,
+path under /api/<id>, bytes), at most 64 MB (decision 0054). Most modules
+leave it empty.
 """
 
 from typing import Any
 
 CSP: list[tuple[str, str] | tuple[str, str, str]] = []
 BOT_PROVIDER: Any = None
+BODY_LIMITS: tuple[tuple[str, str, int], ...] = ()

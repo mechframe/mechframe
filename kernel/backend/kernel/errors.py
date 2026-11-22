@@ -29,7 +29,7 @@ from __future__ import annotations
 
 import logging
 import re
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from http import HTTPStatus
 from typing import Any, cast
 
@@ -185,20 +185,34 @@ class BodyLimit:
     """Refuses a request body over `max_bytes`: by its Content-Length before
     the app reads anything, or as it streams in when there is none."""
 
-    def __init__(self, app: ASGIApp, *, max_bytes: int) -> None:
+    def __init__(
+        self,
+        app: ASGIApp,
+        *,
+        max_bytes: int,
+        larger: Callable[[str, str], int | None] | None = None,
+    ) -> None:
         self.app = app
         self.max_bytes = max_bytes
+        #: A route's own limit, larger than `max_bytes`, by method and path (decision 0054).
+        self.larger = larger
 
-    def _detail(self) -> str:
-        return f"That's more than this site accepts ({self.max_bytes:,} bytes at most)."
+    @staticmethod
+    def _detail(limit: int) -> str:
+        return f"That's more than this site accepts ({limit:,} bytes at most)."
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
+        limit = self.max_bytes
+        if self.larger is not None:
+            limit = max(limit, self.larger(scope.get("method", ""), scope.get("path", "")) or 0)
         length = dict(scope.get("headers") or ()).get(b"content-length")
-        if length is not None and length.isdigit() and int(length) > self.max_bytes:
-            await Problem("kernel.too_large", 413, self._detail()).response()(scope, receive, send)
+        if length is not None and length.isdigit() and int(length) > limit:
+            await Problem("kernel.too_large", 413, self._detail(limit)).response()(
+                scope, receive, send
+            )
             return
         seen = 0
 
@@ -207,10 +221,10 @@ class BodyLimit:
             message = await receive()
             if message["type"] == "http.request":
                 seen += len(message.get("body", b""))
-                if seen > self.max_bytes:
+                if seen > limit:
                     # An HTTPException, since FastAPI turns anything else raised
                     # while it reads a body into a 400.
-                    raise HTTPException(413, self._detail())
+                    raise HTTPException(413, self._detail(limit))
             return message
 
         await self.app(scope, counted, send)

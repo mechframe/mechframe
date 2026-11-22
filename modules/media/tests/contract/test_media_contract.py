@@ -144,13 +144,8 @@ async def test_a_bad_cursor_is_422(browser: Browser) -> None:
     assert "cursor" in response.json()["errors"]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="The kernel refuses any body over MAX_BODY_BYTES (1 MB) with kernel.too_large, before media's "
-    "15 MB check: a phone's photo can't be uploaded until media's upload routes may take more "
-    "(asked of the owner, 2026-11-21). Remove this mark once they can.",
-)
 async def test_a_phones_photo_of_a_few_megabytes_is_taken(browser: Browser) -> None:
+    """Past the site's 1 MB MAX_BODY_BYTES: media's upload routes take 16 MB (decision 0054)."""
     await browser.as_new("member", "editor")
     photo = unique_image("PNG", (1800, 1200))
     assert len(photo) > 2 * 1024 * 1024

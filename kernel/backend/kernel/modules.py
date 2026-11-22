@@ -102,6 +102,10 @@ class InstalledModule:
     #: visitors consent to (kernel.consent, decision 0052): `necessary` when
     #: it names none.
     csp: tuple[tuple[str, str] | tuple[str, str, str], ...] = ()
+    #: Routes that take a larger body than the site's MAX_BODY_BYTES while the
+    #: module is on (decision 0054): (method, path under /api/<id>, bytes),
+    #: such as media's uploads. A path's `{name}` parts match one segment.
+    body_limits: tuple[tuple[str, str, int], ...] = ()
     #: The module's email templates, each named `<id>.<name>` (kernel.email).
     #: A site may reword them through create_app(emails=...).
     emails: Mapping[str, Template] = field(default_factory=dict)
@@ -253,6 +257,7 @@ def load_module(manifest: Path) -> InstalledModule:
         router=_attribute(f"{package}.router", "router"),
         settings=_attribute(f"{package}.schemas", "Settings"),
         csp=tuple(_attribute(package, "CSP") or ()),
+        body_limits=tuple(_attribute(package, "BODY_LIMITS") or ()),
         emails=dict(_attribute(f"{package}.emails", "EMAILS") or {}),
         jobs=module_jobs(f"{package}.jobs"),
         payloads=payloads,

@@ -10,3 +10,9 @@ from typing import Any
 
 CSP: list[tuple[str, str] | tuple[str, str, str]] = []
 BOT_PROVIDER: Any = None
+#: Its two upload routes take a phone's photo, past the site's MAX_BODY_BYTES: the
+#: 15 MB `pictures` reads and the form's own few bytes (decision 0054).
+BODY_LIMITS = (
+    ("POST", "/admin/images", 16 * 1024 * 1024),
+    ("PUT", "/admin/images/{image_id}/file", 16 * 1024 * 1024),
+)
