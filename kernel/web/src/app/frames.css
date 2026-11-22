@@ -60,6 +60,7 @@
   }
 
   .mf-site-header nav,
+  .mf-site-footer nav,
   .mf-slot-links {
     display: flex;
     flex-wrap: wrap;

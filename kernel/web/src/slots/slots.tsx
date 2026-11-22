@@ -1,8 +1,10 @@
 /**
  * Reading the slots (K4 contract §2): `useSlot` gives only the entries of
- * modules that are on and that the person may see; `SlotOutlet` shows a
- * slot, each part that loads in its own error boundary.
+ * modules that are on and that the person may see, a module's loaded links
+ * after its fixed ones (decision 0056); `SlotOutlet` shows a slot, each part
+ * that loads in its own error boundary.
  */
+import { useQueries } from "@tanstack/react-query";
 import { Suspense, useCallback, useState } from "react";
 import { NavLink } from "react-router";
 
@@ -11,7 +13,45 @@ import { useKernelSetup } from "../app/context";
 import { lazyPart } from "../app/lazy";
 import { useSession } from "../session/session";
 import { SITE, useModulesOn } from "../site/site";
-import { LINK_SLOTS, type Lazy, type LinkSlotName, type SlotEntryOf, type SlotName } from "./types";
+import { LINK_SLOTS, linkFits, type Lazy, type LinkSlotName, type SlotEntryOf, type SlotName } from "./types";
+
+/** Where TanStack Query keeps a module's loaded links: `[...SLOT_LINKS, module, slot]`. */
+export const SLOT_LINKS = ["kernel", "slot-links"] as const;
+/** How long a module's loaded links stay fresh before the next page asks again. */
+const FRESH = 60_000;
+
+type Loaded = { module: string; links: readonly unknown[] | undefined };
+
+/** The loaded links of the modules on for `name`, each module's once its load has answered. */
+function useLoadedLinks(name: SlotName, on: (id: string) => boolean): Map<string, readonly unknown[]> {
+  const { modules } = useKernelSetup();
+  const loaders = isLinkSlot(name)
+    ? modules.flatMap((definition) => {
+        const load = definition.links?.[name];
+        return load && on(definition.id) ? [{ module: definition.id, load }] : [];
+      })
+    : [];
+  const found = useQueries({
+    queries: loaders.map(({ module, load }) => ({
+      queryKey: [...SLOT_LINKS, module, name],
+      queryFn: load,
+      staleTime: FRESH,
+    })),
+    combine: (results) =>
+      results.map((result, at): Loaded => ({ module: loaders[at]?.module ?? "", links: result.data })),
+  });
+  const byModule = new Map<string, readonly unknown[]>();
+  for (const { module, links } of found) if (links) byModule.set(module, links);
+  return byModule;
+}
+
+/** A loaded entry `useSlot` may show: a link that fits the slot, as a fixed one must; else it's left out, with a warning. */
+function fits(name: LinkSlotName, module: string, entry: unknown): entry is SlotEntryOf<LinkSlotName> {
+  const link = entry as { label?: unknown; to?: unknown } | null;
+  if (typeof link === "object" && link !== null && typeof link.label === "string" && linkFits(name, link.to)) return true;
+  console.warn(`${module} loaded a ${name} link that isn't a path on this site, so it's left out.`, entry);
+  return false;
+}
 
 /**
  * An entry with the module it came from, and its `key`: the module, the slot
@@ -28,14 +68,21 @@ export function useSlot<Name extends SlotName>(name: Name): Placed<Name>[] {
   const session = useSession();
   const may = (permission: string | undefined) =>
     permission === undefined || (session.status === "signed-in" && session.can(permission));
+  // The site's are always on, even while the switches are read; a module's wait for them (CodeRabbit on #92).
+  const isOn = (id: string) => id === SITE || on?.has(id) === true;
+  const loaded = useLoadedLinks(name, isOn);
   const found: Placed<Name>[] = [];
   for (const definition of modules) {
-    // The site's are always on, even while the switches are read; a module's wait for them (CodeRabbit on #92).
-    if (definition.id !== SITE && !on?.has(definition.id)) continue;
+    if (!isOn(definition.id)) continue;
     const entries = (definition.slots?.[name] ?? []) as SlotEntryOf<Name>[];
     entries.forEach((entry, at) => {
       const permission = "permission" in entry ? entry.permission : undefined;
       if (may(permission)) found.push({ ...entry, module: definition.id, key: `${definition.id}:${name}:${String(at)}` });
+    });
+    if (!isLinkSlot(name)) continue;
+    (loaded.get(definition.id) ?? []).forEach((entry, at) => {
+      if (!fits(name, definition.id, entry) || !may(entry.permission)) return;
+      found.push({ ...(entry as SlotEntryOf<Name>), module: definition.id, key: `${definition.id}:${name}:loaded:${String(at)}` });
     });
   }
   return found;

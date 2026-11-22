@@ -298,6 +298,7 @@
           "nav.public",
           "nav.member",
           "nav.admin",
+          "nav.footer",
           "admin.dashboard.widget",
           "admin.settings.section",
           "account.section",

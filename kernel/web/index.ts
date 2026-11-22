@@ -20,12 +20,14 @@ export {
 export type { ApiClientOptions, KernelPaths, ProblemBody } from "./src/api/client";
 export { defineModule, defineSite } from "./src/modules";
 export type { ModuleDefinition, ModuleRoute, SiteDefinition } from "./src/modules";
-export type { AdminLinkEntry, IconName, Lazy, LinkEntry, SlotName, Slots } from "./src/slots/types";
+export type { AdminLinkEntry, IconName, Lazy, LinkEntry, LinkLoaders, SlotName, Slots } from "./src/slots/types";
 
 export { mountApp } from "./src/app/mount";
 // The frame's account links, for a site's own header (`defineSite({ header })`, decision 0048),
 // and a part a page draws after the site frame's footer (`dev plans/contracts/after-footer.md`).
 export { AfterFooter, SiteAccountLinks } from "./src/app/frames";
+/** The 404 page, for a module's public page whose content isn't there (pages, blog). */
+export { NotFound } from "./src/app/pages/KernelPages";
 export type { AppOptions } from "./src/app/mount";
 export type { AdminSection } from "./src/app/context";
 export { ADMIN_SECTIONS } from "./src/slots/sidebar";

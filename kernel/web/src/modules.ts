@@ -9,8 +9,7 @@
 import type { ComponentType } from "react";
 
 import { kernelPageTaken } from "./app/pages";
-import { safeNext } from "./guards/next";
-import { LINK_SLOTS, SLOT_NAMES, type Slots } from "./slots/types";
+import { LINK_SLOTS, SLOT_NAMES, linkFits, type LinkLoaders, type LinkSlotName, type Slots } from "./slots/types";
 
 export type ModuleRoute = {
   /** The path, in React Router's syntax, such as "/blog/:slug". */
@@ -36,6 +35,12 @@ export type ModuleDefinition = {
   };
   /** The kernel slots this module fills (`Slots` says what each takes). */
   slots?: Slots;
+  /**
+   * Link slots whose entries come from the module's own API, such as a
+   * menu its people choose (decision 0056): each loader's links follow the
+   * module's fixed ones in `useSlot`, while the module is on.
+   */
+  links?: LinkLoaders;
 };
 
 const MODULE_ID = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
@@ -45,11 +50,6 @@ export const SITE = "site";
 
 /** The ids the kernel keeps: its own API (`/api/auth`, `/api/kernel`) and the site's, as the backend does. */
 const RESERVED = new Set(["auth", "kernel", SITE]);
-
-/** A path on this site as the browser reads it: dots resolved, no query or fragment. */
-function pathOf(to: string): string {
-  return new URL(to, "https://site.invalid").pathname;
-}
 
 function checkRoutes(definition: ModuleDefinition): void {
   const seen = new Set<string>();
@@ -88,17 +88,23 @@ function checkSlots(definition: ModuleDefinition): void {
     }
     for (const entry of entries as Record<string, unknown>[]) {
       if ((LINK_SLOTS as readonly string[]).includes(name)) {
-        const to = entry.to;
-        if (typeof to !== "string" || safeNext(to) === null) {
+        if (!linkFits("nav.public", entry.to)) {
           throw new Error(`${definition.id}'s ${name} link must go to a path on this site.`);
         }
-        const path = pathOf(to);
-        if (name === "nav.admin" && !(path === "/admin" || path.startsWith("/admin/"))) {
-          throw new Error(`${definition.id}'s nav.admin link ${to} must go under /admin/.`);
+        if (!linkFits(name as LinkSlotName, entry.to)) {
+          throw new Error(`${definition.id}'s nav.admin link ${String(entry.to)} must go under /admin/.`);
         }
       } else if (typeof entry.lazy !== "function") {
         throw new Error(`${definition.id}'s ${name} entry must load its part (lazy).`);
       }
+    }
+  }
+  for (const [name, load] of Object.entries(definition.links ?? {})) {
+    if (!(LINK_SLOTS as readonly string[]).includes(name)) {
+      throw new Error(`${definition.id} loads links for "${name}", which isn't one of the kernel's link slots.`);
+    }
+    if (typeof load !== "function") {
+      throw new Error(`${definition.id}'s links for ${name} must be a function that loads them.`);
     }
   }
 }

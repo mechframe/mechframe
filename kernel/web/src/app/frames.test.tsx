@@ -351,3 +351,28 @@ describe("a part after the footer", () => {
     expect(holder()).toBeNull();
   });
 });
+
+describe("the frame's own footer menu (nav.footer, decision 0056)", () => {
+  const pages = defineModule({
+    id: "pages",
+    routes: { public: [{ path: "/:address", lazy: pageSaying("A page") }], member: [], admin: [] },
+    links: {
+      "nav.public": () => Promise.resolve([{ label: "Press", to: "/press" }]),
+      "nav.footer": () => Promise.resolve([{ label: "Privacy", to: "/privacy" }]),
+    },
+  });
+
+  it("draws the footer's links in a Footer navigation, and a header link in the Site one", async () => {
+    renderApp({ path: "/about", modules: [pages] });
+    const footer = await screen.findByRole("navigation", { name: "Footer" });
+    expect(footer.closest("footer")).not.toBeNull();
+    expect(footer).toContainElement(screen.getByRole("link", { name: "Privacy" }));
+    expect(screen.getByRole("navigation", { name: "Site" })).toContainElement(await screen.findByRole("link", { name: "Press" }));
+  });
+
+  it("draws no Footer navigation while nothing is in it", async () => {
+    renderApp({ path: "/blog", modules: [blog] });
+    await screen.findByRole("heading", { level: 1, name: "The blog" });
+    expect(screen.queryByRole("navigation", { name: "Footer" })).toBeNull();
+  });
+});

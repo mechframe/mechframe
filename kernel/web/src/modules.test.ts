@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { defineModule, type ModuleDefinition, type Slots } from "../index";
+import { defineModule, type LinkLoaders, type ModuleDefinition, type Slots } from "../index";
 import kernelManifest from "../../kernel.json";
 import { KERNEL_WEB_VERSION } from "./version";
 
@@ -90,7 +90,7 @@ describe("defineModule", () => {
   });
 
   it("refuses a slot the kernel doesn't have", () => {
-    const slots = { "nav.footer": [{ label: "Posts", to: "/blog" }] } as unknown as Slots;
+    const slots = { "nav.sidebar": [{ label: "Posts", to: "/blog" }] } as unknown as Slots;
     expect(() => defineModule(blog({ slots }))).toThrow(/doesn't have/);
   });
 
@@ -128,5 +128,25 @@ describe("defineModule", () => {
 describe("the kernel's version", () => {
   it("matches kernel.json", () => {
     expect(KERNEL_WEB_VERSION).toBe(kernelManifest.version);
+  });
+});
+
+describe("a module's loaded links (decision 0056)", () => {
+  const bare = { id: "pages", routes: { public: [], member: [], admin: [] } };
+
+  it("takes a loader for each link slot", () => {
+    const load = () => Promise.resolve([]);
+    expect(() => defineModule({ ...bare, links: { "nav.public": load, "nav.footer": load } })).not.toThrow();
+  });
+
+  it("refuses links for a slot that holds parts, and a loader that isn't a function", () => {
+    expect(() => defineModule({ ...bare, links: { "site.footer": () => Promise.resolve([]) } as unknown as LinkLoaders })).toThrow(
+      /isn't one of the kernel's link slots/,
+    );
+    expect(() => defineModule({ ...bare, links: { "nav.public": [] } as unknown as LinkLoaders })).toThrow(/a function that loads them/);
+  });
+
+  it("checks a fixed nav.footer link as it does the others", () => {
+    expect(() => defineModule({ ...bare, slots: { "nav.footer": [{ label: "Out", to: "//elsewhere.test" }] } })).toThrow(/path on this site/);
   });
 });

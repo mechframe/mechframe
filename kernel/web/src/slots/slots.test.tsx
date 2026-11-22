@@ -224,3 +224,67 @@ describe("the admin sidebar's order", () => {
     expect(top?.items[1]).toEqual({ label: "x", to: "/admin/x", icon: "bell" });
   });
 });
+
+describe("links a module loads (decision 0056)", () => {
+  const menu = (load: () => Promise<{ label: string; to: string; permission?: string }[]>) =>
+    defineModule({
+      id: "pages",
+      routes: { public: [], member: [], admin: [] },
+      slots: { "nav.public": [{ label: "Fixed", to: "/fixed" }] },
+      links: { "nav.public": load },
+    });
+
+  it("puts a module's loaded links after its fixed ones, and before the next module's", async () => {
+    const pages = menu(() => Promise.resolve([{ label: "About", to: "/about" }, { label: "Credits", to: "/credits" }]));
+    renderWithKernel(<Labels />, { modules: [pages, shop] });
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent("pages:Fixed,pages:About,pages:Credits,shop:Shop");
+    });
+  });
+
+  it("asks nothing of a module that's off", async () => {
+    const load = vi.fn(() => Promise.resolve([{ label: "About", to: "/about" }]));
+    renderWithKernel(<Labels />, { modules: [menu(load), shop], on: ["shop"] });
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent(/^shop:Shop$/);
+    });
+    expect(load).not.toHaveBeenCalled();
+  });
+
+  it("keeps the fixed entries and the other modules' when a load fails", async () => {
+    const load = vi.fn(() => Promise.reject(new Error("the menu didn't load")));
+    renderWithKernel(<Labels />, { modules: [menu(load), shop] });
+    await waitFor(() => {
+      expect(load).toHaveBeenCalled();
+    });
+    expect(screen.getByRole("status")).toHaveTextContent(/^pages:Fixed,shop:Shop$/);
+  });
+
+  it("leaves out a loaded link that isn't a path on this site, and one the person may not see", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const pages = menu(() =>
+      Promise.resolve([
+        { label: "Away", to: "https://elsewhere.test/" },
+        { label: "Drafts", to: "/drafts", permission: "pages.page.write" },
+        { label: "About", to: "/about" },
+      ]),
+    );
+    renderWithKernel(<Labels />, { modules: [pages] });
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent(/^pages:Fixed,pages:About$/);
+    });
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("isn't a path on this site"), expect.anything());
+  });
+
+  it("gives SlotOutlet the loaded links as links", async () => {
+    const footer = defineModule({
+      id: "pages",
+      routes: { public: [], member: [], admin: [] },
+      links: { "nav.footer": () => Promise.resolve([{ label: "Privacy", to: "/privacy" }]) },
+    });
+    renderWithKernel(<SlotOutlet name="nav.footer" label="Footer" />, { modules: [footer] });
+    const list = await screen.findByRole("list", { name: "Footer" });
+    expect(list).toContainElement(screen.getByRole("link", { name: "Privacy" }));
+    expect(screen.getByRole("link", { name: "Privacy" })).toHaveAttribute("href", "/privacy");
+  });
+});

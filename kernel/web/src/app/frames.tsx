@@ -1,6 +1,6 @@
 /**
  * The site's frame (K4 contract §2), around public and member pages, with
- * `nav.public`, `nav.member` and `site.footer`. The admin's is
+ * `nav.public`, `nav.member`, `nav.footer` and `site.footer`. The admin's is
  * `admin/AdminFrame.tsx` (K4.6); the sign-in pages' `auth/AuthFrame.tsx`.
  *
  * A site may give its own header and footer (`defineSite({ header, footer })`),
@@ -26,7 +26,7 @@ import { createPortal } from "react-dom";
 import { Link, Outlet, useLocation, useNavigate } from "react-router";
 
 import { useSession, useSignOut } from "../session/session";
-import { SlotOutlet } from "../slots/slots";
+import { SlotOutlet, useSlot } from "../slots/slots";
 import { useSite } from "../site/site";
 import { ErrorBoundary } from "../ui/ErrorBoundary";
 import { RouteFocus } from "../ui/RouteFocus";
@@ -136,9 +136,20 @@ function FrameHeader() {
   );
 }
 
+/** The footer's menu (`nav.footer`, decision 0056), only while it has links, so no empty landmark is drawn. */
+function FooterMenu() {
+  if (useSlot("nav.footer").length === 0) return null;
+  return (
+    <nav aria-label="Footer">
+      <SlotOutlet name="nav.footer" />
+    </nav>
+  );
+}
+
 function FrameFooter() {
   return (
     <footer className="mf-site-footer">
+      <FooterMenu />
       <SlotOutlet name="site.footer" />
     </footer>
   );

@@ -1,10 +1,12 @@
 /**
  * The kernel's slots, typed (K4 contract §2): what a module's binding may put
  * in each, by name. `defineModule` takes them; `useSlot` and `SlotOutlet`
- * read them.
+ * read them. A link slot's entries may also be loaded from the module's own
+ * API (`LinkLoaders`, decision 0056).
  */
 import type { ComponentType } from "react";
 
+import { safeNext as onThisSite } from "../guards/next";
 import type { IconName } from "../ui/icons";
 
 /** An icon's name: one of the UI kit's set (`ICON_NAMES`; contract change 10). */
@@ -31,6 +33,8 @@ export type Slots = {
   "nav.public"?: LinkEntry[];
   "nav.member"?: LinkEntry[];
   "nav.admin"?: AdminLinkEntry[];
+  /** The footer's menu (decision 0056): the frame's footer draws it; a site's own places it with `SlotOutlet`. */
+  "nav.footer"?: LinkEntry[];
   "admin.dashboard.widget"?: { lazy: Lazy; permission?: string }[];
   "admin.settings.section"?: { id: string; title: string; lazy: Lazy; permission?: string }[];
   "account.section"?: { id: string; title: string; lazy: Lazy }[];
@@ -43,7 +47,7 @@ export type SlotName = keyof Slots;
 export type SlotEntryOf<Name extends SlotName> = NonNullable<Slots[Name]>[number];
 
 /** The slots that hold links; the rest hold parts that load. */
-export const LINK_SLOTS = ["nav.public", "nav.member", "nav.admin"] as const satisfies readonly SlotName[];
+export const LINK_SLOTS = ["nav.public", "nav.member", "nav.admin", "nav.footer"] as const satisfies readonly SlotName[];
 
 export const SLOT_NAMES = [
   ...LINK_SLOTS,
@@ -55,3 +59,18 @@ export const SLOT_NAMES = [
 
 export type LinkSlotName = (typeof LINK_SLOTS)[number];
 export type PartSlotName = Exclude<SlotName, LinkSlotName>;
+
+/**
+ * A link slot's entries loaded from the module's own API (decision 0056): each
+ * loader answers what the slot holds, and `useSlot` puts them after the
+ * module's fixed entries while it's on.
+ */
+export type LinkLoaders = { [Name in LinkSlotName]?: () => Promise<SlotEntryOf<Name>[]> };
+
+/** Whether `to` may be a link in the slot `name`: a path on this site, under /admin for `nav.admin`. */
+export function linkFits(name: LinkSlotName, to: unknown): boolean {
+  if (typeof to !== "string" || onThisSite(to) === null) return false;
+  if (name !== "nav.admin") return true;
+  const path = new URL(to, "https://site.invalid").pathname;
+  return path === "/admin" || path.startsWith("/admin/");
+}
