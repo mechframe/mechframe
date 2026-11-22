@@ -8,7 +8,9 @@ import { useId, useRef, useState, type ChangeEvent, type SubmitEvent } from "rea
 
 import { ApiProblem, Button, Dialog, EmptyState, Field, Input, LoadError, Switch } from "@/kernel";
 
-import { LIBRARY, useApiQuery, type Image } from "../api";
+import { LIBRARY, type Image } from "../api";
+import "../media.css";
+import { useLibrary } from "./library";
 import { Picture } from "./Picture";
 import { ACCEPT, describeImage, tooLarge, uploadImage } from "./upload";
 
@@ -29,7 +31,9 @@ export function nameOf(image: Image): string {
 export function ImagePicker({ title, onPick, onClose }: ImagePickerProps) {
   const id = useId();
   const queryClient = useQueryClient();
-  const listed = useApiQuery("get", LIBRARY, {});
+  const [q, setQ] = useState("");
+  const library = useLibrary(q ? { q } : {});
+  const listed = library.found;
   const [chosen, setChosen] = useState<Image | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -93,6 +97,15 @@ export function ImagePicker({ title, onPick, onClose }: ImagePickerProps) {
             </Button>
             <span className="mf-media-muted">PNG, JPEG or WebP, up to 15 MB</span>
           </div>
+          <Field id={`${id}-search`} label="Search the library">
+            <Input
+              type="search"
+              value={q}
+              onChange={(event) => {
+                setQ(event.target.value);
+              }}
+            />
+          </Field>
           {problem ? (
             <p role="alert" className="mf-media-problem">
               {problem}
@@ -100,11 +113,11 @@ export function ImagePicker({ title, onPick, onClose }: ImagePickerProps) {
           ) : null}
           {listed.isError ? (
             <LoadError what="the library" error={listed.error} onRetry={() => void listed.refetch()} inline />
-          ) : listed.data && listed.data.items.length === 0 ? (
-            <EmptyState title="No images yet">Upload the first one above.</EmptyState>
+          ) : library.loaded && library.items.length === 0 ? (
+            <EmptyState title={q ? "Nothing matches" : "No images yet"}>{q ? "Try other words." : "Upload the first one above."}</EmptyState>
           ) : (
             <ul role="list" className="mf-media-grid" aria-label="The library">
-              {(listed.data?.items ?? []).map((image) => (
+              {library.items.map((image) => (
                 <li key={image.id}>
                   <button type="button" className="mf-media-thumb" aria-label={nameOf(image)} onClick={() => { take(image); }}>
                     <Picture image={{ ...image, decorative: true }} sizes="10rem" />
@@ -113,6 +126,11 @@ export function ImagePicker({ title, onPick, onClose }: ImagePickerProps) {
               ))}
             </ul>
           )}
+          {listed.hasNextPage ? (
+            <Button disabled={listed.isFetchingNextPage} onClick={() => void listed.fetchNextPage()}>
+              {listed.isFetchingNextPage ? "Loading…" : "Show more"}
+            </Button>
+          ) : null}
         </>
       )}
     </Dialog>

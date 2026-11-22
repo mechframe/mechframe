@@ -8,9 +8,9 @@ Updated 2026-11-20, `main` at `b543642`. Progress counts steps, not effort: each
 
 | Milestone | Done | In review | Next | To do | Waiting | Later | Progress |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| MechFrame v1.0 | 48 | 0 | 0 | 7 | 3 | 3 | ███████░░░ 78% (48 of 61) |
+| MechFrame v1.0 | 48 | 0 | 1 | 6 | 3 | 3 | ███████░░░ 78% (48 of 61) |
 | After v1.0 | 0 | 0 | 0 | 85 | 0 | 3 | ░░░░░░░░░░ 0% (0 of 88) |
-| Everything | 48 | 0 | 0 | 92 | 3 | 6 | ███░░░░░░░ 32% (48 of 149) |
+| Everything | 48 | 0 | 1 | 91 | 3 | 6 | ███░░░░░░░ 32% (48 of 149) |
 
 ## MechFrame v1.0
 
@@ -151,7 +151,7 @@ Gate: v1.0 is frozen when blog, chat (community) and payments pass the quality g
 | Step | Status | PRs | Decisions | Note |
 | --- | --- | --- | --- | --- |
 | Step 0: scaffold, moderation permission, custom roles | Done | [#55](https://github.com/mechframe/mechframe/pull/55), [#56](https://github.com/mechframe/mechframe/pull/56) | [0029](decisions/0029-vibrant-mindz-order.md), [0031](decisions/0031-moderation-permission.md) |  |
-| Step 1: media, pages, blog, embeds, contact, campaigns | To do |  |  |  |
+| Step 1: media, pages, blog, embeds, contact, campaigns | Next | [#116](https://github.com/mechframe/mechframe/pull/116) |  | media in review (#116); pages, blog, embeds, contact and campaigns to come |
 | Step 2: discography, audio player, featured | To do |  |  |  |
 | Step 3: roster, portfolio, reactions, comments | To do |  |  |  |
 | Step 4: community | To do |  |  |  |

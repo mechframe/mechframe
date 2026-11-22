@@ -792,11 +792,11 @@
    "gate": "not passed",
    "step_order": 2,
    "step": "Step 1: media, pages, blog, embeds, contact, campaigns",
-   "status": "todo",
-   "status_label": "To do",
-   "prs": "",
+   "status": "next",
+   "status_label": "Next",
+   "prs": "#116",
    "decisions": "",
-   "note": ""
+   "note": "media in review (#116); pages, blog, embeds, contact and campaigns to come"
   },
   {
    "milestone": "MechFrame v1.0",

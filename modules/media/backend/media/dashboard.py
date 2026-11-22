@@ -20,7 +20,7 @@ SETUP = (
         key="media.public_bucket",
         title="Turn on the public bucket for images",
         why="The media library stores every image there, so nothing can be uploaded until it's set.",
-        link="/admin/system",
+        link="/admin/settings/system",
         permission="media.image.manage",
         done=_bucket_on,
     ),

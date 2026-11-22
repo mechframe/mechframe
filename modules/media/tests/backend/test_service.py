@@ -360,6 +360,7 @@ async def test_the_dashboard_asks_for_alt_text_and_the_public_bucket(
     assert await dashboard.ATTENTION(db, None) == []
 
     (step,) = dashboard.SETUP
+    assert step.link == "/admin/settings/system"  # the System page (Codex on #116)
     assert await step.done(db)
     bucket.on = False
     assert not await step.done(db)

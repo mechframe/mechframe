@@ -168,6 +168,46 @@ describe("the admin page", () => {
   });
 });
 
+describe("the library's pages", () => {
+  const OLDER = image({ id: "44444444-4444-4444-8444-444444444444", filename: "older.png", alt: "An older one" });
+
+  function paged(): Answers {
+    return {
+      [LIST]: (request) =>
+        new URL(request.url).searchParams.get("cursor") === "page-2"
+          ? { status: 200, body: { items: [OLDER], next_cursor: null, missing_alt: 1 } }
+          : { status: 200, body: { items: [DOOR], next_cursor: "page-2", missing_alt: 1 } },
+    };
+  }
+
+  it("shows the older images on the admin page once asked (Codex on #116)", async () => {
+    routed(paged());
+    renderWithKernel(<AdminMedia />, { path: "/admin/media", session: staff });
+    await screen.findByRole("button", { name: /door\.png/ });
+    expect(screen.queryByRole("button", { name: /An older one/ })).toBeNull();
+
+    await userEvent.click(screen.getByRole("button", { name: "Show more" }));
+
+    expect(await screen.findByRole("button", { name: /An older one/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /door\.png/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Show more" })).toBeNull();
+  });
+
+  it("lets the picker reach the older images and find one by its words", async () => {
+    const sent = routed(paged());
+    renderWithKernel(<ImagePicker title="Choose" onPick={vi.fn()} onClose={vi.fn()} />, { session: staff });
+    await screen.findByRole("button", { name: /door\.png/ });
+
+    await userEvent.click(screen.getByRole("button", { name: "Show more" }));
+    expect(await screen.findByRole("button", { name: /An older one/ })).toBeInTheDocument();
+
+    await userEvent.type(screen.getByRole("searchbox", { name: "Search the library" }), "older");
+    await waitFor(() => {
+      expect(sent.some((request) => new URL(request.url).searchParams.get("q") === "older")).toBe(true);
+    });
+  });
+});
+
 describe("the picker", () => {
   it("hands back an image that has alt text at once", async () => {
     routed({ [LIST]: { status: 200, body: { items: [DESCRIBED], next_cursor: null, missing_alt: 0 } } });

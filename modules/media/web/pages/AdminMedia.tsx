@@ -23,6 +23,7 @@ import {
 } from "@/kernel";
 
 import { LIBRARY, useApiQuery, type Image } from "../api";
+import { useLibrary } from "../components/library";
 import { nameOf } from "../components/ImagePicker";
 import { Picture } from "../components/Picture";
 import { ACCEPT, deleteImage, describeImage, replaceImage, tooLarge, uploadImage } from "../components/upload";
@@ -43,13 +44,14 @@ export default function AdminMedia() {
   const onlyMissing = search.get("missing_alt") === "1";
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
-  const listed = useApiQuery("get", LIBRARY, { params: { query: { ...(q ? { q } : {}), missing_alt: onlyMissing } } });
+  const library = useLibrary({ ...(q ? { q } : {}), missing_alt: onlyMissing });
+  const listed = library.found;
   const queryClient = useQueryClient();
   const toast = useToast();
   const input = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
-  const items = listed.data?.items ?? [];
-  const missing = listed.data?.missing_alt ?? 0;
+  const items = library.items;
+  const missing = library.missing;
   // "Fix the first": with the filter on and nothing picked, the first without alt text is open.
   const shown = selected ?? (onlyMissing ? (items[0]?.id ?? null) : null);
 
@@ -120,7 +122,7 @@ export default function AdminMedia() {
           </div>
           {listed.isError ? (
             <LoadError what="the library" error={listed.error} onRetry={() => void listed.refetch()} />
-          ) : listed.data && items.length === 0 ? (
+          ) : library.loaded && items.length === 0 ? (
             <EmptyState title={q || onlyMissing ? "Nothing matches" : "No images yet"}>
               {q || onlyMissing ? "Try other words, or clear the filter." : "Upload the first one: it's then here for every page."}
             </EmptyState>
@@ -142,6 +144,11 @@ export default function AdminMedia() {
               ))}
             </ul>
           )}
+          {listed.hasNextPage ? (
+            <Button disabled={listed.isFetchingNextPage} onClick={() => void listed.fetchNextPage()}>
+              {listed.isFetchingNextPage ? "Loading…" : "Show more"}
+            </Button>
+          ) : null}
         </section>
         {shown ? <Panel key={shown} id={shown} onGone={() => { setSelected(null); }} onChanged={refresh} /> : null}
       </div>
