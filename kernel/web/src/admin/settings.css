@@ -165,4 +165,10 @@
       grid-template-columns: minmax(0, 1fr);
     }
   }
+
+  /* The boards' normal line height on Settings' parts that set type.body or type.small (kit.css,
+     "The admin's line height"). */
+  .mf-admin-look :is(.mf-settings-lead, .mf-settings-quiet, .mf-settings-row-name, .mf-settings-row-line) {
+    line-height: normal;
+  }
 }

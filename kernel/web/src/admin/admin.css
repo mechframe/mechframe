@@ -852,4 +852,17 @@
       grid-template-columns: minmax(0, 1fr);
     }
   }
+
+  /* The boards' normal line height on the admin's own parts that set type.small (kit.css, "The
+     admin's line height"). */
+  .mf-admin-look :is(
+      .mf-admin-notices-empty,
+      .mf-admin-notices-choose,
+      .mf-jump-section,
+      .mf-jump-none,
+      .mf-people-roles legend,
+      .mf-role-permissions legend
+    ) {
+    line-height: normal;
+  }
 }

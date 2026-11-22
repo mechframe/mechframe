@@ -654,8 +654,10 @@
     padding: 0 0.75rem;
     border: 1px solid var(--mf-color-border-control);
     border-radius: var(--mf-radius-control);
-    background: var(--mf-color-field);
+    /* No fill, as the boards draw it: the box is its edge on whatever it sits on. */
+    background: transparent;
     color: var(--mf-color-text-muted);
+    font: var(--mf-type-small);
   }
 
   .mf-search-input {
@@ -1338,5 +1340,37 @@
 
   .mf-admin-look .mf-tab[aria-selected="true"]:focus-visible {
     box-shadow: var(--mf-shadow-tab-current-focus);
+  }
+
+  /* --- The admin's line height ------------------------------------------ */
+
+  /* The boards leave the browser's normal line height (about 1.25) on the admin's labels, leads,
+     tiles and panels, where the theme's type.body and type.small carry the prose's 1.5 to 1.6
+     (the owner, 2026-11-22: match the boards, keep 1.5 for prose; media's round 2). The tokens
+     stay as they are: inside the admin the root takes normal, and so does each part of the kit
+     whose `font` shorthand sets type.body or type.small. Long text keeps its own: `.mf-prose`
+     (type.body), the Markdown editor's text (1.8) and a field (1.45, the boards' too). */
+  .mf-admin-look,
+  .mf-admin-look :is(
+      .mf-button,
+      .mf-switch-label,
+      .mf-attention-why,
+      .mf-stat-label,
+      .mf-stat-line,
+      .mf-stat-link,
+      .mf-accordion-title,
+      .mf-accordion-meta,
+      .mf-accordion-body,
+      .mf-history-version,
+      .mf-tab,
+      .mf-search,
+      .mf-search-input,
+      .mf-table,
+      .mf-save-bar-words,
+      .mf-toast,
+      .mf-empty-line,
+      .mf-load-error-why
+    ) {
+    line-height: normal;
   }
 }

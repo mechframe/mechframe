@@ -55,7 +55,7 @@
     {
       "id": "media",
       "name": "Media library",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "status": "experimental",
       "category": "media",
       "summary": "Images uploaded once with alt text, cleaned of metadata, and placed by any module.",
