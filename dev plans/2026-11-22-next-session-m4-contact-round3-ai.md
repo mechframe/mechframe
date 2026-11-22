@@ -23,7 +23,7 @@ MechFrame: website modules on a FastAPI + Postgres kernel (`CLAUDE.md`, `SPEC.md
 ## 4. The job, in order
 
 1. **Republish the ledger** (`dev plans/progress-ledger/README.md`).
-2. **Media's round 3**, #131 (`dev plans/done/2026-11-22-media-round-3.md`, with its result): two items, its own PR, every admin page checked after.
+2. **Media's round 3 is built: #131** (`dev plans/done/2026-11-22-media-round-3.md`, with its result). Nothing is left to build. Land #131 on green CI with the bots clear, then tell VM Website Dev 10.
 2b. **A site's mypy can't see its modules** (`dev plans/2026-11-22-site-mypy-modules.md`, from VM Website): a template fix, its own small PR.
 3. **Blog's AI PR** (decision 0058). Write its contract first, `dev plans/contracts/kernel-ai.md`, for the owner to approve:
    - `ai.client()` (SPEC 6);
