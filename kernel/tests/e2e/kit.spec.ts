@@ -20,7 +20,7 @@ async function open(page: Page, theme: string, canvas: string): Promise<void> {
   await page.evaluate(async (name) => {
     document.documentElement.dataset.theme = name;
     document.body.getBoundingClientRect(); // styles worked out now, so their transitions have started
-    await Promise.all(document.getAnimations().map((animation) => animation.finished));
+    await Promise.all(document.getAnimations().map((animation) => animation.finished.catch(() => undefined)));
   }, theme);
   expect(await page.evaluate(() => getComputedStyle(document.documentElement).backgroundColor)).toBe(canvas);
 }

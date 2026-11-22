@@ -300,6 +300,14 @@ async def counted(db: AsyncSession, *, live: bool) -> list[dict[str, Any]]:
     return out
 
 
+async def live_categories(db: AsyncSession) -> list[dict[str, Any]]:
+    """Every category as the public sees it: its slug, label and live posts, in staff's order."""
+    return [
+        {"slug": each["slug"], "label": each["label"], "posts": each["posts"]}
+        for each in await counted(db, live=True)
+    ]
+
+
 # --- covers ----------------------------------------------------------------------------------
 
 

@@ -8,20 +8,21 @@ import { Link, Navigate, useLocation, useParams } from "react-router";
 import { ApiProblem, LoadError, NotFound, Prose, Seo } from "@/kernel";
 import { Picture } from "@/modules/media/public";
 
-import { day, pathOf, useApiQuery } from "../api";
+import { day, pathOf } from "../api";
+import { isMoved, usePost } from "../reads";
 import "../blog.css";
 
 export default function Post() {
   const { slug = "" } = useParams();
   const { search, hash } = useLocation();
-  const found = useApiQuery("get", "/api/blog/posts/{slug}", { params: { path: { slug } } });
+  const found = usePost(slug);
   if (found.isPending) return null;
   if (found.error) {
     if (found.error instanceof ApiProblem && found.error.status === 404) return <NotFound />;
     return <LoadError what="This post" error={found.error} onRetry={() => void found.refetch()} />;
   }
   const post = found.data;
-  if ("moved" in post) return <Navigate to={`${post.moved}${search}${hash}`} replace />;
+  if (isMoved(post)) return <Navigate to={`${post.moved}${search}${hash}`} replace />;
   return (
     <article className="mf-blog-post">
       <Seo

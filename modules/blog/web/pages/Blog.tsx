@@ -2,13 +2,13 @@
 // latest post first and larger, then the rest as cards, filtered by category
 // (`?category=`), with Older posts for the next 12. The words are the server
 // copy's own, so a crawler reads what a person sees.
-import { useInfiniteQuery } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router";
 
 import { Button, Chip, LoadError, Seo, useSite } from "@/kernel";
 import { Picture } from "@/modules/media/public";
 
-import { PUBLIC_LIST, api, day, pathOf, useApiQuery, type Card } from "../api";
+import { day, pathOf, type Card } from "../api";
+import { useCategories, usePosts } from "../reads";
 import "../blog.css";
 
 function Byline({ card }: { card: Card }) {
@@ -46,18 +46,8 @@ export default function Blog() {
   const site = useSite();
   const [search, setSearch] = useSearchParams();
   const category = search.get("category") ?? "";
-  const categories = useApiQuery("get", "/api/blog/categories");
-  const query = category ? { category } : {};
-  const posts = useInfiniteQuery({
-    queryKey: ["get", PUBLIC_LIST, { params: { query } }, "pages"],
-    initialPageParam: null as string | null,
-    queryFn: async ({ pageParam }) => {
-      const { data } = await api.GET(PUBLIC_LIST, { params: { query: { ...query, ...(pageParam ? { cursor: pageParam } : {}) } } });
-      if (!data) throw new Error("The site answered without the posts.");
-      return data;
-    },
-    getNextPageParam: (last) => last.next_cursor,
-  });
+  const categories = useCategories();
+  const posts = usePosts({ category });
   const cards = posts.data?.pages.flatMap((page) => page.items) ?? [];
   const [latest, ...rest] = cards;
   const shown = (categories.data?.items ?? []).filter((each) => each.posts > 0);
