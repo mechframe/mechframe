@@ -1,48 +1,40 @@
 # Handoff
 
-Overwritten every session. This one: 2026-11-21, evening Eastern (Claude Code, the owner's machine), session M3a of `dev plans/2026-11-21-vibrant-mindz-push-plan.md`. VM Website's items 6 and 7 landed (#113, #114), and `media` is begun on a local branch. `main` is `12b3993`.
+Overwritten every session. This one: 2026-11-21, evening Eastern (Claude Code, the owner's machine), session M3 of `dev plans/2026-11-21-vibrant-mindz-push-plan.md`. Landed: VM Website's items 6 and 7 (#113, #114), the handoff (#115), and the first module, `media`, with per-route body limits (#116). `main` is `fde6a90`.
 
 ## State
 
 - **The kernel is done**, K0 to K5; hooks 1 to 8 of the ten are in (decision 0052). Entitlements and profile tabs wait.
-- **#113, `<AfterFooter>`** (VM Website's "For MechFrame" item 6, the owner's goal: Release's docked player stays under the footer), landed at `0d19081`.
-  - A page renders `<AfterFooter>` from `@/kernel`. Its children are portaled into a holder `SiteFrame` draws last in `.mf-site`, after the footer.
-  - The holder is `display: contents`, so a `position: sticky; bottom: 0` bar sticks over the whole page and settles below the footer at the end.
-  - It draws nothing in the sign-in or admin frames.
-  - Contract `dev plans/contracts/after-footer.md`; SPEC 8; decision 0048 amended.
-  - Playwright checks the bar on the harness frame page (`/frame-docked`) in both themes. A `display: block` mutant put the bar at y=1305 in a 720px window.
-- **#114, the upgrade's new site files** (item 7, a bug from #111's first live run), landed at `12b3993`.
-  - A template file new in `backend/app/site/` or `web/src/site/` since the base is written where the site has none, named after the run, and the site's from then on.
-  - A file the site already has there is kept, and one the site removed isn't written again.
-  - CodeRabbit's finding, fixed with tests: with no `SITE_NAME` in `.env.example`, such a file that carries the name stops the run before anything is written.
-  - Decision 0053 and its contract amended.
-- **`media`, begun.** Its contract, `dev plans/contracts/media.md`, was approved 2026-11-21 as recommended. On `feat/media`, committed locally (`d4ffa49`, then `aae5612`) and not pushed:
-  - the backend: `pictures`, VybeSite's upload rules, with 53 of its tests ported and green; `models`, with `media_image` and `media_use`; `service`, `router`, `public`, `privacy`, `dashboard` and `seed`;
-  - the migration `media_0001`, which grants admin and editor;
-  - `module.json`, `openapi.json` and `catalog.json`; Pillow 13.0.0 and python-multipart 0.0.34 pinned, pip-audit clean;
-  - green: mypy, ruff, the schema check, and the migration round trip with media's branch.
-  - The contract's "Changes after approval" lists six things the build moved: no kernel CSP change (`img-src` already allows `https:`), `version` and `file_version`, 409 `media.changed`, the grants in the migration, the seed storing its own files, and python-multipart.
-- **The full suite on `feat/media`** found one kernel test to widen: the seeded grants were held to `kernel.json` alone, so media's read as extra. Fixed in `aae5612`: they're held to every installed manifest's, which also checks `media_0001` against media's `default_roles`. A full rerun was started at the session's end; its result wasn't read, so run the suite first.
-- VM Website has been told where items 6 and 7 landed.
-- **The owner approved (2026-11-21, "Approved on both points")** #114's change to decision 0053 §5, and widening Playwright to `modules/*/tests/e2e` (the E2E workflow), for media's admin page first.
+- **#113, `<AfterFooter>`** (VM item 6): a page's part after the site frame's footer, a portal into a `display: contents` holder, so a sticky bar sticks over the whole page. Contract `dev plans/contracts/after-footer.md`.
+- **#114, the upgrade's new site files** (VM item 7): a template file new in `backend/app/site/` or `web/src/site/` is written where the site has none. With no `SITE_NAME`, one that carries the name stops the run. The owner approved the change to decision 0053 §5.
+- **#116, `media`**, landed at `fde6a90`. Its contract is `dev plans/contracts/media.md`, approved 2026-11-21 as recommended. Its "Changes after approval" lists 12 things the build and the reviews moved.
+  - **Backend:** VybeSite's upload rules (`pictures`), `media_image`, `media_use` and the sequence `media_file_version_seq` (`media_0001`, which grants admin and editor), the staff routes, `public.py`, and hooks 4, 7 and 8.
+  - **Web:** `/admin/media` to the AdminMedia board (which VM Website has since redrawn to match), and `public.ts`'s `ImagePicker` and `Picture`.
+  - **Decision 0054, the owner's choice:** a module's `BODY_LIMITS` lets its named routes take more than MAX_BODY_BYTES, up to 64 MB, while it's on. The start refuses an entry that names no route and two that can match one request.
+  - **Tests and gates:** Playwright runs `modules/*/tests/e2e`, the owner's OK. A kernel test and three hook contract tests now allow real modules beside the probe. Mutants were caught throughout, and media's backend is at 95.75%.
+  - **Reviews:** Codex's 4 and CodeRabbit's 21 findings were fixed with tests, and so were their follow-ups. One was a misread, answered with a test. CodeRabbit hit its chat limit at the end.
+- **The progress ledger:** `steps` points at `/_blob/8153bd635ff8bf573eb9965c192da7b3` (from `fde6a90`; step 1 is next). Its `data/users/me` `check` wasn't written yet, since the page hadn't drawn. The old asset `fe086f5b0b23e9e6621a99d0fe0cd7bb` stays until it has.
+- **v1.0:** 78% (48 of 61 steps).
 
 ## Next
 
-1. **Session M3b** (`dev plans/2026-11-21-next-session-m3-media-web.md`): media's service and contract tests, then its web (the admin page, `ImagePicker`, `Picture`), docs and PR.
-2. M4 (`pages`, `blog`) and M5, as the plan has them.
+1. **Session M4** (`dev plans/2026-11-21-next-session-m4-pages-blog.md`): `pages`, then `blog`, which requires media.
+2. M5 as the plan has it.
 
 ## Open questions for the owner
 
+- **A flaky end-to-end test:** `kernel/tests/e2e/sign-in.spec.ts:389`, axe on the account's pages, failed once on main at `0d19081` with `AbortError` and has passed since.
 - Hooks 6 to 8's changes after approval; a public name and handle for a person (hook 10); the Vibrant Mindz content; `mechframe-iac-probe` on Railway; the rest of M2's list.
 
 ## Notes
 
-- **The full suite** takes 25 minutes on a quiet machine, more under load: in the background, with no edits or branch switches in that checkout. This handoff was written in a worktree beside it (`.claude/worktrees/handoff`).
-- **A module's tests can't see `kernel/tests/conftest.py`:** media needs a `conftest.py` of its own.
-- **The Write tool decodes `\uXXXX`:** build such characters with `chr()`. Git writes CRLF on a merge, so patch scripts match after `.replace("\r\n", "\n")`.
-- **`npx.cmd` and a quoted argument with a space** fail in cmd: use `--grep=word`.
+- **Cleanup that follows a transaction** decides at the outer transaction's end (`after_transaction_end`, root). A savepoint's release fires `after_commit`, and the kernel's `get_db` closes its session with no rollback (`media.service._when_done`).
+- **A key that a rolled-back try may reuse** needs a number no rollback undoes: a Postgres sequence.
+- **`npx.cmd` and an argument with a space** fail in cmd: use `--testNamePattern=word` or `--grep=word`.
+- **Black's check covers the tests:** run `python -m black --check .` before a push.
+- **The full suite** is 25 minutes; run it in the background, editing nothing in that checkout meanwhile. A worktree under `.claude/worktrees/` lets work go on, but remove its folder (`rmdir`) if `git worktree remove` stops on "Permission denied".
 
 ## Warnings
 
-- Nothing from VybeSite's `dev plans\` or `snapshots\`; run its brand check on lifted code (media's, before its PR).
+- Nothing from VybeSite's `dev plans\` or `snapshots\`; run its brand check on lifted code.
 - Editing CI's security gates is the owner's call. Never apply a site's `railway.ts` for the owner. Never edit `C:\DEV\VM Website`.
