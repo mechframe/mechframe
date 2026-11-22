@@ -12,7 +12,16 @@ import { renderApp, renderWithKernel, testUser } from "@/kernel/testing";
 
 import { morePages, toCsv, type InboxItem, type InboxMessage, type InboxPage } from "../../web/api";
 import contact from "../../web/module.web";
-import { ContactForm } from "@/modules/contact/public";
+import { ApiProblem } from "@/kernel";
+import {
+  ContactForm,
+  fieldErrors,
+  useContactForm,
+  useSendMessage,
+  type ContactFormAnswer,
+  type FieldErrors,
+  type NewMessage,
+} from "@/modules/contact/public";
 
 type Answer = { status: number; body?: unknown };
 type Answers = Record<string, Answer | ((request: Request) => Answer | Promise<Answer>)>;
@@ -192,6 +201,93 @@ describe("the form on a site's own page (public.ts)", () => {
     await user.click(screen.getByRole("button", { name: "Send message" }));
     await screen.findByRole("status");
     expect(onSent).toHaveBeenCalledTimes(1);
+  });
+
+  it("takes its thanks into focus even when the next frame comes before they're drawn (the e2e flake under load)", async () => {
+    routed({ [SEND]: { status: 202, body: { received: true } } });
+    // The frame at once, before React has drawn "Message sent": as a loaded machine can run it.
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      callback(0);
+      return 0;
+    });
+    const user = userEvent.setup();
+    renderWithKernel(<ContactForm />);
+    await fill(user);
+    await user.click(screen.getByRole("button", { name: "Send message" }));
+    expect(await screen.findByRole("status")).toHaveFocus();
+  });
+});
+
+/** A site's own form, drawn from contact's reads and its send (public.ts, contact 0.1.1). */
+function OwnForm({ body }: { body: NewMessage }) {
+  const form = useContactForm();
+  const send = useSendMessage();
+  const answer: ContactFormAnswer | undefined = form.data;
+  const refused: FieldErrors = send.error instanceof ApiProblem ? fieldErrors(send.error) : {};
+  return (
+    <div>
+      <p>{answer?.intro}</p>
+      <ul>
+        {(answer?.topics ?? []).map((topic) => (
+          <li key={topic.key}>{topic.label}</li>
+        ))}
+      </ul>
+      <button type="button" onClick={() => { send.mutate({ body }); }}>
+        Send
+      </button>
+      {send.data ? <p>received: {String(send.data.received)}</p> : null}
+      {Object.entries(refused).map(([field, said]) => (
+        <p key={field}>{`${field}: ${said.join(" ")}`}</p>
+      ))}
+      {send.error instanceof ApiProblem && send.error.status === 429 ? <p>{send.error.code}</p> : null}
+    </div>
+  );
+}
+
+describe("a site's own form, from contact's reads (public.ts)", () => {
+  const body: NewMessage = { name: "Rae", email: "rae@example.com", topic: "work", message: "Hello.", wants_news: false, bot: { website: "", elapsed_ms: 4000, token: null } };
+
+  it("reads the intro and the topics, and sends a message", async () => {
+    const sent = routed({ [SEND]: { status: 202, body: { received: true } } });
+    renderWithKernel(<OwnForm body={body} />);
+    expect(await screen.findByText(FORM.intro)).toBeInTheDocument();
+    expect(screen.getByText("Working together")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    expect(await screen.findByText("received: true")).toBeInTheDocument();
+    const posted = sent.find((request) => request.method === "POST");
+    expect(posted && (await posted.json())).toEqual(body);
+  });
+
+  it("gives each refused field by the form's names, and says when too many came", async () => {
+    routed({
+      [SEND]: {
+        status: 422,
+        body: {
+          type: "urn:mechframe:problem:kernel.invalid_request",
+          title: "Refused",
+          status: 422,
+          detail: "Check the fields.",
+          code: "kernel.invalid_request",
+          errors: { "body.email": ["Enter a real email address."], "body.elsewhere": ["Not a field."] },
+        },
+      },
+    });
+    renderWithKernel(<OwnForm body={body} />);
+    await userEvent.click(await screen.findByRole("button", { name: "Send" }));
+    expect(await screen.findByText("email: Enter a real email address.")).toBeInTheDocument();
+    expect(screen.queryByText(/elsewhere/)).not.toBeInTheDocument();
+  });
+
+  it("says kernel.rate_limited after too many from one address", async () => {
+    routed({
+      [SEND]: {
+        status: 429,
+        body: { type: "urn:mechframe:problem:kernel.rate_limited", title: "Slow down", status: 429, detail: "Too many.", code: "kernel.rate_limited" },
+      },
+    });
+    renderWithKernel(<OwnForm body={body} />);
+    await userEvent.click(await screen.findByRole("button", { name: "Send" }));
+    expect(await screen.findByText("kernel.rate_limited")).toBeInTheDocument();
   });
 });
 

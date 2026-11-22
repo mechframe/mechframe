@@ -63,7 +63,9 @@ No env vars.
 
 ## Extension points
 
-`contact.news.requested`, for a newsletter module to ask the address to confirm. The bot check's provider is the kernel's (a module's `BOT_PROVIDER`, such as Turnstile later).
+`contact.news.requested`, for a newsletter module to ask the address to confirm.
+
+**Its public surface,** `@/modules/contact/public` (decision 0057): `ContactForm`, and for a site that draws its own form (0.1.1) `useContactForm()` (the intro and the topics), `useSendMessage()` (202 `{received}`, a 422 whose refused fields `fieldErrors(problem)` gives by the form's names, a 429 `kernel.rate_limited`), and the types `ContactFormAnswer`, `NewMessage`, `Received`, `Topic`, `FieldErrors` and `MessageField`. Such a site draws the kernel's `BotFields` and sends `useBotProof().proof()` as `bot`, and keeps the news box hidden while `campaigns` is off, as `ContactForm` does. The bot check's provider is the kernel's (a module's `BOT_PROVIDER`, such as Turnstile later).
 
 ## Known limits
 
