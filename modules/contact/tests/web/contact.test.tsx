@@ -10,7 +10,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { renderApp, renderWithKernel, testUser } from "@/kernel/testing";
 
-import { toCsv, type InboxItem, type InboxMessage, type InboxPage } from "../../web/api";
+import { morePages, toCsv, type InboxItem, type InboxMessage, type InboxPage } from "../../web/api";
 import contact from "../../web/module.web";
 import { ContactForm } from "@/modules/contact/public";
 
@@ -375,6 +375,43 @@ describe("the Inbox", () => {
     expect(csv).toContain('"Sam Ito"');
   });
 
+  it("says when the next messages didn't load, and tries the same page again (CodeRabbit on #125)", async () => {
+    let tries = 0;
+    routed({
+      [LIST]: (request) => {
+        if (new URL(request.url).searchParams.get("cursor") !== "c1") return page([item()], { next_cursor: "c1" });
+        tries += 1;
+        return tries === 1 ? problem(500, "kernel.internal_error") : page([item({ id: OTHER, name: "Sam Ito" })]);
+      },
+    });
+    const user = userEvent.setup();
+    renderApp({ path: "/admin/contact", modules: [contact], session: reader });
+    await user.click(await screen.findByRole("button", { name: "Show more" }));
+    expect(await screen.findByText("The next messages couldn’t be loaded.")).toBeInTheDocument();
+    const list = screen.getByRole("list", { name: "Messages" });
+    expect(within(list).getAllByRole("link")).toHaveLength(1);
+    await user.click(screen.getByRole("button", { name: "Show more" }));
+    await waitFor(() => {
+      expect(within(list).getAllByRole("link")).toHaveLength(2);
+    });
+    expect(screen.queryByText("The next messages couldn’t be loaded.")).toBeNull();
+  });
+
+  it("goes back to the list when another tab is picked (CodeRabbit on #125)", async () => {
+    routed({ [LIST]: page([item()]), [`GET ${ONE}`]: { status: 200, body: message() } });
+    const user = userEvent.setup();
+    const { router } = renderApp({ path: `/admin/contact/${ID}`, modules: [contact], session: reader });
+    await screen.findByRole("heading", { level: 2, name: "Rae Okafor" });
+    await user.click(screen.getByRole("tab", { name: "Spam (1)" }));
+    await waitFor(() => {
+      expect(`${router.state.location.pathname}${router.state.location.search}`).toBe("/admin/contact?tab=spam");
+    });
+    await user.click(screen.getByRole("tab", { name: "All (3)" }));
+    await waitFor(() => {
+      expect(`${router.state.location.pathname}${router.state.location.search}`).toBe("/admin/contact");
+    });
+  });
+
   it("says when a tab is empty", async () => {
     routed({ [LIST]: page([], { waiting: null, counts: { new: 0, replied: 0, archived: 0, spam: 0 } }) });
     renderApp({ path: "/admin/contact?tab=spam", modules: [contact], session: reader });
@@ -386,6 +423,23 @@ describe("the Inbox", () => {
     routed({ [LIST]: page([item()]) });
     renderApp({ path: "/admin/contact", modules: [contact], session: reader });
     expect(await screen.findByRole("link", { name: "Inbox" })).toHaveAttribute("href", "/admin/contact");
+  });
+});
+
+describe("the pages after the first", () => {
+  it("never lets an older answer undo the pages loaded after it (CodeRabbit on #125)", () => {
+    const a = item({ id: "a" });
+    const b = item({ id: "b" });
+    const newer = morePages(null, 20, { items: [b], next_cursor: null });
+    expect(morePages(newer, 10, { items: [a], next_cursor: "x" })).toBe(newer);
+    const appended = morePages({ after: 20, items: [a], next: "c2" }, 20, { items: [b], next_cursor: null });
+    expect(appended).toEqual({ after: 20, items: [a, b], next: null });
+    // A first page read since starts over from it.
+    expect(morePages({ after: 10, items: [a], next: "c2" }, 20, { items: [b], next_cursor: "c3" })).toEqual({
+      after: 20,
+      items: [b],
+      next: "c3",
+    });
   });
 });
 
@@ -409,6 +463,21 @@ const form = (version: number, values: Record<string, unknown>): Answer => ({ st
 const empty = { status: 200, body: { items: [], next_cursor: null, people: {} } };
 
 describe("the Contact form's settings", () => {
+  it("says when they couldn't be read, and offers to try again (CodeRabbit on #125)", async () => {
+    routed({
+      "GET /api/kernel/admin/settings/kernel.site": form(1, { description: "", kind: "Organization", logo: "", card_image: "", same_as: [], llms_summary: "", ai_crawlers: "allow" }),
+      "GET /api/kernel/admin/settings/kernel.auth": form(0, { sign_up_mode: "closed" }),
+      "GET /api/kernel/admin/settings/contact": problem(500, "kernel.internal_error"),
+      "GET /api/kernel/admin/settings/kernel.site/history": empty,
+      "GET /api/kernel/admin/settings/kernel.auth/history": empty,
+      "GET /api/kernel/admin/settings/contact/history": empty,
+    });
+    renderApp({ path: "/admin/settings", modules: [contact], session: reader });
+    expect(await screen.findByText("The contact form's settings couldn't be loaded.")).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Intro" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Add a topic" })).toBeNull();
+  });
+
   it("edits the intro and the topics, and the Site tab's Save sends them", async () => {
     const sent = routed({
       "GET /api/kernel/admin/settings/kernel.site": form(1, { description: "", kind: "Organization", logo: "", card_image: "", same_as: [], llms_summary: "", ai_crawlers: "allow" }),

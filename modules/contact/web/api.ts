@@ -62,6 +62,24 @@ const COLUMNS: readonly [string, (message: InboxMessage) => string][] = [
   ["Message", (m) => m.message],
 ];
 
+/** The Inbox's pages after the first, for the read of the first page they follow (`after`, its time). */
+export type More = { after: number; items: InboxItem[]; next: string | null };
+
+/**
+ * What the pages after the first are once the next one is in. An answer for
+ * an older first page never replaces pages loaded since for a newer one
+ * (CodeRabbit on #125); one for a first page read since starts over from it.
+ */
+export function morePages(
+  before: More | null,
+  after: number,
+  page: { items: readonly InboxItem[]; next_cursor: string | null },
+): More {
+  if (before && before.after > after) return before;
+  const kept = before?.after === after ? before.items : [];
+  return { after, items: [...kept, ...page.items], next: page.next_cursor };
+}
+
 type ExportPage = components["schemas"]["InboxExport"];
 
 async function exportPage(tab: Tab, cursor: string | null): Promise<ExportPage> {

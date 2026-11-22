@@ -19,8 +19,10 @@ import {
   toCsv,
   useApiMutation,
   useApiQuery,
+  morePages,
   type InboxItem,
   type InboxMessage,
+  type More,
   type Status,
   type Tab,
 } from "../api";
@@ -58,8 +60,9 @@ function List({ tab, open }: { tab: Tab; open: string | undefined }) {
   const listed = useApiQuery("get", LIST, { params: { query: { status: tab } } });
   // The pages after the first, for the first page they follow: a new read of
   // the first (a status changed, another tab) starts over from it.
-  const [extra, setExtra] = useState<{ after: number; items: InboxItem[]; next: string | null } | null>(null);
+  const [extra, setExtra] = useState<More | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [moreFailed, setMoreFailed] = useState(false);
   if (listed.error) return <LoadError what="The messages" error={listed.error} onRetry={() => void listed.refetch()} />;
   if (!listed.data) return null;
   const more = extra?.after === listed.dataUpdatedAt ? extra : null;
@@ -74,10 +77,16 @@ function List({ tab, open }: { tab: Tab; open: string | undefined }) {
   }
   const showMore = async () => {
     if (!next) return;
+    const after = listed.dataUpdatedAt;
     setLoadingMore(true);
+    setMoreFailed(false);
     try {
       const { data } = await api.GET(LIST, { params: { query: { status: tab, cursor: next } } });
-      if (data) setExtra({ after: listed.dataUpdatedAt, items: [...(more?.items ?? []), ...data.items], next: data.next_cursor });
+      if (!data) throw new Error("The next page didn't answer.");
+      setExtra((before) => morePages(before, after, data));
+    } catch {
+      // The rows already shown stay, and Show more tries the same page again.
+      setMoreFailed(true);
     } finally {
       setLoadingMore(false);
     }
@@ -89,6 +98,11 @@ function List({ tab, open }: { tab: Tab; open: string | undefined }) {
           <Row key={item.id} item={item} tab={tab} open={item.id === open} />
         ))}
       </ul>
+      {moreFailed ? (
+        <p className="mf-contact-error" role="alert">
+          The next messages couldn&rsquo;t be loaded.
+        </p>
+      ) : null}
       {next ? (
         <Button size="small" onClick={() => void showMore()} disabled={loadingMore}>
           {loadingMore ? "Loading…" : "Show more"}
@@ -218,7 +232,8 @@ function download(name: string, text: string) {
 
 export default function AdminInbox() {
   const { id } = useParams();
-  const [search, setSearch] = useSearchParams();
+  const [search] = useSearchParams();
+  const navigate = useNavigate();
   const tab = tabOf(search.get("tab"));
   const toast = useToast();
   const listed = useApiQuery("get", LIST, { params: { query: { status: tab } } });
@@ -261,7 +276,8 @@ export default function AdminInbox() {
           label="Messages"
           selected={tab}
           onSelect={(next) => {
-            setSearch(next === "all" ? {} : { tab: next });
+            // Back to the list: an open message belongs to the tab it was opened from (CodeRabbit on #125).
+            void navigate(next === "all" ? "/admin/contact" : `/admin/contact?tab=${next}`);
           }}
           tabs={TABS.map((each) => ({
             id: each.id,

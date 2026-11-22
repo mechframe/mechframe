@@ -124,6 +124,10 @@ class NewContactMessage(BaseModel):
         value = value.strip()
         if not email.is_address(value):
             raise ValueError("Enter one email address, like name@example.com.")
+        # Kept lowercased too (`email_normal`), and lowercasing can lengthen a
+        # letter beyond ASCII: İ is two characters then (CodeRabbit on #125).
+        if len(value.lower()) > MAX_EMAIL:
+            raise ValueError("That address is too long.")
         return value
 
     @field_validator("message")

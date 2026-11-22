@@ -2,7 +2,7 @@
 // `dev plans/contracts/contact.md` §2): the Contact page's intro line, then the
 // topics a message can be about, in the form's order, each with First (its new
 // messages at the top of the Inbox). The Site tab's one Save sends it.
-import { Button, Field, Input, Switch, useSettings } from "@/kernel";
+import { Button, Field, Input, LoadError, Switch, useSettings } from "@/kernel";
 
 import "../contact.css";
 
@@ -46,6 +46,11 @@ export default function ContactSettings() {
     next[other] = here;
     put(next);
   };
+  // Never an empty editor in place of what's saved (CodeRabbit on #125).
+  if (form.read === "failed") {
+    return <LoadError what="The contact form's settings" error={form.problem} onRetry={form.retry} inline />;
+  }
+  if (form.read === "loading") return <p className="mf-contact-hint">Loading…</p>;
   return (
     <div className="mf-contact-settings">
       <Field label="Intro" hint="The line under the Contact page's heading." error={form.errors.intro}>

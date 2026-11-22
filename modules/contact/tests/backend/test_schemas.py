@@ -72,6 +72,8 @@ def test_a_message_is_trimmed_where_it_s_one_line() -> None:
         ("message", "Hi" + chr(0)),
         ("message", "x" * 5_001),
         ("topic", "x" * 41),
+        # Lowercased, each dotted capital I is two characters: 412 in all (CodeRabbit on #125).
+        ("email", chr(0x130) * 200 + "@example.com"),
     ],
 )
 def test_a_message_refuses_what_can_t_be_stored(field: str, value: str) -> None:
