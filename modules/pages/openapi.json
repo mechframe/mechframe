@@ -1,0 +1,1096 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Pages",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/pages/page": {
+      "get": {
+        "summary": "Read Page",
+        "description": "The live page at `address` (`/about`), or `{moved}` for an address a live page left.",
+        "operationId": "read_page_api_pages_page_get",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 61,
+              "title": "Address"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/LivePage"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Moved"
+                    }
+                  ],
+                  "title": "Response Read Page Api Pages Page Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No live page is at that address"
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/pages/menu": {
+      "get": {
+        "summary": "Read Menu",
+        "description": "The live pages in the header's menu or the footer's, in their order.",
+        "operationId": "read_menu_api_pages_menu_get",
+        "parameters": [
+          {
+            "name": "place",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "enum": [
+                "header",
+                "footer"
+              ],
+              "type": "string",
+              "title": "Place"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MenuLink"
+                  },
+                  "title": "Response Read Menu Api Pages Menu Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/pages/admin/pages": {
+      "get": {
+        "summary": "List Pages",
+        "description": "Every page, newest edit first.",
+        "operationId": "list_pages_api_pages_admin_pages_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Listed"
+                  },
+                  "type": "array",
+                  "title": "Response List Pages Api Pages Admin Pages Get"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "New Page",
+        "description": "A draft; 409 `pages.address_taken`, naming who answers the address.",
+        "operationId": "new_page_api_pages_admin_pages_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewPage"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Full"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/pages/admin/pages/{page_id}": {
+      "get": {
+        "summary": "Read One",
+        "description": "One page with its Markdown, its `version` and the addresses it left.",
+        "operationId": "read_one_api_pages_admin_pages__page_id__get",
+        "parameters": [
+          {
+            "name": "page_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Page Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Full"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Save Page",
+        "description": "Saves it, and a live page changes on the site at once; 409 `pages.changed`\non a stale `version`, with the page now.",
+        "operationId": "save_page_api_pages_admin_pages__page_id__patch",
+        "parameters": [
+          {
+            "name": "page_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Page Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PageChange"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Full"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete Page",
+        "description": "Gone, with the addresses it left.",
+        "operationId": "delete_page_api_pages_admin_pages__page_id__delete",
+        "parameters": [
+          {
+            "name": "page_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Page Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/pages/admin/preview": {
+      "post": {
+        "summary": "Preview",
+        "description": "The HTML the site would draw for `body`, saved or not.",
+        "operationId": "preview_api_pages_admin_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Preview"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/pages/admin/pages/{page_id}/publish": {
+      "post": {
+        "summary": "Publish Page",
+        "description": "Live now, or scheduled for `at`.",
+        "operationId": "publish_page_api_pages_admin_pages__page_id__publish_post",
+        "parameters": [
+          {
+            "name": "page_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Page Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/Publish"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Full"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/pages/admin/pages/{page_id}/unpublish": {
+      "post": {
+        "summary": "Unpublish Page",
+        "description": "Back to a draft: its address answers 404.",
+        "operationId": "unpublish_page_api_pages_admin_pages__page_id__unpublish_post",
+        "parameters": [
+          {
+            "name": "page_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Page Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Full"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Full": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "address": {
+            "type": "string",
+            "title": "Address"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "scheduled",
+              "published"
+            ],
+            "title": "Status"
+          },
+          "in_header": {
+            "type": "boolean",
+            "title": "In Header"
+          },
+          "in_footer": {
+            "type": "boolean",
+            "title": "In Footer"
+          },
+          "menu_order": {
+            "type": "integer",
+            "title": "Menu Order"
+          },
+          "publish_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publish At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "updated_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated By"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body"
+          },
+          "search_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Search Title"
+          },
+          "search_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Search Description"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "moves": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Moves"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "address",
+          "status",
+          "in_header",
+          "in_footer",
+          "menu_order",
+          "publish_at",
+          "updated_at",
+          "updated_by",
+          "body",
+          "search_title",
+          "search_description",
+          "published_at",
+          "version",
+          "moves"
+        ],
+        "title": "Full",
+        "description": "One page as its editor opens it."
+      },
+      "Listed": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "address": {
+            "type": "string",
+            "title": "Address"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "scheduled",
+              "published"
+            ],
+            "title": "Status"
+          },
+          "in_header": {
+            "type": "boolean",
+            "title": "In Header"
+          },
+          "in_footer": {
+            "type": "boolean",
+            "title": "In Footer"
+          },
+          "menu_order": {
+            "type": "integer",
+            "title": "Menu Order"
+          },
+          "publish_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publish At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "updated_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated By"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "address",
+          "status",
+          "in_header",
+          "in_footer",
+          "menu_order",
+          "publish_at",
+          "updated_at",
+          "updated_by"
+        ],
+        "title": "Listed",
+        "description": "A page in the admin's list."
+      },
+      "LivePage": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "address": {
+            "type": "string",
+            "title": "Address"
+          },
+          "html": {
+            "type": "string",
+            "title": "Html"
+          },
+          "search_title": {
+            "type": "string",
+            "title": "Search Title"
+          },
+          "search_description": {
+            "type": "string",
+            "title": "Search Description"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title",
+          "address",
+          "html",
+          "search_title",
+          "search_description",
+          "updated_at"
+        ],
+        "title": "LivePage",
+        "description": "A live page as the site draws it."
+      },
+      "MenuLink": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "address": {
+            "type": "string",
+            "title": "Address"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title",
+          "address"
+        ],
+        "title": "MenuLink"
+      },
+      "Moved": {
+        "properties": {
+          "moved": {
+            "type": "string",
+            "title": "Moved"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "moved"
+        ],
+        "title": "Moved",
+        "description": "An address a live page left: where it is now."
+      },
+      "NewPage": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 120,
+            "title": "Title"
+          },
+          "address": {
+            "type": "string",
+            "maxLength": 60,
+            "pattern": "^/[a-z0-9]+(-[a-z0-9]+)*$",
+            "title": "Address"
+          },
+          "body": {
+            "type": "string",
+            "maxLength": 100000,
+            "title": "Body",
+            "default": ""
+          },
+          "search_title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 70
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Search Title"
+          },
+          "search_description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 160
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Search Description"
+          },
+          "in_header": {
+            "type": "boolean",
+            "title": "In Header",
+            "default": false
+          },
+          "in_footer": {
+            "type": "boolean",
+            "title": "In Footer",
+            "default": false
+          },
+          "menu_order": {
+            "type": "integer",
+            "maximum": 10000.0,
+            "minimum": 0.0,
+            "title": "Menu Order",
+            "default": 0
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title",
+          "address"
+        ],
+        "title": "NewPage"
+      },
+      "PageChange": {
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Version"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "address": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 60,
+                "pattern": "^/[a-z0-9]+(-[a-z0-9]+)*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "body": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body"
+          },
+          "search_title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 70
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Search Title"
+          },
+          "search_description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 160
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Search Description"
+          },
+          "in_header": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "In Header"
+          },
+          "in_footer": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "In Footer"
+          },
+          "menu_order": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 10000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Menu Order"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "version"
+        ],
+        "title": "PageChange",
+        "description": "What a save changes: only the fields it sends, with the `version` it read."
+      },
+      "Preview": {
+        "properties": {
+          "html": {
+            "type": "string",
+            "title": "Html"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "html"
+        ],
+        "title": "Preview"
+      },
+      "PreviewBody": {
+        "properties": {
+          "body": {
+            "type": "string",
+            "maxLength": 100000,
+            "title": "Body"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "body"
+        ],
+        "title": "PreviewBody"
+      },
+      "Problem": {
+        "title": "Problem",
+        "description": "RFC 9457 problem details (SPEC 7): `type` is `urn:mechframe:problem:<code>`, `code` is stable, and field errors are in `errors` by dotted path. Some problems carry more members, such as `retry_after`.",
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "errors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "required": [
+          "type",
+          "title",
+          "status",
+          "detail",
+          "code"
+        ],
+        "additionalProperties": true
+      },
+      "Publish": {
+        "properties": {
+          "at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 40
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "Publish",
+        "description": "Publish now, or at `at`, a time with its zone still to come."
+      }
+    }
+  }
+}

@@ -25,6 +25,29 @@
         "modules": {}
       },
       "conflicts": []
+    },
+    {
+      "id": "pages",
+      "name": "Pages",
+      "version": "0.1.0",
+      "status": "experimental",
+      "category": "content",
+      "summary": "The site's fixed pages, About to Privacy, written in Markdown and placed in the header's and footer's menus.",
+      "use_when": [
+        "The site needs pages its people write and change themselves: About, Credits, Privacy, Terms, a press kit",
+        "Those pages belong in the site's header or footer menu, chosen page by page",
+        "A page's address may change, and links to the old one must keep working"
+      ],
+      "avoid_when": [
+        "The page is dated news or a story with an author and comments: that's a blog post",
+        "The page is laid out from designed sections and blocks: VybeSite's builder comes as pages' next version",
+        "The page is drawn from the site's own code and never changes: put it in the site's own pages"
+      ],
+      "requires": {
+        "kernel": "^0.1",
+        "modules": {}
+      },
+      "conflicts": []
     }
   ]
 }

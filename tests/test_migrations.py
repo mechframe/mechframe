@@ -193,6 +193,11 @@ _SEED = [
     "INSERT INTO media_use (id, image_id, owner, label, link, created_at) VALUES "
     "(gen_random_uuid(), '00000000-0000-0000-0000-000000000006', 'blog.post:1', 'A post', "
     "'/admin/blog/1', now())",
+    "INSERT INTO pages_page (id, version, title, address, body, updated_by, created_at, updated_at, "
+    "status, published_at) VALUES ('00000000-0000-0000-0000-000000000007', 2, 'About', '/about', "
+    "'## Who we are', :user, now(), now(), 'published', now())",
+    "INSERT INTO pages_move (address, page_id, created_at) VALUES "
+    "('/about-us', '00000000-0000-0000-0000-000000000007', now())",
 ]
 
 
