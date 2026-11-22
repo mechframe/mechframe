@@ -31,6 +31,16 @@
               }
             }
           },
+          "200": {
+            "description": "The same image, already in the library",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Image"
+                }
+              }
+            }
+          },
           "422": {
             "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
             "content": {

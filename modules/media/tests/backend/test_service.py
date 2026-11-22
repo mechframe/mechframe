@@ -91,6 +91,38 @@ async def test_a_refused_upload_stores_nothing(db: AsyncSession, bucket: Bucket)
     assert bucket.files == {}
 
 
+async def test_a_file_name_any_character_may_be_in_is_taken(
+    db: AsyncSession, bucket: Bucket
+) -> None:
+    """CodeRabbit on #116: the audit log refuses an @ in its details, so the name stays out of them."""
+    image, made = await service.upload(db, unique_image(), filename="logo@2x.png", by=None)
+    await db.commit()
+
+    assert made
+    assert image.filename == "logo@2x.png"
+
+
+async def test_a_rolled_back_upload_or_replace_takes_its_new_files_back(
+    db: AsyncSession, bucket: Bucket
+) -> None:
+    """CodeRabbit on #116: the files a transaction wrote go if it never commits."""
+    image, _ = await service.upload(db, unique_image(), filename="a.png", by=None)
+    image_id = image.id
+    await db.rollback()
+    await _settled()
+    assert bucket.under(f"media/{image_id}/") == []
+
+    kept, _ = await service.upload(db, unique_image(size=(600, 400)), filename="b.png", by=None)
+    await db.commit()
+    kept_id = kept.id
+    await _settled()
+    before = bucket.under(f"media/{kept_id}/")
+    await service.replace(db, kept_id, unique_image(size=(600, 400)), filename="c.png", by=None)
+    await db.rollback()
+    await _settled()
+    assert bucket.under(f"media/{kept_id}/") == before  # the old version's files stay
+
+
 async def test_with_the_public_bucket_off_an_upload_is_503(
     db: AsyncSession, bucket: Bucket
 ) -> None:
@@ -317,6 +349,20 @@ async def test_the_list_is_newest_first_in_pages_found_by_name_or_alt(
     refused = await _problem(service.page(db, cursor="nonsense", q=None, only_missing_alt=False))
     assert (refused.code, refused.status) == ("kernel.invalid_request", 422)
 
+    huge = "99999999999999999999." + "0" * 31 + "1"
+    refused = await _problem(service.page(db, cursor=huge, q=None, only_missing_alt=False))
+    assert (refused.code, refused.status) == ("kernel.invalid_request", 422)
+
+
+def test_a_cursor_keeps_the_exact_microsecond_long_after_2038() -> None:
+    """CodeRabbit on #116: through a float, 2100's microseconds can come back one short."""
+    from datetime import UTC, datetime
+
+    at = datetime(2100, 6, 1, 12, 0, 0, 999_999, tzinfo=UTC)
+    row = MediaImage(id=uuid.UUID(int=5), created_at=at)
+
+    assert service._moment(service._cursor_of(row)) == at
+
 
 # --- hooks -----------------------------------------------------------------------------
 
@@ -338,6 +384,30 @@ async def test_export_lists_a_persons_uploads_and_erase_forgets_who_uploaded(
     await db.refresh(image)
     assert image.uploaded_by is None
     assert (await media_privacy.export_user_data(db, subject)) == {"images": []}
+
+
+async def test_an_export_lists_the_uploads_while_the_public_bucket_is_off(
+    db: AsyncSession, bucket: Bucket
+) -> None:
+    """CodeRabbit on #116: a missing public address mustn't stop the account's copy."""
+    person = await make_person(db)
+    image, _ = await service.upload(db, unique_image(), filename="mine.png", by=person)
+    await db.commit()
+    bucket.on = False
+
+    exported = await media_privacy.export_user_data(
+        db, privacy.Subject(user_id=person, email="x@example.test")
+    )
+
+    assert exported["images"] == [
+        {
+            "id": str(image.id),
+            "url": None,
+            "filename": "mine.png",
+            "alt": None,
+            "uploaded_at": image.created_at.isoformat(),
+        }
+    ]
 
 
 async def test_the_dashboard_asks_for_alt_text_and_the_public_bucket(

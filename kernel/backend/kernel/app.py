@@ -322,6 +322,8 @@ def assemble(
 MAX_ROUTE_BODY_BYTES = 64 * 1024 * 1024
 _BODY_METHODS = ("POST", "PUT", "PATCH")
 _PATH_PART = re.compile(r"\\{[a-z_][a-z0-9_]*\\}")
+#: A path's `{name}` part, for a sample request when two limits are compared.
+_SAMPLE_PART = re.compile(r"\{[a-z_][a-z0-9_]*\}")
 
 
 def _larger_bodies(
@@ -330,7 +332,7 @@ def _larger_bodies(
     """The limit a module's route takes over the site's MAX_BODY_BYTES while
     the module is on (its `__init__.py`'s BODY_LIMITS, decision 0054), by
     method and path. ValueError at the start for an entry the kernel can't keep."""
-    routes: list[tuple[str, str, re.Pattern[str], int]] = []
+    routes: list[tuple[str, str, re.Pattern[str], int, str]] = []
     for module in installed:
         for entry in module.body_limits:
             method, path, size = entry
@@ -346,15 +348,26 @@ def _larger_bodies(
             ):
                 raise ValueError(f"{where}: its limit is 1 to {MAX_ROUTE_BODY_BYTES:,} bytes.")
             shape = _PATH_PART.sub("[^/]+", re.escape(path))
-            routes.append(
-                (module.id, method, re.compile(f"/api/{re.escape(module.id)}{shape}"), size)
-            )
+            pattern = re.compile(f"/api/{re.escape(module.id)}{shape}")
+            # Which applied would hang on their order (CodeRabbit on #116): refuse
+            # two of one method whose paths can be one request's.
+            sample = f"/api/{module.id}" + _SAMPLE_PART.sub("x", path)
+            for owner, wanted, other, _size, other_path in routes:
+                if owner != module.id or wanted != method:
+                    continue
+                other_sample = f"/api/{module.id}" + _SAMPLE_PART.sub("x", other_path)
+                if other.fullmatch(sample) or pattern.fullmatch(other_sample):
+                    raise ValueError(
+                        f"{where} and {(method, other_path)!r} both match one request. "
+                        "Give each request one limit."
+                    )
+            routes.append((module.id, method, pattern, size, path))
 
     def larger(method: str, path: str) -> int | None:
         if not routes:
             return None
         on = modules_on()
-        for owner, wanted, pattern, size in routes:
+        for owner, wanted, pattern, size, _path in routes:
             if method == wanted and owner in on and pattern.fullmatch(path):
                 return size
         return None

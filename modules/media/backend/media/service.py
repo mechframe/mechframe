@@ -14,7 +14,7 @@ import re
 import unicodedata
 import uuid
 from collections.abc import Sequence
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import sqlalchemy as sa
@@ -120,6 +120,25 @@ async def _delete(stored: Sequence[str]) -> None:
             continue
 
 
+def until_committed(db: AsyncSession, stored: Sequence[str]) -> None:
+    """Deletes the files `stored` wrote if the session's transaction rolls back
+    instead of committing: no file outlives the row that would have named it."""
+    made = list(stored)
+    if not made:
+        return
+    state = {"committed": False}
+
+    def committed(_: Any) -> None:
+        state["committed"] = True
+
+    def rolled_back(_: Any) -> None:
+        if not state["committed"]:
+            asyncio.get_running_loop().create_task(_delete(made))
+
+    sa.event.listen(db.sync_session, "after_commit", committed, once=True)
+    sa.event.listen(db.sync_session, "after_rollback", rolled_back, once=True)
+
+
 def after_commit(db: AsyncSession, stored: Sequence[str]) -> None:
     """Deletes `stored` once the session's transaction commits."""
     gone = list(stored)
@@ -159,21 +178,41 @@ def missing_alt() -> sa.ColumnElement[bool]:
     )
 
 
+_EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
+_MICRO = timedelta(microseconds=1)
+
+
+def _bad_cursor() -> Problem:
+    return Problem(
+        "kernel.invalid_request",
+        422,
+        "That page doesn't follow on from a list of the library.",
+        errors={"cursor": ["Use the next_cursor a page gave."]},
+    )
+
+
 def _cursor_of(image: MediaImage) -> str:
-    micros = int(image.created_at.timestamp() * 1_000_000)
+    # Whole microseconds, never through a float, which loses one past 2038 (CodeRabbit on #116).
+    micros = (image.created_at - _EPOCH) // _MICRO
     return f"{micros}.{image.id.hex}"
 
 
-def _after(cursor: str) -> sa.ColumnElement[bool]:
+def _moment(cursor: str) -> datetime:
+    """The instant a cursor names; 422 for one no page gave."""
     matched = _CURSOR.fullmatch(cursor)
     if matched is None:
-        raise Problem(
-            "kernel.invalid_request",
-            422,
-            "That page doesn't follow on from a list of the library.",
-            errors={"cursor": ["Use the next_cursor a page gave."]},
-        )
-    at = datetime.fromtimestamp(int(matched[1]) / 1_000_000, UTC)
+        raise _bad_cursor()
+    try:
+        return _EPOCH + timedelta(microseconds=int(matched[1]))
+    except OverflowError:
+        raise _bad_cursor() from None
+
+
+def _after(cursor: str) -> sa.ColumnElement[bool]:
+    at = _moment(cursor)
+    matched = _CURSOR.fullmatch(cursor)
+    if matched is None:  # never: _moment checked it
+        raise _bad_cursor()
     after = uuid.UUID(hex=matched[2])
     return or_(
         MediaImage.created_at < at, sa.and_(MediaImage.created_at == at, MediaImage.id < after)
@@ -310,13 +349,9 @@ async def upload(
     except BaseException:
         await _delete(stored)
         raise
-    audit.record(
-        db,
-        "media.image.uploaded",
-        actor=by,
-        target=("media.image", image.id),
-        details={"filename": image.filename},
-    )
+    # Not the file's name: the audit log refuses some of what a name may hold (CodeRabbit on #116).
+    audit.record(db, "media.image.uploaded", actor=by, target=("media.image", image.id))
+    until_committed(db, stored)
     return image, True
 
 
@@ -360,6 +395,7 @@ async def replace(
         await _delete(stored)
         raise
     audit.record(db, "media.image.replaced", actor=by, target=("media.image", image.id))
+    until_committed(db, stored)
     after_commit(db, old)
     return image
 

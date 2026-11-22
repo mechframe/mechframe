@@ -32,7 +32,12 @@ async def _shown(db: AsyncSession, image: Any, *, uses: bool = False) -> dict[st
     return service.as_answer(image, named, placed)
 
 
-@router.post("/admin/images", response_model=Image, status_code=201)
+@router.post(
+    "/admin/images",
+    response_model=Image,
+    status_code=201,
+    responses={200: {"model": Image, "description": "The same image, already in the library"}},
+)
 async def upload_image(
     file: Annotated[UploadFile, File()],
     user: Any = Depends(UPLOAD),

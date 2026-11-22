@@ -414,6 +414,17 @@ def test_the_pixels_are_converted_by_the_images_own_profile():
     assert blue < 60
 
 
+def test_a_palette_png_with_a_profile_is_converted_before_the_profile_goes() -> None:
+    """CodeRabbit on #116: a palette's colours are in its profile's space too."""
+    palette = Image.new("RGB", (32, 32), (255, 0, 0)).convert("P", palette=Image.Palette.ADAPTIVE)
+    upload = encoded(palette, "PNG", icc_profile=_red_and_green_swapped())
+
+    red, green, _ = opened(pictures.prepare(upload).data).convert("RGB").getpixel((16, 16))
+
+    assert green > 200
+    assert red < 60
+
+
 def test_a_see_through_colour_survives_the_colour_profile():
     """A PNG can mark one colour see-through instead of carrying alpha. The
     conversion to sRGB makes a new image, which must keep that."""

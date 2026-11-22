@@ -7,9 +7,18 @@ from __future__ import annotations
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from kernel import privacy
+from kernel import Problem, privacy
 from media import service
 from media.models import MediaImage
+
+
+def _address(row: MediaImage) -> str | None:
+    """The image's address, or None while the public bucket is off: the copy
+    of a person's data never waits on it (CodeRabbit on #116)."""
+    try:
+        return service.url(row)
+    except Problem:
+        return None
 
 
 async def export_user_data(db: AsyncSession, subject: privacy.Subject) -> privacy.Exported:
@@ -22,7 +31,7 @@ async def export_user_data(db: AsyncSession, subject: privacy.Subject) -> privac
         "images": [
             {
                 "id": str(row.id),
-                "url": service.url(row),
+                "url": _address(row),
                 "filename": row.filename,
                 "alt": row.alt,
                 "uploaded_at": row.created_at.isoformat(),

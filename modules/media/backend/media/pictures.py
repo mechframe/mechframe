@@ -273,6 +273,10 @@ def _in_srgb(image: Image.Image) -> Image.Image:
     with the rest of its metadata when it is encoded. CMYK, a print format,
     always comes out in RGB."""
     profile = image.info.get("icc_profile")
+    if profile and image.mode == "P":
+        # A palette's colours are in its profile's space too: as colour first,
+        # keeping what's see-through (CodeRabbit on #116).
+        image = image.convert("RGBA" if "transparency" in image.info else "RGB")
     if profile and image.mode in ("RGB", "RGBA", "CMYK"):
         if image.mode == "RGB" and "transparency" in image.info:
             # A see-through colour lives in `info`, which the converted image
