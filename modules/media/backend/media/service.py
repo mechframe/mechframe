@@ -120,35 +120,44 @@ async def _delete(stored: Sequence[str]) -> None:
             continue
 
 
-def until_committed(db: AsyncSession, stored: Sequence[str]) -> None:
-    """Deletes the files `stored` wrote if the session's transaction rolls back
-    instead of committing: no file outlives the row that would have named it."""
-    made = list(stored)
-    if not made:
+def _when_done(
+    db: AsyncSession, *, if_committed: Sequence[str] = (), if_not: Sequence[str] = ()
+) -> None:
+    """Deletes `if_committed` once the session's outer transaction commits, or
+    `if_not` once it ends any other way: a rollback, or a close with none
+    (the kernel's get_db). A savepoint's release fires after_commit too, so
+    only the outer transaction's end decides (CodeRabbit on #116)."""
+    if not (if_committed or if_not):
         return
-    state = {"committed": False}
+    state = {"committed": False, "done": False}
 
     def committed(_: Any) -> None:
         state["committed"] = True
 
-    def rolled_back(_: Any) -> None:
-        if not state["committed"]:
-            asyncio.get_running_loop().create_task(_delete(made))
+    def ended(_: Any, transaction: Any) -> None:
+        if state["done"]:
+            return
+        if transaction.nested or transaction.parent is not None:
+            state["committed"] = False  # a savepoint's own release, not the commit
+            return
+        state["done"] = True
+        gone = list(if_committed if state["committed"] else if_not)
+        if gone:
+            asyncio.get_running_loop().create_task(_delete(gone))
 
-    sa.event.listen(db.sync_session, "after_commit", committed, once=True)
-    sa.event.listen(db.sync_session, "after_rollback", rolled_back, once=True)
+    sa.event.listen(db.sync_session, "after_commit", committed)
+    sa.event.listen(db.sync_session, "after_transaction_end", ended)
+
+
+def until_committed(db: AsyncSession, stored: Sequence[str]) -> None:
+    """Deletes the files `stored` wrote unless the outer transaction commits:
+    no file outlives the row that would have named it."""
+    _when_done(db, if_not=stored)
 
 
 def after_commit(db: AsyncSession, stored: Sequence[str]) -> None:
-    """Deletes `stored` once the session's transaction commits."""
-    gone = list(stored)
-    if not gone:
-        return
-
-    def committed(_: Any) -> None:
-        asyncio.get_running_loop().create_task(_delete(gone))
-
-    sa.event.listen(db.sync_session, "after_commit", committed, once=True)
+    """Deletes `stored` once the outer transaction commits, and keeps them otherwise."""
+    _when_done(db, if_committed=stored)
 
 
 # --- reading ---------------------------------------------------------------------------
@@ -349,9 +358,9 @@ async def upload(
     except BaseException:
         await _delete(stored)
         raise
+    until_committed(db, stored)  # before anything else can fail (CodeRabbit on #116)
     # Not the file's name: the audit log refuses some of what a name may hold (CodeRabbit on #116).
     audit.record(db, "media.image.uploaded", actor=by, target=("media.image", image.id))
-    until_committed(db, stored)
     return image, True
 
 
@@ -380,6 +389,7 @@ async def replace(
         )
     old = keys(image)
     stored = await put_files(image.id, image.file_version + 1, prepared)
+    until_committed(db, stored)  # before anything else can fail (CodeRabbit on #116)
     try:
         image.file_version += 1
         image.version += 1
@@ -395,7 +405,6 @@ async def replace(
         await _delete(stored)
         raise
     audit.record(db, "media.image.replaced", actor=by, target=("media.image", image.id))
-    until_committed(db, stored)
     after_commit(db, old)
     return image
 

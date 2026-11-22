@@ -280,18 +280,57 @@ def test_a_body_limit_the_kernel_cant_keep_is_refused_at_the_start(
     assert says in str(refused.value)
 
 
-def test_two_body_limits_that_can_match_one_route_are_refused_at_the_start(
+def _routes_module(
+    limits: tuple[tuple[str, str, int], ...], *paths: tuple[str, str]
+) -> InstalledModule:
+    router = APIRouter()
+    for method, path in paths:
+
+        async def take(body: dict[str, str]) -> dict[str, int]:
+            return {"keys": len(body)}
+
+        router.add_api_route(path, take, methods=[method], dependencies=[Depends(public)])
+    return InstalledModule(manifest("probe"), router=router, body_limits=limits)
+
+
+@pytest.mark.parametrize(
+    ("first", "second"),
+    [
+        ("/items/{item_id}", "/items/import"),
+        ("/items/{item_id}/edit", "/items/special/{action}"),
+    ],
+)
+def test_two_body_limits_that_can_match_one_request_are_refused_at_the_start(
+    app_factory: AppFactory, first: str, second: str
+) -> None:
+    """CodeRabbit on #116: which applied hung on their order. Compared segment by segment."""
+    limits = (("POST", first, 4096), ("POST", second, 8192))
+    with pytest.raises(ValueError, match="BODY_LIMITS") as refused:
+        app_factory([_routes_module(limits, ("POST", first), ("POST", second))])
+    assert "both match" in str(refused.value)
+
+
+def test_body_limits_that_dont_meet_are_taken(app_factory: AppFactory) -> None:
+    paths = (
+        ("POST", "/items/{item_id}"),
+        ("PUT", "/items/import"),
+        ("POST", "/items/{item_id}/edit"),
+    )
+    limits = (
+        ("POST", "/items/{item_id}", 4096),
+        ("PUT", "/items/import", 8192),
+        ("POST", "/items/{item_id}/edit", 8192),
+    )
+    app_factory([_routes_module(limits, *paths)])
+
+
+def test_a_body_limit_for_a_route_the_module_doesnt_serve_is_refused_at_the_start(
     app_factory: AppFactory,
 ) -> None:
-    """CodeRabbit on #116: which applied hung on their order."""
-    limits = (("POST", "/items/{item_id}", 4096), ("POST", "/items/import", 8192))
+    """CodeRabbit on #116: it raised the limit for a request nothing answers."""
     with pytest.raises(ValueError, match="BODY_LIMITS") as refused:
-        app_factory([_uploading_module(limits)])
-    assert "both match" in str(refused.value)
-    # The same paths under different methods don't meet.
-    app_factory(
-        [_uploading_module((("POST", "/items/{item_id}", 4096), ("PUT", "/items/import", 8192)))]
-    )
+        app_factory([_routes_module((("POST", "/uploads", 4096),), ("POST", "/echo"))])
+    assert "names no route" in str(refused.value)
 
 
 def test_the_kernels_permissions_match_its_manifest() -> None:

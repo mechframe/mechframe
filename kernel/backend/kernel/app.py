@@ -322,8 +322,25 @@ def assemble(
 MAX_ROUTE_BODY_BYTES = 64 * 1024 * 1024
 _BODY_METHODS = ("POST", "PUT", "PATCH")
 _PATH_PART = re.compile(r"\\{[a-z_][a-z0-9_]*\\}")
-#: A path's `{name}` part, for a sample request when two limits are compared.
-_SAMPLE_PART = re.compile(r"\{[a-z_][a-z0-9_]*\}")
+
+
+def _served(module: InstalledModule) -> set[tuple[str, str]]:
+    """The (method, path) of each route the module's router serves, as declared."""
+    found: set[tuple[str, str]] = set()
+    for route in getattr(module.router, "routes", ()):
+        for method in getattr(route, "methods", None) or ():
+            found.add((method, getattr(route, "path", "")))
+    return found
+
+
+def _paths_meet(first: str, second: str) -> bool:
+    """Whether one request's path can match both route paths: the same number
+    of segments, each pair equal, or either a `{name}` (one whole segment).
+    A segment holding a `{name}` among other text is taken to meet any."""
+    one, two = first.strip("/").split("/"), second.strip("/").split("/")
+    if len(one) != len(two):
+        return False
+    return all(a == b or "{" in a or "{" in b for a, b in zip(one, two, strict=True))
 
 
 def _larger_bodies(
@@ -347,16 +364,18 @@ def _larger_bodies(
                 or not 0 < size <= MAX_ROUTE_BODY_BYTES
             ):
                 raise ValueError(f"{where}: its limit is 1 to {MAX_ROUTE_BODY_BYTES:,} bytes.")
+            served = _served(module)
+            if (method, path) not in served:
+                raise ValueError(
+                    f"{where}: it names no route {module.id} serves, so it would raise the limit "
+                    "for a request nothing answers (CodeRabbit on #116)."
+                )
             shape = _PATH_PART.sub("[^/]+", re.escape(path))
             pattern = re.compile(f"/api/{re.escape(module.id)}{shape}")
-            # Which applied would hang on their order (CodeRabbit on #116): refuse
-            # two of one method whose paths can be one request's.
-            sample = f"/api/{module.id}" + _SAMPLE_PART.sub("x", path)
-            for owner, wanted, other, _size, other_path in routes:
-                if owner != module.id or wanted != method:
-                    continue
-                other_sample = f"/api/{module.id}" + _SAMPLE_PART.sub("x", other_path)
-                if other.fullmatch(sample) or pattern.fullmatch(other_sample):
+            # Which applied would hang on their order (CodeRabbit on #116): refuse two
+            # of one method whose paths can be one request's, segment by segment.
+            for owner, wanted, _other, _size, other_path in routes:
+                if owner == module.id and wanted == method and _paths_meet(path, other_path):
                     raise ValueError(
                         f"{where} and {(method, other_path)!r} both match one request. "
                         "Give each request one limit."

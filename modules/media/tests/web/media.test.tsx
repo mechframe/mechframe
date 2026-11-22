@@ -334,6 +334,42 @@ describe("unsaved alt text (CodeRabbit on #116)", () => {
     expect(await sent.find((request) => request.method === "PATCH")?.json()).toEqual({ version: 1, alt: "Mine", decorative: false });
   });
 
+  it("holds the form while a save or a replace is under way, so nothing typed meanwhile is lost", async () => {
+    let answer: (value: Answer) => void = () => undefined;
+    const waiting = () =>
+      new Promise<Answer>((resolve) => {
+        answer = resolve;
+      });
+    routed({
+      [LIST]: { status: 200, body: { items: [DOOR], next_cursor: null, missing_alt: 1 } },
+      [`GET /api/media/admin/images/${DOOR.id}`]: { status: 200, body: { ...DOOR, uses: [] } },
+      [`PATCH /api/media/admin/images/${DOOR.id}`]: waiting,
+      [`PUT /api/media/admin/images/${DOOR.id}/file`]: waiting,
+    });
+    renderWithKernel(<AdminMedia />, { path: "/admin/media", session: staff });
+    await userEvent.click(await screen.findByRole("button", { name: /door\.png/ }));
+    const alt = await screen.findByRole("textbox", { name: /Alt text/ });
+    await userEvent.type(alt, "A red door");
+
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByRole("button", { name: "Saving…" })).toBeDisabled();
+    expect(alt).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Replace" })).toBeDisabled();
+    answer({ status: 200, body: { ...DOOR, alt: "A red door", version: 2, uses: [] } });
+    expect(await screen.findByText("Saved.")).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: /Alt text/ })).toBeEnabled();
+
+    await userEvent.upload(screen.getByLabelText("Replace the file"), new File([new Uint8Array(64)], "new.png", { type: "image/png" }));
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Replace" })).toBeDisabled();
+    });
+    expect(screen.getByRole("textbox", { name: /Alt text/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Delete" })).toBeDisabled();
+    answer({ status: 200, body: { ...DOOR, alt: "A red door", version: 3, uses: [] } });
+    expect(await screen.findByText(/Replaced: every page that places it/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Replace" })).toBeEnabled();
+  });
+
   it("keeps the file inputs out of the tab order, named for what they do", async () => {
     routed({ [LIST]: { status: 200, body: { items: [], next_cursor: null, missing_alt: 0 } } });
     renderWithKernel(<ImagePicker title="Choose" onPick={vi.fn()} onClose={vi.fn()} />, { session: staff });

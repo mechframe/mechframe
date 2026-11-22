@@ -15,7 +15,7 @@ from media.seed import _NAMESPACE, IMAGES
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from kernel import Problem, load_module, privacy
+from kernel import Database, Problem, load_module, privacy
 from kernel import seed as seeding
 
 from ..conftest import Bucket, make_person, unique_image
@@ -121,6 +121,60 @@ async def test_a_rolled_back_upload_or_replace_takes_its_new_files_back(
     await db.rollback()
     await _settled()
     assert bucket.under(f"media/{kept_id}/") == before  # the old version's files stay
+
+
+async def test_an_upload_whose_audit_entry_fails_takes_its_files_back(
+    db: AsyncSession, bucket: Bucket, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def broken(*_: object, **__: object) -> None:
+        raise RuntimeError("the audit log refused it")
+
+    monkeypatch.setattr(service.audit, "record", broken)
+    with pytest.raises(RuntimeError):
+        await service.upload(db, unique_image(), filename="a.png", by=None)
+    await db.rollback()
+    await _settled()
+
+    assert bucket.files == {}
+
+
+async def test_a_session_closed_without_a_commit_takes_its_new_files_back(
+    database: Database, bucket: Bucket
+) -> None:
+    """The kernel's get_db closes the session; no rollback is called."""
+    async with database.sessions() as session:
+        image, _ = await service.upload(session, unique_image(), filename="a.png", by=None)
+        image_id = image.id
+    await _settled()
+
+    assert bucket.under(f"media/{image_id}/") == []
+
+
+async def test_a_savepoint_in_the_same_transaction_isnt_its_commit(
+    db: AsyncSession, bucket: Bucket
+) -> None:
+    """Each upload's insert is a savepoint, whose release fires after_commit."""
+    kept, _ = await service.upload(db, unique_image(size=(600, 400)), filename="kept.png", by=None)
+    await db.commit()
+    kept_id = kept.id
+    await _settled()
+    before = bucket.under(f"media/{kept_id}/")
+
+    first, _ = await service.upload(db, unique_image(), filename="first.png", by=None)
+    first_id = first.id
+    await service.replace(db, kept_id, unique_image(size=(600, 400)), filename="new.png", by=None)
+    second, _ = await service.upload(db, unique_image(), filename="second.png", by=None)
+    second_id = second.id
+    await _settled()
+    assert set(before) <= set(bucket.files)  # the old files wait for the outer commit
+    await db.rollback()
+    await _settled()
+
+    assert bucket.under(f"media/{first_id}/") == []
+    assert bucket.under(f"media/{second_id}/") == []
+    assert (
+        bucket.under(f"media/{kept_id}/") == before
+    )  # the replace's old files stay, its new ones go
 
 
 async def test_with_the_public_bucket_off_an_upload_is_503(
