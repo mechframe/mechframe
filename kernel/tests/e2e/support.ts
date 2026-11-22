@@ -52,12 +52,13 @@ export async function signInTo(page: Page, user: Made, next: string): Promise<vo
   await expect(page).toHaveURL(new RegExp(`${next.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&")}$`));
 }
 
-/** The theme `name` on the page, once its fades have finished. */
+/** The theme `name` on the page, once its fades have finished. A fade cancelled meanwhile (React
+ * taking over from the server's copy, say) rejects `finished` with an AbortError: it's done too. */
 export async function theme(page: Page, name: string, canvas: string): Promise<void> {
   await page.evaluate(async (chosen) => {
     document.documentElement.dataset.theme = chosen;
     document.body.getBoundingClientRect();
-    await Promise.all(document.getAnimations().map((animation) => animation.finished));
+    await Promise.all(document.getAnimations().map((animation) => animation.finished.catch(() => undefined)));
   }, name);
   expect(await page.evaluate(() => getComputedStyle(document.documentElement).backgroundColor)).toBe(canvas);
 }

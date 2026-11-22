@@ -1,6 +1,6 @@
 # The UI kit
 
-Every part a kernel screen or a module's page is built from (K4 contract §4 item 4, change 15). `@/kernel` exports all of it. Use a part before writing a component of your own (SPEC 16).
+Every part a kernel screen or a module's page is built from (K4 contract Â§4 item 4, change 15). `@/kernel` exports all of it. Use a part before writing a component of your own (SPEC 16).
 
 The behavior is ported from VybeSite; the look is drawn from the Vibrant Mindz admin boards (VM Website `design/generators/admin_kit.py`, `design/theme/vibrant-mindz/shell-slots.md`) on the theme's tokens alone, so Machined Light draws the same parts in its own values. The styles are `kit.css`, in the `mf.kit` cascade layer after the frames' `mf.base`.
 
@@ -29,7 +29,8 @@ The behavior is ported from VybeSite; the look is drawn from the Vibrant Mindz a
 | `Icon`, `ICON_NAMES` | The kit's icon set; `IconName` is one of its names |
 | `QrCode` | A value as a QR code for a phone's camera (uqr's grid, one SVG path): dark on light in every theme, named by its `label`, with what it holds shown beside it as words |
 | `MarkdownEditor` | Someone's Markdown (decision 0055; VM Website `AdminPost.dc.html`): Write and Preview tabs over one text, Bold, Italic, Heading, Quote and Link, Ctrl B and Ctrl I, and a module's own `tools` after them. Preview asks the module's route for the HTML `kernel.markdown.render` makes, so it shows what the page will. A button's change is typed in, so Ctrl Z takes it back |
-| `Prose` | The server's cleaned HTML of someone's Markdown, in the theme's type; a link to a page here moves inside the app |
+| `Prose` | The server's cleaned HTML of someone's Markdown, in the theme's type; a link to a page here moves inside the app; a lone link a `prose.embed` player claims drawn as that player (decision 0060) |
+| `TextPartsContext` | What the kernel and the modules on add to every editor (`editor.tools`) and every `Prose` (`prose.embed`), filled by `mountApp` (decision 0060); empty by default, so the kit works alone |
 | `SearchBox` | A search: one 38px box, the magnifier inside, the label as its placeholder and its name; its edge a field's, the admin's ring round the box |
 | `SearchFields` | Search and sharing: the title in search results and the description, each showing what an empty one becomes |
 

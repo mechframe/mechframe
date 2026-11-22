@@ -2,7 +2,7 @@
 
 Session prompts and working plans, the owner's convention across `C:\DEV`. Each session ends with two starting prompts saved here (`CLAUDE.md`, "Two lanes", since 2026-11-22): `<date>-next-session-<topic>.md` for the main lane and `<date>-side-lane-<topic>.md` for the side lane, in a worktree. When a prompt's session is done, it moves to `done/`, so the ones left here are the jobs. Durable decisions go in `docs/decisions/`, not here.
 
-`2026-11-22-media-round-2.md` is the ten ways Admin › Media still differs from its board, sent by VM Website with the owner's OK, with the owner's line-height choice: the main lane's next job.
+`2026-11-22-media-round-3.md` is the two ways Admin › Media still differs from its board after round 2 (#126; round 2's queue and result are in `done/`), sent by VM Website Dev 10 with the owner's OK: the main lane's job after landing #129. The jobs now are `2026-11-22-next-session-m4-contact-round3-ai.md` (the main lane) and `2026-11-22-side-lane-m5-embeds-campaigns.md` (the side lane).
 
 `progress-ledger/` is the source of the visual progress ledger, https://claude.ai/artifact/48auLkb7Ajmyn2SNAni9rm: its page (`index.html`) and the rows `python -m tools.progress` makes from `docs/progress.json` (`rows.json`); its README says how to republish it.
 
@@ -43,6 +43,7 @@ Session prompts and working plans, the owner's convention across `C:\DEV`. Each 
 | `contracts/pages.md` | The pages module: Markdown pages, their addresses and moves, the header's and footer's menus through link slots a module loads (decision 0056); approved 2026-11-21 with the owner's four answers (the kernel's editor in #118, the module in #121) |
 | `contracts/blog.md` | The blog module: posts, the kernel's AI writing help, generated covers and social posting, in four PRs; approved 2026-11-22 for the first (#123, with decision 0057), §8 saying what's still to ask and §9 what changed as it was built |
 | `contracts/contact.md` | The contact module: the `/contact` form and the admin's Inbox, held messages set apart as spam, a notice to the Inbox's readers (decision 0059's `notify_holders`) and a newsletter sign-up for `campaigns`; approved 2026-11-22 as recommended |
+| `contracts/embeds.md` | The embeds module: players from a pasted link behind a consent facade, the editor's Embed button and the YouTube playlist player, through two new kit slots, `editor.tools` (which the AI's buttons use too) and `prose.embed` (decision 0060); approved 2026-11-22 as recommended |
 | `contracts/campaigns.md` | The campaigns module: the newsletter and release announcements, sign-ups confirmed by email, sends in batches through the kernel's mail queue with one-click unsubscribe, bounces and complaints set aside, and `email.queue_message` public (decision 0062); draft, waiting for the owner |
 | `contracts/mechframe-upgrade.md` | M3's `mechframe upgrade kernel`: a site takes the kernel's changes from a Git ref, three ways against its lock, whole or not at all, with diffs for an agent where both sides changed; approved 2026-11-21 as recommended, built in #111 (decision 0053) |
 | `contracts/hooks.md` | Decision 0018's ten contract hooks (decision 0052): content lifecycle, taxonomy, search index, seed data, bot check, consent, export and erase, dashboard cards, entitlements and profile tabs; one PR each from #97; draft, waiting for the owner |

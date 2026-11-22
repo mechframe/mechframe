@@ -11,6 +11,8 @@ export type InboxMessage = components["schemas"]["InboxMessage"];
 export type InboxPage = components["schemas"]["InboxPage"];
 export type ContactForm = components["schemas"]["ContactForm"];
 export type NewMessage = components["schemas"]["NewContactMessage"];
+export type Topic = components["schemas"]["ContactTopic"];
+export type Received = components["schemas"]["MessageReceived"];
 export type Status = InboxItem["status"];
 export type Tab = "all" | Status;
 

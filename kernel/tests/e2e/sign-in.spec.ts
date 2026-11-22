@@ -367,7 +367,7 @@ async function theme(page: Page, name: string, canvas: string): Promise<void> {
   await page.evaluate(async (chosen) => {
     document.documentElement.dataset.theme = chosen;
     document.body.getBoundingClientRect();
-    await Promise.all(document.getAnimations().map((animation) => animation.finished));
+    await Promise.all(document.getAnimations().map((animation) => animation.finished.catch(() => undefined)));
   }, name);
   expect(await page.evaluate(() => getComputedStyle(document.documentElement).backgroundColor)).toBe(canvas);
 }
