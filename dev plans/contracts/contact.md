@@ -1,8 +1,8 @@
 ---
 feature: The contact module, the site's contact form and the admin's Inbox (Vibrant Mindz step 1; M5's first job)
-status: draft (four questions for the owner in §8, each with its recommendation)
+status: approved
 plan: `docs/plans/vibrant-mindz-backend/extraction/contact.md`; `dev plans/2026-11-21-vibrant-mindz-push-plan.md` (M5); the site's Contact board and the canvas's AdminInbox board (`C:\DEV\VM Website\design\site\Contact.dc.html`, `AdminInbox.dc.html`); `C:\DEV\VM Website\design\specs\site-pages.md` (Contact's row)
-approved: not yet
+approved: 2026-11-22, all four of §8 as recommended (the owner: "Yes, as recommended")
 pr: one, after `blog`'s first (#123 predicted), numbered at push time
 ---
 
@@ -40,7 +40,7 @@ A visitor writes to the site from `/contact`: name, email, what it's about (a bo
 
 **Hooks:** bot check (`contact.message`); export and erase (`privacy.py`: a person's messages found by address or account; erase deletes them); seed (one message in each status and one held, `@example.com` senders, fixed ids); dashboard `ATTENTION` `contact.waiting`, while any message is new: "n new messages are waiting", the oldest's wait in its why, Open the first. It's `info`, then `warning` once the oldest has waited 2 days. No lifecycle, taxonomy, search or consent: messages aren't public.
 
-**The kernel's addition** (decision 0059 in this PR, if §8's 1 goes as recommended): `notifications.notify_holders(db, permission, key, context, *, link=None) -> int`. It gives the notice to every active account holding `permission`, by role or by override, each as that person chose for `key`, and answers how many got it. Comments, campaigns and the shop will need it too.
+**The kernel's addition** (decision 0059, in this PR; §8, 1): `notifications.notify_holders(db, permission, key, context, *, link=None) -> list[uuid.UUID]`. It gives the notice to every active account holding `permission`, by the owner's role or a role that grants it, each once and as that person chose for `key`, and answers the people it reached. Comments, campaigns and the shop will need it too.
 
 ## 3. Data
 
@@ -96,7 +96,7 @@ Also `schema/events/contact.news_requested.v1.schema.json`. The kernel's additio
 
 **Notices and events:**
 - Each holder gets the notice. Someone without the permission gets none, and so does a held message.
-- The kernel's `notify_holders` follows roles and overrides, both ways, and skips suspended accounts.
+- The kernel's `notify_holders` reaches the owner's role and a granting role, each person once, and skips other roles and suspended accounts.
 - `news_requested` goes only for `wants_news` and a message that wasn't held, or on its release.
 
 **The rest:**
@@ -105,12 +105,15 @@ Also `schema/events/contact.news_requested.v1.schema.json`. The kernel's additio
 - **Web:** `/contact` (empty, with field errors, sent, and Send another) and the Inbox (each tab, a message open, an empty tab), in both themes and axe clean. `ContactForm` works through `@/modules/contact/public`.
 - `validate_schemas`, `module-contract-lint` and the brand check pass. `mechframe add contact`, then `mechframe check`, passes on a new site.
 
-## 8. Open questions for the owner
+## 8. The owner's answers
 
-1. **Who is told about a new message?** Recommended: everyone who may read the Inbox gets a notice in the site and by email, and each can turn the email off. The notice names the topic and the sender, and the message itself stays on the site. That needs the kernel's `notify_holders` (decision 0059). The other way is VybeSite's: one address typed in Settings gets each message in full, its Reply-To set to the sender.
-2. **Who may read the Inbox?** Recommended: owner and admin, since every message holds someone's address. VybeSite lets editors read it as well.
-3. **How long are messages kept?** Recommended:
-   - spam is deleted after 30 days;
-   - every other message is deleted 2 years after its last change;
-   - a Delete button, which isn't on the board, for a sender who asks to be forgotten. The kernel's erase reaches only people with accounts.
-4. **Vibrant Mindz's topics:** the board has Booking a show, Press and interviews, Commissioning artwork, Licensing a beat and Something else, with bookings and commissions first. `site-pages.md` calls them suggestions. Keep them, or change them? They're set in Settings, so this needn't hold up the build.
+Answered 2026-11-22, all four as recommended:
+
+1. **Who is told about a new message:** everyone who may read the Inbox, by a notice in the site and by email (each can turn the email off), naming the topic and the sender; the message stays on the site. Through the kernel's `notify_holders` (decision 0059). Not VybeSite's one address.
+2. **Who may read the Inbox:** owner and admin (`contact.message.manage`), since every message holds someone's address. Not editors.
+3. **How long messages are kept:** spam is deleted after 30 days, every other message 2 years after its last change (`contact.prune`, daily), and the Inbox has a Delete button, not drawn on the board, for a sender who asks to be forgotten.
+4. **Vibrant Mindz's topics:** the board's five, Booking a show, Press and interviews, Commissioning artwork, Licensing a beat and Something else, with Booking a show and Commissioning artwork marked First. They're the site's to set in Settings → Contact form (or its own seed); the module's defaults stay generic.
+
+## Changes after approval
+
+- 2026-11-22: `notify_holders` holds by role alone, and answers the people it reached rather than a count. Overrides are per resource (SPEC 14.8), and a notice about the site as a whole has none (decision 0059).

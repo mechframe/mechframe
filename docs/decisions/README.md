@@ -63,3 +63,4 @@ One short record per decision, numbered, written when the decision is made (`C:\
 | [0054](0054-route-body-limits.md) | A module's routes may take a larger body than MAX_BODY_BYTES (`BODY_LIMITS`), at most 64 MB, while it's on | Decided; applied with the media module |
 | [0055](0055-markdown-editor.md) | The kernel makes Markdown into HTML, and the kit has its editor (`MarkdownEditor`, `Prose`, `SearchFields`) | Decided; applied in #118 |
 | [0056](0056-loaded-links-and-the-footer-menu.md) | A link slot's entries may be loaded from a module's API (`defineModule`'s `links`), and the footer has a menu, `nav.footer` | Decided; applied with the pages module (#121) |
+| [0059](0059-notify-holders.md) | A notice to everyone who holds a permission, `notifications.notify_holders` (0057 and 0058 are blog's) | Decided; applied with the contact module |
