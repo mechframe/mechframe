@@ -68,34 +68,58 @@ export function VideoPlaylist({ items, autoplay = true, onPlay, ref, label = "Vi
     const id = youtubeId(item.url);
     return id ? [{ ...item, id }] : [];
   });
+  const ids = videos.map((video) => video.id);
   const media = useConsent("media");
   const [current, setCurrent] = useState(0);
   const [started, setStarted] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [rolling, setRolling] = useState(autoplay);
   const [failed, setFailed] = useState(false);
+  // The video the visitor asked for last, while it loads or plays (CodeRabbit on #127).
+  const [requested, setRequested] = useState<string | null>(null);
+  // Each time the player is stopped for good: the effect below lets it go.
+  const [stops, setStops] = useState(0);
   const stage = useRef<HTMLDivElement>(null);
   const player = useRef<YouTubePlayer | null>(null);
   // Whether the player has said onReady: it takes no call before (CodeRabbit on #127).
   const ready = useRef(false);
-  // The video asked for last, loaded once the player is there and ready; null once it's gone (Codex on #127).
+  // `requested`, for the player's events and the API's answer, which come after a render (Codex on #127).
   const wanted = useRef<string | null>(null);
-  // The selection, kept within a list that shrinks, and kept there if it grows again (CodeRabbit on #127).
-  const at = Math.min(current, Math.max(videos.length - 1, 0));
-  if (videos.length > 0 && current !== at) setCurrent(at);
-  // Counts the player's teardowns: a load begun before one is forgotten when it answers (CodeRabbit on #127).
+  // Counts the player's stops: a load begun before one is forgotten when it answers (CodeRabbit on #127).
   const attempt = useRef(0);
+
+  // The selection: the video asked for, wherever a changing list puts it; else
+  // kept within a list that shrinks, and kept there if it grows again (CodeRabbit on #127).
+  const playingAt = requested === null ? -1 : ids.indexOf(requested);
+  const at = playingAt !== -1 ? playingAt : Math.min(current, Math.max(videos.length - 1, 0));
+  if (videos.length > 0 && current !== at) setCurrent(at);
   // Playing needs both: a visitor's Play, and media still granted.
   const live = started && media.granted;
   // What the player's events read when they come, after this render.
-  const now = useRef({ at, rolling, onPlay, ids: videos.map((video) => video.id) });
+  const now = useRef({ at, rolling, onPlay, ids });
   useEffect(() => {
-    now.current = { at, rolling, onPlay, ids: videos.map((video) => video.id) };
+    now.current = { at, rolling, onPlay, ids };
   });
+
+  const want = (id: string) => {
+    wanted.current = id;
+    setRequested(id);
+  };
+  const stop = () => {
+    setStarted(false);
+    setPlaying(false);
+    setRequested(null);
+    setStops((count) => count + 1);
+  };
 
   useImperativeHandle(ref, () => ({
     pause: () => {
-      player.current?.pauseVideo();
+      if (player.current) {
+        player.current.pauseVideo();
+        return;
+      }
+      // A video still loading doesn't start: back to the facade (CodeRabbit on #127).
+      if (started) stop();
     },
   }));
 
@@ -107,29 +131,29 @@ export function VideoPlaylist({ items, autoplay = true, onPlay, ref, label = "Vi
     [],
   );
 
-  // Media withdrawn, here or in another tab, or no video left to play: the
-  // player goes, a load on its way makes none, and the facade is back, so a
-  // grant made elsewhere starts nothing here (Codex and CodeRabbit on #127).
-  const gone = !media.granted || videos.length === 0;
-  // Back to the facade the render it goes: React's way to adjust state when what it's given changes.
+  // Media withdrawn, here or in another tab, no video left, or the one asked
+  // for gone from the list: back to the facade in this render, the player let
+  // go, and a load on its way makes none, so a grant made elsewhere starts
+  // nothing here (Codex and CodeRabbit on #127). React's way to adjust state
+  // when what it's given changes.
+  const gone = !media.granted || videos.length === 0 || (requested !== null && playingAt === -1);
   const [wasGone, setWasGone] = useState(gone);
   if (gone !== wasGone) {
     setWasGone(gone);
     if (gone) {
-      setStarted(false);
-      setPlaying(false);
       setFailed(false);
+      stop();
     }
   }
   useEffect(() => {
-    if (!gone) return;
+    if (stops === 0) return;
     attempt.current += 1;
     wanted.current = null;
     ready.current = false;
     player.current?.destroy();
     player.current = null;
     stage.current?.querySelector(".mf-playlist-frame")?.replaceChildren();
-  }, [gone]);
+  }, [stops]);
 
   const shown = videos[at];
   if (!shown) return null;
@@ -138,7 +162,7 @@ export function VideoPlaylist({ items, autoplay = true, onPlay, ref, label = "Vi
     const video = videos[index];
     if (!video) return;
     setCurrent(index);
-    wanted.current = video.id;
+    want(video.id);
     if (player.current) {
       if (ready.current) player.current.loadVideoById(video.id);
       return;
@@ -181,7 +205,7 @@ export function VideoPlaylist({ items, autoplay = true, onPlay, ref, label = "Vi
                 const id = now.current.ids[next];
                 if (now.current.rolling && id) {
                   setCurrent(next);
-                  wanted.current = id;
+                  want(id);
                   player.current?.loadVideoById(id);
                 }
               }

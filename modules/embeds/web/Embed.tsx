@@ -10,7 +10,7 @@
  * by itself (WCAG 1.4.2), except a YouTube player just after that click.
  * Its shape is a class, never a style, for the CSP.
  */
-import { Button, ConsentGate } from "@/kernel";
+import { Button, ConsentGate, useConsent } from "@/kernel";
 import { useState } from "react";
 
 import "./embeds.css";
@@ -51,6 +51,13 @@ function Facade({ found, words, onPlay }: { found: Found; words: string; onPlay:
 export function Embed({ link, words = "" }: EmbedProps) {
   // The link the visitor played: a link put in its place doesn't play by itself (CodeRabbit on #127).
   const [asked, setAsked] = useState<string | null>(null);
+  // A withdrawn grant forgets the Play, so a later grant doesn't start it (CodeRabbit on #127).
+  const { granted } = useConsent("media");
+  const [wasGranted, setWasGranted] = useState(granted);
+  if (granted !== wasGranted) {
+    setWasGranted(granted);
+    if (!granted) setAsked(null);
+  }
   const found = recognise(link);
   if (!found) {
     return (

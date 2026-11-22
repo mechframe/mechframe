@@ -283,15 +283,54 @@ describe("VideoPlaylist", () => {
     expect(FakePlayer.made).toHaveLength(2);
   });
 
-  it("keeps its selection within a list that shrinks (CodeRabbit on #127)", async () => {
+  it("keeps its selection within a list that shrinks, back at the facade once what played has gone (CodeRabbit on #127)", async () => {
     renderWithKernel(<Changing lists={{ "Just one": [{ url: "https://youtu.be/aaaaaaaaaaa", title: "First" }] }} />);
     await userEvent.click(row("Third"));
-    player().ready();
+    const third = player();
+    third.ready();
     await userEvent.click(screen.getByRole("button", { name: "Just one" }));
+    expect(third.destroyed).toBe(true);
     expect(row("First")).toHaveAttribute("aria-current", "true");
     expect(screen.getByText("First", { selector: ".mf-playlist-now" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Play First" })).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Next video" }));
-    expect(player().loaded).toEqual(["aaaaaaaaaaa"]);
+    expect(FakePlayer.made).toHaveLength(2);
+    expect(player().options.videoId).toBe("aaaaaaaaaaa");
+  });
+
+  it("makes no player for a video that left the list while YouTube's script loaded (CodeRabbit on #127)", async () => {
+    delete window.YT;
+    renderWithKernel(<Changing lists={{ "Just one": [{ url: "https://youtu.be/aaaaaaaaaaa", title: "First" }] }} />);
+    await userEvent.click(row("Third"));
+    await userEvent.click(screen.getByRole("button", { name: "Just one" }));
+    youTubeArrives();
+    await act(() => Promise.resolve());
+    expect(FakePlayer.made).toHaveLength(0);
+    expect(screen.getByRole("button", { name: "Play First" })).toBeInTheDocument();
+  });
+
+  it("keeps playing a video that's still in the list when the list changes around it (CodeRabbit on #127)", async () => {
+    const reordered = [ITEMS[3], ITEMS[0], ITEMS[2]].filter((item): item is PlaylistItem => item !== undefined);
+    renderWithKernel(<Changing lists={{ Reordered: reordered }} />);
+    await userEvent.click(row("Second"));
+    const second = player();
+    await userEvent.click(screen.getByRole("button", { name: "Reordered" }));
+    expect(second.destroyed).toBe(false);
+    expect(row("Second")).toHaveAttribute("aria-current", "true");
+  });
+
+  it("stops a video still loading when pause() is asked (CodeRabbit on #127)", async () => {
+    delete window.YT;
+    const handle = createRef<VideoPlaylistHandle>();
+    renderWithKernel(<VideoPlaylist items={ITEMS} ref={handle} />);
+    await userEvent.click(screen.getByRole("button", { name: "Play First" }));
+    act(() => {
+      handle.current?.pause();
+    });
+    youTubeArrives();
+    await act(() => Promise.resolve());
+    expect(FakePlayer.made).toHaveLength(0);
+    expect(screen.getByRole("button", { name: "Play First" })).toBeInTheDocument();
   });
 
   it("keeps the selection it was clamped to when the list grows again (CodeRabbit on #127)", async () => {

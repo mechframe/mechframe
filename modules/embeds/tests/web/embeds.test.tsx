@@ -6,7 +6,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { CONSENT_COOKIE, MarkdownEditor, Prose } from "@/kernel";
+import { CONSENT_COOKIE, MarkdownEditor, Prose, useConsent } from "@/kernel";
 import { renderWithKernel } from "@/kernel/testing";
 import { Embed } from "@/modules/embeds/public";
 
@@ -65,6 +65,35 @@ describe("Embed", () => {
     expect(screen.getByTitle("YouTube player: A video")).toHaveAttribute(
       "src",
       "https://www.youtube-nocookie.com/embed/zYxWvUtSrQp",
+    );
+  });
+
+  it("forgets a Play once media is withdrawn, so a later grant doesn't start it (CodeRabbit on #127)", async () => {
+    function Choices() {
+      const media = useConsent("media");
+      return (
+        <>
+          <button type="button" onClick={media.withdraw}>
+            Withdraw media
+          </button>
+          <button type="button" onClick={media.grant}>
+            Allow media
+          </button>
+        </>
+      );
+    }
+    renderWithKernel(
+      <>
+        <Embed link={VIDEO} words="A video" />
+        <Choices />
+      </>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Play: A video" }));
+    await userEvent.click(screen.getByRole("button", { name: "Withdraw media" }));
+    await userEvent.click(screen.getByRole("button", { name: "Allow media" }));
+    expect(screen.getByTitle("YouTube player: A video")).toHaveAttribute(
+      "src",
+      "https://www.youtube-nocookie.com/embed/aBcDeFgHiJk",
     );
   });
 

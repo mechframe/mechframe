@@ -60,6 +60,17 @@ describe("embedMarkdown", () => {
     );
   });
 
+  it("encodes a space beyond ASCII as its UTF-8 bytes (CodeRabbit on #127)", () => {
+    const nbsp = String.fromCharCode(0xa0);
+    expect(embedMarkdown(`https://example.net/a${nbsp}b`, "x")).toBe("[x](https://example.net/a%C2%A0b)");
+  });
+
+  it("puts words that cross a line break on one line, so the link stays one paragraph (CodeRabbit on #127)", () => {
+    expect(embedMarkdown("https://youtu.be/aBcDeFgHiJk", "First\n\n  Second\nThird")).toBe(
+      "[First Second Third](https://youtu.be/aBcDeFgHiJk)",
+    );
+  });
+
   it("encodes the brackets and spaces that would end the link", () => {
     expect(embedMarkdown("https://example.net/a (b)", "Elsewhere")).toBe("[Elsewhere](https://example.net/a%20%28b%29)");
   });

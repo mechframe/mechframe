@@ -184,8 +184,10 @@ export function wordsFor(found: Embed, text: string): string {
 export function embedMarkdown(href: string, words: string): string {
   const link = normalised(href).trim();
   const found = recognise(link);
-  const said = found ? wordsFor(found, words) : words.trim() || link;
-  const address = link.replace(/[()\s<>]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase().padStart(2, "0")}`);
+  // Words across a line break on one line: a blank line would end the link's paragraph (CodeRabbit on #127).
+  const said = (found ? wordsFor(found, words) : words.trim() || link).replace(/\s*[\r\n]+\s*/g, " ");
+  // Percent-encoding is of UTF-8 bytes: a space beyond ASCII is two or three of them (CodeRabbit on #127).
+  const address = link.replace(/[()\s<>]/g, (c) => (c === "(" ? "%28" : c === ")" ? "%29" : encodeURIComponent(c)));
   return `[${said.replace(/[\\[\]*_`]/g, "\\$&")}](${address})`;
 }
 

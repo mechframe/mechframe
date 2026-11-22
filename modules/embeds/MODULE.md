@@ -52,7 +52,11 @@ None.
 
 ## Extension points
 
-A provider is one more entry in `backend/embeds/providers.json` and its twin `web/providers.json` (kept equal by the tests), its player's host in `CSP`, and its cases in `tests/providers.cases.json`, which the backend and the web both answer.
+A new provider takes four changes, each on both sides:
+- an entry in `backend/embeds/providers.json` and its twin `web/providers.json` (kept equal by the tests);
+- a parser for its links, and a branch for its hosts in `recognise`, in `backend/embeds/providers.py` and `web/providers.ts` alike. Without them its links stay plain links;
+- its player's host in `CSP`;
+- its cases in `tests/providers.cases.json`, which the backend and the web both answer.
 
 ## Known limits
 
