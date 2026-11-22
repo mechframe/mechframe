@@ -9,4 +9,4 @@
 - **Rejected:**
   - Raising MAX_BODY_BYTES site-wide, since every route would then read 16 MB.
   - A browser upload straight to the bucket with a signed link, which is more moving parts. The re-encode would still need the bytes.
-- **Consequences:** A route that declares a larger limit reads it into memory, so it reads within limits as media does (`file.read(MAX + 1)`). The module contract lint checks that a module's BODY_LIMITS name its own upload routes.
+- **Consequences:** A route that declares a larger limit reads it into memory, so it reads within limits, as media does (`file.read(MAX + 1)`). Nothing checks that an entry names a route the module serves: one that names none keeps the site's limit and does nothing. The start does refuse two entries of one method that can match one request (CodeRabbit on #116), since which applied would hang on their order.

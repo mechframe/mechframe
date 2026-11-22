@@ -245,6 +245,78 @@ describe("the picker", () => {
   });
 });
 
+describe("unsaved alt text (CodeRabbit on #116)", () => {
+  it("asks before the picker's Back drops what's typed", async () => {
+    routed({ [LIST]: { status: 200, body: { items: [DOOR], next_cursor: null, missing_alt: 1 } } });
+    renderWithKernel(<ImagePicker title="Choose" onPick={vi.fn()} onClose={vi.fn()} />, { session: staff });
+    await userEvent.click(await screen.findByRole("button", { name: "door.png, 1000 × 600" }));
+    await userEvent.type(screen.getByRole("textbox", { name: /Alt text/ }), "A red");
+
+    await userEvent.click(screen.getByRole("button", { name: "Back to the library" }));
+    expect(screen.getByText("Your alt text isn't saved. Leave it?")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Keep writing" }));
+    expect(screen.getByRole("textbox", { name: /Alt text/ })).toHaveValue("A red");
+
+    await userEvent.click(screen.getByRole("button", { name: "Back to the library" }));
+    await userEvent.click(screen.getByRole("button", { name: "Leave it" }));
+    expect(await screen.findByRole("button", { name: "door.png, 1000 × 600" })).toBeInTheDocument();
+  });
+
+  it("takes another's change on a conflict, and saves with its version", async () => {
+    let tries = 0;
+    const sent = routed({
+      [LIST]: { status: 200, body: { items: [DOOR], next_cursor: null, missing_alt: 1 } },
+      [`PATCH /api/media/admin/images/${DOOR.id}`]: () => {
+        tries += 1;
+        return tries === 1
+          ? problem(409, "media.changed", { version: 2, alt: "Theirs", decorative: false })
+          : { status: 200, body: { ...DOOR, alt: "Theirs", version: 3 } };
+      },
+    });
+    const onPick = vi.fn();
+    renderWithKernel(<ImagePicker title="Choose" onPick={onPick} onClose={vi.fn()} />, { session: staff });
+    await userEvent.click(await screen.findByRole("button", { name: "door.png, 1000 × 600" }));
+    await userEvent.type(screen.getByRole("textbox", { name: /Alt text/ }), "Mine");
+    await userEvent.click(screen.getByRole("button", { name: "Place it" }));
+
+    expect(await screen.findByText(/Here is how it reads now/)).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: /Alt text/ })).toHaveValue("Theirs");
+    await userEvent.click(screen.getByRole("button", { name: "Place it" }));
+
+    await waitFor(() => {
+      expect(onPick).toHaveBeenCalledWith(expect.objectContaining({ version: 3 }));
+    });
+    const patches = sent.filter((request) => request.method === "PATCH");
+    expect(await patches[1]?.json()).toEqual({ version: 2, alt: "Theirs", decorative: false });
+  });
+
+  it("asks before the admin page opens another image over what's typed", async () => {
+    routed({
+      [LIST]: { status: 200, body: { items: [DOOR, DESCRIBED], next_cursor: null, missing_alt: 1 } },
+      [`GET /api/media/admin/images/${DOOR.id}`]: { status: 200, body: { ...DOOR, uses: [] } },
+      [`GET /api/media/admin/images/${DESCRIBED.id}`]: { status: 200, body: { ...DESCRIBED, uses: [] } },
+    });
+    renderWithKernel(<AdminMedia />, { path: "/admin/media", session: staff });
+    await userEvent.click(await screen.findByRole("button", { name: /door\.png/ }));
+    await userEvent.type(await screen.findByRole("textbox", { name: /Alt text/ }), "A red door");
+
+    await userEvent.click(screen.getByRole("button", { name: /A mixing desk/ }));
+    const asking = await screen.findByRole("dialog", { name: "Your alt text isn't saved" });
+    await userEvent.click(within(asking).getByRole("button", { name: "Keep editing" }));
+    expect(screen.getByRole("textbox", { name: /Alt text/ })).toHaveValue("A red door");
+
+    await userEvent.click(screen.getByRole("button", { name: /A mixing desk/ }));
+    await userEvent.click(within(await screen.findByRole("dialog", { name: "Your alt text isn't saved" })).getByRole("button", { name: "Leave it" }));
+    expect(await screen.findByRole("textbox", { name: /Alt text/ })).toHaveValue("A mixing desk");
+  });
+
+  it("keeps the file inputs out of the tab order, named for what they do", async () => {
+    routed({ [LIST]: { status: 200, body: { items: [], next_cursor: null, missing_alt: 0 } } });
+    renderWithKernel(<ImagePicker title="Choose" onPick={vi.fn()} onClose={vi.fn()} />, { session: staff });
+    expect(await screen.findByLabelText("Upload an image")).toHaveAttribute("tabindex", "-1");
+  });
+});
+
 describe("Picture", () => {
   it("draws the image with its copies, its size and its alt text, and says nothing of decoration", () => {
     const { rerender } = render(<Picture image={DESCRIBED} sizes="50vw" />);

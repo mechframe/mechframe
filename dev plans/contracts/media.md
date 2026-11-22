@@ -31,7 +31,7 @@ One library of images for the whole site: covers, member photos, artwork, produc
 
 **`public.py`** (for modules that list `media` in `requires`): `picture(db, id) -> Picture | None` and `pictures(db, ids)` (`url`, `srcset`, `width`, `height`, `alt`, `decorative`); `use(db, image_id, *, owner, label, link)` and `release(db, *, owner)`, where `owner` is the using thing's key, `<module>.<type>:<id>`, in the caller's transaction.
 
-**`web/public.ts`:** `<ImagePicker value onChange label />` (the library in a dialog, upload in place, alt text asked before it's placed) and `<Picture image sizes />` (an `<img>` with `srcset`, `width`, `height` and the image's alt).
+**`web/public.ts`:** `<ImagePicker title onPick onClose />` (the library in a dialog, paged and searchable, upload in place, alt text asked before it's placed; changes after approval) and `<Picture image sizes />` (an `<img>` with `srcset`, `width`, `height` and the image's alt).
 
 **Admin page** `/admin/media` (`nav.admin` under Content), as the board draws it: the "N images have no alt text" card with Fix the first, search, the grid with "No alt text" badges, and the side panel (alt text, file, size, added, used in, Copy link, Replace, Delete, and why Delete waits).
 
@@ -82,4 +82,5 @@ SPEC 4 to 8 and 16; `skills/mechframe-module-extractor/SKILL.md` and `module-con
 - 2026-11-21 (the build): **`python-multipart`** joins `requirements.in` beside Pillow: FastAPI's `File` and `UploadFile` need it, and the kernel took no uploads before.
 - 2026-11-21 (the build; the owner chose it the same day, "Per route limit"): **its upload routes take 16 MB.** The kernel refused any body over MAX_BODY_BYTES (1 MB) before media read it, which its HTTP tests found. A module's `BODY_LIMITS` now lets named routes take more while it's on (decision 0054).
 - 2026-11-21 (the build): **an image's address while the public bucket is off is 503 `media.storage_off`**, as an upload is, not a 500.
+- 2026-11-21 (CodeRabbit on #116): **`ImagePicker` takes `title`, `onPick` and `onClose`**, not §2's `value`, `onChange` and `label`: it's a dialog a module opens and closes, and it hands back the image picked, so the module keeps its own value.
 - 2026-11-21 (the build): **the admin page's filter is one chip, "No alt text"**, not the board's All, Images, Audio, Video and Documents tabs: images are the only kind (§8, 1).

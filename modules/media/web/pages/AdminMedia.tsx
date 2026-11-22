@@ -13,13 +13,16 @@ import {
   Button,
   Card,
   Chip,
+  Dialog,
   EmptyState,
   Field,
   Input,
   LoadError,
   Pill,
   Switch,
+  UnsavedDialog,
   useToast,
+  useUnsavedGuard,
 } from "@/kernel";
 
 import { LIBRARY, useApiQuery, type Image } from "../api";
@@ -44,6 +47,10 @@ export default function AdminMedia() {
   const onlyMissing = search.get("missing_alt") === "1";
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
+  // The panel's alt text typed but not saved (CodeRabbit on #116): moving to
+  // another image asks first, and leaving the page asks through the guard.
+  const [dirty, setDirty] = useState(false);
+  const [asking, setAsking] = useState<string | null>(null);
   const library = useLibrary({ ...(q ? { q } : {}), missing_alt: onlyMissing });
   const listed = library.found;
   const queryClient = useQueryClient();
@@ -55,6 +62,14 @@ export default function AdminMedia() {
   // "Fix the first": with the filter on and nothing picked, the first without alt text is open.
   const shown = selected ?? (onlyMissing ? (items[0]?.id ?? null) : null);
 
+
+  function choose(next: string) {
+    if (dirty && next !== shown) {
+      setAsking(next);
+      return;
+    }
+    setSelected(next);
+  }
 
   async function refresh() {
     await queryClient.invalidateQueries({ queryKey: ["get", LIBRARY] });
@@ -73,7 +88,7 @@ export default function AdminMedia() {
     try {
       const image = await uploadImage(file);
       await refresh();
-      setSelected(image.id);
+      choose(image.id);
       toast({ tone: "success", text: `${image.filename} is in the library.` });
     } catch (error) {
       toast({ tone: "danger", text: error instanceof ApiProblem ? error.detail : "The upload didn't go through. Try again." });
@@ -89,7 +104,7 @@ export default function AdminMedia() {
       lead="Every image the site uses. Upload once, use it anywhere."
       actions={
         <>
-          <input ref={input} type="file" accept={ACCEPT} className="mf-media-file" aria-label="Upload an image" onChange={(event) => void upload(event)} />
+          <input ref={input} type="file" accept={ACCEPT} className="mf-media-file" aria-label="Upload an image" tabIndex={-1} onChange={(event) => void upload(event)} />
           <Button variant="primary" icon="upload" disabled={uploading} onClick={() => input.current?.click()}>
             {uploading ? "Uploading…" : "Upload"}
           </Button>
@@ -113,7 +128,6 @@ export default function AdminMedia() {
             <Chip
               pressed={onlyMissing}
               onPressedChange={(pressed) => {
-                setSelected(null);
                 setSearch(pressed ? { missing_alt: "1" } : {});
               }}
             >
@@ -135,7 +149,9 @@ export default function AdminMedia() {
                     className="mf-media-thumb"
                     aria-pressed={shown === image.id}
                     aria-label={nameOf(image) + (missingAlt(image) ? ", no alt text" : "")}
-                    onClick={() => { setSelected(image.id); }}
+                    onClick={() => {
+                      choose(image.id);
+                    }}
                   >
                     <Picture image={{ ...image, decorative: true }} sizes="10rem" />
                     {missingAlt(image) ? <Pill tone="warning">No alt text</Pill> : null}
@@ -150,13 +166,55 @@ export default function AdminMedia() {
             </Button>
           ) : null}
         </section>
-        {shown ? <Panel key={shown} id={shown} onGone={() => { setSelected(null); }} onChanged={refresh} /> : null}
+        {shown ? (
+          <Panel
+            key={shown}
+            id={shown}
+            onDirty={setDirty}
+            onGone={() => {
+              setDirty(false);
+              setSelected(null);
+            }}
+            onChanged={refresh}
+          />
+        ) : null}
       </div>
+      {asking ? (
+        <Dialog
+          title="Your alt text isn't saved"
+          onClose={() => {
+            setAsking(null);
+          }}
+        >
+          <p>Open the other image and leave this one as it was?</p>
+          <div className="mf-media-actions">
+            <Button
+              variant="primary"
+              onClick={() => {
+                setDirty(false);
+                setSelected(asking);
+                setAsking(null);
+              }}
+            >
+              Leave it
+            </Button>
+            <Button
+              onClick={() => {
+                setAsking(null);
+              }}
+            >
+              Keep editing
+            </Button>
+          </div>
+        </Dialog>
+      ) : null}
     </AdminPage>
   );
 }
 
-function Panel({ id, onGone, onChanged }: { id: string; onGone: () => void; onChanged: () => Promise<void> }) {
+type PanelProps = { id: string; onDirty: (dirty: boolean) => void; onGone: () => void; onChanged: () => Promise<void> };
+
+function Panel({ id, onDirty, onGone, onChanged }: PanelProps) {
   const fields = useId();
   const one = useApiQuery("get", ONE, { params: { path: { image_id: id } } });
   const queryClient = useQueryClient();
@@ -165,7 +223,42 @@ function Panel({ id, onGone, onChanged }: { id: string; onGone: () => void; onCh
   const [alt, setAlt] = useState<string | null>(null);
   const [decorative, setDecorative] = useState<boolean | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
+  // While a write is under way the form waits, so nothing typed meanwhile is lost (CodeRabbit on #116).
+  const [busy, setBusy] = useState(false);
   const image = one.data;
+  const dirty = alt !== null || decorative !== null;
+  const guard = useUnsavedGuard(dirty, saveDraft);
+
+  function edit(next: { alt?: string; decorative?: boolean }) {
+    if (next.alt !== undefined) setAlt(next.alt);
+    if (next.decorative !== undefined) setDecorative(next.decorative);
+    onDirty(true);
+  }
+
+  async function saveDraft(): Promise<string | null> {
+    if (!image) return null;
+    setBusy(true);
+    setProblem(null);
+    try {
+      await settle(await describeImage(image, { alt: alt ?? image.alt ?? "", decorative: decorative ?? image.decorative }));
+      return null;
+    } catch (error) {
+      if (error instanceof ApiProblem && error.code === "media.changed") {
+        await one.refetch();
+        setAlt(null);
+        setDecorative(null);
+        onDirty(false);
+        const said = "Someone changed this image since you opened it. It now reads as they left it.";
+        setProblem(said);
+        return said;
+      }
+      const said = error instanceof ApiProblem ? error.detail : "That didn't save. Try again.";
+      setProblem(said);
+      return said;
+    } finally {
+      setBusy(false);
+    }
+  }
 
   if (one.isError) return <LoadError what="the image" error={one.error} onRetry={() => void one.refetch()} />;
   if (!image) return null;
@@ -177,26 +270,14 @@ function Panel({ id, onGone, onChanged }: { id: string; onGone: () => void; onCh
     queryClient.setQueryData(["get", ONE, { params: { path: { image_id: id } } }], fresh);
     setAlt(null);
     setDecorative(null);
+    onDirty(false);
     await onChanged();
   }
 
   async function save(event: SubmitEvent) {
     event.preventDefault();
-    if (!image) return;
-    setProblem(null);
-    try {
-      await settle(await describeImage(image, { alt: shownAlt, decorative: shownDecorative }));
-      toast({ tone: "success", text: "Saved." });
-    } catch (error) {
-      if (error instanceof ApiProblem && error.code === "media.changed") {
-        setProblem("Someone changed this image since you opened it. It now reads as they left it.");
-        await one.refetch();
-        setAlt(null);
-        setDecorative(null);
-        return;
-      }
-      setProblem(error instanceof ApiProblem ? error.detail : "That didn't save. Try again.");
-    }
+    if (busy) return;
+    if ((await saveDraft()) === null) toast({ tone: "success", text: "Saved." });
   }
 
   async function replace(event: ChangeEvent<HTMLInputElement>) {
@@ -208,11 +289,14 @@ function Panel({ id, onGone, onChanged }: { id: string; onGone: () => void; onCh
       toast({ tone: "danger", text: refused });
       return;
     }
+    setBusy(true);
     try {
       await settle(await replaceImage(image, file));
       toast({ tone: "success", text: "Replaced: every page that places it shows the new file." });
     } catch (error) {
       toast({ tone: "danger", text: error instanceof ApiProblem ? error.detail : "The replace didn't go through. Try again." });
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -238,11 +322,25 @@ function Panel({ id, onGone, onChanged }: { id: string; onGone: () => void; onCh
           hint={missingAlt(image) ? "Screen readers skip this image until it has alt text." : undefined}
           error={problem ?? undefined}
         >
-          <Input value={shownAlt} maxLength={250} disabled={shownDecorative} onChange={(event) => { setAlt(event.target.value); }} />
+          <Input
+            value={shownAlt}
+            maxLength={250}
+            disabled={shownDecorative || busy}
+            onChange={(event) => {
+              edit({ alt: event.target.value });
+            }}
+          />
         </Field>
-        <Switch label="Only decoration" checked={shownDecorative} onChange={setDecorative} />
-        <Button type="submit" variant="primary">
-          Save
+        <Switch
+          label="Only decoration"
+          checked={shownDecorative}
+          disabled={busy}
+          onChange={(on) => {
+            edit({ decorative: on });
+          }}
+        />
+        <Button type="submit" variant="primary" disabled={busy}>
+          {busy ? "Saving…" : "Save"}
         </Button>
       </form>
       <dl className="mf-media-facts">
@@ -281,13 +379,16 @@ function Panel({ id, onGone, onChanged }: { id: string; onGone: () => void; onCh
         >
           Copy link
         </Button>
-        <input ref={replacing} type="file" accept={ACCEPT} className="mf-media-file" aria-label="Replace the file" onChange={(event) => void replace(event)} />
-        <Button onClick={() => replacing.current?.click()}>Replace</Button>
-        <Button disabled={uses.length > 0} onClick={() => void remove()}>
+        <input ref={replacing} type="file" accept={ACCEPT} className="mf-media-file" aria-label="Replace the file" tabIndex={-1} onChange={(event) => void replace(event)} />
+        <Button disabled={busy} onClick={() => replacing.current?.click()}>
+          Replace
+        </Button>
+        <Button disabled={uses.length > 0 || busy} onClick={() => void remove()}>
           Delete
         </Button>
       </div>
       {uses.length > 0 ? <p className="mf-media-muted">A file that's in use can't be deleted until it's removed from those pages.</p> : null}
+      <UnsavedDialog guard={guard} what="This image's alt text" />
     </Card>
   );
 }

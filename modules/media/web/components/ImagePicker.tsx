@@ -4,7 +4,7 @@
 // An image placed without alt text is asked for some first, unless it's only
 // decoration, since a screen reader would say nothing of it.
 import { useQueryClient } from "@tanstack/react-query";
-import { useId, useRef, useState, type ChangeEvent, type SubmitEvent } from "react";
+import { useEffect, useId, useRef, useState, type ChangeEvent, type SubmitEvent } from "react";
 
 import { ApiProblem, Button, Dialog, EmptyState, Field, Input, LoadError, Switch } from "@/kernel";
 
@@ -37,7 +37,18 @@ export function ImagePicker({ title, onPick, onClose }: ImagePickerProps) {
   const [chosen, setChosen] = useState<Image | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Alt text typed but not saved: leaving asks first (CodeRabbit on #116).
+  const [dirty, setDirty] = useState(false);
+  const [leaving, setLeaving] = useState<(() => void) | null>(null);
   const input = useRef<HTMLInputElement>(null);
+
+  function askToLeave(then: () => void) {
+    if (chosen && dirty) {
+      setLeaving(() => then);
+      return;
+    }
+    then();
+  }
 
   async function upload(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -67,19 +78,57 @@ export function ImagePicker({ title, onPick, onClose }: ImagePickerProps) {
       onClose();
       return;
     }
+    setDirty(false);
     setChosen(image);
   }
 
   return (
-    <Dialog title={title} onClose={onClose} wide>
+    <Dialog
+      title={title}
+      onClose={() => {
+        askToLeave(onClose);
+      }}
+      wide
+    >
+      {leaving ? (
+        <div role="alert" className="mf-media-describe">
+          <p>Your alt text isn&apos;t saved. Leave it?</p>
+          <div className="mf-media-actions">
+            <Button
+              variant="primary"
+              onClick={() => {
+                const then = leaving;
+                setLeaving(null);
+                setDirty(false);
+                then();
+              }}
+            >
+              Leave it
+            </Button>
+            <Button
+              onClick={() => {
+                setLeaving(null);
+              }}
+            >
+              Keep writing
+            </Button>
+          </div>
+        </div>
+      ) : null}
       {chosen ? (
         <DescribeFirst
           image={chosen}
+          hidden={leaving !== null}
+          onDirty={setDirty}
           onDone={(image) => {
             onPick(image);
             onClose();
           }}
-          onBack={() => { setChosen(null); }}
+          onBack={() => {
+            askToLeave(() => {
+              setChosen(null);
+            });
+          }}
         />
       ) : (
         <>
@@ -90,6 +139,8 @@ export function ImagePicker({ title, onPick, onClose }: ImagePickerProps) {
               type="file"
               accept={ACCEPT}
               className="mf-media-file"
+              aria-label="Upload an image"
+              tabIndex={-1}
               onChange={(event) => void upload(event)}
             />
             <Button icon="upload" onClick={() => input.current?.click()} disabled={busy}>
@@ -119,7 +170,14 @@ export function ImagePicker({ title, onPick, onClose }: ImagePickerProps) {
             <ul role="list" className="mf-media-grid" aria-label="The library">
               {library.items.map((image) => (
                 <li key={image.id}>
-                  <button type="button" className="mf-media-thumb" aria-label={nameOf(image)} onClick={() => { take(image); }}>
+                  <button
+                    type="button"
+                    className="mf-media-thumb"
+                    aria-label={nameOf(image)}
+                    onClick={() => {
+                      take(image);
+                    }}
+                  >
                     <Picture image={{ ...image, decorative: true }} sizes="10rem" />
                   </button>
                 </li>
@@ -137,47 +195,113 @@ export function ImagePicker({ title, onPick, onClose }: ImagePickerProps) {
   );
 }
 
-function DescribeFirst({ image, onDone, onBack }: { image: Image; onDone: (image: Image) => void; onBack: () => void }) {
+type DescribeProps = {
+  image: Image;
+  hidden: boolean;
+  onDirty: (dirty: boolean) => void;
+  onDone: (image: Image) => void;
+  onBack: () => void;
+};
+
+function DescribeFirst({ image, hidden, onDirty, onDone, onBack }: DescribeProps) {
   const id = useId();
+  // The image as the library has it now: a conflict brings in another's change (CodeRabbit on #116).
+  const [current, setCurrent] = useState(image);
   const [alt, setAlt] = useState("");
   const [decorative, setDecorative] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  // A save that answers after this step has closed reports nothing (CodeRabbit on #116).
+  const open = useRef(true);
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    open.current = true;
+    return () => {
+      open.current = false;
+    };
+  }, []);
+
+  function change(next: { alt?: string; decorative?: boolean }) {
+    const nextAlt = next.alt ?? alt;
+    const nextDecorative = next.decorative ?? decorative;
+    setAlt(nextAlt);
+    setDecorative(nextDecorative);
+    onDirty(nextAlt.trim() !== "" || nextDecorative);
+  }
 
   async function save(event: SubmitEvent) {
     event.preventDefault();
+    if (saving) return;
     if (!decorative && !alt.trim()) {
       setProblem("Say what's in the picture, or mark it as only decoration.");
       return;
     }
+    setSaving(true);
+    setProblem(null);
     try {
-      const saved = await describeImage(image, { alt, decorative });
+      const saved = await describeImage(current, { alt, decorative });
       await queryClient.invalidateQueries({ queryKey: ["get", LIBRARY] });
+      if (!open.current) return;
+      onDirty(false);
       onDone(saved);
     } catch (error) {
+      if (!open.current) return;
+      if (error instanceof ApiProblem && error.code === "media.changed") {
+        const theirs = error.extra;
+        const version = typeof theirs.version === "number" ? theirs.version : current.version;
+        const said = typeof theirs.alt === "string" ? theirs.alt : null;
+        const only = theirs.decorative === true;
+        setCurrent({ ...current, version, alt: said, decorative: only });
+        await queryClient.invalidateQueries({ queryKey: ["get", LIBRARY] });
+        if (said || only) {
+          setProblem("Someone described this image while you were writing. Here is how it reads now: place it, or change it.");
+          change({ alt: said ?? "", decorative: only });
+        } else {
+          setProblem("Someone changed this image while you were writing. Save again to keep yours.");
+        }
+        return;
+      }
       setProblem(error instanceof ApiProblem ? error.detail : "That didn't save. Try again.");
+    } finally {
+      if (open.current) setSaving(false);
     }
   }
 
   return (
-    <form onSubmit={(event) => void save(event)} className="mf-media-describe" noValidate>
-      <Picture image={{ ...image, decorative: true }} sizes="16rem" className="mf-media-preview" />
+    <form onSubmit={(event) => void save(event)} className="mf-media-describe" noValidate hidden={hidden}>
+      <Picture image={{ ...current, decorative: true }} sizes="16rem" className="mf-media-preview" />
       <Field
         id={`${id}-alt`}
         label="Alt text: what's in the picture, for screen readers"
         hint="Screen readers skip this image until it has alt text."
         error={problem ?? undefined}
       >
-        <Input value={alt} disabled={decorative} maxLength={250} onChange={(event) => { setAlt(event.target.value); }} />
+        <Input
+          value={alt}
+          disabled={decorative || saving}
+          maxLength={250}
+          onChange={(event) => {
+            change({ alt: event.target.value });
+          }}
+        />
       </Field>
-      <Switch label="Only decoration" checked={decorative} onChange={setDecorative} />
+      <Switch
+        label="Only decoration"
+        checked={decorative}
+        disabled={saving}
+        onChange={(on) => {
+          change({ decorative: on });
+        }}
+      />
       <div className="mf-media-actions">
-        <Button variant="primary" type="submit">
-          Place it
+        <Button variant="primary" type="submit" disabled={saving}>
+          {saving ? "Saving…" : "Place it"}
         </Button>
-        <Button onClick={onBack}>Back to the library</Button>
+        <Button onClick={onBack} disabled={saving}>
+          Back to the library
+        </Button>
       </div>
     </form>
   );
 }
-
