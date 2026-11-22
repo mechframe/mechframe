@@ -45,7 +45,8 @@ function EmbedDialog({ editor, onClose }: { editor: MarkdownTools; onClose: () =
     onClose();
   };
   const onEnter = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key !== "Enter") return;
+    // An Enter that confirms a composed character is the input method's, not Insert (CodeRabbit on #127).
+    if (event.key !== "Enter" || event.nativeEvent.isComposing) return;
     event.preventDefault();
     insert();
   };

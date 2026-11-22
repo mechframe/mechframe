@@ -50,6 +50,16 @@ describe("embedMarkdown", () => {
     expect(embedMarkdown("https://youtu.be/aBcDeFgHiJk", "  ")).toBe("[A video on YouTube](https://youtu.be/aBcDeFgHiJk)");
   });
 
+  it("names a link it can't play by its address when no words are given (CodeRabbit on #127)", () => {
+    expect(embedMarkdown(" https://example.net/a ", "  ")).toBe("[https://example.net/a](https://example.net/a)");
+  });
+
+  it("writes the address recognise read, a pasted tab or line break taken out (CodeRabbit on #127)", () => {
+    expect(embedMarkdown("https://youtu.be/aBcDe\tFgHi\nJk", "")).toBe(
+      "[A video on YouTube](https://youtu.be/aBcDeFgHiJk)",
+    );
+  });
+
   it("encodes the brackets and spaces that would end the link", () => {
     expect(embedMarkdown("https://example.net/a (b)", "Elsewhere")).toBe("[Elsewhere](https://example.net/a%20%28b%29)");
   });

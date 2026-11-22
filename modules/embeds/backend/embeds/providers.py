@@ -87,7 +87,6 @@ _SPACE = "".join(
         ),
     )
 )
-_SPACES = re.compile(f"^[{re.escape(_SPACE)}]+|[{re.escape(_SPACE)}]+$")
 # Words that are the address itself: a bare link, as Markdown links one.
 _AN_ADDRESS = re.compile(f"(?:https?://|www\\.)[^{re.escape(_SPACE)}]*", re.ASCII | re.IGNORECASE)
 
@@ -222,5 +221,6 @@ def recognise(href: str) -> Embed | None:
 def words_for(embed: Embed, text: str) -> str:
     """The words shown with the player: the writer's link text, or the kind's
     own ("A video on YouTube") when it's blank or the address itself."""
-    words = _SPACES.sub("", text or "")
+    # str.strip, not a regex: a long run of spaces inside costs no quadratic scan (CodeRabbit on #127).
+    words = (text or "").strip(_SPACE)
     return embed.default if not words or _AN_ADDRESS.fullmatch(words) else words

@@ -1,7 +1,7 @@
 // embeds' players and its Embed button (dev plans/contracts/embeds.md §7): the
 // facade until `media` is granted, the sandboxed iframe after, a lone link in
 // Prose drawn as its player, and the editor's dialog.
-import { screen, within } from "@testing-library/react";
+import { fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
@@ -39,6 +39,33 @@ describe("Embed", () => {
     );
     expect(player.getAttribute("allow")).toContain("encrypted-media");
     expect(document.cookie).toContain(`${CONSENT_COOKIE}=media`);
+  });
+
+  it("plays at once only the link that was played, not one put in its place (CodeRabbit on #127)", async () => {
+    const other = "https://youtu.be/zYxWvUtSrQp";
+    function Swap() {
+      const [link, setLink] = useState(VIDEO);
+      return (
+        <>
+          <Embed link={link} words="A video" />
+          <button
+            type="button"
+            onClick={() => {
+              setLink(other);
+            }}
+          >
+            Swap
+          </button>
+        </>
+      );
+    }
+    renderWithKernel(<Swap />);
+    await userEvent.click(screen.getByRole("button", { name: "Play: A video" }));
+    await userEvent.click(screen.getByRole("button", { name: "Swap" }));
+    expect(screen.getByTitle("YouTube player: A video")).toHaveAttribute(
+      "src",
+      "https://www.youtube-nocookie.com/embed/zYxWvUtSrQp",
+    );
   });
 
   it("draws the player at once, never playing by itself, while consent isn't asked", () => {
@@ -133,6 +160,17 @@ describe("the editor's Embed button (editor.tools)", () => {
     expect(link).toHaveValue("https://exampleband.bandcamp.com/album/weightless#bandcamp-album=1234567");
     expect(within(dialog).getByRole("textbox", { name: "Words under the player (optional)" })).toHaveValue("Weightless");
     expect(within(dialog).getByRole("status")).toHaveTextContent("An album on Bandcamp.");
+  });
+
+  it("takes an Enter that confirms a composed character as that, not as Insert (CodeRabbit on #127)", async () => {
+    const dialog = await openDialog();
+    const link = within(dialog).getByRole("textbox", { name: "Paste a link from YouTube, SoundCloud, Spotify or Bandcamp" });
+    await userEvent.type(link, VIDEO);
+    fireEvent.keyDown(link, { key: "Enter", isComposing: true });
+    expect(screen.getByRole("dialog", { name: "Embed a player" })).toBeInTheDocument();
+    expect(screen.getByTestId("value").textContent).toBe("Before.");
+    fireEvent.keyDown(link, { key: "Enter" });
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("inserts nothing with no link, and Cancel leaves the text as it was", async () => {

@@ -8,6 +8,7 @@ is what an email draws as a card. Lifted with VybeSite's `test_embeds.py`.
 from __future__ import annotations
 
 import json
+import time
 from pathlib import Path
 from typing import Any
 
@@ -114,6 +115,16 @@ def test_every_kind_has_its_shape_words_and_player() -> None:
             assert spec["words"].endswith(f" on {provider['name']}"), (provider["id"], kind)
             assert spec["player"].startswith(provider["frame_host"] + "/")
             assert "{id}" in spec["player"]
+
+
+def test_long_words_are_trimmed_in_linear_time() -> None:
+    """A long run of spaces inside the words is kept, and costs no quadratic scan (CodeRabbit on #127)."""
+    embed = providers.recognise("https://youtu.be/aBcDeFgHiJk")
+    assert embed is not None
+    words = "A" + " " * 20000 + "B"
+    started = time.perf_counter()
+    assert providers.words_for(embed, f"  {words}﻿") == words
+    assert time.perf_counter() - started < 0.2
 
 
 def test_public_reads_links_as_the_site_does() -> None:

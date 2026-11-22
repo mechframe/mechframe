@@ -17,7 +17,7 @@ export type YouTubeOptions = {
   width?: string;
   height?: string;
   playerVars: Record<string, number | string>;
-  events: { onStateChange: (event: { data: number }) => void };
+  events: { onReady: () => void; onStateChange: (event: { data: number }) => void };
 };
 
 export type YouTubeApi = {

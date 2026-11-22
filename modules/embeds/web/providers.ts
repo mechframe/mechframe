@@ -147,11 +147,15 @@ function bandcamp(parts: string[], fragment: string): Embed | null {
   return embed("bandcamp", kind, found[2] ?? "");
 }
 
+/** A link as the server's urlsplit reads it: leading spaces and controls gone, and tabs and line breaks anywhere. */
+export function normalised(href: string): string {
+  // eslint-disable-next-line no-control-regex -- the controls urlsplit drops.
+  return href.replace(/^[\x00-\x20]+/, "").replace(/[\t\r\n]/g, "");
+}
+
 /** The player `href` is, or null for a link that stays a link. */
 export function recognise(href: string): Embed | null {
-  // As the server's urlsplit: leading spaces and controls go, and tabs and line breaks anywhere.
-  // eslint-disable-next-line no-control-regex -- the controls urlsplit drops.
-  const address = ADDRESS.exec(href.replace(/^[\x00-\x20]+/, "").replace(/[\t\r\n]/g, ""));
+  const address = ADDRESS.exec(normalised(href));
   if (!address) return null;
   const [, scheme = "", authority = "", path = "", rawQuery = "", fragment = ""] = address;
   const host = authority.toLowerCase();
@@ -174,11 +178,14 @@ export function wordsFor(found: Embed, text: string): string {
 
 /** The Markdown the editor writes: the link with its words, what Markdown
  * would read in them escaped, and the address's brackets and spaces encoded.
- * A link the rules take gets the kind's own words if it has none. */
+ * A link the rules take gets the kind's own words if it has none, and one
+ * they don't its address, so it never draws as an empty link. Both are read
+ * from the address `recognise` reads (CodeRabbit on #127). */
 export function embedMarkdown(href: string, words: string): string {
-  const found = recognise(href);
-  const said = found ? wordsFor(found, words) : words.trim();
-  const address = href.trim().replace(/[()\s<>]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase().padStart(2, "0")}`);
+  const link = normalised(href).trim();
+  const found = recognise(link);
+  const said = found ? wordsFor(found, words) : words.trim() || link;
+  const address = link.replace(/[()\s<>]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase().padStart(2, "0")}`);
   return `[${said.replace(/[\\[\]*_`]/g, "\\$&")}](${address})`;
 }
 

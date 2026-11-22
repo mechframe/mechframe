@@ -53,3 +53,15 @@ None.
 ## Extension points
 
 A provider is one more entry in `backend/embeds/providers.json` and its twin `web/providers.json` (kept equal by the tests), its player's host in `CSP`, and its cases in `tests/providers.cases.json`, which the backend and the web both answer.
+
+## Known limits
+
+- Four providers: YouTube, SoundCloud, Spotify and Bandcamp. No oEmbed lookups: a player is built from the link alone.
+- Every provider's host is in the CSP while the module is on; there's no switch per provider.
+- A player in text can't be paused from outside, so "one thing plays at a time" covers only `VideoPlaylist`, through `onPlay` and `pause()`, once `audio-player` arrives (step 2).
+- An email can't hold a player: `public.py` gives `campaigns` the link and its words for a card instead.
+- Bandcamp needs its embed code, since it has no public way to look a link up.
+
+## Source and license
+
+Lifted from VybeSite at `2416bc1`: `backend/app/services/embeds.json` and `embeds.py`, and `frontend/src/lib/embeds.ts`, `embeds.cases.json`, `components/MediaEmbed.tsx`, `EmbedPicker.tsx` and `MarkdownParagraph.tsx`. Proprietary, as `module.json`'s `source` says.

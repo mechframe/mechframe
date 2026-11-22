@@ -4,7 +4,7 @@
 // the hand-off `audio-player` will use.
 import { act, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { createRef } from "react";
+import { createRef, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CONSENT_COOKIE, useConsent } from "@/kernel";
@@ -38,6 +38,12 @@ class FakePlayer {
   say(state: number) {
     act(() => {
       this.options.events.onStateChange({ data: state });
+    });
+  }
+  /** YouTube's onReady: from here the player takes calls. */
+  ready() {
+    act(() => {
+      this.options.events.onReady();
     });
   }
 }
@@ -80,6 +86,37 @@ function Withdraw() {
     <button type="button" onClick={media.withdraw}>
       Withdraw media
     </button>
+  );
+}
+
+/** A banner's Allow for media, beside the player. */
+function Grant() {
+  const media = useConsent("media");
+  return (
+    <button type="button" onClick={media.grant}>
+      Allow media
+    </button>
+  );
+}
+
+/** The playlist with its list changed by a button, as a page's data may change. */
+function Changing({ lists }: { lists: Record<string, PlaylistItem[]> }) {
+  const [items, setItems] = useState<PlaylistItem[]>(ITEMS);
+  return (
+    <>
+      <VideoPlaylist items={items} />
+      {Object.entries(lists).map(([name, list]) => (
+        <button
+          key={name}
+          type="button"
+          onClick={() => {
+            setItems(list);
+          }}
+        >
+          {name}
+        </button>
+      ))}
+    </>
   );
 }
 
@@ -163,6 +200,7 @@ describe("VideoPlaylist", () => {
     await userEvent.click(screen.getByRole("button", { name: "Previous video" }));
     expect(player().options.videoId).toBe("ccccccccccc");
     expect(row("Third")).toHaveAttribute("aria-current", "true");
+    player().ready();
     await userEvent.click(screen.getByRole("button", { name: "Next video" }));
     expect(player().loaded).toEqual(["aaaaaaaaaaa"]);
     await userEvent.click(row("Second"));
@@ -227,6 +265,55 @@ describe("VideoPlaylist", () => {
     expect(player().options.videoId).toBe("bbbbbbbbbbb");
     expect(player().loaded).toEqual([]);
     expect(row("Second")).toHaveAttribute("aria-current", "true");
+  });
+
+  it("keeps the facade after a withdrawal, whatever grants media next (CodeRabbit on #127)", async () => {
+    renderWithKernel(
+      <>
+        <VideoPlaylist items={ITEMS} />
+        <Withdraw />
+        <Grant />
+      </>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Play First" }));
+    await userEvent.click(screen.getByRole("button", { name: "Withdraw media" }));
+    await userEvent.click(screen.getByRole("button", { name: "Allow media" }));
+    expect(screen.getByRole("button", { name: "Play First" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Play First" }));
+    expect(FakePlayer.made).toHaveLength(2);
+  });
+
+  it("keeps its selection within a list that shrinks (CodeRabbit on #127)", async () => {
+    renderWithKernel(<Changing lists={{ "Just one": [{ url: "https://youtu.be/aaaaaaaaaaa", title: "First" }] }} />);
+    await userEvent.click(row("Third"));
+    player().ready();
+    await userEvent.click(screen.getByRole("button", { name: "Just one" }));
+    expect(row("First")).toHaveAttribute("aria-current", "true");
+    expect(screen.getByText("First", { selector: ".mf-playlist-now" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Next video" }));
+    expect(player().loaded).toEqual(["aaaaaaaaaaa"]);
+  });
+
+  it("lets its player go while the list has no video, and makes a new one after (CodeRabbit on #127)", async () => {
+    renderWithKernel(<Changing lists={{ None: [], All: ITEMS }} />);
+    await userEvent.click(screen.getByRole("button", { name: "Play First" }));
+    const first = player();
+    await userEvent.click(screen.getByRole("button", { name: "None" }));
+    expect(first.destroyed).toBe(true);
+    await userEvent.click(screen.getByRole("button", { name: "All" }));
+    await userEvent.click(screen.getByRole("button", { name: "Play First" }));
+    expect(FakePlayer.made).toHaveLength(2);
+  });
+
+  it("holds a row picked before the player is ready, and plays it once it is (CodeRabbit on #127)", async () => {
+    renderWithKernel(<VideoPlaylist items={ITEMS} />);
+    await userEvent.click(screen.getByRole("button", { name: "Play First" }));
+    await userEvent.click(row("Second"));
+    expect(player().loaded).toEqual([]);
+    player().ready();
+    expect(player().loaded).toEqual(["bbbbbbbbbbb"]);
+    await userEvent.click(row("Third"));
+    expect(player().loaded).toEqual(["bbbbbbbbbbb", "ccccccccccc"]);
   });
 
   it("draws nothing for a list with no video it can play", () => {

@@ -49,7 +49,8 @@ function Facade({ found, words, onPlay }: { found: Found; words: string; onPlay:
 }
 
 export function Embed({ link, words = "" }: EmbedProps) {
-  const [asked, setAsked] = useState(false);
+  // The link the visitor played: a link put in its place doesn't play by itself (CodeRabbit on #127).
+  const [asked, setAsked] = useState<string | null>(null);
   const found = recognise(link);
   if (!found) {
     return (
@@ -68,7 +69,7 @@ export function Embed({ link, words = "" }: EmbedProps) {
             found={found}
             words={said}
             onPlay={() => {
-              setAsked(true);
+              setAsked(link);
               grant();
             }}
           />
@@ -76,7 +77,7 @@ export function Embed({ link, words = "" }: EmbedProps) {
       >
         <iframe
           className="mf-embed-player"
-          src={playing(found, asked)}
+          src={playing(found, asked === link)}
           title={`${found.name} player: ${said}`}
           loading="lazy"
           referrerPolicy="strict-origin-when-cross-origin"

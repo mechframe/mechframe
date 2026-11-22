@@ -76,14 +76,18 @@ export function VideoPlaylist({ items, autoplay = true, onPlay, ref, label = "Vi
   const [failed, setFailed] = useState(false);
   const stage = useRef<HTMLDivElement>(null);
   const player = useRef<YouTubePlayer | null>(null);
-  // The video asked for last while YouTube's script loads; null once media is withdrawn (Codex on #127).
+  // Whether the player has said onReady: it takes no call before (CodeRabbit on #127).
+  const ready = useRef(false);
+  // The video asked for last, loaded once the player is there and ready; null once it's gone (Codex on #127).
   const wanted = useRef<string | null>(null);
+  // The selection, kept within a list that shrinks (CodeRabbit on #127).
+  const at = Math.min(current, Math.max(videos.length - 1, 0));
   // Playing needs both: a visitor's Play, and media still granted.
   const live = started && media.granted;
   // What the player's events read when they come, after this render.
-  const now = useRef({ current, rolling, count: videos.length, onPlay, ids: videos.map((video) => video.id) });
+  const now = useRef({ at, rolling, onPlay, ids: videos.map((video) => video.id) });
   useEffect(() => {
-    now.current = { current, rolling, count: videos.length, onPlay, ids: videos.map((video) => video.id) };
+    now.current = { at, rolling, onPlay, ids: videos.map((video) => video.id) };
   });
 
   useImperativeHandle(ref, () => ({
@@ -100,27 +104,40 @@ export function VideoPlaylist({ items, autoplay = true, onPlay, ref, label = "Vi
     [],
   );
 
-  // Media withdrawn, here or in another tab: the player goes, and a load on its way makes none (Codex on #127).
+  // Media withdrawn, here or in another tab, or no video left to play: the
+  // player goes, a load on its way makes none, and the facade is back, so a
+  // grant made elsewhere starts nothing here (Codex and CodeRabbit on #127).
+  const gone = !media.granted || videos.length === 0;
+  // Back to the facade the render it goes: React's way to adjust state when what it's given changes.
+  const [wasGone, setWasGone] = useState(gone);
+  if (gone !== wasGone) {
+    setWasGone(gone);
+    if (gone) {
+      setStarted(false);
+      setPlaying(false);
+    }
+  }
   useEffect(() => {
-    if (media.granted) return;
+    if (!gone) return;
     wanted.current = null;
+    ready.current = false;
     player.current?.destroy();
     player.current = null;
     stage.current?.querySelector(".mf-playlist-frame")?.replaceChildren();
-  }, [media.granted]);
+  }, [gone]);
 
-  const shown = videos[Math.min(current, videos.length - 1)];
+  const shown = videos[at];
   if (!shown) return null;
 
-  const play = (at: number) => {
-    const video = videos[at];
+  const play = (index: number) => {
+    const video = videos[index];
     if (!video) return;
-    setCurrent(at);
+    setCurrent(index);
+    wanted.current = video.id;
     if (player.current) {
-      player.current.loadVideoById(video.id);
+      if (ready.current) player.current.loadVideoById(video.id);
       return;
     }
-    wanted.current = video.id;
     media.grant();
     setStarted(true);
     setFailed(false);
@@ -133,6 +150,7 @@ export function VideoPlaylist({ items, autoplay = true, onPlay, ref, label = "Vi
         // YouTube swaps the element it's given for its iframe: one of its own, not React's.
         const host = document.createElement("div");
         frame.append(host);
+        ready.current = false;
         player.current = new api.Player(host, {
           host: NOCOOKIE,
           videoId,
@@ -140,6 +158,11 @@ export function VideoPlaylist({ items, autoplay = true, onPlay, ref, label = "Vi
           height: "100%",
           playerVars: { autoplay: 1, rel: 0, playsinline: 1 },
           events: {
+            onReady: () => {
+              ready.current = true;
+              const asked = wanted.current;
+              if (asked && asked !== videoId) player.current?.loadVideoById(asked);
+            },
             onStateChange: ({ data }) => {
               if (data === api.PlayerState.PLAYING) {
                 setPlaying(true);
@@ -148,10 +171,11 @@ export function VideoPlaylist({ items, autoplay = true, onPlay, ref, label = "Vi
                 setPlaying(false);
               } else if (data === api.PlayerState.ENDED) {
                 setPlaying(false);
-                const next = now.current.current + 1;
+                const next = now.current.at + 1;
                 const id = now.current.ids[next];
                 if (now.current.rolling && id) {
                   setCurrent(next);
+                  wanted.current = id;
                   player.current?.loadVideoById(id);
                 }
               }
@@ -166,7 +190,7 @@ export function VideoPlaylist({ items, autoplay = true, onPlay, ref, label = "Vi
   };
 
   const step = (by: number) => {
-    play((current + by + videos.length) % videos.length);
+    play((at + by + videos.length) % videos.length);
   };
 
   return (
@@ -186,7 +210,7 @@ export function VideoPlaylist({ items, autoplay = true, onPlay, ref, label = "Vi
                 className="mf-playlist-play"
                 aria-label={`Play ${shown.title}`}
                 onClick={() => {
-                  play(current);
+                  play(at);
                 }}
               >
                 Play
@@ -235,19 +259,19 @@ export function VideoPlaylist({ items, autoplay = true, onPlay, ref, label = "Vi
       </div>
       <div className="mf-playlist-side">
         <ol className="mf-playlist-list">
-          {videos.map((video, at) => (
-            <li key={`${video.id}:${String(at)}`}>
+          {videos.map((video, index) => (
+            <li key={`${video.id}:${String(index)}`}>
               <button
                 type="button"
                 className="mf-playlist-row"
-                aria-current={at === current ? "true" : undefined}
+                aria-current={index === at ? "true" : undefined}
                 onClick={() => {
-                  play(at);
+                  play(index);
                 }}
               >
-                <span className="mf-playlist-number">{at + 1}</span>
+                <span className="mf-playlist-number">{index + 1}</span>
                 <span className="mf-playlist-title">{video.title}</span>
-                {at === current && playing && live ? <Equalizer /> : null}
+                {index === at && playing && live ? <Equalizer /> : null}
               </button>
             </li>
           ))}
