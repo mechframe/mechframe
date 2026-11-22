@@ -118,8 +118,12 @@ export function VideoPlaylist({ items, autoplay = true, onPlay, ref, label = "Vi
         player.current.pauseVideo();
         return;
       }
-      // A video still loading doesn't start: back to the facade (CodeRabbit on #127).
-      if (started) stop();
+      // A video still loading doesn't start: back to the facade, the load
+      // forgotten now, since its answer may come before the next render (CodeRabbit on #127).
+      if (!started) return;
+      attempt.current += 1;
+      wanted.current = null;
+      stop();
     },
   }));
 

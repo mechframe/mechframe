@@ -319,6 +319,21 @@ describe("VideoPlaylist", () => {
     expect(row("Second")).toHaveAttribute("aria-current", "true");
   });
 
+  it("stops a load at once on pause(), even when YouTube answers before the next render (CodeRabbit on #127)", async () => {
+    delete window.YT;
+    const handle = createRef<VideoPlaylistHandle>();
+    renderWithKernel(<VideoPlaylist items={ITEMS} ref={handle} />);
+    await userEvent.click(screen.getByRole("button", { name: "Play First" }));
+    await act(async () => {
+      handle.current?.pause();
+      window.YT = { Player: FakePlayer, PlayerState: STATE };
+      window.onYouTubeIframeAPIReady?.();
+      await Promise.resolve();
+    });
+    expect(FakePlayer.made).toHaveLength(0);
+    expect(screen.getByRole("button", { name: "Play First" })).toBeInTheDocument();
+  });
+
   it("stops a video still loading when pause() is asked (CodeRabbit on #127)", async () => {
     delete window.YT;
     const handle = createRef<VideoPlaylistHandle>();
