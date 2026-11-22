@@ -320,6 +320,7 @@ Routers stay thin, services hold the logic, and modules never reach into each ot
 **Between modules**
 
 - A module MUST NOT import another module, except through that module's public surface: `public.py` on the backend and `web/public.ts` on the front end, and only when it is listed in `requires.modules`. This is how a blog post shows `<Comments>`.
+- The backend imports it by package (`from media import public`); the front end as `@/modules/<id>/public`, which the repo's and the site template's TypeScript, Vite and Vitest configs map to the module's `public.ts` (decision 0057). Nothing else of another module resolves.
 - Everything else goes through kernel events.
 
 **Errors.** One shape: RFC 9457 problem details (`application/problem+json`) with `type`, `title`, `status` and `detail`, plus a stable `code` such as `blog.post_not_found`. `type` is `urn:mechframe:problem:<code>`, the same on every site. Field errors go in an `errors` map.
@@ -910,7 +911,8 @@ All eleven were answered on 2026-11-12, and the sections above already reflect t
 
 | Date | Change |
 | --- | --- |
-| 2026-11-22 | The third module, `contact` (`dev plans/contracts/contact.md`): the contact form at `/contact` and `ContactForm` for a site's own page; a message the bot check or the site's filters hold kept as spam and told to nobody; the Inbox's readers told of the rest through the kernel's new `notifications.notify_holders` (decision 0059), a notice to every active account holding a permission by role; a newsletter sign-up passed to `campaigns` as `contact.news.requested` (6) |
+| 2026-11-22 | The fourth module, `contact` (`dev plans/contracts/contact.md`): the contact form at `/contact` and `ContactForm` for a site's own page; a message the bot check or the site's filters hold kept as spam and told to nobody; the Inbox's readers told of the rest through the kernel's new `notifications.notify_holders` (decision 0059), a notice to every active account holding a permission by role; a newsletter sign-up passed to `campaigns` as `contact.news.requested` (6) |
+| 2026-11-22 | The third module, `blog` (`dev plans/contracts/blog.md`): posts with their categories, covers and related posts; a module's web binding imports another's `public.ts` as `@/modules/<id>/public`, mapped in the repo's and the site template's configs (decision 0057) (7) |
 | 2026-11-22 | The second module, `pages` (`dev plans/contracts/pages.md`): a site's fixed pages in Markdown, in its header and footer menus; a link slot's entries may be loaded from a module's own API (`defineModule`'s `links`), and the footer's menu is the link slot `nav.footer`, which the manifest's `slots` may name (decision 0056) (6, 8) |
 | 2026-11-22 | The admin and the kit to the boards (decisions 0042 and 0044, amended; VM Website Dev 08's check of media against its board, with the owner's OK, 2026-11-21 and 22): an action's icon before its words; the kit's `SearchBox`; a Needs-you item's action beside its words at 390; the required token `opacity.55`; the session's `name` on the person card; the boards' admin sections when a site gives none; the bell after the breadcrumb under 960px; media 0.1.1 drawn to its board (8) |
 | 2026-11-22 | Markdown made HTML on the server, `kernel.markdown` (decision 0055, `dev plans/contracts/pages.md`): `render`, `plain` and `excerpt`; `cleaned` keeps a link's and an image's `title` and a list's `start`; the kit's `MarkdownEditor`, `Prose` and `SearchFields` (6, 8, 15) |

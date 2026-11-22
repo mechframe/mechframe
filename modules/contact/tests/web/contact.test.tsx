@@ -12,7 +12,7 @@ import { renderApp, renderWithKernel, testUser } from "@/kernel/testing";
 
 import { toCsv, type InboxItem, type InboxMessage, type InboxPage } from "../../web/api";
 import contact from "../../web/module.web";
-import { ContactForm } from "../../web/public";
+import { ContactForm } from "@/modules/contact/public";
 
 type Answer = { status: number; body?: unknown };
 type Answers = Record<string, Answer | ((request: Request) => Answer | Promise<Answer>)>;

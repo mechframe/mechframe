@@ -1,0 +1,106 @@
+{
+  "id": "blog",
+  "name": "Blog",
+  "version": "0.1.0",
+  "status": "experimental",
+  "category": "content",
+  "summary": "Dated posts in Markdown, with categories, a cover from the media library, scheduling and related posts.",
+  "use_when": [
+    "The site publishes news, stories, poems or write-ups, each with a date, an author and a category",
+    "Posts are drafted and scheduled ahead, and a post's address may change while old links keep working",
+    "Each post needs a cover image for its card and for sharing, and a few related posts under it"
+  ],
+  "avoid_when": [
+    "The page is fixed, like About or Credits, and has no date or author: that's pages",
+    "The writing is a thread people start and answer: that's community",
+    "The posts are mailed out rather than read on the site: that's campaigns"
+  ],
+  "requires": {
+    "kernel": "^0.1",
+    "modules": {
+      "media": "^0.1"
+    }
+  },
+  "conflicts": [],
+  "permissions": [
+    {
+      "key": "blog.post.write",
+      "description": "Write posts and save changes to them, a live post's included",
+      "default_roles": [
+        "admin",
+        "editor"
+      ]
+    },
+    {
+      "key": "blog.post.publish",
+      "description": "Publish, schedule, unpublish and delete posts",
+      "default_roles": [
+        "admin",
+        "editor"
+      ]
+    }
+  ],
+  "settings": [],
+  "env": [],
+  "routes": {
+    "api": "/api/blog",
+    "public": [
+      "/blog",
+      "/blog/:slug"
+    ],
+    "member": [],
+    "admin": [
+      "/admin/blog"
+    ]
+  },
+  "tables": [
+    "blog_post",
+    "blog_slug_move",
+    "blog_post_related"
+  ],
+  "events": {
+    "emits": [
+      "blog.post.published"
+    ],
+    "listens": [
+      "kernel.content.published"
+    ]
+  },
+  "slots": [
+    "nav.public",
+    "nav.admin"
+  ],
+  "bindings": [
+    "web"
+  ],
+  "jobs": [],
+  "notifications": [],
+  "vocabularies": [
+    {
+      "key": "blog_category",
+      "label": "Categories",
+      "hierarchical": false
+    }
+  ],
+  "content_types": [
+    {
+      "key": "blog.post",
+      "label": "Post",
+      "lifecycle": true,
+      "search": true,
+      "taxonomy": [
+        "blog_category"
+      ]
+    }
+  ],
+  "data_hooks": {
+    "export": true,
+    "delete": true
+  },
+  "source": {
+    "from": "VybeSite",
+    "commit": "f659d7c",
+    "path": "backend/app/models/blog.py, backend/app/services/blog_service.py, backend/app/services/related_posts.py, backend/app/routers/blog_admin.py, backend/app/routers/blog_public.py",
+    "license": "proprietary"
+  }
+}

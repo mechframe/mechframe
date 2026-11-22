@@ -4,6 +4,8 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
 const kernel = fileURLToPath(new URL("../../kernel/web/index.ts", import.meta.url));
+// Another module's public surface, as `@/modules/<id>/public` (SPEC 7, decision 0057).
+const modules = fileURLToPath(new URL("../../modules/", import.meta.url));
 
 // The harness's web app. `npm run dev` serves it on 5173 and sends /api to the
 // harness's FastAPI app on 8000 (`python -m uvicorn harness.main:app`). Three
@@ -20,6 +22,11 @@ export default defineConfig({
       },
     },
   },
-  resolve: { alias: { "@/kernel": kernel } },
+  resolve: {
+    alias: [
+      { find: /^@\/kernel$/, replacement: kernel },
+      { find: /^@\/modules\/([a-z][a-z0-9-]*)\/public$/, replacement: `${modules}$1/web/public.ts` },
+    ],
+  },
   server: { port: 5173, proxy: { "/api": "http://localhost:8000" } },
 });
