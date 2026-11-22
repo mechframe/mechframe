@@ -1,8 +1,8 @@
 ---
 feature: The campaigns module, the site's newsletter and release announcements (Vibrant Mindz step 1; M5's third job)
-status: draft; §8 answered by the owner on 2026-11-22, waiting for approval
+status: approved; §8 answered by the owner on 2026-11-22
 plan: `docs/plans/vibrant-mindz-backend/extraction/campaigns.md`; `dev plans/2026-11-21-vibrant-mindz-push-plan.md` (M5); the canvas's AdminNewsletter board (`C:\DEV\VM Website\design\site\AdminNewsletter.dc.html`), the newsletter sections on Music, Blog and Videos, Contact's news box and AdminPost's "Email it to subscribers"
-approved:
+approved: 2026-11-22, by the owner, after a summary ("Fuller and then approved")
 pr: one, after `embeds`' (#127), numbered at push time
 ---
 
