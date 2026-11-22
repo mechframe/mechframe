@@ -376,3 +376,31 @@ describe("the frame's own footer menu (nav.footer, decision 0056)", () => {
     expect(screen.queryByRole("navigation", { name: "Footer" })).toBeNull();
   });
 });
+
+describe("loaded menus kept current (decision 0056; Codex on #121)", () => {
+  it("are read again on the next page once a minute old, and not before", async () => {
+    let reads = 0;
+    const pages = defineModule({
+      id: "pages",
+      routes: { public: [{ path: "/:address", lazy: pageSaying("A page") }], member: [], admin: [] },
+      links: {
+        "nav.footer": () => {
+          reads += 1;
+          return Promise.resolve(reads === 1 ? [{ label: "Credits", to: "/credits" }] : [{ label: "Privacy", to: "/privacy" }]);
+        },
+      },
+    });
+    const { router } = renderApp({ path: "/about", modules: [pages] });
+    expect(await screen.findByRole("link", { name: "Credits" })).toBeInTheDocument();
+
+    await router.navigate("/credits");
+    await screen.findByRole("heading", { level: 1, name: "A page" });
+    expect(reads).toBe(1); // still fresh
+
+    const now = Date.now();
+    vi.spyOn(Date, "now").mockReturnValue(now + 61_000);
+    await router.navigate("/press");
+    expect(await screen.findByRole("link", { name: "Privacy" })).toBeInTheDocument();
+    expect(reads).toBe(2);
+  });
+});

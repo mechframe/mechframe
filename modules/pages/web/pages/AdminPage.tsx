@@ -5,7 +5,7 @@
 // panel says Live, and its button Update. A save someone else got to first asks
 // field by field (the kit's SaveConflict); leaving with changes asks first.
 import { useQueryClient } from "@tanstack/react-query";
-import { useId, useMemo, useRef, useState } from "react";
+import { useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router";
 
 import {
@@ -51,6 +51,7 @@ import {
   merged,
   openingWords,
   problems,
+  rebased,
   type Form,
   type FormField,
   type Menu,
@@ -112,6 +113,11 @@ function Editor({ saved: first, start }: { saved: Full | null; start: Form }) {
   const [deleting, setDeleting] = useState(false);
   const saveButton = useRef<HTMLButtonElement>(null);
   const atId = useId();
+  // The fields as they stand now, for an answer that lands after more typing.
+  const formNow = useRef(form);
+  useLayoutEffect(() => {
+    formNow.current = form;
+  });
 
   const edits = changed(form, base);
   const dirty = edits.length > 0;
@@ -144,7 +150,7 @@ function Editor({ saved: first, start }: { saved: Full | null; start: Form }) {
       if (!data) throw new Error("The site answered without the page.");
       remember(data);
       setSaved(data);
-      setForm(formOf(data));
+      setForm((now) => rebased(now, from, formOf(data)));
       guard.release();
       void navigate(`/admin/pages/${data.id}`, { replace: true, state: { created: true } });
       return data;
@@ -159,7 +165,7 @@ function Editor({ saved: first, start }: { saved: Full | null; start: Form }) {
       if (!data) throw new Error("The site answered without the page.");
       remember(data);
       setSaved(data);
-      setForm(formOf(data));
+      setForm((now) => rebased(now, from, formOf(data)));
       setConflict(null);
       return data;
     } catch (error) {
@@ -169,12 +175,34 @@ function Editor({ saved: first, start }: { saved: Full | null; start: Form }) {
         if (said.conflicts.length === 0) {
           // They changed only what you didn't: theirs, with yours on top, saved again.
           setSaved(theirs);
+          setForm((now) => merged(formOf(onto), now, theirs, new Set()));
           return save(merged(formOf(onto), from, theirs, new Set()), theirs);
         }
         setConflict({ said, theirs, mine: from });
       }
       throw error;
     }
+  }
+
+  /**
+   * Takes in a page a Publish or an Unpublish answered with, `held` the one this
+   * editor had. Someone else's save since (a newer version) comes into the
+   * fields you haven't changed; where you both changed one, it asks which to keep
+   * (Codex on #121), so the next save never overwrites theirs unseen.
+   */
+  function adopt(answer: Full, held: Full) {
+    if (answer.version === held.version) {
+      setSaved(answer);
+      return;
+    }
+    const before = formOf(held);
+    const said = conflictOf("Someone saved this page since you opened it. Here is how it reads now.", before, formNow.current, answer);
+    if (said.conflicts.length > 0) {
+      setConflict({ said, theirs: answer, mine: formNow.current });
+      return;
+    }
+    setForm((now) => merged(before, now, answer, new Set()));
+    setSaved(answer);
   }
 
   async function act(what: () => Promise<unknown>, done?: string) {
@@ -201,7 +229,7 @@ function Editor({ saved: first, start }: { saved: Full | null; start: Form }) {
     });
     if (!data) throw new Error("The site answered without the page.");
     remember(data);
-    setSaved(data);
+    adopt(data, page);
     setScheduling(false);
   }
 
@@ -212,7 +240,7 @@ function Editor({ saved: first, start }: { saved: Full | null; start: Form }) {
     });
     if (!data) throw new Error("The site answered without the page.");
     remember(data);
-    setSaved(data);
+    adopt(data, saved);
   }
 
   async function remove() {

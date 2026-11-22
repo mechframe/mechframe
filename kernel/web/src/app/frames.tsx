@@ -23,10 +23,11 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { Link, Outlet, useLocation, useNavigate } from "react-router";
 
 import { useSession, useSignOut } from "../session/session";
-import { SlotOutlet, useSlot } from "../slots/slots";
+import { SLOT_LINKS, SLOT_LINKS_FRESH, SlotOutlet, useSlot } from "../slots/slots";
 import { useSite } from "../site/site";
 import { ErrorBoundary } from "../ui/ErrorBoundary";
 import { RouteFocus } from "../ui/RouteFocus";
@@ -34,12 +35,31 @@ import { ScrollMemory } from "../ui/ScrollMemory";
 import { onStay } from "../ui/unsaved";
 import { useKernelSetup } from "./context";
 
-/** Every page: focus moved to its heading, scroll kept per page and landed on its place (`ScrollMemory`). */
+/**
+ * Each new page reads again the modules' loaded links that are over a minute
+ * old (decision 0056): a query's freshness alone never reads again while the
+ * frame keeps its menus drawn, so a page published or taken out of a menu
+ * would wait for the window's next focus (Codex on #121).
+ */
+function FreshLinks() {
+  const { pathname } = useLocation();
+  const queryClient = useQueryClient();
+  const last = useRef(pathname);
+  useEffect(() => {
+    if (last.current === pathname) return;
+    last.current = pathname;
+    void queryClient.refetchQueries({ queryKey: SLOT_LINKS, type: "active", predicate: (query) => query.isStaleByTime(SLOT_LINKS_FRESH) });
+  }, [pathname, queryClient]);
+  return null;
+}
+
+/** Every page: focus moved to its heading, scroll kept per page and landed on its place (`ScrollMemory`), the loaded menus kept current. */
 export function Root() {
   return (
     <>
       <RouteFocus />
       <ScrollMemory />
+      <FreshLinks />
       <Outlet />
     </>
   );

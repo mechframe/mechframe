@@ -323,6 +323,76 @@ describe("the editor", () => {
     expect(await json(second)).toEqual({ version: 2, title: "My title" });
   });
 
+  it("keeps what's typed while a save is on its way (Codex on #121)", async () => {
+    let answer: (value: Answer) => void = () => undefined;
+    const sent = routed({
+      [`GET ${ONE}`]: { status: 200, body: full() },
+      [`PATCH ${ONE}`]: () =>
+        new Promise<Answer>((resolve) => {
+          answer = resolve;
+        }),
+    });
+    renderApp({ path: `/admin/pages/${ID}`, modules: [pages], session: editor });
+
+    const title = await screen.findByRole("textbox", { name: "Title" });
+    await userEvent.clear(title);
+    await userEvent.type(title, "About us");
+    await userEvent.click(screen.getAllByRole("button", { name: "Save draft" })[0] as HTMLElement);
+    await waitFor(() => {
+      expect(sent.some((each) => each.method === "PATCH")).toBe(true);
+    });
+    const body = screen.getByRole("textbox", { name: "Page body" });
+    await userEvent.type(body, " More.");
+    answer({ status: 200, body: full({ title: "About us", version: 2 }) });
+
+    await waitFor(() => {
+      expect(screen.getByText("1 change not saved")).toBeInTheDocument();
+    });
+    expect(body).toHaveValue("We make music. More.");
+    expect(title).toHaveValue("About us");
+  });
+
+  it("takes in someone else's save an Unpublish answers with, keeping your changes (Codex on #121)", async () => {
+    const sent = routed({
+      [`GET ${ONE}`]: { status: 200, body: full({ status: "published", published_at: "2026-11-20T12:00:00+00:00" }) },
+      [`POST ${ONE}/unpublish`]: { status: 200, body: full({ title: "Their title", version: 2 }) },
+      [`PATCH ${ONE}`]: { status: 200, body: full({ title: "Their title", body: "We make music. More.", version: 3 }) },
+    });
+    renderApp({ path: `/admin/pages/${ID}`, modules: [pages], session: editor });
+
+    const body = await screen.findByRole("textbox", { name: "Page body" });
+    await userEvent.type(body, " More.");
+    await userEvent.click(screen.getByRole("button", { name: "Unpublish" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("textbox", { name: "Title" })).toHaveValue("Their title");
+    });
+    expect(body).toHaveValue("We make music. More.");
+    await userEvent.click(screen.getAllByRole("button", { name: "Save draft" })[0] as HTMLElement);
+    await waitFor(() => {
+      expect(sent.some((each) => each.method === "PATCH")).toBe(true);
+    });
+    // Their title stays theirs: only the body, at their version.
+    expect(await json(sent.find((each) => each.method === "PATCH") as Request)).toEqual({ version: 2, body: "We make music. More." });
+  });
+
+  it("asks field by field when an Unpublish answers with someone else's change to a field you changed too", async () => {
+    routed({
+      [`GET ${ONE}`]: { status: 200, body: full({ status: "published", published_at: "2026-11-20T12:00:00+00:00" }) },
+      [`POST ${ONE}/unpublish`]: { status: 200, body: full({ title: "Their title", version: 2 }) },
+    });
+    renderApp({ path: `/admin/pages/${ID}`, modules: [pages], session: editor });
+
+    const title = await screen.findByRole("textbox", { name: "Title" });
+    await userEvent.clear(title);
+    await userEvent.type(title, "My title");
+    await userEvent.click(screen.getByRole("button", { name: "Unpublish" }));
+
+    expect(await screen.findByText("Their title")).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Keep mine" })).toBeInTheDocument();
+    expect(title).toHaveValue("My title");
+  });
+
   it("asks before leaving with changes", async () => {
     routed({ [`GET ${ONE}`]: { status: 200, body: full() }, [LIST]: { status: 200, body: { items: [] } } });
     renderApp({ path: `/admin/pages/${ID}`, modules: [pages], session: editor });

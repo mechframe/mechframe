@@ -168,3 +168,16 @@ export function merged(base: Form, mine: Form, theirs: Full, keepTheirs: Readonl
   }
   return next;
 }
+
+/**
+ * The fields once a save of `sent` is answered with `answer`: what the person
+ * typed after the save went (where the fields no longer read as `sent`) stays
+ * as typed, and the rest read as the server has them (Codex on #121).
+ */
+export function rebased(now: Form, sent: Form, answer: Form): Form {
+  const next: Form = { ...answer };
+  for (const field of Object.keys(now) as FormField[]) {
+    if (now[field] !== sent[field]) (next as Record<FormField, unknown>)[field] = now[field];
+  }
+  return next;
+}

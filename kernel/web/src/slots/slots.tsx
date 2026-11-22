@@ -18,7 +18,7 @@ import { LINK_SLOTS, linkFits, type Lazy, type LinkSlotName, type SlotEntryOf, t
 /** Where TanStack Query keeps a module's loaded links: `[...SLOT_LINKS, module, slot]`. */
 export const SLOT_LINKS = ["kernel", "slot-links"] as const;
 /** How long a module's loaded links stay fresh before the next page asks again. */
-const FRESH = 60_000;
+export const SLOT_LINKS_FRESH = 60_000;
 
 type Loaded = { module: string; links: readonly unknown[] | undefined };
 
@@ -35,7 +35,7 @@ function useLoadedLinks(name: SlotName, on: (id: string) => boolean): Map<string
     queries: loaders.map(({ module, load }) => ({
       queryKey: [...SLOT_LINKS, module, name],
       queryFn: load,
-      staleTime: FRESH,
+      staleTime: SLOT_LINKS_FRESH,
     })),
     combine: (results) =>
       results.map((result, at): Loaded => ({ module: loaders[at]?.module ?? "", links: result.data })),
