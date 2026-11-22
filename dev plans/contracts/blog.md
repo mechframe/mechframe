@@ -1,8 +1,8 @@
 ---
 feature: The blog module, posts with their editor, categories, covers and AI writing help (Vibrant Mindz step 1; M4's second job)
-status: draft (the owner's answers to four questions in §8; three smaller ones still to ask)
+status: draft (the owner's answers to five questions in §8; two smaller ones still to ask, before the AI PR and social posting)
 plan: `docs/plans/vibrant-mindz-backend/extraction/blog.md`; `dev plans/2026-11-21-vibrant-mindz-push-plan.md` (M4); the canvas's AdminBlog and AdminPost boards (`C:\DEV\VM Website\design\site\AdminBlog.dc.html`, `AdminPost.dc.html`) and the site's Blog and Post boards (`Blog.dc.html`, `Post.dc.html`)
-approved: not yet; answered 2026-11-22: the order of PRs, where AI help lives, what a cover is, and two extras (§8)
+approved: not yet; answered 2026-11-22: the order of PRs, where AI help lives, what a cover is, two extras, and who writes (§8)
 pr: four, after `pages`: the blog, then the kernel's AI writing help, then generated covers, then social posting (§8); numbers predicted at push time
 ---
 
@@ -66,9 +66,9 @@ Answered 2026-11-22:
 2. **Where AI writing help lives:** the kernel, as recommended: `ai.client()` (SPEC 6), Settings → Writing (VybeSite's writing constitution and writing styles), and the editor's AI buttons for every module's `MarkdownEditor` (draft, titles, summary, search words, rewrite), through its `tools`. A decision record with that PR.
 3. **What a generated cover is:** VybeSite's, as recommended: Claude draws an SVG cover from the post (the brand's colours, a wordmark if ticked), cleaned, then made a PNG on the server and stored in the media library as any image, with alt text.
 4. **VybeSite's extras now:** related posts and social posting; the claims list checks later.
+5. **Who writes** (answered 2026-11-22, as recommended): "Anyone with blog writing permissions should be able to write and publish." `blog.post.write` and `blog.post.publish` both go to owner, admin and editor, the Author field naming any of them; a site that wants authors who can't publish adds a custom role with only `blog.post.write`.
 
 Still to ask, each with its recommendation:
 
-5. **The Anthropic key** (before the AI PR): `ANTHROPIC_API_KEY` in the host's variables only, typed by the owner, as every other key here; nothing AI shows without it. VybeSite also lets an admin save one in Settings → AI, encrypted.
-6. **Social posting's home and key** (before its PR): VybeSite posts through Buffer, its key saved in Settings → Company channels. Recommended: a `social` module any module can share through (blog first, then releases and products), its Buffer token in the host's variables; the other way is inside blog. Creating the Buffer account is the owner's.
-7. **Who writes** (before the blog PR): anyone holding `blog.post.write` (owner, admin, editor), the Author field naming any of them; a site that wants authors who can't publish adds a custom role with only that permission.
+6. **The Anthropic key** (before the AI PR): `ANTHROPIC_API_KEY` in the host's variables only, typed by the owner, as every other key here; nothing AI shows without it. VybeSite also lets an admin save one in Settings → AI, encrypted.
+7. **Social posting's home and key** (before its PR): VybeSite posts through Buffer, its key saved in Settings → Company channels. Recommended: a `social` module any module can share through (blog first, then releases and products), its Buffer token in the host's variables; the other way is inside blog. Creating the Buffer account is the owner's.

@@ -10,10 +10,10 @@ The binding directives are in `C:\DEV\CLAUDE.md` and `C:\DEV\DIRECTIVES.md`, whi
 - **Path:** `C:\DEV\AI-DevKit`. **Remote:** `https://github.com/mechframe/mechframe` (decision 0034), **public** (decision 0011). Never commit secrets, client material or private notes; private notes go in `docs/private/` (gitignored).
 - **The contract:** `SPEC.md`. Every module, the kernel and the CLI follow it. Read the sections you touch before every change.
 
-## Current state (2026-11-22; the kernel closed, #96; hooks 1 to 8, #97 to #110; media, #116; the kernel's Markdown, #118)
+## Current state (2026-11-22; the kernel closed, #96; hooks 1 to 8, #97 to #110; media, #116; the kernel's Markdown, #118; pages, #121)
 
 - **The kernel is done**, K0 to K5 (#1 to #96), with K2's steps 9 to 11 waiting until the site needs them (decision 0029). **Hooks 1 to 8** of the ten are in (#97 to #110, decision 0052); entitlements and profile tabs wait until just before Vibrant Mindz's step 5 and wave 2b. `mechframe upgrade kernel` is in (#111, #114; decision 0053).
-- **Modules:** `media` (#116; 0.1.1 drawn to its board, #119). **Next: `pages`**, its contract approved (`dev plans/contracts/pages.md`), **then `blog`**, its contract drafted with the owner's answers (`dev plans/contracts/blog.md`, §8 saying what's still to ask).
+- **Modules:** `media` (#116; 0.1.1 drawn to its board, #119) and `pages` (#121: Markdown pages, moves that never chain, the header's and footer's menus through link slots a module loads and `nav.footer`, decision 0056). **Next: `blog`**, its contract drafted with the owner's answers (`dev plans/contracts/blog.md`; §8's 6 and 7 still to ask, before its AI and social PRs).
 - **The kernel's Markdown** (#118, decision 0055): `kernel.markdown` (`render`, `plain`, `excerpt`) and the kit's `MarkdownEditor`, `Prose` and `SearchFields`, for pages first and blog next. #119 added the kit's `SearchBox`, an action's icon before its words, the required token `opacity.55`, the session's `name` on the person card and the boards' admin sections by default (decisions 0042 and 0044, amended).
 - **Progress** is one record, `docs/progress.json`, made into `docs/PROGRESS.md` and the owner's visual ledger (#61). v1.0: 78% (48 of 61 steps).
 - **The first real site** is the new Vibrant Mindz site (`docs/plans/vibrant-mindz-module-plan.md`), built in its own session (`C:\DEV\VM Website`) from MechFrame's `main`; its checks against the boards send items here, the owner's calls relayed.
@@ -24,12 +24,10 @@ The binding directives are in `C:\DEV\CLAUDE.md` and `C:\DEV\DIRECTIVES.md`, whi
 
 ## Last Completed Task
 
-2026-11-21 night to 2026-11-22 early morning Eastern (Claude Code, the owner's machine): session M4a.
+2026-11-22, early morning to 08:30 Eastern (Claude Code, the owner's machine): session M4b.
 
-- **`pages`' contract**, approved with the owner's four answers: a Markdown page for now and VybeSite's builder after, the editor in the kernel, a live page's Save changing the site, header and footer menus.
-- **#118, the kernel's Markdown and its editor** (decision 0055), landed at `81eabf2`, with Codex's finding (offset zero) and CodeRabbit's five fixed, each with a test seen failing.
-- **#119, media and the kit to VM Website's boards** (VM Website Dev 08's nine items and canvas version 82, the owner's calls).
-- **`blog`'s contract**, drafted with the owner's answers: four PRs, AI help in the kernel, SVG covers into media, related posts and social posting now.
+- **#121, `pages`**, landed at `2be4d49`: the module to its approved contract, decision 0056 (link slots a module loads, `nav.footer`) and the template never inlining a font (VM Website's CSP finding, the owner's call), with Codex's three and CodeRabbit's nine and a nitpick fixed, each with a test seen failing.
+- **`blog`'s §8, who writes:** anyone with blog-writing permission writes and publishes (the owner, as recommended).
 
 ## Read order
 
