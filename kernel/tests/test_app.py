@@ -298,6 +298,7 @@ def _routes_module(
     [
         ("/items/{item_id}", "/items/import"),
         ("/items/{item_id}/edit", "/items/special/{action}"),
+        ("/items/{item_id}/detail", "/items/import/{action}"),
     ],
 )
 def test_two_body_limits_that_can_match_one_request_are_refused_at_the_start(
