@@ -2,7 +2,7 @@
 // home page says only what the server's copy says, a missing address is a real
 // 404, and axe finds no serious or critical problem.
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type ConsoleMessage, type Page } from "@playwright/test";
 
 const WORDS = ":is(h1, h2, h3, p)";
 
@@ -53,4 +53,30 @@ test("an address the site doesn't have is a real 404", async ({ page }) => {
   const answer = await page.goto("/nowhere");
   expect(answer?.status()).toBe(404);
   await expect(page.getByRole("heading", { level: 1, name: "Page not found" })).toBeVisible();
+});
+
+// Nothing the browser refuses or fails on, behind the built app's own security
+// policy, which the dev server doesn't send: VM Website's first deploy
+// (2026-11-22) had a font face refused on every page, a font Vite inlined as a
+// data: address for being under its 4 KB limit (font-src 'self'). The one error
+// a signed-out visitor's browser logs by design is the session check's 401.
+function signedOutCheck(message: ConsoleMessage): boolean {
+  return message.text().includes("status of 401") && new URL(message.location().url, "http://site.invalid").pathname === "/api/auth/session";
+}
+
+test("every page loads with no console error once its fonts are in", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("console", (message) => {
+    if (message.type() === "error" && !signedOutCheck(message)) {
+      errors.push(`${new URL(page.url()).pathname}: ${message.text().slice(0, 200)}`);
+    }
+  });
+  for (const path of ["/", "/sign-in", "/sign-up", "/forgot-password"]) {
+    const answer = await page.goto(path);
+    expect(answer?.status()).toBe(200);
+    expect(answer?.headers()["content-security-policy"]).toContain("font-src 'self'");
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+  }
+  expect(errors).toEqual([]);
 });

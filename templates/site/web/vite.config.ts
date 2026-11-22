@@ -20,6 +20,12 @@ export default defineConfig({
     ],
   },
   server: { port: 5173, proxy: { "/api": "http://localhost:8000" } },
+  // A font is never inlined as a data: address, which the kernel's security
+  // policy refuses (font-src 'self'): Vite inlines any file under 4 KB, and a
+  // font's smaller subsets are (VM Website's first deploy, 2026-11-22; e2e
+  // "every page loads with no console error once its fonts are in"). Other
+  // small files keep Vite's default.
+  build: { assetsInlineLimit: (file) => (/\.(woff2?|ttf|otf)$/i.test(file) ? false : undefined) },
   test: {
     environment: "jsdom",
     setupFiles: ["./vitest.setup.ts"],
