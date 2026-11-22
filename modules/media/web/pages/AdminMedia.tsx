@@ -225,11 +225,15 @@ function Panel({ id, onDirty, onGone, onChanged }: PanelProps) {
   const [problem, setProblem] = useState<string | null>(null);
   // While a write is under way the form waits, so nothing typed meanwhile is lost (CodeRabbit on #116).
   const [busy, setBusy] = useState(false);
+  // The version a draft was typed against: a refresh meanwhile mustn't turn it
+  // into a save over another's change (CodeRabbit on #116).
+  const [base, setBase] = useState<number | null>(null);
   const image = one.data;
   const dirty = alt !== null || decorative !== null;
   const guard = useUnsavedGuard(dirty, saveDraft);
 
   function edit(next: { alt?: string; decorative?: boolean }) {
+    if (base === null && image) setBase(image.version);
     if (next.alt !== undefined) setAlt(next.alt);
     if (next.decorative !== undefined) setDecorative(next.decorative);
     onDirty(true);
@@ -240,13 +244,16 @@ function Panel({ id, onDirty, onGone, onChanged }: PanelProps) {
     setBusy(true);
     setProblem(null);
     try {
-      await settle(await describeImage(image, { alt: alt ?? image.alt ?? "", decorative: decorative ?? image.decorative }));
+      await settle(
+        await describeImage({ ...image, version: base ?? image.version }, { alt: alt ?? image.alt ?? "", decorative: decorative ?? image.decorative }),
+      );
       return null;
     } catch (error) {
       if (error instanceof ApiProblem && error.code === "media.changed") {
         await one.refetch();
         setAlt(null);
         setDecorative(null);
+        setBase(null);
         onDirty(false);
         const said = "Someone changed this image since you opened it. It now reads as they left it.";
         setProblem(said);
@@ -270,6 +277,7 @@ function Panel({ id, onDirty, onGone, onChanged }: PanelProps) {
     queryClient.setQueryData(["get", ONE, { params: { path: { image_id: id } } }], fresh);
     setAlt(null);
     setDecorative(null);
+    setBase(null);
     onDirty(false);
     await onChanged();
   }

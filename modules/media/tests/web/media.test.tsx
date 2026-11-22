@@ -310,6 +310,30 @@ describe("unsaved alt text (CodeRabbit on #116)", () => {
     expect(await screen.findByRole("textbox", { name: /Alt text/ })).toHaveValue("A mixing desk");
   });
 
+  it("saves a draft with the version it was typed against, though a refresh brought a newer one", async () => {
+    let reads = 0;
+    const sent = routed({
+      [LIST]: { status: 200, body: { items: [DOOR], next_cursor: null, missing_alt: 1 } },
+      [`GET /api/media/admin/images/${DOOR.id}`]: () => {
+        reads += 1;
+        return { status: 200, body: { ...DOOR, version: reads === 1 ? 1 : 2, alt: reads === 1 ? null : "Theirs", uses: [] } };
+      },
+      [`PATCH /api/media/admin/images/${DOOR.id}`]: problem(409, "media.changed", { version: 2, alt: "Theirs", decorative: false }),
+    });
+    const { queryClient } = renderWithKernel(<AdminMedia />, { path: "/admin/media", session: staff });
+    await userEvent.click(await screen.findByRole("button", { name: /door\.png/ }));
+    await userEvent.type(await screen.findByRole("textbox", { name: /Alt text/ }), "Mine");
+
+    await queryClient.invalidateQueries({ queryKey: ["get", "/api/media/admin/images/{image_id}"] });
+    await waitFor(() => {
+      expect(reads).toBe(2);
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(await screen.findByText(/Someone changed this image since you opened it/)).toBeInTheDocument();
+    expect(await sent.find((request) => request.method === "PATCH")?.json()).toEqual({ version: 1, alt: "Mine", decorative: false });
+  });
+
   it("keeps the file inputs out of the tab order, named for what they do", async () => {
     routed({ [LIST]: { status: 200, body: { items: [], next_cursor: null, missing_alt: 0 } } });
     renderWithKernel(<ImagePicker title="Choose" onPick={vi.fn()} onClose={vi.fn()} />, { session: staff });
