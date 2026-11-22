@@ -3,7 +3,7 @@ feature: The embeds module, players from a pasted link and the YouTube playlist 
 status: approved
 plan: `docs/plans/vibrant-mindz-backend/extraction/embeds.md`; `dev plans/2026-11-21-vibrant-mindz-push-plan.md` (M5); `docs/plans/vibrant-mindz-backend/videos-player.md` and `players-admin.md` (copies of VM Website's specs); `docs/plans/vibrant-mindz-module-plan.md` §4
 approved: 2026-11-22, §8, 1 as recommended (the owner: "As recommended")
-pr: one, after `contact`'s (#125), numbered at push time
+pr: #127, after `contact`'s (#125)
 ---
 
 # Contract: `embeds`
