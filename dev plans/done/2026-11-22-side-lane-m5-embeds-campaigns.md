@@ -47,7 +47,7 @@ AI DevKit Development 35 WT ran this prompt, 2026-11-22, to about 16:40 Eastern.
   - a post's email goes as it goes live;
   - owner and admin send;
   - bounces are read over IMAP in this PR, since the site sends by Spaceship's Spacemail;
-  - `send_per_hour` is 6,000 by default, since Spacemail has no sending limit.
+  - `send_per_hour` is 6,000 by default, since Spacemail has no sending limit. (Since changed, 2026-11-23: Spaceship documents 500 an hour for a paid mailbox and 20 on a trial, so the owner chose 400; `dev plans/contracts/campaigns.md`, §8 6.)
 - **For the main lane's handoff:**
   - #127 landed and step 1's row lists it;
   - campaigns is built next, in the side lane, from `dev plans/2026-11-22-side-lane-m6-campaigns.md` (on `feat/campaigns-module`);

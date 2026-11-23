@@ -33,7 +33,7 @@ Both go to owner and admin (§8, 4), granted in `campaigns_0001`.
 - `signups_open`: a bool, true by default. It's the board's "Sign-ups open" pill; while it's off, the forms say sign-ups are closed.
 - `postal_address`: ≤ 300 characters. US law (CAN-SPAM) puts a postal address in every newsletter; a P.O. box will do. Nothing sends until it's set, and the Newsletter page says so.
 - `footer_note`: ≤ 300 characters, by default "You're getting this because you asked for news from ${site_name}."
-- `send_per_hour`: how many newsletter messages may go out in an hour, 1 to 10,000, and 400 by default (the owner, 2026-11-23: under a Spacemail mailbox's 500 an hour, with room for the site's own mail). Spacemail has no sending limit (§8, 6); a site whose host has one sets it lower.
+- `send_per_hour`: how many newsletter messages may go out in an hour, 1 to 10,000, and 400 by default (the owner, 2026-11-23: under a Spacemail mailbox's 500 an hour, with room for the site's own mail). A trial mailbox (20 an hour) or a host with another limit sets its own.
 
 They're edited in the Settings section "Newsletter".
 
