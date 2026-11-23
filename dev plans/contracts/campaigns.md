@@ -217,5 +217,7 @@ For later, not a choice:
   - **The webhook refuses malformed headers with 401,** never a 500: a timestamp of a few ASCII digits, signatures compared as bytes.
   - **NewsletterSignup's done state says "if"**: an address already on the list gets the same answer and no second confirmation.
   - **An erase keeps a send's queued rows, the address replaced,** so the hour still counts them; the person's unsent rows go.
+  - **A run stamps its copies as it ends,** so one that took longer than a minute still counts them in the minute they leave in.
+  - **Subjects and preview lines refuse what the kernel mailer refuses** (Unicode's Cc, Zl and Zp, C1 controls among them). A copy the mailer refuses anyway stops its email, never the sends behind it; a test it refuses is 422 `campaigns.unsendable`.
   - **One route serves the editor, `/admin/campaigns/:id`, `new` among them:** a new email's editor stays drawn as its address changes on the first save, so a Send after it, and what it's refused, end in that editor. Editing a field puts away only that field's error.
   - **Owner's call, still open:** Spaceship's knowledge base and terms give Spacemail an outgoing limit of 500 an hour for a paid mailbox (20 on a trial), across its aliases, where §8 6 has none. The default `send_per_hour` of 6,000 stands until the owner chooses.

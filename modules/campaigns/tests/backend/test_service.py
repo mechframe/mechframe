@@ -659,3 +659,54 @@ async def test_a_copy_erased_within_the_hour_still_counts_toward_it(
     assert await _run(db) == 1
     clock.advance(61)
     assert await _run(db) == 0  # two in the hour, the erased one among them
+
+
+async def test_a_run_that_takes_over_a_minute_still_holds_the_pace(
+    db: AsyncSession,
+    queued: Queued,
+    campaigns_settings: dict[str, Any],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """CodeRabbit on #134: copies stamped at a long run's start would fall out of
+    the minute before they're even sent, and the next run would queue again."""
+    campaigns_settings["send_per_hour"] = 120  # two a minute
+    await _subscribed(db, queued, *(_address(f"l{each}") for each in range(4)))
+    row = await _email(db)
+    await _send_now(db, row)
+    recorder = email.queue_message
+
+    async def slow(*args: Any, **kwargs: Any) -> None:
+        await recorder(*args, **kwargs)
+        clock.advance(40)  # each copy takes a while: the run outlasts its minute
+
+    monkeypatch.setattr(email, "queue_message", slow)
+    assert await _run(db) == 2
+    monkeypatch.setattr(email, "queue_message", recorder)
+    assert await _run(db) == 0  # the two just sent are still in this minute
+
+
+async def test_a_copy_the_mailer_refuses_stops_its_email_and_never_the_rest(
+    db: AsyncSession, queued: Queued
+) -> None:
+    """CodeRabbit on #134: a refusal from the kernel's queue mustn't roll back every batch."""
+    address = _address()
+    await _subscribed(db, queued, address)
+    bad = await _email(db, "Bad")
+    await _send_now(db, bad)
+    await db.execute(update(Email).where(Email.id == bad.id).values(subject="Bad" + chr(0x85)))
+    await db.commit()
+    good = await _email(db, "Good")
+    await _send_now(db, good)
+    assert await _run(db) == 1
+    assert [each["subject"] for each in queued.to(address)][-1:] == ["Good"]
+    await db.refresh(bad)
+    assert (bad.status, bad.sent_to) == ("sent", 0)
+
+
+async def test_a_test_the_mailer_refuses_is_422(db: AsyncSession) -> None:
+    row = await service.create(db, NewCampaignEmail(subject="Fine"), by=None)
+    await db.execute(update(Email).where(Email.id == row.id).values(subject="Bad" + chr(0x9F)))
+    await db.commit()
+    with pytest.raises(Problem) as refused:
+        await service.send_test(db, row.id, to="me@example.org")
+    assert (refused.value.code, refused.value.status) == ("campaigns.unsendable", 422)

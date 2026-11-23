@@ -8,6 +8,7 @@ send pace.
 
 from __future__ import annotations
 
+import unicodedata
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -35,14 +36,16 @@ MAX_ADDRESS = 300
 MAX_TOKEN = 200
 DEFAULT_NOTE = "You're getting this because you asked for news from ${site_name}."
 
-#: What breaks a line besides a control character: NEL and the line and
-#: paragraph separators, which str.splitlines() reads as line ends.
-_BREAKS = frozenset(chr(code) for code in (0x85, 0x2028, 0x2029))
+#: Control characters and Unicode's line and paragraph separators: the kernel
+#: mailer refuses any of them in a header.
+_REFUSED = frozenset({"Cc", "Zl", "Zp"})
 
 
 def one_line(value: str) -> str:
-    """The text trimmed, refused if it holds a line break or a control character."""
-    if any(ord(each) < 32 or ord(each) == 127 or each in _BREAKS for each in value):
+    """The text trimmed, refused if it holds a line break or a control character:
+    by the kernel mailer's own rule (Unicode's Cc, Zl and Zp, C1 controls among
+    them), so a subject saved is one it sends (CodeRabbit on #134)."""
+    if any(unicodedata.category(each) in _REFUSED for each in value):
         raise ValueError("One line, with no line breaks.")
     return value.strip()
 

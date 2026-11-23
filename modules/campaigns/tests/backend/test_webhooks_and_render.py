@@ -237,3 +237,10 @@ def test_a_save_s_subject_is_one_line_and_never_empty() -> None:
         CampaignEmailChange(version=1, subject="   ")
     with pytest.raises(ValidationError):
         CampaignEmailChange(version=1, body="a" + chr(0))
+
+
+@pytest.mark.parametrize("control", [chr(0x80), chr(0x9F), chr(0x1B), chr(0x2028)])
+def test_a_subject_holds_nothing_the_mailer_refuses(control: str) -> None:
+    """CodeRabbit on #134: the subject is one line by the kernel mailer's own rule."""
+    with pytest.raises(ValidationError):
+        CampaignEmailChange(version=1, subject=f"Hello{control}there")

@@ -126,6 +126,7 @@ async def _queue(db: AsyncSession, send_per_hour: int, now: datetime) -> int:
     made: dict[uuid.UUID, render.Parts] = {}
     skipped: list[uuid.UUID] = []
     stopped: set[uuid.UUID] = set()
+    sent: list[Delivery] = []
     queued = 0
     for delivery, row in rows:
         if row.id in stopped:
@@ -158,19 +159,33 @@ async def _queue(db: AsyncSession, send_per_hour: int, now: datetime) -> int:
             skipped.append(delivery.id)
             continue
         link = render.unsubscribe_page(site_url, token)
-        await email.queue_message(
-            db,
-            person.email,
-            parts.subject,
-            render.text(parts, link),
-            render.html(parts, link),
-            render.headers(site_url, token),
-        )
+        try:
+            await email.queue_message(
+                db,
+                person.email,
+                parts.subject,
+                render.text(parts, link),
+                render.html(parts, link),
+                render.headers(site_url, token),
+            )
+        except ValueError:
+            # The kernel's checks refused this email's copy (its subject, say): every
+            # copy would be refused alike, so it stops here, and the sends behind it
+            # go on (CodeRabbit on #134). Nothing of the copy is logged.
+            await _stop(db, row, now)
+            stopped.add(row.id)
+            continue
         delivery.queued_at = now
+        sent.append(delivery)
         row.sent_to += 1
         queued += 1
     if skipped:
         await db.execute(delete(Delivery).where(Delivery.id.in_(skipped)))
+    # Stamped as the run ends, not as it began: a run that took long still counts its
+    # copies in the minute they leave in (CodeRabbit on #134).
+    finished = clock.now()
+    for delivery in sent:
+        delivery.queued_at = finished
     return queued
 
 

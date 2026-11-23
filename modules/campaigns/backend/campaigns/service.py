@@ -579,9 +579,17 @@ async def send_test(db: AsyncSession, email_id: uuid.UUID, *, to: str) -> None:
     if render.too_long(made):
         raise _too_long()
     link = render.unsubscribe_page(made.site_url, None)
-    await email.queue_message(
-        db, to, made.subject, render.text(made, link), render.html(made, link)
-    )
+    try:
+        await email.queue_message(
+            db, to, made.subject, render.text(made, link), render.html(made, link)
+        )
+    except ValueError:
+        # The kernel's checks refused it: a 422 that says so, never a 500 (CodeRabbit on #134).
+        raise Problem(
+            "campaigns.unsendable",
+            422,
+            "The mailer refused this email as it is. Check its subject for characters it can't send.",
+        ) from None
 
 
 def _at(text: str) -> datetime:
