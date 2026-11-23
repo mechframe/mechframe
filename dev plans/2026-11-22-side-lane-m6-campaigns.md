@@ -66,4 +66,16 @@ Nothing. The editor isn't drawn: if the build needs what §2 doesn't settle, ask
 
 ## 7. Result
 
-(Filled in by the side lane before it closes: the PR, what was built, tests, the owner's choices, and what the main lane's handoff should say.)
+- **PR:** #134, `feat/campaigns-module` (side lane M6, AI DevKit Development 37 WT, 2026-11-23). Check its head and CI with `gh pr view 134`.
+- **What was built:**
+  - the kernel's `email.queue_message` on its public surface, SPEC 6 and decision 0062, with its test;
+  - `modules/campaigns` 0.1.0 to its contract: sign-ups (double opt-in), the Newsletter page to its board, the editor, the confirm and unsubscribe pages, Settings › Newsletter, the send job at its pace, the IMAP bounce reader, Resend's webhook, and hooks 4, 5, 7 and 8;
+  - the harness's `/api/_test/mail?full=1` (HTML and headers).
+- **Changes after approval** are listed in the contract's new section. Two for the owner: the email's colours are a neutral palette (the backend can't read the theme), and a post's email has no summary until blog's payload carries one.
+- **Tests:** 114 of campaigns' own in Python (96% of its lines), plus the kernel's queue and the harness; 18 web; 5 end-to-end in both themes with axe. `mechframe add campaigns`, then `check`, passes on a new site. The brand check is clean.
+- **The owner's choices:** none new; §8 stands.
+- **For the main lane's handoff:**
+  - campaigns is step 1's sixth module (#134); decision 0062 is the side lane's;
+  - **the owner's content intake:** the postal address in Settings › Newsletter, and the Spacemail mailbox's IMAP login typed into the host's variables (`CAMPAIGNS_BOUNCE_IMAP_HOST`, `_USERNAME`, `_PASSWORD`);
+  - **for blog (the main lane's):** `blog.post.published` could carry the post's `summary`, so its email holds it; campaigns already reads it when it's there;
+  - **for VM Website:** draw `NewsletterSignup` from `@/modules/campaigns/public` in Music's, Blog's and Videos' sections, each with its own `source`; contact's news box can ask `useNewsletterOn()`.
