@@ -1,0 +1,6 @@
+# Changelog
+
+## 0.1.0 (2026-11-23)
+
+- The newsletter (`dev plans/contracts/campaigns.md`): sign-ups confirmed by email from `NewsletterSignup`, contact's news box and blog's "Email it to subscribers"; emails written in Markdown, tested, scheduled and sent at a pace with each subscriber's own one-click unsubscribe; addresses that bounce, complain or unsubscribe set aside for good, from the bounce mailbox over IMAP or Resend's webhook; the Newsletter page, its editor, the confirm and unsubscribe pages, and Settings › Newsletter.
+- The kernel's `email.queue_message` on its public surface for it (decision 0062).

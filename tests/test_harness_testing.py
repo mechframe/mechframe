@@ -117,6 +117,18 @@ async def test_mail_is_read_by_address_and_forgotten_on_reset(
                     {"to": "quill@site.test", "subject": "Again", "text": "second"},
                 ]
             }
+            whole = await client.get("/api/_test/mail", params={"to": "bob@site.test", "full": "1"})
+            assert whole.json() == {
+                "messages": [
+                    {
+                        "to": "bob@site.test",
+                        "subject": "Other",
+                        "text": "someone else's",
+                        "html": None,
+                        "headers": {},
+                    }
+                ]
+            }
             assert (await client.post("/api/_test/reset")).status_code == 204
             after = await client.get("/api/_test/mail", params={"to": "quill@site.test"})
             assert after.json() == {"messages": []}

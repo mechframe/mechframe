@@ -116,17 +116,19 @@ async def stored_file(key: str) -> Response:
 
 
 @router.get("/mail")
-async def mail(to: str, request: Request) -> dict[str, list[dict[str, str]]]:
+async def mail(to: str, request: Request, full: bool = False) -> dict[str, list[dict[str, Any]]]:
     """What the app's mailer was handed for `to`, oldest first, once every
     due job has run: a mail is a `kernel.send_mail` job, so "nothing more
-    was sent" means nothing more is waiting to be sent either."""
+    was sent" means nothing more is waiting to be sent either. With `full`,
+    each message's HTML and headers too (a newsletter's RFC 8058 pair)."""
     await request.app.state.worker.run_due()
-    return {
-        "messages": [
-            {"to": message.to, "subject": message.subject, "text": message.text}
-            for message in _captured(request).to(to)
-        ]
-    }
+    found: list[dict[str, Any]] = []
+    for message in _captured(request).to(to):
+        shown: dict[str, Any] = {"to": message.to, "subject": message.subject, "text": message.text}
+        if full:
+            shown |= {"html": message.html, "headers": dict(message.headers or {})}
+        found.append(shown)
+    return {"messages": found}
 
 
 class NewUser(BaseModel):

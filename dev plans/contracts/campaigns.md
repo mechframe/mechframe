@@ -187,3 +187,20 @@ Answered 2026-11-22:
 For later, not a choice:
 
 - The newsletter's postal address (a P.O. box works) goes in Settings → Newsletter before the first send. It's an item for the content intake.
+
+## Changes after approval
+
+- 2026-11-23, in the build (side lane M6):
+  - **The token is kept twice:** `token_hash` to look a link up by, and `token_sealed` (`crypto.seal`) so each newsletter can carry the person's own unsubscribe link. A hash alone can't be turned back into the link a send needs.
+  - **`GET /signup` `{open}`** is added, public: `useNewsletterOn()` reads whether Settings has sign-ups open.
+  - **The text part is the Markdown as written,** its site links made absolute (VybeSite's choice). `kernel.markdown.plain` runs every block onto one line and drops each link's address, which a text part needs.
+  - **The email's colours are campaigns' own neutral palette**, written as values. The backend doesn't know the site's theme: a theme-aware frame waits for the kernel to give the backend the theme's values.
+  - **A post's email holds its title and link, and its summary once blog's payload carries one.** `blog.post.published` v1 has no summary, and campaigns may not read blog's tables. Without the postal address or a subscriber, the post's email waits as a draft for someone to send.
+  - **Only the newsletter's own addresses are set aside** by a bounce or a complaint: one about a sign-in link or a notice is left alone.
+  - **The mailbox's folder is a fourth, optional variable,** `CAMPAIGNS_BOUNCE_IMAP_FOLDER` ("Newsletter bounces" by default), for a server that wants folders under the inbox. Resend's secret is `CAMPAIGNS_RESEND_WEBHOOK_SECRET`.
+  - **A pending address asked again within 10 minutes gets no second confirmation,** so a form can't flood someone's inbox; a sign-up the bot check holds is kept pending and sent nothing.
+  - **A replayed webhook is 409 `campaigns.replayed`;** a bad or missing signature, or no secret, is 401 `campaigns.bad_signature`.
+  - **Cancel while sending** stops the rest and leaves the email `sent` to those it reached.
+  - **The answers' schema names are the module's own** (`CampaignEmail`, `CampaignEmailChange` and the rest): a bare `EmailChange` renamed the kernel's in its committed OpenAPI.
+  - **The harness's `/api/_test/mail?full=1`** answers each message's HTML and headers too, so the contract suite checks RFC 8058's pair over HTTP alone.
+  - **NewsletterSignup's states are checked in the web tests,** not a browser: no harness page draws it.

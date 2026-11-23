@@ -1,0 +1,156 @@
+{
+  "id": "campaigns",
+  "name": "Newsletter",
+  "version": "0.1.0",
+  "status": "experimental",
+  "category": "comms",
+  "summary": "The site's newsletter: sign-ups confirmed by email, emails sent with one-click unsubscribe, bounces set aside.",
+  "use_when": [
+    "People should be able to ask for the site's news and new releases by email, from a form on any page",
+    "The site's people write an email, test it on themselves, and send it now or at a set time to everyone who asked",
+    "A new blog post should go to the subscribers as soon as it's live",
+    "The site sends its own mail by SMTP or Resend and must keep its list clean of addresses that bounce or complain"
+  ],
+  "avoid_when": [
+    "Mail should be segmented, A/B tested or tracked by opens and clicks: that's a marketing platform's job",
+    "A person should hear about something they did, such as a reply to their comment: that's the kernel's notifications",
+    "Members talk to each other or to staff: that's a chat or community module"
+  ],
+  "requires": {
+    "kernel": "^0.1",
+    "modules": {}
+  },
+  "conflicts": [],
+  "permissions": [
+    {
+      "key": "campaigns.email.manage",
+      "description": "Write, test, schedule and send the newsletter's emails, and see its counts",
+      "default_roles": [
+        "admin"
+      ]
+    },
+    {
+      "key": "campaigns.subscriber.manage",
+      "description": "See the newsletter's subscribers and the addresses set aside, set one aside and remove one",
+      "default_roles": [
+        "admin"
+      ]
+    }
+  ],
+  "settings": [
+    {
+      "key": "signups_open",
+      "type": "bool",
+      "default": true,
+      "secret": false,
+      "description": "Whether the newsletter takes sign-ups; while it's off, the forms say sign-ups are closed"
+    },
+    {
+      "key": "postal_address",
+      "type": "string",
+      "default": "",
+      "secret": false,
+      "description": "The postal address every newsletter carries (US law; a P.O. box will do). Nothing sends until it's set"
+    },
+    {
+      "key": "footer_note",
+      "type": "string",
+      "default": "You're getting this because you asked for news from ${site_name}.",
+      "secret": false,
+      "description": "The footer's first line; ${site_name} is the site's name"
+    },
+    {
+      "key": "send_per_hour",
+      "type": "int",
+      "default": 6000,
+      "secret": false,
+      "description": "How many newsletter copies may go out in an hour, 1 to 10,000: a sixtieth each minute"
+    }
+  ],
+  "env": [
+    {
+      "name": "CAMPAIGNS_BOUNCE_IMAP_HOST",
+      "required": false,
+      "description": "The bounce mailbox's IMAP host, such as mail.example.com or mail.example.com:993; with the next two, bounces are read every 15 minutes"
+    },
+    {
+      "name": "CAMPAIGNS_BOUNCE_IMAP_USERNAME",
+      "required": false,
+      "description": "The bounce mailbox's login: on Spacemail and most mailbox hosts, the sending mailbox itself"
+    },
+    {
+      "name": "CAMPAIGNS_BOUNCE_IMAP_PASSWORD",
+      "required": false,
+      "description": "The bounce mailbox's password, typed into the host's variables by the owner"
+    },
+    {
+      "name": "CAMPAIGNS_BOUNCE_IMAP_FOLDER",
+      "required": false,
+      "description": "The folder a read report moves to; Newsletter bounces by default"
+    },
+    {
+      "name": "CAMPAIGNS_RESEND_WEBHOOK_SECRET",
+      "required": false,
+      "description": "Only for a site that sends by Resend: the webhook's signing secret (whsec_...), for its bounces and complaints"
+    }
+  ],
+  "routes": {
+    "api": "/api/campaigns",
+    "public": [
+      "/newsletter/confirm",
+      "/newsletter/unsubscribe"
+    ],
+    "member": [],
+    "admin": [
+      "/admin/campaigns"
+    ]
+  },
+  "tables": [
+    "campaigns_subscriber",
+    "campaigns_set_aside",
+    "campaigns_email",
+    "campaigns_delivery",
+    "campaigns_webhook_seen"
+  ],
+  "events": {
+    "emits": [],
+    "listens": [
+      "contact.news.requested",
+      "blog.post.published"
+    ]
+  },
+  "slots": [
+    "nav.admin",
+    "admin.settings.section"
+  ],
+  "bindings": [
+    "web"
+  ],
+  "jobs": [
+    {
+      "name": "send",
+      "schedule": "* * * * *"
+    },
+    {
+      "name": "bounces",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "name": "prune",
+      "schedule": "40 3 * * *"
+    }
+  ],
+  "notifications": [],
+  "vocabularies": [],
+  "content_types": [],
+  "data_hooks": {
+    "export": true,
+    "delete": true
+  },
+  "source": {
+    "from": "VybeSite",
+    "commit": "f659d7c",
+    "path": "backend/app/services/campaign_service.py, backend/app/services/suppression_service.py, backend/app/services/bounce_classifier.py, backend/app/services/render_service.py, backend/app/routers/tracking.py",
+    "license": "proprietary"
+  }
+}
