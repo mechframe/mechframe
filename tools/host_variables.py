@@ -137,6 +137,9 @@ class Var:
     default: str | None = None
     #: Shown instead of what `railway.ts` says, where something else sets it.
     railway: str | None = None
+    #: Read from the process's environment, never `.env` (which feeds only the
+    #: kernel's settings).
+    env_only: bool = False
 
 
 #: Every kernel setting, by its variable's name (KernelConfig's field, upper-cased).
@@ -493,6 +496,7 @@ PROCESS = [
         "The port the site listens on. Railway and most hosts give it; the Dockerfile falls "
         "back to `8000`.",
         default="`8000`",
+        env_only=True,
     ),
     Var(
         "FORWARDED_ALLOW_IPS",
@@ -502,6 +506,7 @@ PROCESS = [
         "visitor's address. `*` on Railway, whose edge has no fixed addresses and is the only "
         "way in; the edge's addresses on a host where they're known; `127.0.0.1` locally.",
         default="`127.0.0.1`",
+        env_only=True,
     ),
     Var(
         "RAILWAY_GIT_COMMIT_SHA",
@@ -510,6 +515,7 @@ PROCESS = [
         "The deployed commit, which Railway gives each deploy: Sentry files errors under it "
         "as the release.",
         default="",
+        env_only=True,
     ),
 ]
 
@@ -719,7 +725,9 @@ def _on_railway(var: Var, railway: Mapping[str, str]) -> str:
 
 
 def _need(var: Var) -> str:
-    return NEEDS[var.need] + (" · Secret" if var.secret else "")
+    marks = [NEEDS[var.need], *(["Secret"] if var.secret else [])]
+    marks += ["Environment only"] if var.env_only else []
+    return " · ".join(marks)
 
 
 def _kernel_table(
@@ -764,6 +772,7 @@ def _module_section(module: Module) -> list[str]:
             name = str(each["name"])
             need = "Required" if each.get("required") else "Optional"
             need += " · Secret" if _is_secret(name) else ""
+            need += " · Environment only"
             lines.append(
                 f"| `{name}` | {need} | You type it (`mechframe add` lists it) "
                 f"| {_cell(str(each['description']))} |"
@@ -795,7 +804,11 @@ _INTRO = """\
 Every variable a site built with MechFrame reads from its host, and what each module
 needs, so a site can go live on Railway or another host without guessing. On Railway
 they're the web service's **Variables**; elsewhere, the host's environment variables.
-Locally, the site's `.env` holds them (copy `.env.example`).
+Locally, the site's `.env` holds the kernel's (copy `.env.example`). `.env` feeds only
+the kernel's settings: a variable marked **Environment only** (each module's own, and
+the server's) is read from the process's environment, so for a local run export it in
+the shell before starting the app (`$env:NAME = "value"` in PowerShell). On a host
+every variable is in the environment, so there it makes no difference.
 
 > Made by `python -m tools.host_variables` from the kernel's settings
 > (`kernel/backend/kernel/config.py`), each module's `module.json` and the site
@@ -817,6 +830,7 @@ written into `.env.example`, `railway.ts` or chat.
 | Tuning | A default to change only with a reason. |
 | The host gives it | Railway (and most hosts) set it; you don't. |
 | Secret | Typed into the host only, never committed or pasted into chat. |
+| Environment only | Read from the process's environment, never `.env`: export it for a local run. |
 
 ## Putting a site on Railway, step by step
 

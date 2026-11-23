@@ -3,7 +3,11 @@
 Every variable a site built with MechFrame reads from its host, and what each module
 needs, so a site can go live on Railway or another host without guessing. On Railway
 they're the web service's **Variables**; elsewhere, the host's environment variables.
-Locally, the site's `.env` holds them (copy `.env.example`).
+Locally, the site's `.env` holds the kernel's (copy `.env.example`). `.env` feeds only
+the kernel's settings: a variable marked **Environment only** (each module's own, and
+the server's) is read from the process's environment, so for a local run export it in
+the shell before starting the app (`$env:NAME = "value"` in PowerShell). On a host
+every variable is in the environment, so there it makes no difference.
 
 > Made by `python -m tools.host_variables` from the kernel's settings
 > (`kernel/backend/kernel/config.py`), each module's `module.json` and the site
@@ -25,6 +29,7 @@ written into `.env.example`, `railway.ts` or chat.
 | Tuning | A default to change only with a reason. |
 | The host gives it | Railway (and most hosts) set it; you don't. |
 | Secret | Typed into the host only, never committed or pasted into chat. |
+| Environment only | Read from the process's environment, never `.env`: export it for a local run. |
 
 ## Putting a site on Railway, step by step
 
@@ -88,8 +93,8 @@ How the site sits behind Railway's proxy (or another host's), and what it tells 
 | `HSTS_MAX_AGE` | Optional | `0` | Only if you change it | Strict-Transport-Security's max-age, in seconds. `0` sends none. Set `31536000` once the domain is settled and every part of it is on https. |
 | `ROBOTS_NOINDEX` | Optional | `false` | Only if you change it | `true` on a copy no search engine should list, such as staging. Never on the live site. |
 | `MAX_BODY_BYTES` | Tuning | `1048576` | Only if you change it | The largest request body accepted, in bytes; larger is 413. Uploads go to storage and aren't held to it. At least 1024. |
-| `PORT` | The host gives it | `8000` | Railway gives it | The port the site listens on. Railway and most hosts give it; the Dockerfile falls back to `8000`. |
-| `FORWARDED_ALLOW_IPS` | Recommended | `127.0.0.1` | Set: `*` | Whose `X-Forwarded-*` headers the server trusts, for the request's scheme and the visitor's address. `*` on Railway, whose edge has no fixed addresses and is the only way in; the edge's addresses on a host where they're known; `127.0.0.1` locally. |
+| `PORT` | The host gives it · Environment only | `8000` | Railway gives it | The port the site listens on. Railway and most hosts give it; the Dockerfile falls back to `8000`. |
+| `FORWARDED_ALLOW_IPS` | Recommended · Environment only | `127.0.0.1` | Set: `*` | Whose `X-Forwarded-*` headers the server trusts, for the request's scheme and the visitor's address. `*` on Railway, whose edge has no fixed addresses and is the only way in; the edge's addresses on a host where they're known; `127.0.0.1` locally. |
 
 ### Accounts and passwords
 
@@ -182,7 +187,7 @@ Error reports go to Sentry once `SENTRY_DSN` is set; logs go to the host's log v
 | `SENTRY_ENVIRONMENT` | Optional | blank | Only if you change it | The environment Sentry files errors under; `production` while blank. |
 | `LOG_FORMAT` | Optional | `json` | Set: `json` | `json` for the host's log view, `text` for reading locally. One of `json` or `text`. |
 | `LOG_LEVEL` | Optional | `INFO` | Only if you change it | The least severe level logged. One of `DEBUG`, `INFO`, `WARNING` or `ERROR`. |
-| `RAILWAY_GIT_COMMIT_SHA` | The host gives it | none | Railway gives it | The deployed commit, which Railway gives each deploy: Sentry files errors under it as the release. |
+| `RAILWAY_GIT_COMMIT_SHA` | The host gives it · Environment only | none | Railway gives it | The deployed commit, which Railway gives each deploy: Sentry files errors under it as the release. |
 
 ### Database and process tuning
 
@@ -212,11 +217,11 @@ The site's newsletter: sign-ups confirmed by email, emails sent with one-click u
 
 | Variable | Needed | On Railway | What it's for |
 | --- | --- | --- | --- |
-| `CAMPAIGNS_BOUNCE_IMAP_HOST` | Optional | You type it (`mechframe add` lists it) | The bounce mailbox's IMAP host, such as mail.example.com or mail.example.com:993; with the next two, bounces are read every 15 minutes |
-| `CAMPAIGNS_BOUNCE_IMAP_USERNAME` | Optional | You type it (`mechframe add` lists it) | The bounce mailbox's login: on Spacemail and most mailbox hosts, the sending mailbox itself |
-| `CAMPAIGNS_BOUNCE_IMAP_PASSWORD` | Optional · Secret | You type it (`mechframe add` lists it) | The bounce mailbox's password, typed into the host's variables by the owner |
-| `CAMPAIGNS_BOUNCE_IMAP_FOLDER` | Optional | You type it (`mechframe add` lists it) | The folder a read report moves to; Newsletter bounces by default |
-| `CAMPAIGNS_RESEND_WEBHOOK_SECRET` | Optional · Secret | You type it (`mechframe add` lists it) | Only for a site that sends by Resend: the webhook's signing secret (whsec_...), for its bounces and complaints |
+| `CAMPAIGNS_BOUNCE_IMAP_HOST` | Optional · Environment only | You type it (`mechframe add` lists it) | The bounce mailbox's IMAP host, such as mail.example.com or mail.example.com:993; with the next two, bounces are read every 15 minutes |
+| `CAMPAIGNS_BOUNCE_IMAP_USERNAME` | Optional · Environment only | You type it (`mechframe add` lists it) | The bounce mailbox's login: on Spacemail and most mailbox hosts, the sending mailbox itself |
+| `CAMPAIGNS_BOUNCE_IMAP_PASSWORD` | Optional · Secret · Environment only | You type it (`mechframe add` lists it) | The bounce mailbox's password, typed into the host's variables by the owner |
+| `CAMPAIGNS_BOUNCE_IMAP_FOLDER` | Optional · Environment only | You type it (`mechframe add` lists it) | The folder a read report moves to; Newsletter bounces by default |
+| `CAMPAIGNS_RESEND_WEBHOOK_SECRET` | Optional · Secret · Environment only | You type it (`mechframe add` lists it) | Only for a site that sends by Resend: the webhook's signing secret (whsec_...), for its bounces and complaints |
 
 **From the kernel:** Every confirmation and newsletter goes by the kernel's mail (`MAIL_FROM` with `SMTP_HOST` or `RESEND_API_KEY`). Nothing sends until its postal address is set in Settings → Newsletter.
 

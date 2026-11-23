@@ -132,6 +132,22 @@ def test_a_module_s_variables_and_settings_come_from_its_manifest() -> None:
     row = next(line for line in text.splitlines() if "`SHOP_STRIPE_SECRET_KEY`" in line)
     assert "Required" in row
     assert "Secret" in row
+    # A module reads its own from the process's environment, never `.env` (Codex on #137).
+    assert "Environment only" in row
+
+
+def test_only_what_the_kernel_s_settings_read_comes_from_dotenv() -> None:
+    """Codex on #137: `.env` feeds the kernel's settings alone; a module's variables and
+    the process's are read from the environment, so the guidebook marks them."""
+    text = host_variables.render()
+
+    def row(name: str) -> str:
+        return next(line for line in text.splitlines() if line.startswith(f"| `{name}` |"))
+
+    assert "Environment only" not in row("SECRET_KEY")
+    for name in ("PORT", "FORWARDED_ALLOW_IPS", "CAMPAIGNS_BOUNCE_IMAP_HOST"):
+        assert "Environment only" in row(name), name
+    assert "export it in the shell before starting the app" in " ".join(text.split())
 
 
 def test_a_variable_two_places_claim_is_a_problem() -> None:
