@@ -238,3 +238,47 @@ async def test_any_message_check_accepts_fits_the_queue(build: Build) -> None:
     await app.state.worker.run_due()
     [sent] = captured.to(to)
     assert (sent.text, sent.html) == (wide, escaped)
+
+
+async def test_a_module_queues_a_rendered_message_with_its_one_click_headers(build: Build) -> None:
+    """`email.queue_message` is on the public surface (decision 0062): a
+    module's own rendering, such as a newsletter's, queued in the caller's
+    transaction with RFC 8058's two headers, which reach the adapter."""
+    captured = CapturingMailer()
+    app = build(captured)
+    to = _address()
+    headers = {
+        "List-Unsubscribe": "<https://mechframe.test/api/campaigns/unsubscribe?token=t>",
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+    }
+    async with app.state.database.sessions() as db:
+        await email.queue_message(db, to, "News", "Words\n", "<p>Words</p>", headers)
+        await db.commit()
+    assert captured.to(to) == []
+    await app.state.worker.run_due()
+    [sent] = captured.to(to)
+    assert (sent.subject, sent.text, sent.html, sent.headers) == (
+        "News",
+        "Words\n",
+        "<p>Words</p>",
+        headers,
+    )
+
+
+async def test_a_header_beyond_rfc_8058_s_two_is_refused_before_queueing(build: Build) -> None:
+    app = build(CapturingMailer())
+    before = await _mail_jobs(app)
+    async with app.state.database.sessions() as db:
+        with pytest.raises(ValueError, match="header"):
+            await email.queue_message(db, _address(), "News", "Words\n", None, {"Bcc": "x@y.test"})
+        with pytest.raises(ValueError, match="List-Unsubscribe"):
+            await email.queue_message(
+                db,
+                _address(),
+                "News",
+                "Words\n",
+                None,
+                {"List-Unsubscribe": "<a>\r\nBcc: x@y.test"},
+            )
+        await db.commit()
+    assert await _mail_jobs(app) == before

@@ -30,6 +30,30 @@
       "conflicts": []
     },
     {
+      "id": "campaigns",
+      "name": "Newsletter",
+      "version": "0.1.0",
+      "status": "experimental",
+      "category": "comms",
+      "summary": "The site's newsletter: sign-ups confirmed by email, emails sent with one-click unsubscribe, bounces set aside.",
+      "use_when": [
+        "People should be able to ask for the site's news and new releases by email, from a form on any page",
+        "The site's people write an email, test it on themselves, and send it now or at a set time to everyone who asked",
+        "A new blog post should go to the subscribers as soon as it's live",
+        "The site sends its own mail by SMTP or Resend and must keep its list clean of addresses that bounce or complain"
+      ],
+      "avoid_when": [
+        "Mail should be segmented, A/B tested or tracked by opens and clicks: that's a marketing platform's job",
+        "A person should hear about something they did, such as a reply to their comment: that's the kernel's notifications",
+        "Members talk to each other or to staff: that's a chat or community module"
+      ],
+      "requires": {
+        "kernel": "^0.1",
+        "modules": {}
+      },
+      "conflicts": []
+    },
+    {
       "id": "contact",
       "name": "Contact",
       "version": "0.1.1",

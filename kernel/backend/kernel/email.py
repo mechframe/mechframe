@@ -25,8 +25,9 @@
 
 - `Mailer`: `async send(to, subject, text, html=None, headers=None)`. An
   adapter delivers or raises, and never logs the address, the subject or the
-  body. `headers` are only the one-click unsubscribe pair a notice email
-  carries (`HEADERS`, RFC 8058; kernel.notifications).
+  body. `headers` are only the one-click unsubscribe pair (`HEADERS`, RFC
+  8058) a notice email (kernel.notifications) or a module's own bulk mail
+  carries, such as a newsletter's (decision 0062).
 - `Checked`: what `create_app` puts in front of the site's adapter, so every
   adapter gets one recipient, no line break in the address or the subject
   (header injection), and bounded sizes. A message that fails the checks is
@@ -392,8 +393,11 @@ async def queue_message(
     headers: Mapping[str, str] | None = None,
 ) -> None:
     """Queues a message already rendered (the kernel's auth mails render
-    theirs through `kernel.auth.mails`). Sealed: its links and codes are
-    never readable in the jobs table, and are wiped once it's sent."""
+    theirs through `kernel.auth.mails`; a module, such as a newsletter, its
+    own: public since decision 0062). Sealed: its links and codes are never
+    readable in the jobs table, and are wiped once it's sent. `headers` may be
+    only RFC 8058's two; ValueError for anything `check` refuses, before
+    anything is queued."""
     check(to, subject, text, html, headers)
     payload: dict[str, Any] = {"to": to, "subject": subject, "text": text, "html": html}
     if headers:

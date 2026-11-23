@@ -216,6 +216,20 @@ _SEED = [
     "message, wants_news, status, held_reason, status_at, notified_at, user_id) VALUES "
     "(gen_random_uuid(), now(), 'Rae', 'Rae@example.com', 'rae@example.com', 'work', "
     "'Working together', 'Can you play?', true, 'spam', 'links', now(), NULL, :user)",
+    "INSERT INTO campaigns_subscriber (id, email, email_normal, name, source, status, token_hash, "
+    "token_sealed, confirm_sent_at, confirmed_at, unsubscribed_at, created_at, user_id) VALUES "
+    "('00000000-0000-0000-0000-00000000000a', 'Rae@example.com', 'rae@example.com', 'Rae', "
+    "'form', 'subscribed', repeat('a', 64), 'sealed', now(), now(), NULL, now(), :user)",
+    "INSERT INTO campaigns_set_aside (email_normal, why, detail, since) VALUES "
+    "('gone@example.com', 'bounced', 'address: 5.1.1', now())",
+    "INSERT INTO campaigns_email (id, version, kind, subject, preview, body, status, send_at, "
+    "started_at, sent_at, sent_to, post_id, created_by, created_at, updated_at) VALUES "
+    "('00000000-0000-0000-0000-00000000000b', 1, 'newsletter', 'News', '', 'Words', 'sent', "
+    "now(), now(), now(), 1, NULL, :user, now(), now())",
+    "INSERT INTO campaigns_delivery (id, email_id, subscriber_id, email_normal, queued_at) VALUES "
+    "(gen_random_uuid(), '00000000-0000-0000-0000-00000000000b', "
+    "'00000000-0000-0000-0000-00000000000a', 'rae@example.com', now())",
+    "INSERT INTO campaigns_webhook_seen (id, seen_at) VALUES ('resend:msg_1', now())",
 ]
 
 

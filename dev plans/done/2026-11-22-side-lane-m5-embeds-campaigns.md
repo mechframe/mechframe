@@ -34,4 +34,21 @@ MechFrame: website modules on a FastAPI + Postgres kernel (`CLAUDE.md`, `SPEC.md
 
 ## 5. Result
 
-(Filled in by the side lane before it closes: PRs, what was built, tests, the owner's choices, and what the main lane's handoff should say.)
+AI DevKit Development 35 WT ran this prompt, 2026-11-22, to about 16:40 Eastern.
+
+- **Embeds, #127, landed** at `f560ed5` by fast-forward. It has "CI result" green and no open threads after Codex's 2 findings and CodeRabbit's 19, each fixed with a test seen failing first. CodeRabbit was rate-limited on the last commit, and cubic's trial is out of reviews. The PR adds:
+  - `modules/embeds` 0.1.0;
+  - decision 0060, the kit's text slots `editor.tools` and `prose.embed`; blog's AI buttons go in `KERNEL_EDITOR_TOOLS` (`kernel/web/src/app/editorTools.ts`);
+  - `test_hook_consent` made to hold for any module with media hosts.
+  The main lane was told.
+- **Campaigns' contract is approved** (`dev plans/contracts/campaigns.md`, on the local branch `feat/campaigns-module`, not pushed). The owner's choices:
+  - SMTP through the site's mailer, with Resend only where a host blocks SMTP;
+  - double opt-in;
+  - a post's email goes as it goes live;
+  - owner and admin send;
+  - bounces are read over IMAP in this PR, since the site sends by Spaceship's Spacemail;
+  - `send_per_hour` is 6,000 by default, since Spacemail has no sending limit. (Since changed, 2026-11-23: Spaceship documents 500 an hour for a paid mailbox and 20 on a trial, so the owner chose 400; `dev plans/contracts/campaigns.md`, §8 6.)
+- **For the main lane's handoff:**
+  - #127 landed and step 1's row lists it;
+  - campaigns is built next, in the side lane, from `dev plans/2026-11-22-side-lane-m6-campaigns.md` (on `feat/campaigns-module`);
+  - it claims decision 0062 and `campaigns_0001`.
