@@ -70,12 +70,18 @@ async def run(db: AsyncSession) -> int:
         for row in due:
             await service.start(db, row, now)
         await db.flush()
-    queued = await _queue(db, cfg.send_per_hour, now) if ready else 0
+    sent = await _queue(db, cfg.send_per_hour, now) if ready else []
     await _finish(db, now)
-    return queued
+    # Stamped last, just before the job commits: a run slow at any step still counts
+    # its copies in the minute they leave in (CodeRabbit on #134).
+    finished = clock.now()
+    for delivery in sent:
+        delivery.queued_at = finished
+    return len(sent)
 
 
-async def _queue(db: AsyncSession, send_per_hour: int, now: datetime) -> int:
+async def _queue(db: AsyncSession, send_per_hour: int, now: datetime) -> list[Delivery]:
+    """Queues the next copies at the pace: answers their rows, which `run` stamps last."""
     minute, hour = (
         await db.execute(
             select(
@@ -90,7 +96,7 @@ async def _queue(db: AsyncSession, send_per_hour: int, now: datetime) -> int:
     # under 60 is held to its hour too (CodeRabbit on #134).
     allowance = min(per_minute(send_per_hour) - int(minute), send_per_hour - int(hour))
     if allowance <= 0:
-        return 0
+        return []
     # The emails first, then their rows, the order Cancel takes them in: an email that
     # a cancel holds is left to it, so neither waits on the other (CodeRabbit on #134).
     held = list(
@@ -102,7 +108,7 @@ async def _queue(db: AsyncSession, send_per_hour: int, now: datetime) -> int:
         )
     )
     if not held:
-        return 0
+        return []
     rows: list[tuple[Delivery, Email]] = [
         (delivery, row)
         for delivery, row in (
@@ -117,7 +123,7 @@ async def _queue(db: AsyncSession, send_per_hour: int, now: datetime) -> int:
         ).all()
     ]
     if not rows:
-        return 0
+        return []
     wanted = {delivery.subscriber_id for delivery, _ in rows if delivery.subscriber_id}
     # Each recipient held while their copy is decided: an unsubscribe under way waits
     # for this run, or this run leaves that copy for the next (CodeRabbit on #134).
@@ -199,12 +205,7 @@ async def _queue(db: AsyncSession, send_per_hour: int, now: datetime) -> int:
         queued += 1
     if skipped:
         await db.execute(delete(Delivery).where(Delivery.id.in_(skipped)))
-    # Stamped as the run ends, not as it began: a run that took long still counts its
-    # copies in the minute they leave in (CodeRabbit on #134).
-    finished = clock.now()
-    for delivery in sent:
-        delivery.queued_at = finished
-    return queued
+    return sent
 
 
 async def _stop(db: AsyncSession, row: Email, now: datetime) -> None:

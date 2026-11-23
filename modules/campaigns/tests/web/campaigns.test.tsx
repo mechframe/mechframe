@@ -500,6 +500,9 @@ describe("what the editor says, as the fields change", () => {
     await user.click(await screen.findByRole("button", { name: "Send it" }));
     expect(await screen.findByText("The newsletter has no postal address")).toBeInTheDocument();
     await user.type(screen.getByRole("textbox", { name: "Subject" }), "!");
+    // The refused send's warning stays through an edit (CodeRabbit on #134); the next
+    // action's answer is what replaces it.
+    expect(screen.getByText("The newsletter has no postal address")).toBeInTheDocument();
     await user.type(screen.getByRole("textbox", { name: "Preview text" }), "!");
     await user.click(screen.getByRole("button", { name: "Save draft" }));
     expect(await screen.findByText("Subject refused.")).toBeInTheDocument();

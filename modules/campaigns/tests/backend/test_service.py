@@ -748,3 +748,26 @@ async def test_a_run_never_waits_on_an_email_a_cancel_holds(
         assert await asyncio.wait_for(_run(db), 10) == 0
         await cancelling.rollback()
     assert await _run(db) == 1
+
+
+async def test_a_run_slow_after_its_last_copy_still_holds_the_pace(
+    db: AsyncSession,
+    queued: Queued,
+    campaigns_settings: dict[str, Any],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """CodeRabbit on #134: the copies are stamped as the run's very last step."""
+    campaigns_settings["send_per_hour"] = 120  # two a minute
+    await _subscribed(db, queued, *(_address(f"s{each}") for each in range(4)))
+    row = await _email(db)
+    await _send_now(db, row)
+    finish = sending._finish
+
+    async def slow(db: AsyncSession, now: Any) -> None:
+        await finish(db, now)
+        clock.advance(61)  # the run's end outlasts a minute
+
+    monkeypatch.setattr(sending, "_finish", slow)
+    assert await _run(db) == 2
+    monkeypatch.setattr(sending, "_finish", finish)
+    assert await _run(db) == 0  # the two just sent are still in this minute
