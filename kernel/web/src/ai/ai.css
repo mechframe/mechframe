@@ -1,0 +1,86 @@
+/* The AI's writing help (decision 0058): the editor's dialog and the
+   Settings → AI and Writing tabs, on the theme's tokens only. */
+
+.mf-ai-form {
+  display: grid;
+  gap: var(--mf-space-4);
+}
+
+.mf-ai-tasks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-2);
+}
+
+.mf-ai-note {
+  margin: 0;
+  font: var(--mf-type-small);
+  color: var(--mf-color-text-muted);
+}
+
+.mf-ai-problem {
+  margin: 0;
+  font: var(--mf-type-small);
+  color: var(--mf-color-danger);
+}
+
+.mf-ai-problem:empty {
+  display: none;
+}
+
+.mf-ai-choices {
+  display: grid;
+  gap: var(--mf-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mf-ai-choices li {
+  display: flex;
+  align-items: center;
+  gap: var(--mf-space-3);
+}
+
+.mf-ai-result {
+  margin: 0;
+  padding: var(--mf-space-3) var(--mf-space-4);
+  border-radius: var(--mf-radius-card);
+  background: var(--mf-color-well);
+}
+
+.mf-ai-result dt {
+  font: var(--mf-type-small);
+  color: var(--mf-color-text-muted);
+}
+
+.mf-ai-result dd {
+  margin: 0 0 var(--mf-space-2);
+}
+
+.mf-ai-styles {
+  display: grid;
+  gap: var(--mf-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mf-ai-styles li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--mf-space-3);
+}
+
+.mf-ai-rules {
+  display: grid;
+  gap: var(--mf-space-3);
+}
+
+.mf-ai-subhead {
+  margin: var(--mf-space-4) 0 0;
+  font: var(--mf-type-section-title);
+  letter-spacing: var(--mf-type-section-title-tracking);
+}

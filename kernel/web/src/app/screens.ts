@@ -32,4 +32,7 @@ export const SCREENS: Readonly<Record<string, Lazy>> = {
   "/admin/settings": () => import("../admin/Site"),
   "/admin/settings/features": () => import("../admin/Features"),
   "/admin/settings/system": () => import("../admin/System"),
+  "/admin/settings/ai": () => import("../ai/AiSettings"),
+  "/admin/settings/writing": () => import("../ai/Writing"),
+  "/admin/settings/writing/styles/:id": () => import("../ai/WritingStyle"),
 };

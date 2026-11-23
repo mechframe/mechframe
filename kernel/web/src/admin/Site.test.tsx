@@ -95,7 +95,7 @@ describe("the Site tab", () => {
     answers();
     await opened(admin(["kernel.settings.manage"]));
     const tabs = within(screen.getByRole("navigation", { name: "Settings" }));
-    expect(tabs.getAllByRole("link").map((link) => link.textContent)).toEqual(["Site", "System"]);
+    expect(tabs.getAllByRole("link").map((link) => link.textContent)).toEqual(["Site", "System", "AI"]);
     expect(tabs.getByRole("link", { name: "Site" })).toHaveAttribute("aria-current", "page");
   });
 

@@ -35,6 +35,9 @@ export const KERNEL_PAGES: readonly KernelPage[] = [
   { path: "/admin/settings", title: "Settings", access: "admin", permission: "kernel.settings.manage" },
   { path: "/admin/settings/features", title: "Features", access: "admin", permission: "kernel.module.manage" },
   { path: "/admin/settings/system", title: "System", access: "admin", permission: "kernel.settings.manage" },
+  { path: "/admin/settings/ai", title: "AI", access: "admin", permission: "kernel.settings.manage" },
+  { path: "/admin/settings/writing", title: "Writing", access: "admin", permission: "kernel.writing.manage" },
+  { path: "/admin/settings/writing/styles/:id", title: "Writing style", access: "admin", permission: "kernel.writing.manage" },
 ];
 
 /** A path's segments, as the router reads them: no empty ones, so a trailing slash counts for nothing. */

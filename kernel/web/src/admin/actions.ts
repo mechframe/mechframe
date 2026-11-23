@@ -32,6 +32,9 @@ const STAFF: Readonly<Record<string, Words>> = {
   "kernel.term.created": "Added a term",
   "kernel.term.changed": "Changed a term",
   "kernel.term.deleted": "Deleted a term",
+  "kernel.writing_style.created": "Made a writing style",
+  "kernel.writing_style.changed": "Changed a writing style",
+  "kernel.writing_style.deleted": "Deleted a writing style",
   "kernel.seed.ran": "Loaded the seed data",
   "kernel.moderation.dismissed": "Dismissed a report",
   "kernel.moderation.hidden": "Hid something reported",
@@ -90,7 +93,7 @@ export const KINDS: readonly Kind[] = [
     ],
   },
   { label: "Moderation", actions: ["kernel.moderation."] },
-  { label: "Settings", actions: ["kernel.settings_saved", "kernel.module.", "kernel.job.", "kernel.seed."] },
+  { label: "Settings", actions: ["kernel.settings_saved", "kernel.module.", "kernel.job.", "kernel.seed.", "kernel.writing_style."] },
   { label: "Terms", actions: ["kernel.term."] },
 ];
 

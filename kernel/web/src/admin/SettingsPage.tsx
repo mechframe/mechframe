@@ -17,6 +17,8 @@ export const SETTINGS_TABS = [
   { to: "/admin/settings", label: "Site", permission: "kernel.settings.manage" },
   { to: "/admin/settings/features", label: "Features", permission: "kernel.module.manage" },
   { to: "/admin/settings/system", label: "System", permission: "kernel.settings.manage" },
+  { to: "/admin/settings/ai", label: "AI", permission: "kernel.settings.manage" },
+  { to: "/admin/settings/writing", label: "Writing", permission: "kernel.writing.manage" },
 ] as const;
 
 export type SettingsPageProps = {
