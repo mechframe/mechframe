@@ -471,6 +471,38 @@ describe("the editor", () => {
   });
 });
 
+describe("the editor's Write with AI (blog 0.1.2, decision 0058)", () => {
+  const writer = testUser({ ...editor, permissions: [...editor.permissions, "kernel.ai.write"] });
+
+  it("fills the post's title and search words from what the AI suggests", async () => {
+    routed({
+      [`GET ${ONE}`]: { status: 200, body: full() },
+      "GET /api/kernel/ai": { status: 200, body: { ready: true, unreadable: false, styles: [] } },
+      "POST /api/kernel/ai/titles": { status: 200, body: { titles: ["Ten years on stage"] } },
+      "POST /api/kernel/ai/search": { status: 200, body: { title: "Ten years on stage", description: "Our shows, year by year." } },
+    });
+    renderApp({ path: `/admin/blog/${ID}`, modules: [blog], session: writer });
+
+    await userEvent.click(await screen.findByRole("button", { name: "Write with AI" }));
+    let dialog = within(await screen.findByRole("dialog", { name: "Write with AI" }));
+    expect(dialog.getAllByRole("button").map((button) => button.textContent)).toEqual(
+      expect.arrayContaining(["Draft", "Rewrite", "Titles", "Summary", "Search words"]),
+    );
+    await userEvent.click(dialog.getByRole("button", { name: "Titles" }));
+    await userEvent.click(dialog.getByRole("button", { name: "Suggest titles" }));
+    await userEvent.click(await dialog.findByRole("button", { name: "Use" }));
+    expect(screen.getByRole("textbox", { name: "Title" })).toHaveValue("Ten years on stage");
+
+    await userEvent.click(screen.getByRole("button", { name: "Write with AI" }));
+    dialog = within(await screen.findByRole("dialog", { name: "Write with AI" }));
+    await userEvent.click(dialog.getByRole("button", { name: "Search words" }));
+    await userEvent.click(dialog.getByRole("button", { name: "Write search words" }));
+    await userEvent.click(await dialog.findByRole("button", { name: "Use these" }));
+    expect(screen.getByRole("textbox", { name: "Title in search results" })).toHaveValue("Ten years on stage");
+    expect(screen.getByRole("textbox", { name: "Description" })).toHaveValue("Our shows, year by year.");
+  });
+});
+
 describe("the review on #123 (CodeRabbit)", () => {
   it("sends a new post's address once the writer has typed it", async () => {
     const sent = routed({
