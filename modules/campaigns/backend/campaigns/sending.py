@@ -23,6 +23,7 @@ Nothing sends while the postal address is missing: the rows wait for it.
 
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import datetime, timedelta
 
@@ -33,8 +34,14 @@ from campaigns import render, service
 from campaigns.models import Delivery, Email, SetAside, Subscriber
 from kernel import clock, crypto, email
 
+log = logging.getLogger(__name__)
+
 #: The window the pace is counted over.
 MINUTE = timedelta(minutes=1)
+#: The advisory lock a run holds for its transaction: Send now's run and the
+#: minute's can overlap in the worker, and each would spend the same allowance
+#: (Codex on #134). A run that finds it held leaves the work to the one holding it.
+LOCK = 6_377_016_421_517_436_516
 
 
 def per_minute(send_per_hour: int) -> int:
@@ -45,6 +52,8 @@ def per_minute(send_per_hour: int) -> int:
 async def run(db: AsyncSession) -> int:
     """One run of the send job, in the caller's transaction. Answers how many
     copies it queued."""
+    if not await db.scalar(select(func.pg_try_advisory_xact_lock(LOCK))):
+        return 0
     now = clock.now()
     cfg = await service.current(db)
     ready = bool(cfg.postal_address.strip())
@@ -108,8 +117,20 @@ async def _queue(db: AsyncSession, send_per_hour: int, now: datetime) -> int:
     site_url = email.site_url()
     made: dict[uuid.UUID, render.Parts] = {}
     skipped: list[uuid.UUID] = []
+    stopped: set[uuid.UUID] = set()
     queued = 0
     for delivery, row in rows:
+        if row.id in stopped:
+            continue
+        if row.id not in made:
+            made[row.id] = render.parts(row.subject, row.preview, row.body, footer, site_url)
+            if render.too_long(made[row.id]):
+                # Past the mailer's limit (send and a scheduled save refuse it, so only a
+                # change since, such as the footer's): it stops here rather than holding
+                # every send behind it (Codex on #134).
+                await _stop(db, row, now)
+                stopped.add(row.id)
+                continue
         person = people.get(delivery.subscriber_id) if delivery.subscriber_id else None
         if (
             person is None
@@ -119,8 +140,6 @@ async def _queue(db: AsyncSession, send_per_hour: int, now: datetime) -> int:
         ):
             skipped.append(delivery.id)
             continue
-        if row.id not in made:
-            made[row.id] = render.parts(row.subject, row.preview, row.body, footer, site_url)
         parts = made[row.id]
         token = crypto.open(person.token_sealed)
         link = render.unsubscribe_page(site_url, token)
@@ -138,6 +157,18 @@ async def _queue(db: AsyncSession, send_per_hour: int, now: datetime) -> int:
     if skipped:
         await db.execute(delete(Delivery).where(Delivery.id.in_(skipped)))
     return queued
+
+
+async def _stop(db: AsyncSession, row: Email, now: datetime) -> None:
+    await db.execute(
+        delete(Delivery).where(Delivery.email_id == row.id, Delivery.queued_at.is_(None))
+    )
+    row.status = "sent"
+    row.sent_at = now
+    log.error(
+        "A newsletter was too long to send once rendered; it stopped.",
+        extra={"email_id": str(row.id), "count": row.sent_to},
+    )
 
 
 async def _finish(db: AsyncSession, now: datetime) -> None:

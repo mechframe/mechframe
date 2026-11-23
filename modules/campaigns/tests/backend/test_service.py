@@ -17,7 +17,7 @@ import pytest_asyncio
 from campaigns import privacy, sending, service
 from campaigns import seed as campaigns_seed
 from campaigns.models import Delivery, Email, SetAside, Subscriber
-from campaigns.schemas import NewCampaignEmail
+from campaigns.schemas import CampaignEmailChange, NewCampaignEmail
 from sqlalchemy import delete, func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -501,3 +501,92 @@ async def test_the_prune_keeps_a_send_s_rows_30_days(db: AsyncSession, queued: Q
     await service.prune(db)
     await db.commit()
     assert await db.scalar(rows) == 0
+
+
+# --- the review's findings (Codex on #134) ---------------------------------------------
+
+
+@dataclass
+class Account:
+    id: uuid.UUID
+    email: str
+    email_verified_at: object
+
+
+def test_a_sign_up_joins_an_account_only_for_its_own_verified_address() -> None:
+    """Codex on #134 (P1): a signed-in person signing up someone else's address
+    mustn't make it theirs, or their account's export would hold it."""
+    person = Account(uuid.uuid4(), "Rae@Example.org", clock.now())
+    assert service.owner_of(person, " rae@example.ORG ") == person.id
+    assert service.owner_of(person, "someone-else@example.org") is None
+    assert service.owner_of(Account(person.id, person.email, None), person.email) is None
+    assert service.owner_of(None, person.email) is None
+
+
+async def test_a_send_run_while_another_holds_the_pace_queues_nothing(
+    database: Any, db: AsyncSession, queued: Queued
+) -> None:
+    """Codex on #134 (P2): two runs at once mustn't each spend the minute's allowance."""
+    await _subscribed(db, queued, *(_address(f"r{each}") for each in range(2)))
+    row = await _email(db)
+    await _send_now(db, row)
+    async with database.sessions() as other:
+        await other.execute(select(func.pg_advisory_xact_lock(sending.LOCK)))
+        assert await _run(db) == 0  # the other run holds it: this one leaves the work to it
+        await other.rollback()
+    assert await _run(db) == 2
+
+
+async def test_an_email_too_long_once_rendered_is_refused_before_it_sends(
+    db: AsyncSession, queued: Queued
+) -> None:
+    """Codex on #134 (P2): a body under the input limit can render past the
+    mailer's, which would stop every send behind it."""
+    await _subscribed(db, queued, _address())
+    long = "a\n\n" * 10_000
+    row = await service.create(db, NewCampaignEmail(subject="Long", body=long), by=None)
+    await db.commit()
+    row_id = row.id
+    with pytest.raises(Problem) as refused:
+        await service.send(db, row_id, None, by=None)
+    assert refused.value.code == "campaigns.too_long"
+    assert "body.body" in refused.value.errors
+    await db.rollback()
+    waiting = select(func.count()).select_from(Delivery).where(Delivery.email_id == row_id)
+    assert await db.scalar(waiting) == 0
+
+
+async def test_a_scheduled_email_saved_too_long_is_refused(
+    db: AsyncSession, queued: Queued
+) -> None:
+    await _subscribed(db, queued, _address())
+    row = await _email(db)
+    await service.send(db, row.id, (clock.now() + timedelta(hours=1)).isoformat(), by=None)
+    await db.commit()
+    await db.refresh(row)
+    with pytest.raises(Problem) as refused:
+        await service.change(
+            db,
+            row.id,
+            CampaignEmailChange(version=row.version, body="a\n\n" * 10_000),
+            by=uuid.uuid4(),
+        )
+    assert refused.value.code == "campaigns.too_long"
+    await db.rollback()
+
+
+async def test_a_send_too_long_to_queue_stops_and_never_blocks_the_rest(
+    db: AsyncSession, queued: Queued
+) -> None:
+    address = _address()
+    await _subscribed(db, queued, address)
+    stuck = await _email(db, "Stuck")
+    await _send_now(db, stuck)
+    await db.execute(update(Email).where(Email.id == stuck.id).values(body="a\n\n" * 10_000))
+    await db.commit()
+    later = await _email(db, "Later")
+    await _send_now(db, later)
+    assert await _run(db) == 1
+    assert [each["subject"] for each in queued.to(address)][-1:] == ["Later"]
+    await db.refresh(stuck)
+    assert (stuck.status, stuck.sent_to) == ("sent", 0)

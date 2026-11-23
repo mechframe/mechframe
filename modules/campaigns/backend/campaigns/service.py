@@ -182,6 +182,16 @@ async def apply(db: AsyncSession, verdicts: list[tuple[str, bounces.Verdict]]) -
 # --- signing up -----------------------------------------------------------------------------
 
 
+def owner_of(user: Any, address: str) -> uuid.UUID | None:
+    """The account a sign-up joins: the signed-in person's, only for their own
+    verified address. Anyone may sign up any address, but only its owner's
+    account may hold it, or their export would hold someone else's (Codex on #134)."""
+    if user is None or getattr(user, "email_verified_at", None) is None:
+        return None
+    found: uuid.UUID = user.id
+    return found if normal(user.email) == normal(address) else None
+
+
 def _token() -> tuple[str, str, str]:
     token = secrets.token_urlsafe(32)
     return token, _hash(token), crypto.seal(token)
@@ -499,6 +509,8 @@ async def change(
     fields = [name for name in EDITABLE if getattr(body, name) is not None]
     for name in fields:
         setattr(row, name, getattr(body, name))
+    if row.status == "scheduled" and fields:
+        await check_size(db, row.subject, row.preview, row.body)
     if fields:
         row.version += 1
         row.updated_at = clock.now()
@@ -586,6 +598,22 @@ async def start(db: AsyncSession, row: Email, now: datetime) -> int:
     return int(made.rowcount or 0)
 
 
+def _too_long() -> Problem:
+    return Problem(
+        "campaigns.too_long",
+        422,
+        "This email is too long once it's made into an email. Shorten it.",
+        errors={"body.body": ["Too long once it's made into an email: shorten it."]},
+    )
+
+
+async def check_size(db: AsyncSession, subject: str, preheader: str, body: str) -> None:
+    """422 `campaigns.too_long` for an email whose copies would be past the
+    mailer's limit, before anything is queued (Codex on #134)."""
+    if render.too_long(render.parts(subject, preheader, body, await footer(db), email.site_url())):
+        raise _too_long()
+
+
 async def send(
     db: AsyncSession, email_id: uuid.UUID, at: str | None, *, by: uuid.UUID | None
 ) -> Email:
@@ -604,6 +632,7 @@ async def send(
     reach = await audience(db)
     if reach == 0:
         raise Problem("campaigns.nobody", 409, "Nobody is subscribed yet.")
+    await check_size(db, row.subject, row.preview, row.body)
     now = clock.now()
     if when is None or when <= now:
         count = await start(db, row, now)

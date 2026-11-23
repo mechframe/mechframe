@@ -37,6 +37,11 @@ UNSUBSCRIBE_PAGE = "/newsletter/unsubscribe"
 UNSUBSCRIBE_API = "/api/campaigns/unsubscribe"
 ONE_CLICK = "List-Unsubscribe=One-Click"
 TEST_MARK = "[Test] "
+#: The most either part may hold once rendered: under the kernel mailer's 256 KiB a
+#: body, with room for the longest unsubscribe link (Codex on #134).
+MAX_RENDERED = 250_000
+#: Longer than any token `service` makes, for measuring a copy before its send.
+_LONGEST_TOKEN = "x" * 64
 
 #: The frame's colours, as values.
 PAGE = "#f4f4f5"
@@ -232,3 +237,10 @@ def escaped(words: str) -> str:
     """Text a person didn't write as Markdown, made safe to put in some: each
     character Markdown reads escaped."""
     return re.sub(r"([\\`*_{}\[\]()#+\-.!<>|~])", r"\\\1", " ".join(words.split()))
+
+
+def too_long(parts: Parts) -> bool:
+    """Whether a subscriber's copy would be past the mailer's limit: a body
+    under the input limit can render past it (Codex on #134)."""
+    link = unsubscribe_page(parts.site_url, _LONGEST_TOKEN)
+    return len(html(parts, link)) > MAX_RENDERED or len(text(parts, link)) > MAX_RENDERED

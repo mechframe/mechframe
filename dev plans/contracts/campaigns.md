@@ -205,3 +205,7 @@ For later, not a choice:
   - **The answers' schema names are the module's own** (`CampaignEmail`, `CampaignEmailChange` and the rest): a bare `EmailChange` renamed the kernel's in its committed OpenAPI.
   - **The harness's `/api/_test/mail?full=1`** answers each message's HTML and headers too, so the contract suite checks RFC 8058's pair over HTTP alone.
   - **NewsletterSignup's states are checked in the web tests,** not a browser: no harness page draws it.
+- 2026-11-23, Codex on #134:
+  - **A sign-up joins the signed-in person's account only for their own verified address,** so their export never holds someone else's subscription.
+  - **One send run at a time** (a transaction's advisory lock): Send now's run and the minute's can't each spend the same allowance. A run that finds it held leaves the work to the other.
+  - **An email too long once rendered is 422 `campaigns.too_long`** at Send and at a scheduled email's save, under the mailer's 256 KiB a part. One that gets past it anyway (a footer changed since) stops, so it never holds the sends behind it.

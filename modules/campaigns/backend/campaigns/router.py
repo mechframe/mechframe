@@ -71,7 +71,7 @@ async def subscribe(
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, bool]:
     """Received, whatever the address's state: nobody learns who's subscribed."""
-    await service.subscribe(db, request, body, user_id=None if user is None else user.id)
+    await service.subscribe(db, request, body, user_id=service.owner_of(user, body.email))
     await db.commit()
     return {"received": True}
 
