@@ -201,6 +201,7 @@ For later, not a choice:
   - **A pending address asked again within 10 minutes gets no second confirmation,** so a form can't flood someone's inbox; a sign-up the bot check holds is kept pending and sent nothing.
   - **A replayed webhook is 409 `campaigns.replayed`;** a bad or missing signature, or no secret, is 401 `campaigns.bad_signature`.
   - **Cancel while sending** stops the rest and leaves the email `sent` to those it reached.
+  - **A send's rows go 30 days after they're queued** (the daily prune), and erasing a person takes their address out of every send's rows; the email keeps its count.
   - **The answers' schema names are the module's own** (`CampaignEmail`, `CampaignEmailChange` and the rest): a bare `EmailChange` renamed the kernel's in its committed OpenAPI.
   - **The harness's `/api/_test/mail?full=1`** answers each message's HTML and headers too, so the contract suite checks RFC 8058's pair over HTTP alone.
   - **NewsletterSignup's states are checked in the web tests,** not a browser: no harness page draws it.

@@ -8,8 +8,8 @@
   the addresses aside, and moves each report to the folder of read ones. A
   mailbox that can't be reached ends the run quietly, a report that can't be
   read stays where it is, and the rest go on.
-- `campaigns.prune`, daily at 03:40 UTC: unconfirmed sign-ups after 30 days,
-  replay ids after 7.
+- `campaigns.prune`, daily at 03:40 UTC: unconfirmed sign-ups and a send's
+  queued rows after 30 days, replay ids after 7.
 """
 
 from __future__ import annotations

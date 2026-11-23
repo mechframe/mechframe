@@ -60,6 +60,9 @@ PAGE = 50
 KEEP_PENDING = timedelta(days=30)
 #: Resend's delivery ids and the events heard, kept against replays.
 KEEP_SEEN = timedelta(days=7)
+#: A send's rows once queued: they keep a send from reaching anyone twice, and
+#: the email keeps its count after them.
+KEEP_DELIVERIES = timedelta(days=30)
 #: A pending address asked again within this gets no second confirmation.
 RESEND_AFTER = timedelta(minutes=10)
 #: The attention card counts the addresses that bounced within this.
@@ -769,8 +772,10 @@ async def set_aside_by_hand(
 
 
 async def forget(db: AsyncSession, row: Subscriber, detail: str) -> None:
-    """The subscriber gone, with a set-aside row kept so they're never emailed again."""
+    """The subscriber gone, and their address out of every send's rows, with a
+    set-aside row kept so they're never emailed again. A send's count stays."""
     await set_aside(db, row.email_normal, "unsubscribed", detail)
+    await db.execute(delete(Delivery).where(Delivery.email_normal == row.email_normal))
     await db.delete(row)
 
 
@@ -874,8 +879,8 @@ async def no_address_item(db: AsyncSession) -> attention.Item | None:
 
 
 async def prune(db: AsyncSession) -> int:
-    """Deletes sign-ups not confirmed within 30 days, and replay ids past 7.
-    Answers how many sign-ups went."""
+    """Deletes sign-ups not confirmed within 30 days, a send's queued rows past
+    30 and replay ids past 7. Answers how many sign-ups went."""
     now = clock.now()
     gone = cast(
         CursorResult[Any],
@@ -886,4 +891,5 @@ async def prune(db: AsyncSession) -> int:
         ),
     )
     await db.execute(delete(WebhookSeen).where(WebhookSeen.seen_at < now - KEEP_SEEN))
+    await db.execute(delete(Delivery).where(Delivery.queued_at < now - KEEP_DELIVERIES))
     return int(gone.rowcount or 0)

@@ -38,9 +38,9 @@ Use it when people should ask for the site's news by email and the site's people
 - **Tables:** `campaigns_subscriber`, `campaigns_set_aside`, `campaigns_email`, `campaigns_delivery` and `campaigns_webhook_seen`, migration `campaigns_0001` on the branch `campaigns`.
 - **Permissions:** `campaigns.email.manage` and `campaigns.subscriber.manage`, granted to admin in the migration; an owner holds every permission.
 - **Events heard:** `contact.news.requested` v1 and `blog.post.published` v1, each delivery taken once.
-- **Jobs:** `campaigns.send` each minute, `campaigns.bounces` every 15 minutes, `campaigns.prune` daily at 03:40 UTC.
+- **Jobs:** `campaigns.send` each minute, `campaigns.bounces` every 15 minutes, `campaigns.prune` daily at 03:40 UTC (unconfirmed sign-ups and a send's queued rows after 30 days; an email keeps its count).
 - **The email template:** `campaigns.confirm`.
-- **Hooks:** bot check `campaigns.subscribe`; export and erase by address or account, erasing leaving a set-aside row; seed (subscribers in each state, two addresses set aside, a draft, a scheduled and a sent email, all `@example.com`); dashboard `campaigns.set_aside` and `campaigns.no_address`.
+- **Hooks:** bot check `campaigns.subscribe`; export and erase by address or account, erasing the address from every send's rows and leaving a set-aside row; seed (subscribers in each state, two addresses set aside, a draft, a scheduled and a sent email, all `@example.com`); dashboard `campaigns.set_aside` and `campaigns.no_address`.
 
 ## Settings and env vars
 

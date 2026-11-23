@@ -469,3 +469,35 @@ async def test_a_replay_key_is_taken_once(db: AsyncSession) -> None:
     assert await service.first_time(db, key) is False
     await db.execute(text("SELECT 1"))
     await db.rollback()
+
+
+async def test_erasing_a_person_takes_their_address_out_of_every_send(
+    db: AsyncSession, queued: Queued
+) -> None:
+    address = _address("erased")
+    await _subscribed(db, queued, address)
+    row = await _email(db)
+    await _send_now(db, row)
+    await _run(db)
+    sent = select(func.count()).select_from(Delivery).where(Delivery.email_normal == address)
+    assert await db.scalar(sent) == 1
+    await privacy.delete_user_data(db, Subject(uuid.uuid4(), address))
+    await db.commit()
+    assert await db.scalar(sent) == 0
+    await db.refresh(row)
+    assert row.sent_to == 1  # the count stays; the address doesn't
+
+
+async def test_the_prune_keeps_a_send_s_rows_30_days(db: AsyncSession, queued: Queued) -> None:
+    address = _address("kept")
+    await _subscribed(db, queued, address)
+    row = await _email(db)
+    await _send_now(db, row)
+    await _run(db)
+    rows = select(func.count()).select_from(Delivery).where(Delivery.email_id == row.id)
+    assert await service.prune(db) == 0
+    assert await db.scalar(rows) == 1
+    clock.advance(31 * 24 * 3600)
+    await service.prune(db)
+    await db.commit()
+    assert await db.scalar(rows) == 0
