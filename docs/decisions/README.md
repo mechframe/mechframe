@@ -65,3 +65,4 @@ One short record per decision, numbered, written when the decision is made (`C:\
 | [0056](0056-loaded-links-and-the-footer-menu.md) | A link slot's entries may be loaded from a module's API (`defineModule`'s `links`), and the footer has a menu, `nav.footer` | Decided; applied with the pages module (#121) |
 | [0059](0059-notify-holders.md) | A notice to everyone who holds a permission, `notifications.notify_holders` (0057 and 0058 are blog's) | Decided; applied with the contact module |
 | [0060](0060-text-slots.md) | Two text slots the kit draws, `editor.tools` (the kernel's buttons first) and `prose.embed` (a player for a lone link) | Decided; applied with the embeds module |
+| [0062](0062-queue-message-public.md) | A module may queue a message it rendered itself: `email.queue_message` on the public surface, with only RFC 8058's two headers (0061 is the account's name field) | Decided; applied with the campaigns module |
