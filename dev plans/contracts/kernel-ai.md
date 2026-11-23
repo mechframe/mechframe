@@ -131,4 +131,6 @@ SPEC 6, 7, 14.12 and 15; decisions 0042 (answers), 0046 (settings, secrets, a sa
 - **The harness's fake Anthropic** (`harness/fake_anthropic.py`) answers every call of the contract suite and the end-to-end server, driven through `POST` and `GET /api/_test/ai` (`docs/contracts/auth-api.md`).
 - **A kernel page's path may hold a `:name` segment** (`schema/kernel.schema.json`), for the style's page.
 - **A draft or a rewrite is typed in after the dialog has gone, from a task of its own:** while the modal is open the editor is inert, and from inside React's effects React writes the old value back over the browser's typing, either of which loses Ctrl Z (found by `ai.spec.ts`).
+- **A site keeps at most 50 writing styles** (409 `kernel.writing_styles_full`), so their list and the Style picker stay one short read (module-contract-lint: lists are bounded).
+- **A validator's own words reach its field** (VM Website Dev 12's finding, folded in): `errors.field_message` drops pydantic's "Value error, " for a route's 422 and a settings save alike.
 - **The kit gains the icon `sparkle`,** for Write with AI and Draft the rules from the samples.

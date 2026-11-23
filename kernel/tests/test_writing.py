@@ -245,6 +245,20 @@ async def test_a_style_deleted_is_gone_for_a_task(db: AsyncSession) -> None:
 
 
 @pytest.mark.db
+async def test_a_site_keeps_at_most_its_number_of_styles(
+    db: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    person = await _person(db)
+    monkeypatch.setattr(writing, "STYLES_MAX", len(await writing.listed(db)) + 1)
+    await writing.create(db, writing.StyleFields(name=_name()), actor=person.id)
+    await db.commit()
+    with pytest.raises(Problem) as full:
+        await writing.create(db, writing.StyleFields(name=_name()), actor=person.id)
+    assert (full.value.code, full.value.status) == ("kernel.writing_styles_full", 409)
+    await db.rollback()
+
+
+@pytest.mark.db
 async def test_styles_are_listed_by_name_in_any_case(db: AsyncSession) -> None:
     person = await _person(db)
     stem = uuid.uuid4().hex[:6]

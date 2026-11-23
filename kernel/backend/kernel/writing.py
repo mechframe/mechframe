@@ -259,6 +259,9 @@ AVOID_PHRASE_MAX = 120
 SAMPLES_MAX = 3
 SAMPLE_MAX = 8000
 
+#: The most styles a site keeps, so their list (and the Style picker) stays one short read.
+STYLES_MAX = 50
+
 #: The Style picker's name for the constitution's own voice, which no style takes.
 HOUSE_STYLE = "House style"
 
@@ -437,10 +440,18 @@ async def _name_free(db: AsyncSession, name: str, *, besides: uuid.UUID | None =
 
 
 async def create(db: AsyncSession, fields: StyleFields, *, actor: uuid.UUID) -> WritingStyle:
-    """A new style, audited as `kernel.writing_style.created`; 409 for a name taken in any case."""
+    """A new style, audited as `kernel.writing_style.created`; 409 for a name
+    taken in any case, and 409 `kernel.writing_styles_full` once the site keeps
+    `STYLES_MAX`."""
     kept = _normalised(fields)
     if "name" not in kept:
         raise _invalid("name", "A style has a name.")
+    if (await db.scalar(select(func.count()).select_from(WritingStyle)) or 0) >= STYLES_MAX:
+        raise Problem(
+            "kernel.writing_styles_full",
+            409,
+            f"The site keeps at most {STYLES_MAX} writing styles. Delete one you don't use first.",
+        )
     await _name_free(db, kept["name"])
     now = clock.now()
     row = WritingStyle(
