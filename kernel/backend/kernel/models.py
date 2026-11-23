@@ -28,7 +28,7 @@ from sqlalchemy import (
     func,
     text,
 )
-from sqlalchemy.dialects.postgresql import INET, JSONB, REGCONFIG, TSVECTOR, UUID
+from sqlalchemy.dialects.postgresql import ARRAY, INET, JSONB, REGCONFIG, TSVECTOR, UUID
 from sqlalchemy.dialects.postgresql import base as postgresql_types
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -409,6 +409,45 @@ class Export(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     #: Seven days after it's asked for, and again after it's made.
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class WritingStyle(Base):
+    """A voice the AI's writing help can be asked to write in (decision 0058,
+    `kernel.writing`): a name unique in any case, a short description, voice
+    rules, phrases to avoid (one a line) and up to three samples. Nothing
+    points at a style, so a delete is a delete; the accounts that made and
+    last changed it are cleared when they're deleted, and the style stays."""
+
+    __tablename__ = "kernel_writing_style"
+    __table_args__ = (
+        # Written as Alembic reads Postgres' definition back, so its check sees no change.
+        Index("uq_kernel_writing_style_name", text("lower(name::text)"), unique=True),
+        Index("ix_kernel_writing_style_created_by_id", "created_by_id"),
+        Index("ix_kernel_writing_style_updated_by_id", "updated_by_id"),
+        CheckConstraint("char_length(voice_rules) <= 6000", name="voice_rules_fit"),
+        CheckConstraint("char_length(avoid) <= 13000", name="avoid_fits"),
+        CheckConstraint("cardinality(samples) <= 3", name="samples_fit"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    #: Counted from 1, one more each save that changes something: a save sent
+    #: from an older one is refused.
+    version: Mapped[int] = mapped_column(Integer)
+    name: Mapped[str] = mapped_column(String(80))
+    description: Mapped[str] = mapped_column(String(200))
+    voice_rules: Mapped[str] = mapped_column(Text)
+    #: One phrase a line, trimmed, without blanks or repeats in any case.
+    avoid: Mapped[str] = mapped_column(Text)
+    #: In the order they were given, each at most 8,000 characters.
+    samples: Mapped[list[str]] = mapped_column(ARRAY(Text))
+    created_by_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("auth_user.id", ondelete="SET NULL")
+    )
+    updated_by_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("auth_user.id", ondelete="SET NULL")
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
 # Auth's tables live in kernel.auth.models; importing them here puts every

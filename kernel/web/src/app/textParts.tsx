@@ -3,7 +3,9 @@
  * kernel's buttons first, then the modules' on in their order, each only for
  * those who hold its permission; and `prose.embed`, the modules' players. The
  * kit reads them from `TextPartsContext`, so it never reads a slot itself.
- * With no entry anywhere it asks nothing: no module switches, no session.
+ * With no entry anywhere it asks nothing: no module switches, no session. The
+ * kernel's own Write with AI (decision 0058) is always an entry, so a mounted
+ * app reads both here, as its frame already does.
  */
 import { useMemo, type ReactNode } from "react";
 

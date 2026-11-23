@@ -7,7 +7,7 @@ import logging
 import httpx
 import pytest
 from fastapi import FastAPI
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from kernel.errors import MEDIA_TYPE, Problem, install_handlers
 
@@ -15,6 +15,17 @@ from kernel.errors import MEDIA_TYPE, Problem, install_handlers
 class Body(BaseModel):
     email: str
     count: int
+
+
+class Named(BaseModel):
+    name: str
+
+    @field_validator("name")
+    @classmethod
+    def _has_words(cls, name: str) -> str:
+        if not name.strip():
+            raise ValueError("Enter your name.")
+        return name
 
 
 def app() -> FastAPI:
@@ -28,6 +39,10 @@ def app() -> FastAPI:
     @application.post("/things")
     async def things(body: Body) -> dict[str, int]:
         return {"count": body.count}
+
+    @application.post("/named")
+    async def named(body: Named) -> dict[str, str]:
+        return {"name": body.name}
 
     @application.get("/boom")
     async def boom() -> None:
@@ -95,6 +110,16 @@ async def test_validation_errors_by_field(client: httpx.AsyncClient) -> None:
     assert (response.status_code, body["code"]) == (422, "kernel.invalid_request")
     assert set(body["errors"]) == {"body.email", "body.count"}
     assert response.headers["content-type"] == MEDIA_TYPE
+
+
+async def test_a_validators_own_words_reach_the_field_without_pydantics_prefix(
+    client: httpx.AsyncClient,
+) -> None:
+    """A model's validator raising ValueError says its own sentence, not
+    pydantic's "Value error, ..." (VM Website Dev 12, 2026-11-23: contact's form
+    showed "Value error, Enter your name.")."""
+    response = await client.post("/named", json={"name": "  "})
+    assert response.json()["errors"] == {"body.name": ["Enter your name."]}
 
 
 async def test_unexpected_errors_say_nothing(

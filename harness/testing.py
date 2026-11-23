@@ -16,7 +16,9 @@ checks a site's adapter gets, read after the due jobs have run, since mail
 goes out through the jobs queue), jobs/run (every due job, now), jobs (a job
 queued now: the probe modules', `harness.probe`, which only the test support
 mounts), users (accounts made without judging their passwords) and seed (the
-modules' seed data, `kernel.seed`, hook 4). Still to come with K2 and K3:
+modules' seed data, `kernel.seed`, hook 4) and ai (the fake Anthropic's
+answers and the requests it was sent, `harness.fake_anthropic`, decision
+0058). Still to come with K2 and K3:
 oauth/grant, delete-hooks.
 """
 
@@ -35,8 +37,9 @@ from pydantic import BaseModel, Field
 from sqlalchemy import delete, select
 
 from harness import probe
+from harness.fake_anthropic import FakeAnthropic
 from harness.registry import discover
-from kernel import clock, create_app, crypto, jobs, seed, storage
+from kernel import ai, clock, create_app, crypto, jobs, seed, storage
 from kernel.access import needs_step_up, public, undeclared
 from kernel.auth.accounts import normal_email
 from kernel.auth.models import Role, Totp, User, UserRole
@@ -81,7 +84,48 @@ async def reset(request: Request, body: Reset | None = None) -> Response:
             await session.execute(delete(User))
         await session.commit()
     _captured(request).clear()
+    _fake_anthropic(request).forget()
     return Response(status_code=204)
+
+
+def _fake_anthropic(request: Request) -> FakeAnthropic:
+    fake: FakeAnthropic = request.app.state.fake_anthropic
+    return fake
+
+
+class AiAnswer(BaseModel):
+    """One answer of the fake Anthropic's: `words` as a message's text, or
+    `answer` as its JSON text, or an error `status`."""
+
+    words: str | None = None
+    answer: dict[str, Any] | None = None
+    status: int = Field(default=200, ge=200, le=599)
+    stop_reason: str = "end_turn"
+
+
+class AiAnswers(BaseModel):
+    answers: list[AiAnswer] = Field(min_length=1, max_length=50)
+
+
+@router.post("/ai", status_code=204)
+async def ai_answers(body: AiAnswers, request: Request) -> Response:
+    """The fake Anthropic answers these next, in order (decision 0058)."""
+    for given in body.answers:
+        _fake_anthropic(request).queue(
+            given.words, answer=given.answer, status=given.status, stop_reason=given.stop_reason
+        )
+    return Response(status_code=204)
+
+
+@router.get("/ai")
+async def ai_asked(request: Request) -> dict[str, Any]:
+    """Every request the fake Anthropic was sent since the last reset, oldest first."""
+    return {
+        "asked": [
+            {"method": a.method, "path": a.path, "key": a.key, "beta": a.beta, "body": a.body}
+            for a in _fake_anthropic(request).asked
+        ]
+    }
 
 
 @router.post("/breached", status_code=204)
@@ -275,6 +319,10 @@ def build_test_app(database_url: str | None = None, *, env_file: bool = True) ->
     )
     app.state.captured_mail = captured
     app.state.breached = set()
+    # Every AI call goes to the fake, never to Anthropic (decision 0058).
+    fake = FakeAnthropic()
+    ai.use_transport(fake.transport)
+    app.state.fake_anthropic = fake
     app.include_router(router, prefix="/api/_test")
     started = app.router.lifespan_context
 

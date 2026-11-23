@@ -9,7 +9,7 @@ from datetime import date
 from enum import StrEnum
 
 import pytest
-from pydantic import BaseModel, ConfigDict, Field, SecretBytes, SecretStr
+from pydantic import BaseModel, ConfigDict, Field, SecretBytes, SecretStr, field_validator
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -193,6 +193,29 @@ async def test_refusals(db: AsyncSession, registry: tuple[SettingsRegistry, str]
         ["posts_per_page"],
     )
     assert (await found.form(db, module_id))["version"] == 0
+
+
+class Signed(BaseModel):
+    signature: str = "Thanks"
+
+    @field_validator("signature")
+    @classmethod
+    def _short(cls, signature: str) -> str:
+        if len(signature) > 10:
+            raise ValueError("A signature is at most 10 characters.")
+        return signature
+
+
+@pytest.mark.db
+async def test_a_refused_value_says_the_validators_own_words(db: AsyncSession) -> None:
+    """Not pydantic's "Value error, ..." in front (VM Website Dev 12, 2026-11-23)."""
+    found = SettingsRegistry()
+    module_id = unique_id("signed")
+    found.register(module_id, Signed)
+    with pytest.raises(Problem) as refused:
+        await found.save(db, module_id, {"signature": "x" * 11}, version=0)
+    await db.rollback()
+    assert refused.value.errors == {"signature": ["A signature is at most 10 characters."]}
 
 
 async def test_two_first_saves_at_once_both_land(

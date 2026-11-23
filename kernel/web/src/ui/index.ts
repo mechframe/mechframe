@@ -31,7 +31,7 @@ export { Chip, Pill } from "./Pill";
 export type { ChipProps, Tone } from "./Pill";
 export { landOn, reveal } from "./place";
 export { MarkdownEditor } from "./MarkdownEditor";
-export type { MarkdownEditorProps, MarkdownTools } from "./MarkdownEditor";
+export type { MarkdownEditorProps, MarkdownTools, WritingFields } from "./MarkdownEditor";
 export { Prose } from "./Prose";
 export type { ProseProps } from "./Prose";
 // What the kernel and the modules on add to every editor and Prose (decision 0060).

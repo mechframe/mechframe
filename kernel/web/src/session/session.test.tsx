@@ -77,7 +77,10 @@ describe("useSession", () => {
     await waitFor(() => {
       expect(result.current.status).toBe("signed-in");
     });
-    expect(fetch).toHaveBeenCalledTimes(1);
+    // The session was read once before the retry. (The kernel's text parts read the module switches
+    // through the same fetch, for Write with AI, decision 0058.)
+    const reads = fetch.mock.calls.filter(([request]) => new URL(request.url).pathname === "/api/auth/session");
+    expect(reads).toHaveLength(1);
   });
 
   it("is signed out when any call finds the session gone, and forgets what was the person's", async () => {

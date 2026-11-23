@@ -50,7 +50,7 @@
         "additionalProperties": false,
         "required": ["path", "title", "access"],
         "properties": {
-          "path": {"type": "string", "pattern": "^(/[a-z][a-z0-9-]*)+$"},
+          "path": {"type": "string", "pattern": "^(/([a-z][a-z0-9-]*|:[a-z][a-z0-9_]*))+$"},
           "title": {"type": "string", "minLength": 1, "maxLength": 60},
           "access": {"enum": ["public", "member", "admin"]}
         }

@@ -15,7 +15,9 @@
  * Ctrl B and Ctrl I (⌘ on a Mac) are Bold and Italic in the text.
  *
  * After `tools` come the buttons the kernel and the modules on add to every
- * editor (`editor.tools`, decision 0060), each left out if it fails.
+ * editor (`editor.tools`, decision 0060), each left out if it fails: first the
+ * kernel's AI writing help (decision 0058), which may fill the module's
+ * `fields` too.
  */
 import {
   Suspense,
@@ -40,6 +42,18 @@ import { applied, link, prefixLines, wrap, type Change, type Selection } from ".
 import { useTextParts } from "./textParts";
 import { shows } from "./words";
 
+/**
+ * The module's own fields beside the editor, which the AI's writing help may
+ * fill (decision 0058): its Titles, Summary and Search words buttons show only
+ * for the fields given.
+ */
+export type WritingFields = {
+  title?: { value: string; set: (title: string) => void };
+  /** `max` is the field's own limit: blog's summary takes 300. */
+  summary?: { value: string; max: number; set: (summary: string) => void };
+  search?: { set: (title: string, description: string) => void };
+};
+
 /** The editor's ways in, for a module's `tools`. */
 export type MarkdownTools = {
   /** `before` and `after` around the selection, or around `placeholder` when nothing is selected. */
@@ -48,6 +62,14 @@ export type MarkdownTools = {
   insert: (text: string) => void;
   /** What's selected now. */
   selected: () => string;
+  /** The editor's label, "Post body": what its text is. */
+  label: string;
+  /** The whole text. */
+  text: () => string;
+  /** The whole text in place of what's there, typed in as `insert` is, so Ctrl Z takes it back. */
+  replace: (text: string) => void;
+  /** The module's fields beside the editor, for the AI's buttons. */
+  fields?: WritingFields;
 };
 
 export type MarkdownEditorProps = {
@@ -67,6 +89,8 @@ export type MarkdownEditorProps = {
   maxLength?: number;
   /** More buttons after the kit's, given the editor's ways in. */
   tools?: ComponentType<{ editor: MarkdownTools }>;
+  /** The module's fields beside the editor that the AI's writing help may fill. */
+  fields?: WritingFields;
 };
 
 type Shown = { text: string; html: string } | { text: string; error: unknown } | null;
@@ -82,6 +106,7 @@ export function MarkdownEditor({
   error,
   maxLength,
   tools: Tools,
+  fields,
 }: MarkdownEditorProps) {
   const made = useId();
   const { tools: added } = useTextParts();
@@ -135,6 +160,12 @@ export function MarkdownEditor({
       const area = text.current;
       return area ? area.value.slice(area.selectionStart, area.selectionEnd) : "";
     },
+    label,
+    text: () => text.current?.value ?? value,
+    replace: (words) => {
+      make((at) => ({ from: 0, to: at.value.length, insert: words, select: [words.length, words.length] }));
+    },
+    ...(fields ? { fields } : {}),
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {

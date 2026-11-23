@@ -615,6 +615,256 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/kernel/ai": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ai State
+         * @description Whether the AI's buttons show, and the styles to pick from.
+         */
+        get: operations["ai_state_api_kernel_ai_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/kernel/ai/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ai Draft
+         * @description A text drafted from a topic, in Markdown, for the editor to insert.
+         */
+        post: operations["ai_draft_api_kernel_ai_draft_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/kernel/ai/titles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ai Titles
+         * @description Up to 8 titles, from what's written, or from the topic while nothing is.
+         */
+        post: operations["ai_titles_api_kernel_ai_titles_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/kernel/ai/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ai Summary
+         * @description A summary of what's written, at most `max` characters.
+         */
+        post: operations["ai_summary_api_kernel_ai_summary_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/kernel/ai/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ai Search
+         * @description The title a search result shows (at most 70) and the description under it (at most 160).
+         */
+        post: operations["ai_search_api_kernel_ai_search_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/kernel/ai/rewrite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ai Rewrite
+         * @description The text rewritten, saying what it said: 502 `kernel.ai_rewrite_lost`
+         *     when a link or image went missing, and the editor keeps its text.
+         */
+        post: operations["ai_rewrite_api_kernel_ai_rewrite_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/kernel/ai/style-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ai Style Rules
+         * @description Voice rules and phrases to avoid drafted from a style's samples, fitted
+         *     to what a style holds, for an editor to change before the save.
+         */
+        post: operations["ai_style_rules_api_kernel_ai_style_rules_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/kernel/admin/ai": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ai Key
+         * @description The key's state, never the key.
+         */
+        get: operations["ai_key_api_kernel_admin_ai_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/kernel/admin/ai/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ai Check
+         * @description Asks Anthropic whether the key in use works. A refusal is 502
+         *     `kernel.ai_failed`, never a 401, which the admin would take for its own
+         *     session ending.
+         */
+        post: operations["ai_check_api_kernel_admin_ai_check_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/kernel/admin/writing/rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Writing Rules
+         * @description The default rules the Writing tab offers as switches, read-only.
+         */
+        get: operations["writing_rules_api_kernel_admin_writing_rules_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/kernel/admin/writing/styles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Writing Styles
+         * @description Every style, by name.
+         */
+        get: operations["writing_styles_api_kernel_admin_writing_styles_get"];
+        put?: never;
+        /**
+         * New Style
+         * @description A new style: 409 `kernel.writing_style_name_taken` for a name another has, in any case.
+         */
+        post: operations["new_style_api_kernel_admin_writing_styles_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/kernel/admin/writing/styles/{style_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One Style */
+        get: operations["one_style_api_kernel_admin_writing_styles__style_id__get"];
+        put?: never;
+        post?: never;
+        /** Delete Style */
+        delete: operations["delete_style_api_kernel_admin_writing_styles__style_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Change Style
+         * @description Changes the fields sent: 409 `kernel.writing_style_changed` when it was saved since `version`.
+         */
+        patch: operations["change_style_api_kernel_admin_writing_styles__style_id__patch"];
+        trace?: never;
+    };
     "/api/auth/sign-in": {
         parameters: {
             query?: never;
@@ -1408,6 +1658,27 @@ export interface components {
             /** Minutes */
             minutes?: number | null;
         };
+        /** AiKey */
+        AiKey: {
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "settings" | "environment" | "none";
+            /** Model */
+            model: string;
+            /** Unreadable */
+            unreadable: boolean;
+        };
+        /** AiState */
+        AiState: {
+            /** Ready */
+            ready: boolean;
+            /** Unreadable */
+            unreadable: boolean;
+            /** Styles */
+            styles: components["schemas"]["StyleCard"][];
+        };
         /** AskForCode */
         AskForCode: {
             /** Email */
@@ -1692,6 +1963,19 @@ export interface components {
              */
             status: "check_email";
         };
+        /** Checked */
+        Checked: {
+            /**
+             * Works
+             * @constant
+             */
+            works: true;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "settings" | "environment" | "none";
+        };
         /** Choice */
         Choice: {
             /** In Site */
@@ -1823,6 +2107,26 @@ export interface components {
             items: components["schemas"]["Device"][];
             /** Next Cursor */
             next_cursor: string | null;
+        };
+        /** DraftAsk */
+        DraftAsk: {
+            /** What */
+            what: string;
+            /** Style Id */
+            style_id?: string | null;
+            /** Topic */
+            topic: string;
+            /**
+             * Length
+             * @default medium
+             * @enum {string}
+             */
+            length: "short" | "medium" | "long";
+        };
+        /** Drafted */
+        Drafted: {
+            /** Markdown */
+            markdown: string;
         };
         /** EmailChange */
         EmailChange: {
@@ -1977,6 +2281,28 @@ export interface components {
             permissions: string[];
             /** Id */
             id: string;
+        };
+        /** NewStyle */
+        NewStyle: {
+            /** Name */
+            name: string;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /**
+             * Voice Rules
+             * @default
+             */
+            voice_rules: string;
+            /**
+             * Avoid
+             * @default
+             */
+            avoid: string;
+            /** Samples */
+            samples?: string[];
         };
         /** NewTerm */
         NewTerm: {
@@ -2308,6 +2634,15 @@ export interface components {
              */
             id: string;
         };
+        /** RewriteAsk */
+        RewriteAsk: {
+            /** What */
+            what: string;
+            /** Style Id */
+            style_id?: string | null;
+            /** Markdown */
+            markdown: string;
+        };
         /** RoleChange */
         RoleChange: {
             /** Name */
@@ -2350,12 +2685,39 @@ export interface components {
             /** Roles */
             roles: string[];
         };
+        /** RuleShown */
+        RuleShown: {
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /** Text */
+            text: string;
+            /** Why */
+            why: string;
+            /** Warning */
+            warning: string;
+        };
         /** Saver */
         Saver: {
             /** Name */
             name: string | null;
             /** Email */
             email: string;
+        };
+        /** SearchAsk */
+        SearchAsk: {
+            /** What */
+            what: string;
+            /** Style Id */
+            style_id?: string | null;
+            /**
+             * Title
+             * @default
+             */
+            title: string;
+            /** Body */
+            body: string;
         };
         /** SearchHit */
         SearchHit: {
@@ -2379,6 +2741,13 @@ export interface components {
             items: components["schemas"]["SearchHit"][];
             /** Next Cursor */
             next_cursor: string | null;
+        };
+        /** SearchWords */
+        SearchWords: {
+            /** Title */
+            title: string;
+            /** Description */
+            description: string;
         };
         /** SecondFactor */
         SecondFactor: {
@@ -2605,6 +2974,103 @@ export interface components {
             /** Public */
             public: boolean;
         };
+        /** StyleCard */
+        StyleCard: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Description */
+            description: string;
+        };
+        /**
+         * StyleChanges
+         * @description The fields to change, at the `version` the form was read at.
+         */
+        StyleChanges: {
+            /** Version */
+            version: number;
+            /** Name */
+            name?: string | null;
+            /** Description */
+            description?: string | null;
+            /** Voice Rules */
+            voice_rules?: string | null;
+            /** Avoid */
+            avoid?: string | null;
+            /** Samples */
+            samples?: string[] | null;
+        };
+        /** StyleRules */
+        StyleRules: {
+            /** Voice Rules */
+            voice_rules: string;
+            /** Avoid */
+            avoid: string;
+        };
+        /** StyleRulesAsk */
+        StyleRulesAsk: {
+            /** Samples */
+            samples: string[];
+        };
+        /** StyleShown */
+        StyleShown: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Version */
+            version: number;
+            /** Name */
+            name: string;
+            /** Description */
+            description: string;
+            /** Voice Rules */
+            voice_rules: string;
+            /** Avoid */
+            avoid: string;
+            /** Samples */
+            samples: string[];
+            /** Created By Id */
+            created_by_id: string | null;
+            /** Updated By Id */
+            updated_by_id: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** Styles */
+        Styles: {
+            /** Items */
+            items: components["schemas"]["StyleShown"][];
+        };
+        /** Summarised */
+        Summarised: {
+            /** Summary */
+            summary: string;
+        };
+        /** SummaryAsk */
+        SummaryAsk: {
+            /** What */
+            what: string;
+            /** Style Id */
+            style_id?: string | null;
+            /** Body */
+            body: string;
+            /** Max */
+            max: number;
+        };
         /** Suspend */
         Suspend: {
             /** Reason */
@@ -2694,6 +3160,28 @@ export interface components {
              * Format: date-time
              */
             until: string;
+        };
+        /** Titled */
+        Titled: {
+            /** Titles */
+            titles: string[];
+        };
+        /** TitlesAsk */
+        TitlesAsk: {
+            /** What */
+            what: string;
+            /** Style Id */
+            style_id?: string | null;
+            /**
+             * Topic
+             * @default
+             */
+            topic: string;
+            /**
+             * Body
+             * @default
+             */
+            body: string;
         };
         /** TotpCode */
         TotpCode: {
@@ -2797,6 +3285,15 @@ export interface components {
             name: string;
             /** Displayname */
             displayName: string;
+        };
+        /** WritingRules */
+        WritingRules: {
+            /** Mechanics */
+            mechanics: string;
+            /** Rules */
+            rules: components["schemas"]["RuleShown"][];
+            /** Default Text */
+            default_text: string;
         };
     };
     responses: never;
@@ -4071,6 +4568,567 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description A problem (RFC 9457) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    ai_state_api_kernel_ai_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiState"];
+                };
+            };
+            /** @description A problem (RFC 9457) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    ai_draft_api_kernel_ai_draft_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DraftAsk"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Drafted"];
+                };
+            };
+            /** @description What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description A problem (RFC 9457) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    ai_titles_api_kernel_ai_titles_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TitlesAsk"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Titled"];
+                };
+            };
+            /** @description What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description A problem (RFC 9457) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    ai_summary_api_kernel_ai_summary_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SummaryAsk"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Summarised"];
+                };
+            };
+            /** @description What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description A problem (RFC 9457) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    ai_search_api_kernel_ai_search_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SearchAsk"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchWords"];
+                };
+            };
+            /** @description What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description A problem (RFC 9457) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    ai_rewrite_api_kernel_ai_rewrite_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RewriteAsk"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Drafted"];
+                };
+            };
+            /** @description What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description A problem (RFC 9457) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    ai_style_rules_api_kernel_ai_style_rules_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StyleRulesAsk"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StyleRules"];
+                };
+            };
+            /** @description What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description A problem (RFC 9457) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    ai_key_api_kernel_admin_ai_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiKey"];
+                };
+            };
+            /** @description A problem (RFC 9457) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    ai_check_api_kernel_admin_ai_check_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Checked"];
+                };
+            };
+            /** @description A problem (RFC 9457) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    writing_rules_api_kernel_admin_writing_rules_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WritingRules"];
+                };
+            };
+            /** @description A problem (RFC 9457) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    writing_styles_api_kernel_admin_writing_styles_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Styles"];
+                };
+            };
+            /** @description A problem (RFC 9457) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    new_style_api_kernel_admin_writing_styles_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewStyle"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StyleShown"];
+                };
+            };
+            /** @description What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description A problem (RFC 9457) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    one_style_api_kernel_admin_writing_styles__style_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                style_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StyleShown"];
+                };
+            };
+            /** @description What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description A problem (RFC 9457) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete_style_api_kernel_admin_writing_styles__style_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                style_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description A problem (RFC 9457) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    change_style_api_kernel_admin_writing_styles__style_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                style_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StyleChanges"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StyleShown"];
+                };
             };
             /** @description What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected` */
             422: {

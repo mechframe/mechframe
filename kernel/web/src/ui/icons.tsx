@@ -160,6 +160,8 @@ export const ICONS = {
     20,
     1.9,
   ),
+  // The AI's writing help (decision 0058): a spark, and a small one beside it.
+  sparkle: line(<path d="M11 3l1.9 5.1L18 10l-5.1 1.9L11 17l-1.9-5.1L4 10l5.1-1.9zM18.5 15l.8 1.7 1.7.8-1.7.8-.8 1.7-.8-1.7-1.7-.8 1.7-.8z" />),
   mail: line(
     <>
       <rect x="3" y="5" width="18" height="14" rx="2" />

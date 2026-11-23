@@ -186,6 +186,10 @@ _SEED = [
     "INSERT INTO kernel_export (id, user_id, status, storage_key, created_at, expires_at) "
     "VALUES (gen_random_uuid(), :user, 'ready', 'kernel/exports/x.zip', now(), "
     "now() + interval '7 days')",
+    "INSERT INTO kernel_writing_style (id, version, name, description, voice_rules, avoid, samples, "
+    "created_by_id, updated_by_id, created_at, updated_at) VALUES (gen_random_uuid(), 1, 'Warm', "
+    "'Friendly and plain', '- Short sentences', 'delve', ARRAY['We make music.'], :user, :user, "
+    "now(), now())",
     "INSERT INTO media_image (id, version, file_version, content_type, sha256, width, height, "
     "bytes, filename, "
     "alt, uploaded_by, created_at, updated_at) VALUES ('00000000-0000-0000-0000-000000000006', 1, 1, "

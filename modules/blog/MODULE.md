@@ -56,7 +56,7 @@ None.
 **Its public surface** (0.1.1), for a site whose own Blog and Post pages replace blog's at `/blog` and `/blog/:slug` (the same rank, which `server_copy.build` allows) and draw blog's posts:
 
 - **Web, `@/modules/blog/public`** (decision 0057): `usePosts({ category })` (an infinite query, 12 a page), `usePost(slug)` (a `LivePost`, or a `PostMoved` that `isMoved` tells apart; any other slug a 404 `blog.post_not_found`) and `useCategories()`; the types `PostCard`, `PostCards`, `PostCover`, `LivePost`, `PostMoved`, `BlogCategory` and `BlogCategoryCount`; and `pathOf(slug)` and `day(at)`.
-- **Backend, `blog.public`**, for the site's server copy: `posts(db, category=, cursor=, limit=)`, `newest(db)`, `post(db, slug)` (a `LivePost`, a `PostMoved` or None) and `categories(db)`, each the API's answer for the same read, and `path(slug)`. A post's title in search results, left empty, is "{title} · {site name}", as the kernel titles its own pages.
+- **Backend, `blog.public`**, for the site's server copy: `posts(db, category=, cursor=, limit=)`, `newest(db)`, `post(db, slug)` (a `LivePost`, a `PostMoved` or None) and `categories(db)`, each the API's answer for the same read, and `path(slug)`. Their dates (`published_at`, `updated_at`) are ISO 8601 text with the zone (`kernel.answers.When`), as the API answers them, never `datetime`: parse one with `datetime.fromisoformat`. A post's title in search results, left empty, is "{title} · {site name}", as the kernel titles its own pages.
 
 ## Known limits
 

@@ -1,5 +1,6 @@
 // One post's editor, /admin/blog/:id and /admin/blog/new (`dev plans/contracts/blog.md`;
 // the canvas's AdminPost board): the title and the body in the kit's MarkdownEditor,
+// whose Write with AI (the kernel's, decision 0058) may fill the title, summary and search words,
 // then Publish, Details (Category, Author, Address, Summary, Cover image), Related
 // posts, Search and sharing, and After publishing beside them. A live post's save
 // changes the site at once (pages' contract §8, 3): its panel says Live, and its
@@ -370,6 +371,27 @@ function Editor({ saved: first, start }: { saved: Full | null; start: Form }) {
             hint="Markdown works here: ## for a heading, **bold**, *italic*, > for a quote and [words](address) for a link."
             maxLength={MAX_BODY}
             error={errorOf("body")}
+            fields={{
+              title: {
+                value: form.title,
+                set: (title) => {
+                  set("title", title.slice(0, MAX_TITLE));
+                },
+              },
+              summary: {
+                value: form.summary,
+                max: MAX_SUMMARY,
+                set: (summary) => {
+                  set("summary", summary);
+                },
+              },
+              search: {
+                set: (title, description) => {
+                  set("search_title", title);
+                  set("search_description", description);
+                },
+              },
+            }}
           />
         </div>
         <div className="mf-blog-side">
