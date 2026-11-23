@@ -400,11 +400,11 @@
    "gate": "passed",
    "step_order": 11,
    "step": "The AI client",
-   "status": "later",
-   "status_label": "Later",
-   "prs": "",
-   "decisions": "",
-   "note": "Outside K3's gate (the owner, 2026-11-17); its tests come with it"
+   "status": "done",
+   "status_label": "Done",
+   "prs": "#135",
+   "decisions": "0058",
+   "note": "ai.client(db), the key saved in Settings → AI or the host's, the writing rules and styles, and Write with AI in every editor (#135)"
   },
   {
    "milestone": "MechFrame v1.0",
@@ -794,9 +794,9 @@
    "step": "Step 1: media, pages, blog, embeds, contact, campaigns",
    "status": "next",
    "status_label": "Next",
-   "prs": "#116 #118 #119 #121 #123 #125 #126 #127 #128 #129 #131 #132",
-   "decisions": "0054 0055 0056 0057 0059 0060",
-   "note": "media landed (#116); the kernel's Markdown and its editor for pages and blog (#118); media and the admin kit drawn to the boards (#119), and again in round 2, the admin's labels in the boards' normal line height (#126), and in round 3, the kit's alert with its what at the boards' 16px and the alt box with no resize handle (#131); pages, its menus loaded into nav.public and the new nav.footer (#121); blog, with its categories, covers, related posts and board, and a module's web reaching another's public.ts as @/modules/<id>/public (#123, decision 0057), and its public surface for a site's own Blog and Post pages (#128), which a site's mypy now follows from its own code (#132); contact, its form, its Inbox and the kernel's notify_holders telling the Inbox's readers (#125, decision 0059), and its reads and send in public.ts for a site's own form (#129); embeds, its players behind a consent facade in every Prose, the Embed button in every editor and the YouTube playlist player, through the kit's two new text slots (#127, decision 0060); blog's AI writing help, generated covers and social posting, and campaigns to come"
+   "prs": "#116 #118 #119 #121 #123 #125 #126 #127 #128 #129 #131 #132 #135",
+   "decisions": "0054 0055 0056 0057 0058 0059 0060",
+   "note": "media landed (#116); the kernel's Markdown and its editor for pages and blog (#118); media and the admin kit drawn to the boards (#119), and again in round 2, the admin's labels in the boards' normal line height (#126), and in round 3, the kit's alert with its what at the boards' 16px and the alt box with no resize handle (#131); pages, its menus loaded into nav.public and the new nav.footer (#121); blog, with its categories, covers, related posts and board, and a module's web reaching another's public.ts as @/modules/<id>/public (#123, decision 0057), and its public surface for a site's own Blog and Post pages (#128), which a site's mypy now follows from its own code (#132); contact, its form, its Inbox and the kernel's notify_holders telling the Inbox's readers (#125, decision 0059), and its reads and send in public.ts for a site's own form (#129); embeds, its players behind a consent facade in every Prose, the Embed button in every editor and the YouTube playlist player, through the kit's two new text slots (#127, decision 0060); blog's AI writing help, the kernel's Write with AI in every editor with Settings → AI and Writing, and blog 0.1.2 handing it its fields (#135, decision 0058); generated covers and social posting, and campaigns to come"
   },
   {
    "milestone": "MechFrame v1.0",
