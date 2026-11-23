@@ -19,7 +19,7 @@ Overwritten every session. This one: 2026-11-22, about 10:50 Eastern to 14:00 (C
 ## Next
 
 1. **Land #129**, then tell VM Website Dev 10.
-2. **Media's round 3** (`dev plans/2026-11-22-media-round-3.md`): the attention alert 3px short, and the alt box's resize handle.
+2. **Media's round 3**, #131 (`dev plans/done/2026-11-22-media-round-3.md`): the attention alert 3px short, and the alt box's resize handle.
 3. **Blog's AI PR** (decision 0058): its contract `dev plans/contracts/kernel-ai.md` first, with the key's two places and which wins. The buttons go through embeds' `editor.tools` as a kernel entry.
 4. **The account's name field** (the owner: now; decision 0061 and `kernel_0017` if it needs them).
 5. Pages' two crossed-save gaps, then generated covers, then social posting (ask §8, 7 first).

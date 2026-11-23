@@ -1,0 +1,36 @@
+# A site's mypy can't see its modules (sent by VM Website)
+
+VM Website Dev 10 sent this on 2026-11-22, with the owner's OK, for the main lane's next session. It's a template fix: its own small PR, after media's round 3.
+
+## The gap
+
+A site's own code may import a module's public surface (decision 0057). VM Website's `backend/app/site/pages.py` imports `blog.public` for its own Blog and Post pages. At run time this works: importing `app` puts `backend/modules` on `sys.path` (`templates/site/backend/app/__init__.py`). mypy doesn't: the template's `pyproject.toml` has `mypy_path = "backend"`, so strict mypy fails with `import-not-found` for `blog`.
+
+VM Website's own fix, in its `pyproject.toml`:
+- `mypy_path = "backend,backend/modules"`;
+- an override for the installed modules' packages (`["blog.*", "media.*"]`) with `follow_imports = "silent"`, since the copied modules are checked where MechFrame keeps them.
+
+## What to decide and build
+
+- **The template's answer, for every site.** VM Website suggests the CLI write the override's module list on `mechframe add` and `remove`, next to `app/modules.py` and the lock. The alternative is one static line, with no list to keep: `mypy_path` plus following modules normally, since each module already passes strict mypy here. Check that a module's own code passes under the template's mypy settings, overrides included, before choosing the static line.
+- **The test, seen failing first:** a site made with `blog`, with a file in `backend/app/site/` that imports `blog.public`, through `mechframe check` or the CLI's tests. `tools.site_smoke` doesn't cover it: its second pass adds only the CLI's fixture modules, which have no `public.py`.
+- `mechframe check`, `templates/README.md` and the site's `CLAUDE.md`/`AGENTS.md` stay true.
+
+## Two notes from VM Website, both as designed
+
+- `blog.public`'s answers carry dates as ISO text (`kernel.answers.When`), so a site's server copy parses them. Say so in blog's `MODULE.md`, "Extension points", with blog's next version.
+- `kernel.server_copy`'s `Pages.page()` receives the address asked (`/blog/<slug>`), not the pattern. Its docstring already says so (`server_copy.py`, `Pages.page`). Nothing to change.
+
+Done means a new site with a module whose site code imports that module's `public` passes `python -m mypy`, CI's site smoke stays green, and VM Website Dev 10 gets the PR number.
+
+## Result (2026-11-22, session M4e)
+
+**The static line.** The template's `pyproject.toml` has `mypy_path = "backend,backend/modules"`, and mypy follows a module normally, as it already followed the kernel: no override list, so `mechframe add` and `remove` write nothing more.
+- Checked before choosing it: a scratch site with all five built modules (media, pages, blog, contact, embeds), a file in `backend/app/site/` importing each module's 45 Python files, passes the site's strict mypy, so a module's own code passes under the template's settings as it does here.
+- A module is still third-party to the site's ruff: `from blog import public` sorts with `sqlalchemy`, as `known-first-party` names only `app` and `kernel`. Left as it is, so VM Website's imports stay sorted.
+
+**The test,** seen failing first with VM Website's `import-not-found` for `blog`: `tests/test_site_template.py`'s `test_a_sites_mypy_sees_its_modules_public_surface`. It makes a site with this checkout's media and blog, adds a Blog page of its own in `backend/app/site/` that imports `blog.public`, and runs the site's `python -m mypy`, ruff and black. It's the first test on a PR that runs a site's mypy (about 2 minutes here; `tools.site_smoke` runs it on main's pushes, with the fixture modules only). The same file's `_run` now reads its subprocesses' output as UTF-8, since this session's full run had failed reading Black's emoji as cp1252.
+
+**For VM Website:** `mechframe upgrade kernel` brings the new `mypy_path`. VM Website edited the same file, so the upgrade stops on `pyproject.toml` as a conflict with a diff for an agent: take the template's `mypy_path` and drop the `follow_imports = "silent"` override, so the modules are checked again in the site, then `--merged pyproject.toml`.
+
+**Left for blog's next version:** the note that `blog.public`'s dates are ISO text goes in blog's `MODULE.md` with blog's next version (blog's AI PR), not here, since changing a module's files means a new version.

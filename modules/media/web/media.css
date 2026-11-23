@@ -104,8 +104,10 @@
   border-radius: var(--mf-radius-control);
 }
 
+/* Two lines at the board's 64px, with no resize handle: the board's box draws none (round 3). */
 textarea.mf-input.mf-media-alt {
   min-height: 4rem;
+  resize: none;
 }
 
 .mf-media-hint {

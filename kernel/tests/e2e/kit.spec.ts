@@ -155,6 +155,41 @@ for (const [theme, canvas] of Object.entries(THEMES)) {
       if (theme === "vibrant-mindz") expect(fills.field).toBe(canvas);
     });
 
+    // The boards' alert (VM Website's AdminMedia, canvas version 82; media's round 3): its "what"
+    // 16px in 600 and its "why" 14px, both at the browser's normal line height, 3px apart, inside
+    // 16px by 18px, so the box is those two lines and nothing more.
+    test("the attention alert's words are the boards': 16px over 14px at normal, 3px apart (media's round 3)", async ({ page }) => {
+      await open(page, theme, canvas);
+      const alert = await page.evaluate(() => {
+        const box = document.querySelector(".mf-admin-look .mf-attention");
+        if (!(box instanceof HTMLElement)) throw new Error("no attention alert in the admin look");
+        const part = (selector: string) => {
+          const found = box.querySelector(selector);
+          if (!(found instanceof HTMLElement)) throw new Error(`no ${selector} in the alert`);
+          const style = getComputedStyle(found);
+          return { height: found.getBoundingClientRect().height, size: style.fontSize, weight: style.fontWeight, line: style.lineHeight };
+        };
+        const style = getComputedStyle(box);
+        const what = part(".mf-attention-what");
+        const why = part(".mf-attention-why");
+        const words = box.querySelector(".mf-attention-words");
+        if (!(words instanceof HTMLElement)) throw new Error("no .mf-attention-words in the alert");
+        const frame = ["paddingTop", "paddingBottom", "borderTopWidth", "borderBottomWidth"] as const;
+        return {
+          what: { size: what.size, weight: what.weight, line: what.line },
+          why: { size: why.size, line: why.line },
+          gap: getComputedStyle(words).rowGap,
+          padding: style.padding,
+          extra: box.getBoundingClientRect().height - frame.reduce((sum, side) => sum + parseFloat(style[side]), 0) - what.height - why.height - 3,
+        };
+      });
+      expect(alert.what).toEqual({ size: "16px", weight: "600", line: "normal" });
+      expect(alert.why).toEqual({ size: "14px", line: "normal" });
+      expect(alert.gap).toBe("3px");
+      expect(alert.padding).toBe("16px 18px");
+      expect(Math.abs(alert.extra)).toBeLessThanOrEqual(0.5);
+    });
+
     test("the admin's labels take the boards' normal line height, and long text keeps its own (media's round 2)", async ({ page }) => {
       await open(page, theme, canvas);
       const lines = await page.evaluate(() => {
