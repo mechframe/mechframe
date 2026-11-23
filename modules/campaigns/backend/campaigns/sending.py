@@ -82,6 +82,8 @@ async def _queue(db: AsyncSession, send_per_hour: int, now: datetime) -> int:
                 func.count().filter(Delivery.queued_at > now - MINUTE),
                 func.count().filter(Delivery.queued_at > now - HOUR),
             ).select_from(Delivery)
+            # The hour's rows only: the queued_at index narrows the scan (CodeRabbit on #134).
+            .where(Delivery.queued_at > now - HOUR)
         )
     ).one()
     # "At least one a minute" never takes an hour past `send_per_hour`: a setting
@@ -89,13 +91,25 @@ async def _queue(db: AsyncSession, send_per_hour: int, now: datetime) -> int:
     allowance = min(per_minute(send_per_hour) - int(minute), send_per_hour - int(hour))
     if allowance <= 0:
         return 0
+    # The emails first, then their rows, the order Cancel takes them in: an email that
+    # a cancel holds is left to it, so neither waits on the other (CodeRabbit on #134).
+    held = list(
+        await db.scalars(
+            select(Email.id)
+            .where(Email.status == "sending")
+            .order_by(Email.started_at, Email.id)
+            .with_for_update(skip_locked=True)
+        )
+    )
+    if not held:
+        return 0
     rows: list[tuple[Delivery, Email]] = [
         (delivery, row)
         for delivery, row in (
             await db.execute(
                 select(Delivery, Email)
                 .join(Email, Delivery.email_id == Email.id)
-                .where(Email.status == "sending", Delivery.queued_at.is_(None))
+                .where(Email.id.in_(held), Delivery.queued_at.is_(None))
                 .order_by(Email.started_at, Email.id, Delivery.id)
                 .limit(allowance)
                 .with_for_update(of=Delivery, skip_locked=True)
@@ -104,16 +118,18 @@ async def _queue(db: AsyncSession, send_per_hour: int, now: datetime) -> int:
     ]
     if not rows:
         return 0
+    wanted = {delivery.subscriber_id for delivery, _ in rows if delivery.subscriber_id}
+    # Each recipient held while their copy is decided: an unsubscribe under way waits
+    # for this run, or this run leaves that copy for the next (CodeRabbit on #134).
     people = {
         row.id: row
         for row in await db.scalars(
-            select(Subscriber).where(
-                Subscriber.id.in_(
-                    [delivery.subscriber_id for delivery, _ in rows if delivery.subscriber_id]
-                )
-            )
+            select(Subscriber).where(Subscriber.id.in_(wanted)).with_for_update(skip_locked=True)
         )
     }
+    busy = set(
+        await db.scalars(select(Subscriber.id).where(Subscriber.id.in_(wanted - set(people))))
+    )
     aside = set(
         await db.scalars(
             select(SetAside.email_normal).where(
@@ -140,6 +156,8 @@ async def _queue(db: AsyncSession, send_per_hour: int, now: datetime) -> int:
                 await _stop(db, row, now)
                 stopped.add(row.id)
                 continue
+        if delivery.subscriber_id in busy:
+            continue  # held by another change right now: this copy waits for the next run
         person = people.get(delivery.subscriber_id) if delivery.subscriber_id else None
         if (
             person is None

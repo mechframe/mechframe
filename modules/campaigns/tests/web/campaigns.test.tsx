@@ -509,3 +509,22 @@ describe("what the editor says, as the fields change", () => {
     expect(screen.getByText("Preview refused.")).toBeInTheDocument();
   });
 });
+
+describe("NewsletterSignup's answer", () => {
+  it("names the address it sent, though the field changed meanwhile (CodeRabbit on #134)", async () => {
+    routed({
+      "POST /api/campaigns/subscribe": async () => {
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        return { status: 202, body: { received: true } };
+      },
+    });
+    const user = userEvent.setup();
+    renderWithKernel(<NewsletterSignup />, { modules: [campaigns] });
+    const field = await screen.findByRole("textbox", { name: "Email" });
+    await user.type(field, "a@example.org");
+    await user.click(screen.getByRole("button", { name: "Sign up" }));
+    await user.type(field, "x");
+    const done = await screen.findByRole("status");
+    expect(done).toHaveTextContent("If a@example.org isn’t on the list yet");
+  });
+});

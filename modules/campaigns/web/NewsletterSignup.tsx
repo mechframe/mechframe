@@ -33,13 +33,14 @@ export function NewsletterSignup({
   const [address, setAddress] = useState("");
   const [error, setError] = useState<string[] | undefined>();
   const [failed, setFailed] = useState<string | null>(null);
-  const [sent, setSent] = useState(false);
+  // The address the request sent, as its answer names it, whatever the field holds since.
+  const [sentTo, setSentTo] = useState<string | null>(null);
   const done = useRef<HTMLDivElement>(null);
   const field = useRef<HTMLInputElement>(null);
   const headingId = useId();
   useEffect(() => {
-    if (sent) done.current?.focus();
-  }, [sent]);
+    if (sentTo !== null) done.current?.focus();
+  }, [sentTo]);
 
   const submit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -50,11 +51,13 @@ export function NewsletterSignup({
       return;
     }
     setError(undefined);
+    const submitted = address.trim();
     subscribe.mutate(
-      { body: { email: address.trim(), source, bot: bot.proof() } },
+      { body: { email: submitted, source, bot: bot.proof() } },
       {
         onSuccess: () => {
-          setSent(true);
+          // The address sent, not the field's now (CodeRabbit on #134).
+          setSentTo(submitted);
         },
         onError: (problem) => {
           if (problem instanceof ApiProblem && problem.status === 422) {
@@ -76,13 +79,13 @@ export function NewsletterSignup({
   return (
     <section className="mf-newsletter" aria-labelledby={headingId}>
       <h2 id={headingId}>{heading}</h2>
-      {sent ? (
+      {sentTo !== null ? (
         <div className="mf-newsletter-sent" role="status" tabIndex={-1} ref={done}>
           <p className="mf-newsletter-sent-head">Check your inbox</p>
           {/* The same words whatever the address's state: one already on the list gets no
               second confirmation, so they say "if" (CodeRabbit on #134). */}
           <p>
-            If {address.trim()} isn&rsquo;t on the list yet, a confirmation is on its way. Click its link and you&rsquo;re on
+            If {sentTo} isn&rsquo;t on the list yet, a confirmation is on its way. Click its link and you&rsquo;re on
             the list.
           </p>
         </div>

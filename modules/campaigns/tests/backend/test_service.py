@@ -6,6 +6,7 @@ the attention items. Mail is recorded as it's queued."""
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 from collections.abc import Iterator
 from dataclasses import dataclass, field
@@ -710,3 +711,40 @@ async def test_a_test_the_mailer_refuses_is_422(db: AsyncSession) -> None:
     with pytest.raises(Problem) as refused:
         await service.send_test(db, row.id, to="me@example.org")
     assert (refused.value.code, refused.value.status) == ("campaigns.unsendable", 422)
+
+
+async def test_a_subscriber_another_transaction_holds_waits_for_the_next_run(
+    database: Any, db: AsyncSession, queued: Queued
+) -> None:
+    """CodeRabbit on #134: each recipient is held while their copy is decided, so an
+    unsubscribe under way is never overtaken; one held elsewhere waits, unsent and kept."""
+    held, free = _address("held"), _address("free")
+    await _subscribed(db, queued, held, free)
+    row = await _email(db)
+    await _send_now(db, row)
+    async with database.sessions() as other:
+        await other.execute(
+            select(Subscriber).where(Subscriber.email_normal == held).with_for_update()
+        )
+        assert await asyncio.wait_for(_run(db), 10) == 1
+        await other.rollback()
+    assert [each for each in queued.to(free) if each["subject"] == "Winter shows"]
+    assert not [each for each in queued.to(held) if each["subject"] == "Winter shows"]
+    clock.advance(61)
+    assert await _run(db) == 1
+    assert [each for each in queued.to(held) if each["subject"] == "Winter shows"]
+
+
+async def test_a_run_never_waits_on_an_email_a_cancel_holds(
+    database: Any, db: AsyncSession, queued: Queued
+) -> None:
+    """CodeRabbit on #134: the run takes an email before its rows, as Cancel does, so
+    the two never wait on each other."""
+    await _subscribed(db, queued, _address("c"))
+    row = await _email(db)
+    await _send_now(db, row)
+    async with database.sessions() as cancelling:
+        await cancelling.execute(select(Email).where(Email.id == row.id).with_for_update())
+        assert await asyncio.wait_for(_run(db), 10) == 0
+        await cancelling.rollback()
+    assert await _run(db) == 1
