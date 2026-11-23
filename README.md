@@ -4,6 +4,7 @@ A library of reusable website modules that any AI agent can pick from and copy i
 
 - **The contract:** [`SPEC.md`](SPEC.md)
 - **For an agent building a site:** [`AGENT-GUIDE.md`](AGENT-GUIDE.md)
+- **Putting a site on Railway or another host:** [`docs/HOST-VARIABLES.md`](docs/HOST-VARIABLES.md), every variable the kernel and each module read
 - **For an agent working on MechFrame itself:** [`CLAUDE.md`](CLAUDE.md) / [`AGENTS.md`](AGENTS.md), then [`KICKOFF.md`](KICKOFF.md)
 
 ## How it works

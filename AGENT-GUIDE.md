@@ -24,7 +24,7 @@ You are an AI agent asked to build a website with MechFrame. This page is your f
    | --- | --- | --- | --- |
 
    Then list the modules considered and dropped (with the `avoid_when` reason), the gaps, and the settings to decide.
-7. **Build:** `mechframe new <site> --recipe <recipe>`, then `mechframe add` or `mechframe remove` for each change to the recipe. Set the theme, each module's settings and the env vars the CLI prints. Write the site's `CLAUDE.md` with the brief card and the confirmed list.
+7. **Build:** `mechframe new <site> --recipe <recipe>`, then `mechframe add` or `mechframe remove` for each change to the recipe. Set the theme, each module's settings and the env vars the CLI prints; [`docs/HOST-VARIABLES.md`](docs/HOST-VARIABLES.md) says what each is, what goes together and what Railway sets by itself. Write the site's `CLAUDE.md` with the brief card and the confirmed list.
 8. **Check:** `mechframe check` and the tests. Report what ran and what it returned.
 
 ## Picking: distinctions agents get wrong
