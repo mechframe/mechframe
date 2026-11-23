@@ -93,6 +93,22 @@
         "admin",
         "editor"
       ]
+    },
+    {
+      "key": "kernel.ai.write",
+      "description": "Use the AI's writing help",
+      "default_roles": [
+        "admin",
+        "editor"
+      ]
+    },
+    {
+      "key": "kernel.writing.manage",
+      "description": "Keep the writing styles",
+      "default_roles": [
+        "admin",
+        "editor"
+      ]
     }
   ],
   "pages": [
@@ -194,6 +210,21 @@
     {
       "path": "/admin/settings/system",
       "title": "System",
+      "access": "admin"
+    },
+    {
+      "path": "/admin/settings/ai",
+      "title": "AI",
+      "access": "admin"
+    },
+    {
+      "path": "/admin/settings/writing",
+      "title": "Writing",
+      "access": "admin"
+    },
+    {
+      "path": "/admin/settings/writing/styles/:id",
+      "title": "Writing style",
       "access": "admin"
     }
   ],

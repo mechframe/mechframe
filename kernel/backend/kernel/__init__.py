@@ -16,6 +16,7 @@ Dashboard's `attention` and `setup`.
 """
 
 from kernel import (
+    ai,
     attention,
     audit,
     bot,
@@ -66,6 +67,7 @@ __all__ = [
     "Problem",
     "When",
     "__version__",
+    "ai",
     "answer",
     "attention",
     "audit",

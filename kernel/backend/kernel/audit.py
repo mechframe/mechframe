@@ -125,6 +125,10 @@ KERNEL_ACTIONS = frozenset(
         "kernel.term.created",
         "kernel.term.changed",
         "kernel.term.deleted",
+        # The writing styles the AI's writing help writes in (decision 0058).
+        "kernel.writing_style.created",
+        "kernel.writing_style.changed",
+        "kernel.writing_style.deleted",
         # Seed data loaded, never on a live site (decision 0052, hook 4).
         "kernel.seed.ran",
         # A copy of an account's data (14.7; decision 0052, hook 7).

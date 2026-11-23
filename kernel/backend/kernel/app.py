@@ -81,6 +81,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.exc import SQLAlchemyError
 
 from kernel import (
+    ai,
     attention,
     audit,
     bot,
@@ -100,8 +101,10 @@ from kernel import (
     setup,
     shell,
     taxonomy,
+    writing,
 )
 from kernel.admin import router as admin_router
+from kernel.ai_routes import router as ai_router
 from kernel.auth import sign_up
 from kernel.auth.codes import router as codes_router
 from kernel.auth.dependencies import SessionCookies
@@ -306,12 +309,19 @@ def assemble(
     attention.install(needs)
     setup.install(steps)
     server_copy.install(site_name=config.site_name, site_url=config.site_url)
+    ai.install(
+        api_key=config.anthropic_api_key,
+        model=config.anthropic_model,
+        rate_rule=config.ai_rate_limit,
+    )
     # Here, not in create_app: a job in a worker of its own reads its module's
     # settings too (Codex on #63).
     settings.register(moderation.SECTION, moderation.Filters)
     settings.register(server_copy.SECTION, server_copy.SiteSettings)
     settings.register(bot.SECTION, bot.Choice)
     settings.register(sign_up.SECTION, sign_up.settings_model(config.sign_up_mode))
+    settings.register(ai.SECTION, ai.KeySettings)
+    settings.register(writing.SECTION, writing.Constitution)
     for module in installed:
         if module.settings is not None:
             settings.register(module.id, module.settings)
@@ -478,6 +488,7 @@ def create_app(
 
     app.include_router(kernel_router, prefix="/api/kernel")
     app.include_router(admin_router, prefix="/api/kernel")
+    app.include_router(ai_router, prefix="/api/kernel")
     app.include_router(auth_router, prefix="/api/auth")
     app.include_router(sign_up_router, prefix="/api/auth")
     app.include_router(codes_router, prefix="/api/auth")

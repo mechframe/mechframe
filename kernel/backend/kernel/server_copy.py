@@ -158,6 +158,9 @@ KERNEL_PAGES: tuple[KernelPage, ...] = (
     KernelPage("/admin/settings", "Settings", "admin"),
     KernelPage("/admin/settings/features", "Features", "admin"),
     KernelPage("/admin/settings/system", "System", "admin"),
+    KernelPage("/admin/settings/ai", "AI", "admin"),
+    KernelPage("/admin/settings/writing", "Writing", "admin"),
+    KernelPage("/admin/settings/writing/styles/:id", "Writing style", "admin"),
 )
 
 #: Each kernel page's title, by its address.

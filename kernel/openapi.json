@@ -2002,6 +2002,687 @@
         }
       }
     },
+    "/api/kernel/ai": {
+      "get": {
+        "tags": [
+          "kernel"
+        ],
+        "summary": "Ai State",
+        "description": "Whether the AI's buttons show, and the styles to pick from.",
+        "operationId": "ai_state_api_kernel_ai_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiState"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/kernel/ai/draft": {
+      "post": {
+        "tags": [
+          "kernel"
+        ],
+        "summary": "Ai Draft",
+        "description": "A text drafted from a topic, in Markdown, for the editor to insert.",
+        "operationId": "ai_draft_api_kernel_ai_draft_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DraftAsk"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Drafted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/kernel/ai/titles": {
+      "post": {
+        "tags": [
+          "kernel"
+        ],
+        "summary": "Ai Titles",
+        "description": "Up to 8 titles, from what's written, or from the topic while nothing is.",
+        "operationId": "ai_titles_api_kernel_ai_titles_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TitlesAsk"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Titled"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/kernel/ai/summary": {
+      "post": {
+        "tags": [
+          "kernel"
+        ],
+        "summary": "Ai Summary",
+        "description": "A summary of what's written, at most `max` characters.",
+        "operationId": "ai_summary_api_kernel_ai_summary_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SummaryAsk"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Summarised"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/kernel/ai/search": {
+      "post": {
+        "tags": [
+          "kernel"
+        ],
+        "summary": "Ai Search",
+        "description": "The title a search result shows (at most 70) and the description under it (at most 160).",
+        "operationId": "ai_search_api_kernel_ai_search_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchAsk"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchWords"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/kernel/ai/rewrite": {
+      "post": {
+        "tags": [
+          "kernel"
+        ],
+        "summary": "Ai Rewrite",
+        "description": "The text rewritten, saying what it said: 502 `kernel.ai_rewrite_lost`\nwhen a link or image went missing, and the editor keeps its text.",
+        "operationId": "ai_rewrite_api_kernel_ai_rewrite_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RewriteAsk"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Drafted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/kernel/ai/style-rules": {
+      "post": {
+        "tags": [
+          "kernel"
+        ],
+        "summary": "Ai Style Rules",
+        "description": "Voice rules and phrases to avoid drafted from a style's samples, fitted\nto what a style holds, for an editor to change before the save.",
+        "operationId": "ai_style_rules_api_kernel_ai_style_rules_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StyleRulesAsk"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StyleRules"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/kernel/admin/ai": {
+      "get": {
+        "tags": [
+          "kernel"
+        ],
+        "summary": "Ai Key",
+        "description": "The key's state, never the key.",
+        "operationId": "ai_key_api_kernel_admin_ai_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiKey"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/kernel/admin/ai/check": {
+      "post": {
+        "tags": [
+          "kernel"
+        ],
+        "summary": "Ai Check",
+        "description": "Asks Anthropic whether the key in use works. A refusal is 502\n`kernel.ai_failed`, never a 401, which the admin would take for its own\nsession ending.",
+        "operationId": "ai_check_api_kernel_admin_ai_check_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Checked"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/kernel/admin/writing/rules": {
+      "get": {
+        "tags": [
+          "kernel"
+        ],
+        "summary": "Writing Rules",
+        "description": "The default rules the Writing tab offers as switches, read-only.",
+        "operationId": "writing_rules_api_kernel_admin_writing_rules_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WritingRules"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/kernel/admin/writing/styles": {
+      "get": {
+        "tags": [
+          "kernel"
+        ],
+        "summary": "Writing Styles",
+        "description": "Every style, by name.",
+        "operationId": "writing_styles_api_kernel_admin_writing_styles_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Styles"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "kernel"
+        ],
+        "summary": "New Style",
+        "description": "A new style: 409 `kernel.writing_style_name_taken` for a name another has, in any case.",
+        "operationId": "new_style_api_kernel_admin_writing_styles_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewStyle"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StyleShown"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/kernel/admin/writing/styles/{style_id}": {
+      "get": {
+        "tags": [
+          "kernel"
+        ],
+        "summary": "One Style",
+        "operationId": "one_style_api_kernel_admin_writing_styles__style_id__get",
+        "parameters": [
+          {
+            "name": "style_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Style Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StyleShown"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "kernel"
+        ],
+        "summary": "Change Style",
+        "description": "Changes the fields sent: 409 `kernel.writing_style_changed` when it was saved since `version`.",
+        "operationId": "change_style_api_kernel_admin_writing_styles__style_id__patch",
+        "parameters": [
+          {
+            "name": "style_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Style Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StyleChanges"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StyleShown"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "kernel"
+        ],
+        "summary": "Delete Style",
+        "operationId": "delete_style_api_kernel_admin_writing_styles__style_id__delete",
+        "parameters": [
+          {
+            "name": "style_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Style Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/auth/sign-in": {
       "post": {
         "summary": "Sign In",
@@ -4153,6 +4834,62 @@
         "title": "Action",
         "description": "`{action, reason?, note?, minutes?}`: a reason for all but dismiss,\nminutes for a time-out."
       },
+      "AiKey": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": [
+              "settings",
+              "environment",
+              "none"
+            ],
+            "title": "Source"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "unreadable": {
+            "type": "boolean",
+            "title": "Unreadable"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source",
+          "model",
+          "unreadable"
+        ],
+        "title": "AiKey"
+      },
+      "AiState": {
+        "properties": {
+          "ready": {
+            "type": "boolean",
+            "title": "Ready"
+          },
+          "unreadable": {
+            "type": "boolean",
+            "title": "Unreadable"
+          },
+          "styles": {
+            "items": {
+              "$ref": "#/components/schemas/StyleCard"
+            },
+            "type": "array",
+            "title": "Styles"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "ready",
+          "unreadable",
+          "styles"
+        ],
+        "title": "AiState"
+      },
       "AskForCode": {
         "properties": {
           "email": {
@@ -4966,6 +5703,31 @@
         "title": "CheckEmail",
         "description": "A mail is on its way, or would be: the same answer either way."
       },
+      "Checked": {
+        "properties": {
+          "works": {
+            "type": "boolean",
+            "const": true,
+            "title": "Works"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "settings",
+              "environment",
+              "none"
+            ],
+            "title": "Source"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "works",
+          "source"
+        ],
+        "title": "Checked"
+      },
       "Choice": {
         "properties": {
           "in_site": {
@@ -5338,6 +6100,64 @@
           "next_cursor"
         ],
         "title": "Devices"
+      },
+      "DraftAsk": {
+        "properties": {
+          "what": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "What"
+          },
+          "style_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Style Id"
+          },
+          "topic": {
+            "type": "string",
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Topic"
+          },
+          "length": {
+            "type": "string",
+            "enum": [
+              "short",
+              "medium",
+              "long"
+            ],
+            "title": "Length",
+            "default": "medium"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "what",
+          "topic"
+        ],
+        "title": "DraftAsk"
+      },
+      "Drafted": {
+        "properties": {
+          "markdown": {
+            "type": "string",
+            "title": "Markdown"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "markdown"
+        ],
+        "title": "Drafted"
       },
       "EmailChange": {
         "properties": {
@@ -5731,6 +6551,48 @@
           "id"
         ],
         "title": "NewRole"
+      },
+      "NewStyle": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Description",
+            "default": ""
+          },
+          "voice_rules": {
+            "type": "string",
+            "maxLength": 6000,
+            "title": "Voice Rules",
+            "default": ""
+          },
+          "avoid": {
+            "type": "string",
+            "maxLength": 12200,
+            "title": "Avoid",
+            "default": ""
+          },
+          "samples": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 3,
+            "title": "Samples"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "NewStyle"
       },
       "NewTerm": {
         "properties": {
@@ -6611,6 +7473,40 @@
         ],
         "title": "Retried"
       },
+      "RewriteAsk": {
+        "properties": {
+          "what": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "What"
+          },
+          "style_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Style Id"
+          },
+          "markdown": {
+            "type": "string",
+            "maxLength": 20000,
+            "minLength": 1,
+            "title": "Markdown"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "what",
+          "markdown"
+        ],
+        "title": "RewriteAsk"
+      },
       "RoleChange": {
         "properties": {
           "name": {
@@ -6729,6 +7625,40 @@
         ],
         "title": "RolesOf"
       },
+      "RuleShown": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "why": {
+            "type": "string",
+            "title": "Why"
+          },
+          "warning": {
+            "type": "string",
+            "title": "Warning"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "text",
+          "why",
+          "warning"
+        ],
+        "title": "RuleShown"
+      },
       "Saver": {
         "properties": {
           "name": {
@@ -6754,6 +7684,46 @@
           "email"
         ],
         "title": "Saver"
+      },
+      "SearchAsk": {
+        "properties": {
+          "what": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "What"
+          },
+          "style_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Style Id"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 300,
+            "title": "Title",
+            "default": ""
+          },
+          "body": {
+            "type": "string",
+            "maxLength": 20000,
+            "minLength": 1,
+            "title": "Body"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "what",
+          "body"
+        ],
+        "title": "SearchAsk"
       },
       "SearchHit": {
         "properties": {
@@ -6818,6 +7788,25 @@
           "next_cursor"
         ],
         "title": "SearchResults"
+      },
+      "SearchWords": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title",
+          "description"
+        ],
+        "title": "SearchWords"
       },
       "SecondFactor": {
         "properties": {
@@ -7421,6 +8410,307 @@
         ],
         "title": "Storage"
       },
+      "StyleCard": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "description"
+        ],
+        "title": "StyleCard"
+      },
+      "StyleChanges": {
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Version"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "voice_rules": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 6000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Voice Rules"
+          },
+          "avoid": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 12200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avoid"
+          },
+          "samples": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "maxItems": 3
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Samples"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "version"
+        ],
+        "title": "StyleChanges",
+        "description": "The fields to change, at the `version` the form was read at."
+      },
+      "StyleRules": {
+        "properties": {
+          "voice_rules": {
+            "type": "string",
+            "title": "Voice Rules"
+          },
+          "avoid": {
+            "type": "string",
+            "title": "Avoid"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "voice_rules",
+          "avoid"
+        ],
+        "title": "StyleRules"
+      },
+      "StyleRulesAsk": {
+        "properties": {
+          "samples": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 3,
+            "minItems": 1,
+            "title": "Samples"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "samples"
+        ],
+        "title": "StyleRulesAsk"
+      },
+      "StyleShown": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "voice_rules": {
+            "type": "string",
+            "title": "Voice Rules"
+          },
+          "avoid": {
+            "type": "string",
+            "title": "Avoid"
+          },
+          "samples": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Samples"
+          },
+          "created_by_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By Id"
+          },
+          "updated_by_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated By Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "version",
+          "name",
+          "description",
+          "voice_rules",
+          "avoid",
+          "samples",
+          "created_by_id",
+          "updated_by_id",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "StyleShown"
+      },
+      "Styles": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/StyleShown"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "Styles"
+      },
+      "Summarised": {
+        "properties": {
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "summary"
+        ],
+        "title": "Summarised"
+      },
+      "SummaryAsk": {
+        "properties": {
+          "what": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "What"
+          },
+          "style_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Style Id"
+          },
+          "body": {
+            "type": "string",
+            "maxLength": 20000,
+            "minLength": 1,
+            "title": "Body"
+          },
+          "max": {
+            "type": "integer",
+            "maximum": 500.0,
+            "minimum": 50.0,
+            "title": "Max"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "what",
+          "body",
+          "max"
+        ],
+        "title": "SummaryAsk"
+      },
       "Suspend": {
         "properties": {
           "reason": {
@@ -7692,6 +8982,62 @@
         ],
         "title": "TimedOut"
       },
+      "Titled": {
+        "properties": {
+          "titles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Titles"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "titles"
+        ],
+        "title": "Titled"
+      },
+      "TitlesAsk": {
+        "properties": {
+          "what": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "What"
+          },
+          "style_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Style Id"
+          },
+          "topic": {
+            "type": "string",
+            "maxLength": 300,
+            "title": "Topic",
+            "default": ""
+          },
+          "body": {
+            "type": "string",
+            "maxLength": 20000,
+            "title": "Body",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "what"
+        ],
+        "title": "TitlesAsk"
+      },
       "TotpCode": {
         "properties": {
           "code": {
@@ -7947,6 +9293,33 @@
           "displayName"
         ],
         "title": "WebAuthnUser"
+      },
+      "WritingRules": {
+        "properties": {
+          "mechanics": {
+            "type": "string",
+            "title": "Mechanics"
+          },
+          "rules": {
+            "items": {
+              "$ref": "#/components/schemas/RuleShown"
+            },
+            "type": "array",
+            "title": "Rules"
+          },
+          "default_text": {
+            "type": "string",
+            "title": "Default Text"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "mechanics",
+          "rules",
+          "default_text"
+        ],
+        "title": "WritingRules"
       }
     }
   }

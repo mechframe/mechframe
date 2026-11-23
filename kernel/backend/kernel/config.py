@@ -192,6 +192,15 @@ class KernelConfig(BaseSettings):
     #: grants every category, for a site with nothing to ask.
     consent_mode: Literal["ask", "off"] = "ask"
 
+    #: The AI's writing help (kernel.ai, decision 0058). ANTHROPIC_API_KEY is
+    #: the host's key, typed by the owner; a key an admin saves in Settings →
+    #: AI wins over it, and with neither, no AI shows. ANTHROPIC_MODEL is the
+    #: model every task asks for. AI_RATE_LIMIT is the calls one person may
+    #: make, every button sharing one budget (`count/period`, as rate_limit).
+    anthropic_api_key: SecretStr = SecretStr("")
+    anthropic_model: str = Field(default="claude-opus-5-5", min_length=1, max_length=100)
+    ai_rate_limit: str = "20/1h"
+
     rate_limit_enabled: bool = True
     #: Where counts live: memory:// for one process, redis://… once a site
     #: runs more than one.

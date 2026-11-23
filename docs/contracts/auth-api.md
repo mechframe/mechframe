@@ -134,6 +134,28 @@ A term is `{id, vocabulary, slug, label, parent_id, position}`. A `slug` is lowe
 | `PATCH /api/kernel/admin/terms/{id}` | any of `{slug, label, parent_id, position}` | `kernel.taxonomy.manage`. 200, the term; `parent_id` null moves it to the top. 404 `kernel.term_not_found`; 409 `kernel.term_exists`; 422 `kernel.invalid_request`, a parent under the term itself among them. Audited as `kernel.term.changed` with the fields' names |
 | `DELETE /api/kernel/admin/terms/{id}` | | `kernel.taxonomy.manage`. 204, the term and its links gone. 404 `kernel.term_not_found`; 409 `kernel.term_has_children` while terms sit under it. Audited as `kernel.term.deleted` |
 
+## The AI's writing help (kernel.ai, decision 0058)
+
+Every task's body has `what` (the editor's label, 1 to 80 characters) and an optional `style_id` (a writing style's id; absent or null is the house style). Every task shares one budget a person, AI_RATE_LIMIT (20 an hour by default; then 429 `kernel.rate_limited`), counted after the permission check. Without a key a task answers 503 `kernel.ai_off`, and with a saved key that can't be opened 503 `kernel.ai_key_unreadable`; Anthropic's refusal, a cut-off or a timeout is 502 `kernel.ai_failed` with a plain sentence. A `style_id` no style has is 404 `kernel.writing_style_not_found`. A style is `{id, version, name, description, voice_rules, avoid, samples, created_by_id, updated_by_id, created_at, updated_at}`, `avoid` one phrase a line. The key and the writing rules are saved through `PUT /api/kernel/admin/settings/kernel.ai` (`api_key`, a secret) and `/kernel.writing`.
+
+| Method and path | Body | Answer |
+| --- | --- | --- |
+| `GET /api/kernel/ai` | | `kernel.ai.write`. 200 `{"ready", "unreadable", "styles": [{id, name, description}]}`: the editor's buttons show while `ready`; the styles only then |
+| `POST /api/kernel/ai/draft` | `{what, topic, length?, style_id?}`, `length` `short`, `medium` (the default) or `long` | `kernel.ai.write`. 200 `{"markdown"}`. 422 for a blank topic |
+| `POST /api/kernel/ai/titles` | `{what, topic?, body?, style_id?}` | `kernel.ai.write`. 200 `{"titles": [...]}`, 1 to 8, from the body or, while it's blank, the topic. 422 with both blank |
+| `POST /api/kernel/ai/summary` | `{what, body, max, style_id?}`, `max` 50 to 500 | `kernel.ai.write`. 200 `{"summary"}`, at most `max` characters |
+| `POST /api/kernel/ai/search` | `{what, title?, body, style_id?}` | `kernel.ai.write`. 200 `{"title", "description"}`, at most 70 and 160 characters |
+| `POST /api/kernel/ai/rewrite` | `{what, markdown, style_id?}` | `kernel.ai.write`. 200 `{"markdown"}`, saying what it said; 502 `kernel.ai_rewrite_lost` when an address a link or image pointed at went missing |
+| `POST /api/kernel/ai/style-rules` | `{samples}`, 1 to 3 of up to 8,000 characters | `kernel.writing.manage`. 200 `{"voice_rules", "avoid"}`, fitted to what a style holds |
+| `GET /api/kernel/admin/ai` | | `kernel.settings.manage`. 200 `{"source", "model", "unreadable"}`: `source` is `settings`, `environment` or `none`, never the key |
+| `POST /api/kernel/admin/ai/check` | | `kernel.settings.manage`. 200 `{"works": true, "source"}`; 502 `kernel.ai_failed` when Anthropic refuses the key (never 401); 503 without one |
+| `GET /api/kernel/admin/writing/rules` | | `kernel.settings.manage`. 200 `{"mechanics", "rules": [{id, label, text, why, warning}], "default_text"}` |
+| `GET /api/kernel/admin/writing/styles` | | `kernel.ai.write`. 200 `{"items": [styles]}`, by name in any case |
+| `POST /api/kernel/admin/writing/styles` | `{name, description?, voice_rules?, avoid?, samples?}` | `kernel.writing.manage`. 201, the style, trimmed, its phrases once each. 409 `kernel.writing_style_name_taken` for a name another has in any case; 422 `kernel.invalid_request` for what it can't hold or the name "House style". Audited as `kernel.writing_style.created` |
+| `GET /api/kernel/admin/writing/styles/{id}` | | `kernel.writing.manage`. 200, the style. 404 `kernel.writing_style_not_found` |
+| `PATCH /api/kernel/admin/writing/styles/{id}` | `{version}` and any of the fields | `kernel.writing.manage`. 200, the style, its `version` one more when something changed. 409 `kernel.writing_style_changed` when it was saved since `version`; 409 for a name taken; 404. Audited as `kernel.writing_style.changed` with the fields' names |
+| `DELETE /api/kernel/admin/writing/styles/{id}` | | `kernel.writing.manage`. 204. 404 `kernel.writing_style_not_found`. Audited as `kernel.writing_style.deleted` |
+
 ## Site search (kernel.search, decision 0052, hook 3)
 
 A hit is `{type, id, title, snippet, path}`: the content type (`<id>.<entity>`), the thing's id, its title, plain text around the words found (from the body's first 20,000 characters, else its opening), and where the site shows it.
@@ -177,7 +199,7 @@ Mounted by the harness only when `HARNESS_TEST_SUPPORT=1`, so the contract suite
 
 | Method and path | Does |
 | --- | --- |
-| `POST /api/_test/reset` | 204. Forgets rate-limit counts, captured mail, the clock offset and the breached list. With `{"accounts": true}` it also deletes every account |
+| `POST /api/_test/reset` | 204. Forgets rate-limit counts, captured mail, the clock offset, the breached list and the fake Anthropic's answers and requests. With `{"accounts": true}` it also deletes every account |
 | `GET /api/_test/mail?to=` | `{"messages": [{"to", "subject", "text"}]}`, oldest first, after running every job that is due (mail goes out as a job) |
 | `POST /api/_test/clock` | `{"advance": seconds}`: 204, moves the server's clock forward (not rate-limit windows, which run on real time) |
 | `POST /api/_test/users` | `{email, password?, roles?, verified?, totp?}` makes an account, without judging the password: 201 `{"id", "totp_secret"?}` (the TOTP confirmed) |
@@ -196,5 +218,7 @@ Mounted by the harness only when `HARNESS_TEST_SUPPORT=1`, so the contract suite
 | `GET /api/probe/notes?vocabulary=&term=` | 200 `{"items": [slugs]}`, the published notes holding the term |
 | `DELETE /api/probe/notes/{id}` | 204: the note and its terms' links gone |
 | `POST /api/probe/inquiries` | `{message, bot?}`, `bot` a `{website?, elapsed_ms?, token?}` proof: 201 `{"held"}`, the bot check's reason, or null when it passed (hook 5, decision 0052). A real module answers a held submission and a passed one alike; the probe tells the suite. With the kernel's `form` check, text in `website` is `honeypot`, under 3,000 ms is `too_fast`, and a missing `website` or `elapsed_ms`, or no proof, is `not_from_form`; a bad proof is 422. The probe's own provider, named by the setting `kernel.bot`, passes the token `probe-ok` and holds the rest as `probe_token` |
+| `POST /api/_test/ai` | `{answers: [{words?, answer?, status?, stop_reason?}]}`: 204, the fake Anthropic answers these next, in order: `words` as a message's text, `answer` (an object) as its JSON, or an error `status`. With none queued it answers "Words for the test.", or an object its request's JSON Schema describes. Every AI call of the harness goes to it (decision 0058) |
+| `GET /api/_test/ai` | `{"asked": [{method, path, key, beta, body}]}`, every request the fake Anthropic was sent since the last reset, oldest first |
 | `GET /api/_test/delete-hooks` | `{"deleted": [user ids]}`, recorded by the harness's probe module |
 | `GET /api/_test/routes` | `{"undeclared": [...], "admin": [...], "step_up": [...]}`: the route audit's list, then every admin route and every step-up route as `METHOD /path/{template}` |
