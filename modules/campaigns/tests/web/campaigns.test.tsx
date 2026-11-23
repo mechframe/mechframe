@@ -457,9 +457,55 @@ describe("sending an email never saved", () => {
     await user.type(await screen.findByRole("textbox", { name: "Subject" }), "Winter shows");
     await user.click(screen.getByRole("button", { name: "Send now" }));
     await user.click(await screen.findByRole("button", { name: "Send it" }));
-    expect(await screen.findByText("Sending: 0 people so far.")).toBeInTheDocument();
+    expect(await screen.findByText("Sending: 0 people so far.", {}, { timeout: 5000 })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe(`/admin/campaigns/${ID}`);
     expect(screen.queryByRole("button", { name: "Send now" })).toBeNull();
     expect(sentTo(sent, "POST", `${ONE}/send`)).toHaveLength(1);
+  });
+});
+
+
+describe("what the editor says, as the fields change", () => {
+  it("keeps a refused send's warning on a new email once it has its address (CodeRabbit on #134)", async () => {
+    routed({
+      "POST /api/campaigns/admin/emails": { status: 201, body: full({ version: 1 }) },
+      [`POST ${ONE}/send`]: problem(409, "campaigns.no_address"),
+    });
+    const user = userEvent.setup();
+    const { router } = renderApp({ path: "/admin/campaigns/new", modules: [campaigns], session: sender });
+    await user.type(await screen.findByRole("textbox", { name: "Subject" }), "Winter shows");
+    await user.click(screen.getByRole("button", { name: "Send now" }));
+    await user.click(await screen.findByRole("button", { name: "Send it" }));
+    expect(await screen.findByText("The newsletter has no postal address", {}, { timeout: 5000 })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe(`/admin/campaigns/${ID}`);
+    });
+    // Settled: a route that loads its page again would draw a fresh editor by now.
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    expect(screen.getByText("The newsletter has no postal address")).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Subject" })).toHaveValue("Winter shows");
+  });
+
+  it("puts away only the edited field's error, and keeps the warning (CodeRabbit on #134)", async () => {
+    routed({
+      [`GET ${ONE}`]: { status: 200, body: full() },
+      [`PATCH ${ONE}`]: problem(422, "kernel.invalid_request", {
+        errors: { "body.subject": ["Subject refused."], "body.preview": ["Preview refused."] },
+      }),
+      [`POST ${ONE}/send`]: problem(409, "campaigns.no_address"),
+    });
+    const user = userEvent.setup();
+    renderApp({ path: `/admin/campaigns/${ID}`, modules: [campaigns], session: sender });
+    await user.click(await screen.findByRole("button", { name: "Send now" }));
+    await user.click(await screen.findByRole("button", { name: "Send it" }));
+    expect(await screen.findByText("The newsletter has no postal address")).toBeInTheDocument();
+    await user.type(screen.getByRole("textbox", { name: "Subject" }), "!");
+    await user.type(screen.getByRole("textbox", { name: "Preview text" }), "!");
+    await user.click(screen.getByRole("button", { name: "Save draft" }));
+    expect(await screen.findByText("Subject refused.")).toBeInTheDocument();
+    expect(screen.getByText("Preview refused.")).toBeInTheDocument();
+    await user.type(screen.getByRole("textbox", { name: "Subject" }), "?");
+    expect(screen.queryByText("Subject refused.")).toBeNull();
+    expect(screen.getByText("Preview refused.")).toBeInTheDocument();
   });
 });

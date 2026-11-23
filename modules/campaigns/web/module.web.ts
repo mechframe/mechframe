@@ -15,7 +15,8 @@ export default defineModule({
     member: [],
     admin: [
       { path: "/admin/campaigns", lazy: () => import("./pages/AdminNewsletter"), permission: EMAIL_PERMISSION },
-      { path: "/admin/campaigns/new", lazy: () => import("./pages/AdminEmail"), permission: EMAIL_PERMISSION },
+      // One route for /admin/campaigns/new and each email's own: a new email's editor
+      // stays drawn as its address changes on the first save (CodeRabbit on #134).
       { path: "/admin/campaigns/:id", lazy: () => import("./pages/AdminEmail"), permission: EMAIL_PERMISSION },
     ],
   },

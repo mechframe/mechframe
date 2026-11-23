@@ -28,7 +28,7 @@ from typing import Any, cast
 
 import sqlalchemy as sa
 from fastapi import Request
-from sqlalchemy import delete, func, literal, select
+from sqlalchemy import delete, func, literal, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.engine import CursorResult
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -824,9 +824,17 @@ async def set_aside_by_hand(
 
 async def forget(db: AsyncSession, row: Subscriber, detail: str) -> None:
     """The subscriber gone, and their address out of every send's rows, with a
-    set-aside row kept so they're never emailed again. A send's count stays."""
+    set-aside row kept so they're never emailed again. Rows not yet queued go;
+    queued ones stay with the address replaced, so the hour's pace still counts
+    them (CodeRabbit on #134), and a send keeps its count."""
     await set_aside(db, row.email_normal, "unsubscribed", detail)
-    await db.execute(delete(Delivery).where(Delivery.email_normal == row.email_normal))
+    theirs = Delivery.email_normal == row.email_normal
+    await db.execute(delete(Delivery).where(theirs, Delivery.queued_at.is_(None)))
+    await db.execute(
+        update(Delivery)
+        .where(theirs)
+        .values(email_normal="erased-" + func.gen_random_uuid().cast(sa.String), subscriber_id=None)
+    )
     await db.delete(row)
 
 

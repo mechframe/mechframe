@@ -96,7 +96,7 @@ function Sent({ email }: { email: CampaignEmail }) {
   );
 }
 
-function Editor({ first }: { first: CampaignEmail | null }) {
+function Editor({ first, onCreated }: { first: CampaignEmail | null; onCreated: (id: string) => void }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const toast = useToast();
@@ -105,6 +105,8 @@ function Editor({ first }: { first: CampaignEmail | null }) {
   const [form, setForm] = useState<Form>(base);
   const [busy, setBusy] = useState(false);
   const [refused, setRefused] = useState<unknown>(null);
+  // The fields edited since the server said what it said of them: only theirs goes.
+  const [cleared, setCleared] = useState<ReadonlySet<FormField>>(new Set());
   const [untitled, setUntitled] = useState(false);
   const [conflict, setConflict] = useState<{ said: SettingsConflict; theirs: CampaignEmail; mine: Form } | null>(null);
   const [asking, setAsking] = useState<"send" | "delete" | null>(null);
@@ -121,16 +123,20 @@ function Editor({ first }: { first: CampaignEmail | null }) {
   const dirty = edits.length > 0;
   const scheduled = saved?.status === "scheduled";
 
-  // A new email made mid-action: opened at its own address once the action ends, so a
-  // Send or a Schedule after its first save finishes in this editor (CodeRabbit on #134).
-  const opened = useRef<string | null>(null);
-
   const set = <Name extends FormField>(field: Name, value: Form[Name]) => {
     setForm((now) => ({ ...now, [field]: value }));
-    // What was said of the fields goes once they change (CodeRabbit on #134).
+    // What was said of a field goes once it changes; the rest, and the warning, stay
+    // (CodeRabbit on #134).
     if (field === "subject") setUntitled(false);
-    setRefused(null);
+    setCleared((now) => (now.has(field) ? now : new Set(now).add(field)));
   };
+
+  const refuse = (error: unknown) => {
+    setRefused(error);
+    setCleared(new Set());
+  };
+
+  const errorOf = (field: FormField) => (cleared.has(field) ? undefined : fieldErrors(refused, field));
 
   const remember = (email: CampaignEmail) => {
     queryClient.setQueryData(["get", ONE, { params: { path: { email_id: email.id } } }], email);
@@ -145,14 +151,18 @@ function Editor({ first }: { first: CampaignEmail | null }) {
       throw new Untitled("An email needs a subject.");
     }
     setUntitled(false);
-    setRefused(null);
+    refuse(null);
     if (onto === null) {
       const { data } = await api.POST("/api/campaigns/admin/emails", { body: { ...from, subject: from.subject.trim() } });
       if (!data) throw new Error("The site answered without the email.");
       remember(data);
       setForm(formOf(data));
       guard.release();
-      opened.current = data.id;
+      // This editor stays the one drawn at the email's own address (one route serves
+      // both), so a Send or a Schedule after the first save, and what it's refused, end
+      // here (CodeRabbit on #134).
+      onCreated(data.id);
+      void navigate(`/admin/campaigns/${data.id}`, { replace: true });
       return data;
     }
     const sent = changed(from, formOf(onto));
@@ -195,15 +205,12 @@ function Editor({ first }: { first: CampaignEmail | null }) {
       await what();
       if (done) toast({ tone: "success", text: done });
     } catch (error) {
-      setRefused(error);
+      refuse(error);
       if (!(error instanceof Untitled) && !(error instanceof ApiProblem && error.code === "campaigns.changed")) {
         toast({ tone: "danger", text: error instanceof ApiProblem ? error.detail : error instanceof Error ? failureWords(error) : "That didn't go through." });
       }
     } finally {
       setBusy(false);
-      const made = opened.current;
-      opened.current = null;
-      if (made) void navigate(`/admin/campaigns/${made}`, { replace: true });
     }
   }
 
@@ -295,10 +302,10 @@ function Editor({ first }: { first: CampaignEmail | null }) {
           />
         ) : null}
         <Card className="mf-newsletter-fields">
-          <Field label="Subject" error={untitled ? ["An email needs a subject."] : fieldErrors(refused, "subject")}>
+          <Field label="Subject" error={untitled ? ["An email needs a subject."] : errorOf("subject")}>
             <Input value={form.subject} maxLength={150} required onChange={(event) => { set("subject", event.target.value); }} />
           </Field>
-          <Field label="Preview text" hint="The line an inbox shows after the subject." error={fieldErrors(refused, "preview")}>
+          <Field label="Preview text" hint="The line an inbox shows after the subject." error={errorOf("preview")}>
             <Input value={form.preview} maxLength={150} onChange={(event) => { set("preview", event.target.value); }} />
           </Field>
           <Field label="Kind">
@@ -315,7 +322,7 @@ function Editor({ first }: { first: CampaignEmail | null }) {
             preview={(text) => (saved ? preview(saved.id, text) : Promise.resolve("<p>Save the draft to see how it reads in an inbox.</p>"))}
             previewTitle={form.subject || "Untitled email"}
             previewNote="This is how the email reads in an inbox, with the footer every subscriber gets."
-            error={fieldErrors(refused, "body")}
+            error={errorOf("body")}
           />
         </Card>
         {refused instanceof ApiProblem && refused.code === "campaigns.no_address" ? (
@@ -398,8 +405,10 @@ function Editor({ first }: { first: CampaignEmail | null }) {
 export default function AdminEmail() {
   const { id } = useParams();
   const isNew = id === undefined || id === "new";
-  const read = useApiQuery("get", ONE, { params: { path: { email_id: id ?? "" } } }, { enabled: !isNew });
-  if (isNew) return <Editor key="new" first={null} />;
+  // The email a new editor made: at its address that editor stays, its state whole.
+  const [made, setMade] = useState<string | null>(null);
+  const read = useApiQuery("get", ONE, { params: { path: { email_id: id ?? "" } } }, { enabled: !isNew && id !== made });
+  if (isNew || id === made) return <Editor key="new" first={null} onCreated={setMade} />;
   if (read.error) {
     return (
       <AdminPage page="Email" title="Email">
@@ -408,5 +417,5 @@ export default function AdminEmail() {
     );
   }
   if (!read.data) return null;
-  return <Editor key={read.data.id} first={read.data} />;
+  return <Editor key={read.data.id} first={read.data} onCreated={setMade} />;
 }

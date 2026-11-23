@@ -216,4 +216,6 @@ For later, not a choice:
   - **A token no key opens skips that copy alone;** a report the reader can't parse moves to the read folder anyway; the reader's limit counts only bounce and spam reports.
   - **The webhook refuses malformed headers with 401,** never a 500: a timestamp of a few ASCII digits, signatures compared as bytes.
   - **NewsletterSignup's done state says "if"**: an address already on the list gets the same answer and no second confirmation.
+  - **An erase keeps a send's queued rows, the address replaced,** so the hour still counts them; the person's unsent rows go.
+  - **One route serves the editor, `/admin/campaigns/:id`, `new` among them:** a new email's editor stays drawn as its address changes on the first save, so a Send after it, and what it's refused, end in that editor. Editing a field puts away only that field's error.
   - **Owner's call, still open:** Spaceship's knowledge base and terms give Spacemail an outgoing limit of 500 an hour for a paid mailbox (20 on a trial), across its aliases, where §8 6 has none. The default `send_per_hour` of 6,000 stands until the owner chooses.

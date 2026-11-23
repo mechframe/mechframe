@@ -634,3 +634,28 @@ async def test_a_test_too_long_is_refused(db: AsyncSession) -> None:
     with pytest.raises(Problem) as refused:
         await service.send_test(db, row.id, to="me@example.org")
     assert refused.value.code == "campaigns.too_long"
+
+
+async def test_a_copy_erased_within_the_hour_still_counts_toward_it(
+    db: AsyncSession, queued: Queued, campaigns_settings: dict[str, Any]
+) -> None:
+    """CodeRabbit on #134: erasing a person mustn't free their copy's place in the hour."""
+    campaigns_settings["send_per_hour"] = 2
+    people = [_address(f"e{each}") for each in range(3)]
+    await _subscribed(db, queued, *people)
+    row = await _email(db)
+    await _send_now(db, row)
+    assert await _run(db) == 1
+    [first] = [
+        address
+        for address in people
+        if any(each["subject"] == "Winter shows" for each in queued.to(address))
+    ]
+    await privacy.delete_user_data(db, Subject(uuid.uuid4(), first))
+    await db.commit()
+    gone = select(func.count()).select_from(Delivery).where(Delivery.email_normal == first)
+    assert await db.scalar(gone) == 0  # the address is out of the rows
+    clock.advance(61)
+    assert await _run(db) == 1
+    clock.advance(61)
+    assert await _run(db) == 0  # two in the hour, the erased one among them
