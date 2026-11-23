@@ -104,4 +104,5 @@ Asked by VM Website (Dev 12, `C:\DEV\VM Website\dev plans\contracts\written-page
   - a field typed back to its saved value while the save waited is asked about, not quietly taken as theirs;
   - what was typed while the save waited survives the conflict's choice;
   - and a third blog closed then, found while porting: a publish or unpublish that lands while a field is asked about shows in the Publish panel, its fields' merge base unchanged.
+  - From the review on #138 (CodeRabbit): a retry with nothing to ask carries the fields already known to be the person's. A field typed back to its saved value is still asked about when the retry meets another save. Blog's editor has the same gap, for blog's next version.
 - **No migration, decision or new route.** `module.json` 0.1.1, the changelog and `MODULE.md`'s "Extension points".

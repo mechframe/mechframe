@@ -142,8 +142,12 @@ function Editor({ saved: first, start }: { saved: Full | null; start: Form }) {
     void queryClient.invalidateQueries({ queryKey: [...SLOT_LINKS, "pages"] });
   }
 
-  /** Saves what changed; the page as the server now has it, or throws why not. */
-  async function save(from: Form = form, onto: Full | null = saved): Promise<Full> {
+  /**
+   * Saves what changed; the page as the server now has it, or throws why not.
+   * `carried` are the fields a retry already knows are the person's, so a field
+   * typed back to its saved value stays theirs to ask about (CodeRabbit on #138).
+   */
+  async function save(from: Form = form, onto: Full | null = saved, carried: readonly FormField[] = []): Promise<Full> {
     const found = problems(from);
     setChecked(found);
     if (Object.keys(found).length > 0) throw new Error("Some fields need fixing first: they're marked.");
@@ -179,14 +183,14 @@ function Editor({ saved: first, start }: { saved: Full | null; start: Form }) {
         // The fields as they stand now, typing since the save went included, even
         // a field typed back to what's saved (pages 0.1.1, as blog's #123).
         const latest = formNow.current;
-        const fields = mineOf(latest, formOf(onto), from);
+        const fields = [...new Set([...carried, ...mineOf(latest, formOf(onto), from)])];
         const said = conflictOf(error.detail, formOf(onto), latest, theirs, fields);
         if (said.conflicts.length === 0) {
           // They changed only what you didn't: theirs, with yours on top, saved again.
           const next = merged(formOf(onto), latest, theirs, new Set(), fields);
           setSaved(theirs);
           setForm(next);
-          return save(next, theirs);
+          return save(next, theirs, fields);
         }
         setConflict({ said, theirs, mine: latest, fields });
       }

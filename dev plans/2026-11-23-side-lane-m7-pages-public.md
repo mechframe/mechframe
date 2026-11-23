@@ -51,4 +51,21 @@ MechFrame: website modules on a FastAPI + Postgres kernel (`CLAUDE.md`, `SPEC.md
 
 ## 5. Result
 
-(Filled in by the side lane before it closes: PRs, what was built, tests, the owner's choices, and what the main lane's handoff should say.)
+AI DevKit Development 40 WT, 2026-11-23, branch `feat/pages-0-1-1`, **#138**.
+
+- **Built:** pages 0.1.1, written first as `dev plans/contracts/pages.md` §10.
+  - `web/public.ts` (`@/modules/pages/public`) gives `usePage(address)`, with or without the slash, plus `isMoved`, `LivePage` and `PageMoved`. `PublicPage` reads through it (`web/reads.ts`). The server copy is unchanged.
+  - The editor's crossed saves: the two gaps asked for, plus blog's third from #123 (a publish landing while a field is asked about now shows in the panel).
+  - A fourth, from CodeRabbit on #138: a conflict-free retry carries the person's fields into the next conflict check.
+  - No migration, decision or route. The IDs 0065+ and `pages_0002` weren't used.
+- **Tests:**
+  - `pages/tests/web/public.test.tsx`;
+  - four in `pages.test.tsx`, each seen failing first;
+  - pages' web (28) and Python suites, and the generated-file tests, green; lint, types, ruff, black, mypy and the schemas clean.
+  - The end-to-end specs weren't run (the side lane's rule).
+- **The owner's choices:** none were asked. VM Website's ask came with the owner's OK.
+- **For the main lane's handoff:**
+  - pages 0.1.1 landed (#138), with its page read in `public.ts`.
+  - VM Website Dev 12 has the PR number, and gets a message when it lands.
+  - **Blog has the CodeRabbit gap:** its `save` recursion in `modules/blog/web/pages/AdminPost.tsx` doesn't carry its fields into a retry. That's a small blog 0.1.3 fix (see pages' `save(…, carried)`).
+- **Cleanup:** take the worktree's `node_modules` junction off (`cmd /c rmdir node_modules`) before `git worktree remove`.

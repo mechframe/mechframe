@@ -384,6 +384,44 @@ describe("the editor", () => {
     expect(title).toHaveValue("A");
   });
 
+  it("still asks about a field typed back to its saved value when a retry meets another save (CodeRabbit on #138)", async () => {
+    let answer: (value: Answer) => void = () => undefined;
+    let patches = 0;
+    routed({
+      [`GET ${ONE}`]: { status: 200, body: full({ title: "A" }) },
+      [`PATCH ${ONE}`]: () => {
+        patches += 1;
+        if (patches === 1) {
+          return new Promise<Answer>((resolve) => {
+            answer = resolve;
+          });
+        }
+        // The retry meets a third save, which changed the title.
+        if (patches === 2) return problem(409, "pages.changed", { page: full({ title: "C", in_header: true, version: 3 }) });
+        return { status: 200, body: full({ title: "C", in_header: true, body: "We make music. More.", version: 4 }) };
+      },
+    });
+    renderApp({ path: `/admin/pages/${ID}`, modules: [pages], session: editor });
+
+    const title = await screen.findByRole("textbox", { name: "Title" });
+    await userEvent.clear(title);
+    await userEvent.type(title, "B");
+    await userEvent.type(screen.getByRole("textbox", { name: "Page body" }), " More.");
+    await userEvent.click(screen.getAllByRole("button", { name: "Save draft" })[0] as HTMLElement);
+    await waitFor(() => {
+      expect(patches).toBe(1);
+    });
+    await userEvent.clear(title);
+    await userEvent.type(title, "A");
+    // Someone else changed only the menu: no question, so the save goes again with the body.
+    answer(problem(409, "pages.changed", { page: full({ title: "A", in_header: true, version: 2 }) }));
+
+    // Your A is still yours when the retry meets their C: a choice, not theirs by default.
+    expect(await screen.findByRole("radio", { name: "Keep mine" })).toBeInTheDocument();
+    expect(title).toHaveValue("A");
+    expect(patches).toBe(2);
+  });
+
   it("keeps what's typed while the save waits through the conflict's choice (pages 0.1.1)", async () => {
     let answer: (value: Answer) => void = () => undefined;
     let patches = 0;
