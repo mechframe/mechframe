@@ -30,8 +30,7 @@ log = logging.getLogger(__name__)
 @jobs.scheduled("* * * * *", "campaigns.send", timeout=240)
 async def send(ctx: jobs.Context) -> None:
     async with ctx.sessions() as db:
-        queued = await sending.run(db)
-        await db.commit()
+        queued = await sending.run_and_commit(db)
     if queued:
         log.info("Newsletter copies queued.", extra={"count": queued})
 

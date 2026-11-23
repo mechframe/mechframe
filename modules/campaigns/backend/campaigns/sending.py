@@ -27,7 +27,7 @@ import logging
 import uuid
 from datetime import datetime, timedelta
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from campaigns import render, service
@@ -50,11 +50,11 @@ def per_minute(send_per_hour: int) -> int:
     return max(1, send_per_hour // 60)
 
 
-async def run(db: AsyncSession) -> int:
-    """One run of the send job, in the caller's transaction. Answers how many
-    copies it queued."""
+async def run(db: AsyncSession) -> list[uuid.UUID]:
+    """One run of the send job, in the caller's transaction. Answers the rows it
+    queued; `run_and_commit` is how the job runs it."""
     if not await db.scalar(select(func.pg_try_advisory_xact_lock(LOCK))):
-        return 0
+        return []
     now = clock.now()
     cfg = await service.current(db)
     ready = bool(cfg.postal_address.strip())
@@ -77,6 +77,20 @@ async def run(db: AsyncSession) -> int:
     finished = clock.now()
     for delivery in sent:
         delivery.queued_at = finished
+    return [delivery.id for delivery in sent]
+
+
+async def run_and_commit(db: AsyncSession) -> int:
+    """A run, committed, then its copies stamped again as of the commit, in a
+    transaction of its own: one whose commit outlasted a minute still counts them
+    in the minute they became mail (CodeRabbit on #134). Answers how many it queued."""
+    sent = await run(db)
+    await db.commit()
+    if sent:
+        await db.execute(
+            update(Delivery).where(Delivery.id.in_(sent)).values(queued_at=clock.now())
+        )
+        await db.commit()
     return len(sent)
 
 

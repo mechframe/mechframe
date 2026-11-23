@@ -124,9 +124,7 @@ async def _send_now(db: AsyncSession, row: Email) -> None:
 
 
 async def _run(db: AsyncSession) -> int:
-    queued = await sending.run(db)
-    await db.commit()
-    return queued
+    return await sending.run_and_commit(db)
 
 
 # --- signing up -----------------------------------------------------------------------
@@ -805,3 +803,30 @@ async def test_a_post_s_title_becomes_a_subject_the_mailer_takes(
     assert made is not None
     assert made.subject == "New song"
     assert made.status == "sending"
+
+
+async def test_a_commit_slower_than_a_minute_still_holds_the_pace(
+    db: AsyncSession,
+    queued: Queued,
+    campaigns_settings: dict[str, Any],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """CodeRabbit on #134: copies are counted from when their run committed, so a
+    commit that outlasts a minute can't let the next run queue another batch."""
+    campaigns_settings["send_per_hour"] = 120  # two a minute
+    await _subscribed(db, queued, *(_address(f"k{each}") for each in range(4)))
+    row = await _email(db)
+    await _send_now(db, row)
+    commit = db.commit
+    slowed = {"done": False}
+
+    async def slow() -> None:
+        await commit()
+        if not slowed["done"]:
+            slowed["done"] = True
+            clock.advance(61)  # the run's own commit outlasts a minute
+
+    monkeypatch.setattr(db, "commit", slow)
+    assert await _run(db) == 2
+    monkeypatch.setattr(db, "commit", commit)
+    assert await _run(db) == 0  # the two just committed are still in this minute
