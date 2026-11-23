@@ -244,3 +244,8 @@ def test_a_subject_holds_nothing_the_mailer_refuses(control: str) -> None:
     """CodeRabbit on #134: the subject is one line by the kernel mailer's own rule."""
     with pytest.raises(ValidationError):
         CampaignEmailChange(version=1, subject=f"Hello{control}there")
+
+
+def test_the_send_pace_defaults_under_a_spacemail_mailbox_s_hour() -> None:
+    """The owner, 2026-11-23: 400 an hour, under Spacemail's 500 with room for the site's own mail."""
+    assert Settings().send_per_hour == 400

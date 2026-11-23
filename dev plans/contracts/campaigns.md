@@ -33,7 +33,7 @@ Both go to owner and admin (§8, 4), granted in `campaigns_0001`.
 - `signups_open`: a bool, true by default. It's the board's "Sign-ups open" pill; while it's off, the forms say sign-ups are closed.
 - `postal_address`: ≤ 300 characters. US law (CAN-SPAM) puts a postal address in every newsletter; a P.O. box will do. Nothing sends until it's set, and the Newsletter page says so.
 - `footer_note`: ≤ 300 characters, by default "You're getting this because you asked for news from ${site_name}."
-- `send_per_hour`: how many newsletter messages may go out in an hour, 1 to 10,000, and 6,000 (100 a minute) by default. Spacemail has no sending limit (§8, 6); a site whose host has one sets it lower.
+- `send_per_hour`: how many newsletter messages may go out in an hour, 1 to 10,000, and 400 by default (the owner, 2026-11-23: under a Spacemail mailbox's 500 an hour, with room for the site's own mail). Spacemail has no sending limit (§8, 6); a site whose host has one sets it lower.
 
 They're edited in the Settings section "Newsletter".
 
@@ -182,7 +182,7 @@ Answered 2026-11-22:
 3. **"Email it to subscribers" on a post:** the post's email (its title, summary and link) goes out as soon as the post goes live. (Agreed.)
 4. **Who may send to the list:** owner and admin, for both permissions. (Agreed.)
 5. **How bounces reach the site by SMTP:** the module reads the bounce mailbox over IMAP, in this PR. The site sends by Spaceship's Spacemail, a mailbox host, so its bounces come back as bounce reports to the sending mailbox (the owner, 2026-11-22). The reader is on once the owner puts the mailbox's login in the host's variables (`CAMPAIGNS_BOUNCE_IMAP_HOST`, `_USERNAME`, `_PASSWORD`). Until then, Set aside holds unsubscribes and addresses set aside by hand, and the Newsletter page says bounces aren't being read. A site that has to send by Resend uses its webhook instead.
-6. **The send pace:** Spacemail has no sending limit (the owner, 2026-11-22), so `send_per_hour` defaults to 6,000, 100 a minute. It stays a setting for a host that has a limit.
+6. **The send pace:** Spacemail has no sending limit (the owner, 2026-11-22), so `send_per_hour` defaults to 6,000, 100 a minute. **Changed 2026-11-23:** Spaceship documents 500 an hour for a paid mailbox (20 on a trial), so the owner chose 400. It stays a setting for a host that has a limit.
 
 For later, not a choice:
 
@@ -221,4 +221,4 @@ For later, not a choice:
   - **Subjects and preview lines refuse what the kernel mailer refuses** (Unicode's Cc, Zl and Zp, C1 controls among them). A copy the mailer refuses anyway stops its email, never the sends behind it; a test it refuses is 422 `campaigns.unsendable`.
   - **A run takes each sending email before its rows, as Cancel does, and holds each recipient's row while their copy is decided:** an email Cancel holds is left to it, an unsubscribe under way waits for the run, and a recipient held elsewhere waits, kept, for the next run.
   - **One route serves the editor, `/admin/campaigns/:id`, `new` among them:** a new email's editor stays drawn as its address changes on the first save, so a Send after it, and what it's refused, end in that editor. Editing a field puts away only that field's error.
-  - **Owner's call, still open:** Spaceship's knowledge base and terms give Spacemail an outgoing limit of 500 an hour for a paid mailbox (20 on a trial), across its aliases, where §8 6 has none. The default `send_per_hour` of 6,000 stands until the owner chooses.
+  - **The send pace defaults to 400 an hour** (the owner, 2026-11-23): Spaceship's knowledge base and terms give a paid Spacemail mailbox 500 an hour (20 on a trial) across its aliases, where §8 6 had none; 400 leaves room for the site's own mail through the same mailbox.

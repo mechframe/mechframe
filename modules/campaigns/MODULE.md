@@ -49,7 +49,7 @@ Use it when people should ask for the site's news by email and the site's people
 - `signups_open` (true): while it's off, the forms say sign-ups are closed.
 - `postal_address` (""): the postal address every newsletter carries, its lines kept; a P.O. box will do. Nothing sends until it's set.
 - `footer_note`: the footer's first line, `${site_name}` filled in.
-- `send_per_hour` (6,000): 1 to 10,000. Spacemail has no sending limit; a host with one sets it lower.
+- `send_per_hour` (400): 1 to 10,000. A paid Spacemail mailbox sends at most 500 an hour (20 on a trial), the site's own mail included, so 400 leaves it room; a host with another limit sets its own.
 
 Env vars, all optional, typed into the host's variables by the owner:
 - `CAMPAIGNS_BOUNCE_IMAP_HOST` (`host` or `host:port`, 993 by default), `CAMPAIGNS_BOUNCE_IMAP_USERNAME`, `CAMPAIGNS_BOUNCE_IMAP_PASSWORD`: the bounce mailbox. On Spacemail and most mailbox hosts it's the sending mailbox itself. Without all three, the Set aside tab says bounces aren't being read.

@@ -14,7 +14,7 @@ export default function NewsletterSettings() {
     return <LoadError what="The newsletter's settings" error={form.problem} onRetry={form.retry} inline />;
   }
   if (form.read === "loading") return <p className="mf-newsletter-hint">Loading…</p>;
-  const pace = typeof form.values.send_per_hour === "number" ? form.values.send_per_hour : 6000;
+  const pace = typeof form.values.send_per_hour === "number" ? form.values.send_per_hour : 400;
   return (
     <div className="mf-newsletter-settings">
       <Switch

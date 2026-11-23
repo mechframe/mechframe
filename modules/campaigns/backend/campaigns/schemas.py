@@ -67,7 +67,9 @@ class Settings(BaseModel):
     #: The footer's first line; ${site_name} is the site's name.
     footer_note: str = Field(default=DEFAULT_NOTE, max_length=MAX_NOTE)
     #: How many newsletter messages may go out in an hour (a sixtieth each minute).
-    send_per_hour: int = Field(default=6_000, ge=1, le=10_000)
+    #: 400 by default: under a Spacemail paid mailbox's 500 an hour, with room for
+    #: the site's own mail through the same mailbox (the owner, 2026-11-23).
+    send_per_hour: int = Field(default=400, ge=1, le=10_000)
 
     @field_validator("postal_address")
     @classmethod

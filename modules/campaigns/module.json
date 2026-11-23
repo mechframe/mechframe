@@ -62,9 +62,9 @@
     {
       "key": "send_per_hour",
       "type": "int",
-      "default": 6000,
+      "default": 400,
       "secret": false,
-      "description": "How many newsletter copies may go out in an hour, 1 to 10,000: a sixtieth each minute"
+      "description": "How many newsletter copies may go out in an hour, 1 to 10,000: a sixtieth each minute. 400 by default, under a Spacemail mailbox's 500 with room for the site's own mail"
     }
   ],
   "env": [
