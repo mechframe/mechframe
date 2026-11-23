@@ -72,8 +72,8 @@ Nothing. The editor isn't drawn: if the build needs what §2 doesn't settle, ask
   - `modules/campaigns` 0.1.0 to its contract: sign-ups (double opt-in), the Newsletter page to its board, the editor, the confirm and unsubscribe pages, Settings › Newsletter, the send job at its pace, the IMAP bounce reader, Resend's webhook, and hooks 4, 5, 7 and 8;
   - the harness's `/api/_test/mail?full=1` (HTML and headers).
 - **Changes after approval** are listed in the contract's new section. Two for the owner: the email's colours are a neutral palette (the backend can't read the theme), and a post's email has no summary until blog's payload carries one.
-- **Tests:** 114 of campaigns' own in Python (96% of its lines), plus the kernel's queue and the harness; 18 web; 5 end-to-end in both themes with axe. `mechframe add campaigns`, then `check`, passes on a new site. The brand check is clean.
-- **The owner's choices:** none new; §8 stands.
+- **Tests:** 146 of campaigns' own in Python (backend and contract), plus the kernel's queue and the harness; 22 web; 5 end-to-end in both themes with axe. Each code fix from Codex's and CodeRabbit's reviews has a test seen failing first. `mechframe add campaigns`, then `check`, passes on a new site. The brand check is clean.
+- **The owner's choices:** one new: the send pace defaults to 400 an hour (2026-11-23), under a paid Spacemail mailbox's documented 500 (20 on a trial); the rest of §8 stands.
 - **For the main lane's handoff:**
   - campaigns is step 1's sixth module (#134); decision 0062 is the side lane's;
   - **the owner's content intake:** the postal address in Settings › Newsletter, and the Spacemail mailbox's IMAP login typed into the host's variables (`CAMPAIGNS_BOUNCE_IMAP_HOST`, `_USERNAME`, `_PASSWORD`);
