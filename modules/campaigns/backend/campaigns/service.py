@@ -168,13 +168,33 @@ async def set_aside_if_known(db: AsyncSession, address: str, why: Why, detail: s
     return await set_aside(db, address, why, detail)
 
 
-async def apply(db: AsyncSession, verdicts: list[tuple[str, bounces.Verdict]]) -> int:
-    """A report's or a webhook's verdicts applied: answers how many were set aside."""
+async def _vouched(db: AsyncSession, tokens: set[str]) -> set[str]:
+    """The addresses whose own tokens these are."""
+    if not tokens:
+        return set()
+    hashes = [_hash(token) for token in tokens]
+    return set(
+        await db.scalars(select(Subscriber.email_normal).where(Subscriber.token_hash.in_(hashes)))
+    )
+
+
+async def apply(
+    db: AsyncSession,
+    verdicts: list[tuple[str, bounces.Verdict]],
+    tokens: set[str] | None = None,
+) -> int:
+    """A report's or a webhook's verdicts applied: answers how many were set aside.
+    Resend's webhook is signed, so its word stands (`tokens` None). Anyone can mail
+    the bounce mailbox, so a report's verdict stands only for an address whose own
+    token the returned message carries (CodeRabbit on #134)."""
+    vouched = None if tokens is None else await _vouched(db, tokens)
     count = 0
     for address, verdict in verdicts:
-        if verdict.set_aside is not None and await set_aside_if_known(
-            db, address, verdict.set_aside, verdict.why
-        ):
+        if verdict.set_aside is None:
+            continue
+        if vouched is not None and normal(address) not in vouched:
+            continue
+        if await set_aside_if_known(db, address, verdict.set_aside, verdict.why):
             count += 1
     return count
 
@@ -556,6 +576,8 @@ async def send_test(db: AsyncSession, email_id: uuid.UUID, *, to: str) -> None:
         await footer(db),
         email.site_url(),
     )
+    if render.too_long(made):
+        raise _too_long()
     link = render.unsubscribe_page(made.site_url, None)
     await email.queue_message(
         db, to, made.subject, render.text(made, link), render.html(made, link)

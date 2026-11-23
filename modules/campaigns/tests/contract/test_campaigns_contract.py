@@ -56,6 +56,7 @@ async def _settings(browser: Browser, **changes: Any) -> None:
 async def _pages(browser: Browser, path: str, **query: str) -> list[dict[str, Any]]:
     found: list[dict[str, Any]] = []
     cursor = None
+    seen: set[str] = set()
     while True:
         params = {**query, **({"cursor": cursor} if cursor else {})}
         page = await browser.http.get(path, params=params)
@@ -65,6 +66,9 @@ async def _pages(browser: Browser, path: str, **query: str) -> list[dict[str, An
         cursor = body["next_cursor"]
         if cursor is None:
             return found
+        # A cursor twice would page forever: a failure here, not a timeout (CodeRabbit on #134).
+        assert cursor not in seen, f"{path} gave the cursor {cursor} twice"
+        seen.add(cursor)
 
 
 async def _fresh(browser: Browser, **settings: Any) -> None:
@@ -162,6 +166,43 @@ ADMIN_ROUTES = [
     ("DELETE", f"{ADMIN}/subscribers/{NOBODY}", None),
     ("GET", f"{ADMIN}/set-aside", None),
 ]
+
+
+EMAIL_ROUTES = [route for route in ADMIN_ROUTES if "/admin/emails" in route[1]]
+PEOPLE_ROUTES = [route for route in ADMIN_ROUTES if "/admin/emails" not in route[1]]
+
+
+async def test_each_permission_opens_its_own_routes_alone(browser: Browser) -> None:
+    """CodeRabbit on #134: a route given the other permission must fail here."""
+    await _owner(browser)
+    roles = {}
+    for name, permission in (
+        ("send", "campaigns.email.manage"),
+        ("people", "campaigns.subscriber.manage"),
+    ):
+        role = f"nl-{name}-{uuid.uuid4().hex[:8]}"
+        made = await browser.http.post(
+            "/api/auth/admin/roles",
+            json={
+                "id": role,
+                "name": f"Newsletter {name} {role[-8:]}",
+                "permissions": [permission],
+            },
+        )
+        assert made.status_code == 201, made.text
+        roles[name] = role
+    for name, own, other in (
+        ("send", EMAIL_ROUTES, PEOPLE_ROUTES),
+        ("people", PEOPLE_ROUTES, EMAIL_ROUTES),
+    ):
+        person = browser.stranger()
+        await person.as_new("member", roles[name])
+        for method, path, body in own:
+            answer = await person.http.request(method, path, json=body)
+            assert answer.status_code not in (401, 403), (name, method, path, answer.text)
+        for method, path, body in other:
+            answer = await person.http.request(method, path, json=body)
+            assert answer.status_code == 403, (name, method, path, answer.text)
 
 
 async def test_every_admin_route_needs_its_permission(browser: Browser) -> None:
@@ -554,6 +595,8 @@ async def test_the_webhook_fails_closed_and_refuses_a_bad_signature_and_a_replay
     )
     resend = browser.stranger()
     hook = f"{API}/webhooks/resend"
+    # Unset whatever the test process was given, so the 401 is for no secret (CodeRabbit on #134).
+    monkeypatch.delenv("CAMPAIGNS_RESEND_WEBHOOK_SECRET", raising=False)
     unconfigured = await resend.http.post(hook, content=body, headers=_signed(body))
     assert (unconfigured.status_code, unconfigured.json()["code"]) == (
         401,
@@ -686,7 +729,13 @@ async def test_a_bounce_shows_as_the_attention_card(
     monkeypatch.setenv("CAMPAIGNS_RESEND_WEBHOOK_SECRET", SECRET)
     address = _address("dead")
     await _subscribed(browser, address)
-    body = _event("email.bounced", address, type="Permanent", subType="NoEmail")
+    body = _event(
+        "email.bounced",
+        address,
+        type="Permanent",
+        subType="General",
+        message="550 5.1.1 The email account that you tried to reach does not exist",
+    )
     await browser.stranger().http.post(
         f"{API}/webhooks/resend", content=body, headers=_signed(body)
     )

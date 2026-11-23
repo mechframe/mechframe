@@ -79,7 +79,12 @@ export function NewsletterSignup({
       {sent ? (
         <div className="mf-newsletter-sent" role="status" tabIndex={-1} ref={done}>
           <p className="mf-newsletter-sent-head">Check your inbox</p>
-          <p>We&rsquo;ve sent a confirmation to {address.trim()}. Click its link and you&rsquo;re on the list.</p>
+          {/* The same words whatever the address's state: one already on the list gets no
+              second confirmation, so they say "if" (CodeRabbit on #134). */}
+          <p>
+            If {address.trim()} isn&rsquo;t on the list yet, a confirmation is on its way. Click its link and you&rsquo;re on
+            the list.
+          </p>
         </div>
       ) : open ? (
         <form className="mf-newsletter-form" aria-labelledby={headingId} noValidate onSubmit={submit}>
@@ -96,6 +101,8 @@ export function NewsletterSignup({
                 value={address}
                 onChange={(event) => {
                   setAddress(event.target.value);
+                  setError(undefined);
+                  setFailed(null);
                 }}
               />
             </Field>

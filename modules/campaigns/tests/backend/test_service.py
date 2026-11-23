@@ -590,3 +590,47 @@ async def test_a_send_too_long_to_queue_stops_and_never_blocks_the_rest(
     assert [each["subject"] for each in queued.to(address)][-1:] == ["Later"]
     await db.refresh(stuck)
     assert (stuck.status, stuck.sent_to) == ("sent", 0)
+
+
+async def test_a_pace_under_60_an_hour_holds_to_its_hour(
+    db: AsyncSession, queued: Queued, campaigns_settings: dict[str, Any]
+) -> None:
+    """CodeRabbit on #134: at least one a minute mustn't make 20 an hour 60."""
+    campaigns_settings["send_per_hour"] = 2
+    await _subscribed(db, queued, *(_address(f"h{each}") for each in range(3)))
+    row = await _email(db)
+    await _send_now(db, row)
+    assert await _run(db) == 1
+    clock.advance(61)
+    assert await _run(db) == 1
+    clock.advance(61)
+    assert await _run(db) == 0  # two in the hour already
+    clock.advance(3600)
+    assert await _run(db) == 1
+
+
+async def test_a_token_no_key_opens_skips_that_copy_alone(db: AsyncSession, queued: Queued) -> None:
+    """CodeRabbit on #134: one unreadable token mustn't hold every send behind it."""
+    broken, fine = _address("broken"), _address("fine")
+    await _subscribed(db, queued, broken, fine)
+    await db.execute(
+        update(Subscriber)
+        .where(Subscriber.email_normal == broken)
+        .values(token_sealed="not sealed")
+    )
+    await db.commit()
+    row = await _email(db)
+    await _send_now(db, row)
+    assert await _run(db) == 1
+    assert [each for each in queued.to(fine) if each["subject"] == "Winter shows"]
+    assert not [each for each in queued.to(broken) if each["subject"] == "Winter shows"]
+    await db.refresh(row)
+    assert (row.status, row.sent_to) == ("sent", 1)
+
+
+async def test_a_test_too_long_is_refused(db: AsyncSession) -> None:
+    row = await service.create(db, NewCampaignEmail(subject="Long", body="a\n\n" * 10_000), by=None)
+    await db.commit()
+    with pytest.raises(Problem) as refused:
+        await service.send_test(db, row.id, to="me@example.org")
+    assert refused.value.code == "campaigns.too_long"

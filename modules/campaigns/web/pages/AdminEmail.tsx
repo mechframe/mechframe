@@ -121,8 +121,15 @@ function Editor({ first }: { first: CampaignEmail | null }) {
   const dirty = edits.length > 0;
   const scheduled = saved?.status === "scheduled";
 
+  // A new email made mid-action: opened at its own address once the action ends, so a
+  // Send or a Schedule after its first save finishes in this editor (CodeRabbit on #134).
+  const opened = useRef<string | null>(null);
+
   const set = <Name extends FormField>(field: Name, value: Form[Name]) => {
     setForm((now) => ({ ...now, [field]: value }));
+    // What was said of the fields goes once they change (CodeRabbit on #134).
+    if (field === "subject") setUntitled(false);
+    setRefused(null);
   };
 
   const remember = (email: CampaignEmail) => {
@@ -145,7 +152,7 @@ function Editor({ first }: { first: CampaignEmail | null }) {
       remember(data);
       setForm(formOf(data));
       guard.release();
-      void navigate(`/admin/campaigns/${data.id}`, { replace: true });
+      opened.current = data.id;
       return data;
     }
     const sent = changed(from, formOf(onto));
@@ -194,6 +201,9 @@ function Editor({ first }: { first: CampaignEmail | null }) {
       }
     } finally {
       setBusy(false);
+      const made = opened.current;
+      opened.current = null;
+      if (made) void navigate(`/admin/campaigns/${made}`, { replace: true });
     }
   }
 

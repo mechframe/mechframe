@@ -18,6 +18,7 @@ import hashlib
 import hmac
 import json
 import os
+import re
 from collections.abc import Mapping
 from datetime import datetime
 from typing import Any
@@ -27,6 +28,7 @@ from campaigns import bounces
 SECRET = "CAMPAIGNS_RESEND_WEBHOOK_SECRET"  # noqa: S105 (the variable's name)
 #: How far a delivery's time may be from now.
 TOLERANCE = 300
+_STAMP = re.compile(r"[0-9]{1,12}")
 
 
 def secret_from(environ: Mapping[str, str] | None = None) -> bytes | None:
@@ -56,12 +58,14 @@ def verified(
     delivery_id = headers.get("svix-id", "")
     timestamp = headers.get("svix-timestamp", "")
     given = headers.get("svix-signature", "")
-    if not (delivery_id and timestamp.isdigit() and given):
+    # ASCII digits, a few: "²" or a thousand digits would raise rather than
+    # refuse, and so would a signature beyond ASCII (CodeRabbit on #134).
+    if not (delivery_id and _STAMP.fullmatch(timestamp) and given):
         return None
     if abs(now.timestamp() - int(timestamp)) > TOLERANCE:
         return None
-    expected = signed(secret, delivery_id, timestamp, body)
-    if not any(hmac.compare_digest(expected, each) for each in given.split()):
+    expected = signed(secret, delivery_id, timestamp, body).encode()
+    if not any(hmac.compare_digest(expected, each.encode()) for each in given.split()):
         return None
     return delivery_id
 
@@ -88,10 +92,10 @@ def verdicts(event: Mapping[str, Any]) -> list[tuple[str, bounces.Verdict]]:
     kind_of = str(bounce.get("type") or "").strip().lower()
     sub = str(bounce.get("subType") or "").strip().lower()
     words = str(bounce.get("message") or "")
+    # No code is no verdict on the address: a General bounce can be a policy
+    # block, and NoEmail says only that the address couldn't be read back
+    # (CodeRabbit on #134). Every doubt sets nobody aside.
     code = bounces.status_code_of(words)
-    if not code and kind_of == "permanent" and sub in ("general", "noemail"):
-        # The provider judged the recipient's address itself: no such mailbox.
-        code = "5.1.1"
     if sub in ("suppressed", "onaccountsuppressionlist"):
         # A repeat of the provider's own list, not a new failure: nothing decided.
         return [

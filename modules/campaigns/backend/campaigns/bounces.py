@@ -52,6 +52,7 @@ from email.message import Message
 from email.parser import BytesHeaderParser, HeaderParser
 from email.utils import getaddresses
 from typing import Any, Literal, Protocol
+from urllib.parse import unquote
 
 SetAsideWhy = Literal["bounced", "complained"]
 
@@ -235,6 +236,34 @@ def _feedback(message: Message) -> list[tuple[str, Verdict]]:
     return []
 
 
+#: A newsletter's own token in a link: `?token=` or `&token=`, as render.py writes them.
+_TOKEN = re.compile(r"[?&]token=([A-Za-z0-9_%-]{20,200})")
+_RETURNED = ("message/rfc822", "text/rfc822-headers")
+
+
+def tokens_in(raw: bytes) -> set[str]:
+    """The newsletter tokens in the message a report returns: its List-Unsubscribe
+    header, or a link in its body. A report sets an address aside only when it
+    returns that address's own token, so a forged one can't (CodeRabbit on #134)."""
+    message = mail.message_from_bytes(raw, policy=mail.policy.compat32)
+    found: set[str] = set()
+    for part in message.walk():
+        if part.get_content_type() not in _RETURNED:
+            continue
+        inner = part.get_payload()
+        if isinstance(inner, list):
+            texts = [each.as_string() for each in inner if isinstance(each, Message)]
+        else:
+            decoded = part.get_payload(decode=True)
+            texts = [
+                decoded.decode("utf-8", "replace") if isinstance(decoded, bytes) else str(inner)
+            ]
+        for text in texts:
+            unfolded = re.sub(r"\r?\n[ \t]+", " ", text)
+            found |= {unquote(token) for token in _TOKEN.findall(unfolded)}
+    return found
+
+
 def read_report(raw: bytes) -> list[tuple[str, Verdict]] | None:
     """Each address a report names and its verdict; None for a message that
     isn't a bounce or spam report."""
@@ -345,9 +374,13 @@ class ImapMailbox:
             ),
             "the search",
         )
-        uids = [uid.decode() for uid in (data[0] or b"").split()][:limit]
-        found = []
+        uids = [uid.decode() for uid in (data[0] or b"").split()]
+        found: list[tuple[str, bytes]] = []
         for uid in uids:
+            if len(found) >= limit:
+                # Counted after the filter: other multipart/reports, left where they
+                # are, never crowd out the bounces (CodeRabbit on #134).
+                break
             header = self._peek(uid, "BODY.PEEK[HEADER.FIELDS (CONTENT-TYPE)]")
             text = header.decode("utf-8", "replace") if header else ""
             value = mail.message_from_string(text, policy=mail.policy.compat32).get(

@@ -5,9 +5,9 @@
   more run at once.
 - `campaigns.bounces`, every 15 minutes while the bounce mailbox's three
   variables are set: reads its bounce and spam reports (`bounces.py`), sets
-  the addresses aside, and moves each report to the folder of read ones. A
-  mailbox that can't be reached ends the run quietly, a report that can't be
-  read stays where it is, and the rest go on.
+  aside each address whose own token the report returns, and moves each report
+  to the folder of read ones, one it can't read too. A mailbox that can't be
+  reached ends the run quietly, and the rest go on.
 - `campaigns.prune`, daily at 03:40 UTC: unconfirmed sign-ups and a send's
   queued rows after 30 days, replay ids after 7.
 """
@@ -61,16 +61,19 @@ async def read_mailbox(
         for uid, raw in reports:
             try:
                 verdicts = bounces.read_report(raw)
+                tokens = bounces.tokens_in(raw)
             except Exception as error:  # a report malformed past the parser's care
+                # Moved all the same: left, it would be read again every run.
                 log.warning(
                     "A bounce report couldn't be read.", extra={"error": type(error).__name__}
                 )
-                continue
+                verdicts, tokens = [], set()
             if verdicts is None:
-                continue
-            async with sessions() as db:
-                await service.apply(db, verdicts)
-                await db.commit()
+                continue  # not a bounce or spam report: left where it is
+            if verdicts:
+                async with sessions() as db:
+                    await service.apply(db, verdicts, tokens)
+                    await db.commit()
             try:
                 await asyncio.to_thread(mailbox.done, uid)
             except bounces.UNREACHABLE as error:

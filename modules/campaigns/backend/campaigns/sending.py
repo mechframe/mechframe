@@ -36,8 +36,9 @@ from kernel import clock, crypto, email
 
 log = logging.getLogger(__name__)
 
-#: The window the pace is counted over.
+#: The windows the pace is counted over: a sixtieth a minute, and the hour's whole.
 MINUTE = timedelta(minutes=1)
+HOUR = timedelta(hours=1)
 #: The advisory lock a run holds for its transaction: Send now's run and the
 #: minute's can overlap in the worker, and each would spend the same allowance
 #: (Codex on #134). A run that finds it held leaves the work to the one holding it.
@@ -75,10 +76,17 @@ async def run(db: AsyncSession) -> int:
 
 
 async def _queue(db: AsyncSession, send_per_hour: int, now: datetime) -> int:
-    recent = await db.scalar(
-        select(func.count()).select_from(Delivery).where(Delivery.queued_at > now - MINUTE)
-    )
-    allowance = per_minute(send_per_hour) - int(recent or 0)
+    minute, hour = (
+        await db.execute(
+            select(
+                func.count().filter(Delivery.queued_at > now - MINUTE),
+                func.count().filter(Delivery.queued_at > now - HOUR),
+            ).select_from(Delivery)
+        )
+    ).one()
+    # "At least one a minute" never takes an hour past `send_per_hour`: a setting
+    # under 60 is held to its hour too (CodeRabbit on #134).
+    allowance = min(per_minute(send_per_hour) - int(minute), send_per_hour - int(hour))
     if allowance <= 0:
         return 0
     rows: list[tuple[Delivery, Email]] = [
@@ -141,7 +149,14 @@ async def _queue(db: AsyncSession, send_per_hour: int, now: datetime) -> int:
             skipped.append(delivery.id)
             continue
         parts = made[row.id]
-        token = crypto.open(person.token_sealed)
+        try:
+            token = crypto.open(person.token_sealed)
+        except crypto.SealError:
+            # Sealed with a key since removed: this person's copy can't carry their
+            # link, so it goes unsent, and nobody else waits on it (CodeRabbit on #134).
+            log.error("A subscriber's link couldn't be opened; their copy is skipped.")
+            skipped.append(delivery.id)
+            continue
         link = render.unsubscribe_page(site_url, token)
         await email.queue_message(
             db,

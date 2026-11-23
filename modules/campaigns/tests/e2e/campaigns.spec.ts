@@ -95,11 +95,17 @@ for (const [name, canvas] of Object.entries(THEMES)) {
   });
 }
 
-test("the Settings section takes the postal address", async ({ page }) => {
+test("the Settings section saves the postal address", async ({ page }) => {
   const owner = await makeUser(page.request, "campaigns-owner", { totp: true, roles: ["member", "owner"] });
   await signInTo(page, owner, "/admin/settings");
   const address = page.getByRole("textbox", { name: "Postal address" });
   await expect(address).toBeVisible();
-  await address.fill("P.O. Box 12\nBoston, MA 02101");
+  const typed = `P.O. Box ${String(Date.now() % 10_000)}\nBoston, MA 02101`;
+  await address.fill(typed);
   expect(await axe(page)).toEqual([]);
+  // Saved and read back, not only typed (CodeRabbit on #134).
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByText("Settings saved.")).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("textbox", { name: "Postal address" })).toHaveValue(typed);
 });

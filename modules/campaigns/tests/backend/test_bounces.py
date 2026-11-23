@@ -32,8 +32,10 @@ def dsn(
     action: str = "failed",
     status: str = "5.1.1",
     diagnostic: str = "smtp; 550 5.1.1 <{r}>: Recipient address rejected: User unknown",
+    token: str | None = None,
 ) -> bytes:
-    """A bounce report as Postfix sends one (RFC 3464)."""
+    """A bounce report as Postfix sends one (RFC 3464), returning the headers of
+    the copy it's about: with `token`, that copy's List-Unsubscribe."""
     return (
         "From: MAILER-DAEMON@mail.example.net\r\n"
         "To: news@site.test\r\n"
@@ -65,12 +67,30 @@ def dsn(
         "From: Test Site <news@site.test>\r\n"
         f"To: {recipient}\r\n"
         "Subject: Winter shows\r\n"
+        f"{unsubscribe(token)}"
         "\r\n"
         "--B0UND--\r\n"
     ).encode()
 
 
-def arf(recipient: str | None, *, feedback: str = "abuse", to: str | None = None) -> bytes:
+def unsubscribe(token: str | None) -> str:
+    """The returned copy's one-click header, folded as a mail server may fold it."""
+    if token is None:
+        return ""
+    return (
+        "List-Unsubscribe:\r\n"
+        f" <https://site.test/api/campaigns/unsubscribe?token={token}>\r\n"
+        "List-Unsubscribe-Post: List-Unsubscribe=One-Click\r\n"
+    )
+
+
+def arf(
+    recipient: str | None,
+    *,
+    feedback: str = "abuse",
+    to: str | None = None,
+    token: str | None = None,
+) -> bytes:
     """A spam report as a feedback loop sends one (RFC 5965)."""
     rcpt = f"Original-Rcpt-To: <{recipient}>\r\n" if recipient else ""
     return (
@@ -100,6 +120,7 @@ def arf(recipient: str | None, *, feedback: str = "abuse", to: str | None = None
         "From: news@site.test\r\n"
         f"To: {to or recipient or 'redacted'}\r\n"
         "Subject: Winter shows\r\n"
+        f"{unsubscribe(token)}"
         "\r\n"
         "The words.\r\n"
         "--ARF--\r\n"
@@ -367,7 +388,8 @@ class FakeMailbox:
         self.closed = True
 
 
-async def _subscriber(db: AsyncSession, address: str) -> None:
+async def _subscriber(db: AsyncSession, address: str) -> str:
+    """A subscriber, committed: its token."""
     token = uuid.uuid4().hex
     db.add(
         Subscriber(
@@ -382,6 +404,7 @@ async def _subscriber(db: AsyncSession, address: str) -> None:
         )
     )
     await db.commit()
+    return token
 
 
 async def _aside(db: AsyncSession, address: str) -> SetAside | None:
@@ -407,15 +430,15 @@ async def test_a_run_sets_aside_the_newsletter_s_addresses_and_reads_each_report
     database: Database, db: AsyncSession
 ) -> None:
     gone, fan, stranger = _address("gone"), _address("fan"), _address("stranger")
-    await _subscriber(db, gone)
-    await _subscriber(db, fan)
+    gone_token = await _subscriber(db, gone)
+    fan_token = await _subscriber(db, fan)
     box = FakeMailbox(
         [
             ("1", PLAIN),
-            ("2", dsn(gone)),
-            ("3", arf(fan)),
+            ("2", dsn(gone, token=gone_token)),
+            ("3", arf(fan, token=fan_token)),
             ("4", dsn(stranger)),  # a sign-in link that bounced: not the newsletter's
-            ("5", dsn(fan, status="5.7.1", diagnostic="smtp; 550 5.7.1 blocked")),
+            ("5", dsn(fan, status="5.7.1", diagnostic="smtp; 550 5.7.1 blocked", token=fan_token)),
         ]
     )
     handled = await read_mailbox(_sessions(database), LOGIN, lambda login: box)
@@ -446,13 +469,13 @@ async def test_a_mailbox_that_can_t_be_reached_changes_nothing_and_raises_nothin
     database: Database, db: AsyncSession
 ) -> None:
     gone = _address("gone")
-    await _subscriber(db, gone)
+    token = await _subscriber(db, gone)
 
     def unreachable(login: bounces.Login) -> FakeMailbox:
         raise TimeoutError("no answer")
 
     assert await read_mailbox(_sessions(database), LOGIN, unreachable) == 0
-    dropping = FakeMailbox([("2", dsn(gone))], fail_reading=True)
+    dropping = FakeMailbox([("2", dsn(gone, token=token))], fail_reading=True)
     assert await read_mailbox(_sessions(database), LOGIN, lambda login: dropping) == 0
     assert dropping.closed
     assert await _aside(db, gone) is None
@@ -463,8 +486,7 @@ async def test_a_report_that_won_t_move_is_set_aside_and_the_rest_go_on(
     database: Database, db: AsyncSession
 ) -> None:
     first, second = _address("first"), _address("second")
-    await _subscriber(db, first)
-    await _subscriber(db, second)
+    tokens = [await _subscriber(db, first), await _subscriber(db, second)]
 
     class Stuck(FakeMailbox):
         def done(self, uid: str) -> None:
@@ -472,8 +494,64 @@ async def test_a_report_that_won_t_move_is_set_aside_and_the_rest_go_on(
                 raise OSError("the move failed")
             super().done(uid)
 
-    box = Stuck([("1", dsn(first)), ("2", dsn(second))])
+    box = Stuck([("1", dsn(first, token=tokens[0])), ("2", dsn(second, token=tokens[1]))])
     assert await read_mailbox(_sessions(database), LOGIN, lambda login: box) == 1
     assert box.done_with == ["2"]
     assert (await _aside(db, first)).why == "bounced"  # type: ignore[union-attr]
     assert (await _aside(db, second)).why == "bounced"  # type: ignore[union-attr]
+
+
+def test_a_report_s_tokens_are_read_from_the_copy_it_returns() -> None:
+    token = "Ab_c-" + "d" * 30
+    assert bounces.tokens_in(dsn("gone@example.org", token=token)) == {token}
+    assert bounces.tokens_in(arf("fan@example.org", token=token)) == {token}
+    assert bounces.tokens_in(dsn("gone@example.org")) == set()
+    # A token in the report's own words, not the returned copy, vouches for nobody.
+    forged = dsn("gone@example.org", diagnostic=f"smtp; 550 5.1.1 ?token={token}")
+    assert bounces.tokens_in(forged) == set()
+
+
+@pytest.mark.db
+async def test_a_forged_report_sets_nobody_aside(database: Database, db: AsyncSession) -> None:
+    """CodeRabbit on #134: anyone can mail the bounce mailbox, so a report must
+    return the address's own copy, its token, before it sets the address aside."""
+    target, other = _address("target"), _address("other")
+    await _subscriber(db, target)
+    other_token = await _subscriber(db, other)
+    box = FakeMailbox(
+        [
+            ("1", dsn(target)),  # no copy of ours
+            ("2", dsn(target, token=other_token)),  # someone else's copy
+            ("3", arf(target, token="x" * 32)),  # a token nobody holds
+        ]
+    )
+    assert await read_mailbox(_sessions(database), LOGIN, lambda login: box) == 3
+    assert box.done_with == ["1", "2", "3"]
+    assert await _aside(db, target) is None
+
+
+@pytest.mark.db
+async def test_a_report_that_can_t_be_read_still_moves(
+    database: Database, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def broken(raw: bytes) -> None:
+        raise UnicodeDecodeError("utf-8", b"\xff", 0, 1, "bad")
+
+    monkeypatch.setattr(bounces, "read_report", broken)
+    box = FakeMailbox([("1", dsn("gone@example.org"))])
+    assert await read_mailbox(_sessions(database), LOGIN, lambda login: box) == 1
+    assert box.done_with == ["1"]
+
+
+def test_the_limit_counts_only_real_reports() -> None:
+    """CodeRabbit on #134: other multipart/reports, left in place, never crowd out bounces."""
+    receipt = (
+        b'Content-Type: multipart/report; report-type=disposition-notification; boundary="R"\r\n'
+        b"\r\n--R--\r\n"
+    )
+    fake = FakeImap(
+        {"1": receipt, "2": receipt, "3": receipt, "9": dsn("gone@example.org")},
+        ("IMAP4REV1", "MOVE"),
+    )
+    box = bounces.ImapMailbox(LOGIN, connect=_connect(fake))
+    assert [uid for uid, _ in box.reports(limit=1)] == ["9"]

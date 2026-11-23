@@ -92,8 +92,29 @@ def test_a_permanent_bounce_sets_the_address_aside() -> None:
         "bounced",
         "address: 5.1.1",
     )
-    [(_, no_code)] = webhooks.verdicts(_bounce("Permanent", "NoEmail"))
-    assert no_code.set_aside == "bounced"
+    # No code is no verdict on the address (CodeRabbit on #134): every doubt sets nobody aside.
+    for sub in ("NoEmail", "General"):
+        [(_, no_code)] = webhooks.verdicts(_bounce("Permanent", sub))
+        assert no_code.set_aside is None, sub
+
+
+@pytest.mark.parametrize(
+    ("stamp", "signature"),
+    [
+        ("²", None),  # a digit beyond ASCII
+        ("9" * 400, None),  # past any time
+        ("1" * 5000, None),  # past int()'s digits
+        (None, "v1,ünïcode"),  # a signature beyond ASCII
+    ],
+)
+def test_a_malformed_header_is_refused_not_raised(stamp: str | None, signature: str | None) -> None:
+    """CodeRabbit on #134: an anonymous request is 401, never a 500."""
+    headers = _headers()
+    if stamp is not None:
+        headers["svix-timestamp"] = stamp
+    if signature is not None:
+        headers["svix-signature"] = signature
+    assert webhooks.verified(KEY, headers, BODY, NOW) is None
 
 
 def test_a_soft_bounce_a_block_and_the_provider_s_own_list_set_nobody_aside() -> None:

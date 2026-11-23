@@ -82,7 +82,7 @@ describe("NewsletterSignup", () => {
     await user.click(screen.getByRole("button", { name: "Sign up" }));
     const done = await screen.findByRole("status");
     expect(done).toHaveTextContent("Check your inbox");
-    expect(done).toHaveTextContent("We’ve sent a confirmation to rae@example.com.");
+    expect(done).toHaveTextContent("If rae@example.com isn’t on the list yet, a confirmation is on its way.");
     await waitFor(() => {
       expect(done).toHaveFocus();
     });
@@ -106,6 +106,9 @@ describe("NewsletterSignup", () => {
     await user.click(screen.getByRole("button", { name: "Sign up" }));
     expect(await screen.findByText("Enter one email address, like name@example.com.")).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Email" })).toHaveFocus();
+    // Typing again puts the server's word away (CodeRabbit on #134).
+    await user.type(screen.getByRole("textbox", { name: "Email" }), "x");
+    expect(screen.queryByText("Enter one email address, like name@example.com.")).toBeNull();
   });
 
   it("says sign-ups are closed while Settings closes them, or while campaigns is off", async () => {
@@ -313,6 +316,9 @@ describe("the email editor", () => {
     const { router } = renderApp({ path: "/admin/campaigns/new", modules: [campaigns], session: sender });
     await user.click(await screen.findByRole("button", { name: "Save draft" }));
     expect(await screen.findByText("An email needs a subject.")).toBeInTheDocument();
+    await user.type(screen.getByRole("textbox", { name: "Subject" }), "W");
+    expect(screen.queryByText("An email needs a subject.")).toBeNull();
+    await user.clear(screen.getByRole("textbox", { name: "Subject" }));
     await user.type(screen.getByRole("textbox", { name: "Subject" }), "Winter shows");
     await user.click(screen.getByRole("button", { name: "Save draft" }));
     await waitFor(() => {
@@ -356,13 +362,17 @@ describe("the email editor", () => {
 
   it("asks which to keep when someone else saved first", async () => {
     let saves = 0;
+    let retried: Record<string, unknown> | null = null;
     routed({
       [`GET ${ONE}`]: { status: 200, body: full() },
-      [`PATCH ${ONE}`]: () => {
+      [`PATCH ${ONE}`]: async (request) => {
         saves += 1;
-        return saves === 1
-          ? problem(409, "campaigns.changed", { email: full({ version: 3, subject: "Their subject" }) })
-          : { status: 200, body: full({ version: 4, subject: "My subject" }) };
+        if (saves === 1) return problem(409, "campaigns.changed", { email: full({ version: 3, subject: "Their subject" }) });
+        // The retry goes at their version with the subject kept (CodeRabbit on #134); else it's refused again.
+        retried = await json(request);
+        return retried.version === 3 && retried.subject === "My subject"
+          ? { status: 200, body: full({ version: 4, subject: "My subject" }) }
+          : problem(409, "campaigns.changed", { email: full({ version: 3, subject: "Their subject" }) });
       },
     });
     const user = userEvent.setup();
@@ -377,6 +387,8 @@ describe("the email editor", () => {
     await waitFor(() => {
       expect(saves).toBe(2);
     });
+    expect(retried).toMatchObject({ version: 3, subject: "My subject" });
+    expect(await screen.findByText("Saved.")).toBeInTheDocument();
   });
 
   it("reads a sent email back, with whom it went to", async () => {
@@ -425,5 +437,29 @@ describe("the words", () => {
     expect(whyWords("bounced", "address: 5.1.2")).toBe("Bounced: the domain doesn't exist");
     expect(whyWords("bounced", "Set aside by hand")).toBe("Bounced");
     expect(whyWords("unsubscribed", "")).toBe("Unsubscribed");
+  });
+});
+
+describe("sending an email never saved", () => {
+  it("saves it, sends it, then opens it in its sent state (CodeRabbit on #134)", async () => {
+    const sent = routed({
+      "POST /api/campaigns/admin/emails": { status: 201, body: full({ version: 1 }) },
+      // Answered late: an editor that moved to the new address on its first save is
+      // drawn by then, holding the draft.
+      [`POST ${ONE}/send`]: async () => {
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        return { status: 200, body: full({ version: 2, status: "sending", sent_to: 0, started_at: "2026-11-23T09:00:00+00:00" }) };
+      },
+      [`POST ${ONE}/preview`]: { status: 200, body: { html: "<p>Three nights.</p>" } },
+    });
+    const user = userEvent.setup();
+    const { router } = renderApp({ path: "/admin/campaigns/new", modules: [campaigns], session: sender });
+    await user.type(await screen.findByRole("textbox", { name: "Subject" }), "Winter shows");
+    await user.click(screen.getByRole("button", { name: "Send now" }));
+    await user.click(await screen.findByRole("button", { name: "Send it" }));
+    expect(await screen.findByText("Sending: 0 people so far.")).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe(`/admin/campaigns/${ID}`);
+    expect(screen.queryByRole("button", { name: "Send now" })).toBeNull();
+    expect(sentTo(sent, "POST", `${ONE}/send`)).toHaveLength(1);
   });
 });
