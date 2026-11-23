@@ -39,7 +39,7 @@ The contract's open questions; `blog.md` §8, 7; the open questions in `docs/HAN
 ## 6. Environment and traps
 
 - **The full suite** (1 h 17 min with both lanes at work): merge `main` first, then run it in the background with `$env:PYTHONUTF8 = "1"`, its log in the scratchpad.
-  `TEST_DATABASE_URL` is the owner's user variable (the `devkit` role on port 55432); `MECHFRAME_REQUIRE_DB=1 .venv/Scripts/python.exe -m pytest --cov -q -rfE`
+  `TEST_DATABASE_URL` is the owner's user variable (the `devkit` role on port 55432); in PowerShell, `$env:MECHFRAME_REQUIRE_DB = "1"; .venv\Scripts\python.exe -m pytest --cov -q -rfE`
 - **End to end:** `npm run build`, then `node node_modules/@playwright/test/cli.js test` with `TEST_DATABASE_URL`. Call node directly: `npx.cmd` mangles `|` and spaces.
 - **Commits:** `git commit -F <file>`, and `git diff --cached --stat` as its own step first.
 - **More:** `docs/HANDOFF.md`, Notes.
