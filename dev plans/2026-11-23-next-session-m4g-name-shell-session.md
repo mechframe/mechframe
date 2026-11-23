@@ -8,15 +8,15 @@ MechFrame (`CLAUDE.md`, `SPEC.md`), public at mechframe/mechframe; M4 of `dev pl
 
 ## 2. Rules not in a CLAUDE.md
 
-- **You're the main lane** (`CLAUDE.md`, "Two lanes"). 37 WT is landing campaigns (#134); the side lane's next session takes pages 0.1.1 (`dev plans/2026-11-23-side-lane-m7-pages-public.md`). Tell it before and after every end-to-end run; fold its result into your handoff.
+- **You're the main lane** (`CLAUDE.md`, "Two lanes"). Campaigns (#134) landed; the side lane's next session takes pages 0.1.1 (`dev plans/2026-11-23-side-lane-m7-pages-public.md`). Tell it before and after every end-to-end run; fold its result into your handoff.
 - **Yours:** `kernel/web/src/account/`, People, the shell (`admin.css`, `AdminFrame.tsx`), the session route and `kernel/web/src/session/`, the template's `web/e2e/smoke.spec.ts`. **Not yours:** `modules/pages/`, `modules/campaigns/`.
 - **VM Website Dev 12** relays the owner's calls: send it each PR number as pushed and landed; never edit `C:\DEV\VM Website`.
 - **The owner's call:** Railway, CI's security gates, any third-party account or key. A contract waits for the owner's approval.
 
 ## 3. State (verify it)
 
-- **main:** this handoff's docs PR on `f18f764` (#135). #134 (campaigns) may have landed since. Check `git log -1 origin/main` and `gh pr list`.
-- **The ledger** shows the rows from `f18f764` (`docs/HANDOFF.md`, State).
+- **main:** this handoff's docs PR on `3fcdf35` (campaigns, #134, after #135). Check `git log -1 origin/main` and `gh pr list`.
+- **The ledger** shows the rows from `3fcdf35` (`docs/HANDOFF.md`, State).
 
 ## 4. The job, in order
 
@@ -30,7 +30,7 @@ MechFrame (`CLAUDE.md`, `SPEC.md`), public at mechframe/mechframe; M4 of `dev pl
    - The order of a section's pages needs a way for a site or a `nav.admin` entry to set it: decision 0063 if the manifest changes (tell the owner which SPEC sections).
    - Check it in `admin.spec.ts` at 1440 and 390, in both themes.
 3. **The signed-out session read** (the owner's ask, through VM Website): `GET /api/auth/session` answers 200 with no user, so a public page logs no 401. Contract first (decision 0064): `docs/contracts/auth-api.md`'s row and its contract tests (spec 14.13), `session.tsx`, the template smoke's allowance for that 401.
-4. Then generated covers (`blog.md` §8, 3, through `ai.client(db)`), then social posting (ask §8, 7 first).
+4. Then blog: `summary` in `blog.post.published` for campaigns, generated covers (`blog.md` §8, 3), social posting (ask §8, 7 first).
 
 Close out at a natural break past ~400K tokens, with two prompts, one for each lane.
 

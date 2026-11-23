@@ -2,7 +2,7 @@
 
 Start a new session **in a worktree** of `C:\DEV\AI-DevKit` (Code tab → New session → this project, in a worktree). Then: "Read dev plans\2026-11-23-side-lane-m7-pages-public.md and follow it, starting with section 3."
 
-This is for the side lane's next session. While **AI DevKit Development 37 WT** is still landing campaigns (#134), it carries on, and this prompt waits.
+This is for the side lane's next session. AI DevKit Development 37 WT landed campaigns (#134) and is done.
 
 ## 1. The project and your lane
 
@@ -26,7 +26,7 @@ MechFrame: website modules on a FastAPI + Postgres kernel (`CLAUDE.md`, `SPEC.md
 
 ## 3. The job
 
-**State, checked 2026-11-23 about 13:30 Eastern:** `main` is `f18f764` (#135) plus the main lane's handoff PR. #134 is open with "CI result" green, and its lane is landing it. Check with `git log -1 origin/main` and `gh pr list`.
+**State, checked 2026-11-23 about 16:40 Eastern:** `main` is `3fcdf35` (campaigns, #134) plus the main lane's handoff PR. Check with `git log -1 origin/main` and `gh pr list`. The old worktree `campaigns-module-contract-065954` can go (its junction is already removed).
 
 1. **Pages' page read in `public.ts`** (VM Website's ask). Write it as a section of `dev plans/contracts/pages.md` first ("0.1.1"), for the owner, the way blog 0.1.1 (#128) added its public surface.
    - The read is `modules/pages/web/public.ts`, reached as `@/modules/pages/public` (decision 0057), like blog's `usePost` in `modules/blog/web/public.ts`.
