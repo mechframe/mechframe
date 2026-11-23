@@ -771,3 +771,37 @@ async def test_a_run_slow_after_its_last_copy_still_holds_the_pace(
     assert await _run(db) == 2
     monkeypatch.setattr(sending, "_finish", finish)
     assert await _run(db) == 0  # the two just sent are still in this minute
+
+
+async def test_a_stored_subject_the_mailer_refuses_is_a_field_error_at_send(
+    db: AsyncSession, queued: Queued
+) -> None:
+    """CodeRabbit on #134: a draft saved before the subject rule can't start."""
+    await _subscribed(db, queued, _address())
+    row_id = (await _email(db)).id
+    await db.execute(update(Email).where(Email.id == row_id).values(subject="Old" + chr(0x85)))
+    await db.commit()
+    with pytest.raises(Problem) as refused:
+        await service.send(db, row_id, None, by=None)
+    assert refused.value.code == "campaigns.unsendable"
+    assert "body.subject" in refused.value.errors
+    await db.rollback()
+    waiting = select(func.count()).select_from(Delivery).where(Delivery.email_id == row_id)
+    assert await db.scalar(waiting) == 0
+
+
+async def test_a_post_s_title_becomes_a_subject_the_mailer_takes(
+    db: AsyncSession, queued: Queued
+) -> None:
+    await _subscribed(db, queued, _address())
+    made = await service.from_post(
+        db,
+        post_id=uuid.uuid4(),
+        title="New" + chr(0x80) + " song",
+        summary="",
+        path="/blog/new-song",
+    )
+    await db.commit()
+    assert made is not None
+    assert made.subject == "New song"
+    assert made.status == "sending"

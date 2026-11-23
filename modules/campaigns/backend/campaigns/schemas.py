@@ -38,14 +38,14 @@ DEFAULT_NOTE = "You're getting this because you asked for news from ${site_name}
 
 #: Control characters and Unicode's line and paragraph separators: the kernel
 #: mailer refuses any of them in a header.
-_REFUSED = frozenset({"Cc", "Zl", "Zp"})
+REFUSED = frozenset({"Cc", "Zl", "Zp"})
 
 
 def one_line(value: str) -> str:
     """The text trimmed, refused if it holds a line break or a control character:
     by the kernel mailer's own rule (Unicode's Cc, Zl and Zp, C1 controls among
     them), so a subject saved is one it sends (CodeRabbit on #134)."""
-    if any(unicodedata.category(each) in _REFUSED for each in value):
+    if any(unicodedata.category(each) in REFUSED for each in value):
         raise ValueError("One line, with no line breaks.")
     return value.strip()
 

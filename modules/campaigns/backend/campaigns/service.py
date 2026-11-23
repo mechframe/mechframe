@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import hashlib
 import secrets
+import unicodedata
 import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any, cast
@@ -36,6 +37,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from campaigns import bounces, render
 from campaigns.models import MAX_SUBJECT, Delivery, Email, SetAside, Subscriber, WebhookSeen
 from campaigns.schemas import (
+    REFUSED,
     CampaignEmailChange,
     EmailTab,
     NewCampaignEmail,
@@ -43,6 +45,7 @@ from campaigns.schemas import (
     Settings,
     SubscriberTab,
     Why,
+    one_line,
 )
 from kernel import Problem, attention, audit, bot, clock, crypto, email, jobs, server_copy
 from kernel import settings as module_settings
@@ -644,6 +647,27 @@ async def check_size(db: AsyncSession, subject: str, preheader: str, body: str) 
         raise _too_long()
 
 
+def check_subject(subject: str) -> None:
+    """422 `campaigns.unsendable` on the subject for one the mailer would refuse:
+    a draft saved before the subject rule can't start (CodeRabbit on #134)."""
+    try:
+        one_line(subject)
+    except ValueError:
+        raise Problem(
+            "campaigns.unsendable",
+            422,
+            "The subject holds a character the mailer can't send.",
+            errors={"body.subject": ["Remove the line break or control character in the subject."]},
+        ) from None
+
+
+def _plain_line(words: str) -> str:
+    """Another module's words as one line the mailer takes: control characters and
+    line separators made spaces, the spaces run together (CodeRabbit on #134)."""
+    cleaned = "".join(" " if unicodedata.category(each) in REFUSED else each for each in words)
+    return " ".join(cleaned.split())
+
+
 async def send(
     db: AsyncSession, email_id: uuid.UUID, at: str | None, *, by: uuid.UUID | None
 ) -> Email:
@@ -662,6 +686,7 @@ async def send(
     reach = await audience(db)
     if reach == 0:
         raise Problem("campaigns.nobody", 409, "Nobody is subscribed yet.")
+    check_subject(row.subject)
     await check_size(db, row.subject, row.preview, row.body)
     now = clock.now()
     if when is None or when <= now:
@@ -732,8 +757,8 @@ async def from_post(
         db,
         NewCampaignEmail(
             kind="newsletter",
-            subject=" ".join(title.split())[:MAX_SUBJECT] or "A new post",
-            preview=" ".join(summary.split())[:150],
+            subject=_plain_line(title)[:MAX_SUBJECT] or "A new post",
+            preview=_plain_line(summary)[:150],
             body="\n\n".join(words),
         ),
         by=None,
