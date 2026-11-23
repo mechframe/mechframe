@@ -57,16 +57,17 @@ function answers(state: Answer, more: Record<string, Answer | ((request: Request
 
 const ready: Answer = { status: 200, body: { ready: true, unreadable: false, styles: STYLES } };
 
-function draw(options: { start?: string; withFields?: boolean } = {}) {
+function draw(options: { start?: string; withFields?: boolean; strict?: boolean } = {}) {
   const seen: Seen = { title: "", summary: "", search: null };
+  const { strict = false, ...shown } = options;
   renderWithKernel(
     <Editing
-      {...options}
+      {...shown}
       report={(change) => {
         Object.assign(seen, change);
       }}
     />,
-    { session: writer },
+    { session: writer, strict },
   );
   return seen;
 }
@@ -190,6 +191,40 @@ describe("Write with AI", () => {
     await user.click(await dialog.findByRole("button", { name: "Use this summary" }));
     expect(seen.summary).toBe("A short summary.");
     expect(await bodyOf(sent, "/api/kernel/ai/summary")).toMatchObject({ max: 300 });
+  });
+
+  it("keeps its answers in StrictMode, as the development app runs it (Codex on #135)", async () => {
+    answers(ready, { "POST /api/kernel/ai/draft": { status: 200, body: { markdown: "Strict words." } } });
+    draw({ strict: true });
+    const { user, dialog } = await opened();
+    await user.type(dialog.getByRole("textbox", { name: "What should it be about?" }), "x");
+    await user.click(dialog.getByRole("button", { name: "Write the draft" }));
+    await waitFor(() => {
+      expect(screen.getByRole("textbox", { name: "Post body" })).toHaveValue("Strict words.");
+    });
+  });
+
+  it("sends a short task only what the AI reads of a long text (Codex on #135)", async () => {
+    const { sent } = answers(ready, { "POST /api/kernel/ai/summary": { status: 200, body: { summary: "Short." } } });
+    draw({ start: "word ".repeat(6_000) });
+    const { user, dialog } = await opened();
+    await user.click(dialog.getByRole("button", { name: "Summary" }));
+    await user.click(dialog.getByRole("button", { name: "Write a summary" }));
+    await dialog.findByRole("button", { name: "Use this summary" });
+    const body = await bodyOf(sent, "/api/kernel/ai/summary");
+    expect(String(body.body)).toHaveLength(12_000);
+  });
+
+  it("asks for a part when the text is longer than the AI rewrites at once", async () => {
+    const { sent } = answers(ready);
+    draw({ start: "word ".repeat(4_001) });
+    const { user, dialog } = await opened();
+    await user.click(dialog.getByRole("button", { name: "Rewrite" }));
+    await user.click(dialog.getByRole("button", { name: "Rewrite it" }));
+    await waitFor(() => {
+      expect(dialog.getByRole("alert")).toHaveTextContent("Select up to 20,000 characters to rewrite");
+    });
+    expect(sent.some((request) => new URL(request.url).pathname === "/api/kernel/ai/rewrite")).toBe(false);
   });
 
   it("offers the field tasks only for the fields it's given", () => {

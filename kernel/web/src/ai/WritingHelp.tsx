@@ -28,6 +28,11 @@ type Task = "draft" | "rewrite" | "titles" | "summary" | "search";
 type Style = { id: string; name: string; description: string };
 type Length = "short" | "medium" | "long";
 
+/** What the AI reads of a text for Titles, Summary and Search words (`kernel.ai.BODY_READ`): only that is sent. */
+const READ = 12_000;
+/** The longest text a task takes (`ai_routes.TEXT_MAX`): a longer one is rewritten a part at a time. */
+const TEXT_MAX = 20_000;
+
 const LENGTHS: readonly (readonly [Length, string])[] = [
   ["short", "Short, 400 to 600 words"],
   ["medium", "Medium, 800 to 1,200 words"],
@@ -68,12 +73,13 @@ function HelpDialog({ editor, styles, onClose, onFinish }: HelpProps) {
   const [search, setSearch] = useState<{ title: string; description: string } | null>(null);
   // An answer that arrives after the dialog closed is dropped.
   const open = useRef(true);
-  useEffect(
-    () => () => {
+  // Set on each setup, not only at first: StrictMode, as the development app runs, sets it up twice (Codex on #135).
+  useEffect(() => {
+    open.current = true;
+    return () => {
       open.current = false;
-    },
-    [],
-  );
+    };
+  }, []);
 
   const chosen = { what: editor.label, style_id: style || null };
   const selected = editor.selected();
@@ -110,6 +116,10 @@ function HelpDialog({ editor, styles, onClose, onFinish }: HelpProps) {
     run(async () => {
       const part = selected.trim() ? selected : "";
       const sent = part || editor.text();
+      if (sent.length > TEXT_MAX) {
+        setProblem("Select up to 20,000 characters to rewrite: the AI rewrites that much at once.");
+        return;
+      }
       const { data } = await api.POST("/api/kernel/ai/rewrite", { body: { ...chosen, markdown: sent } });
       if (!open.current || !data) return;
       const now = part ? editor.selected() : editor.text();
@@ -126,20 +136,20 @@ function HelpDialog({ editor, styles, onClose, onFinish }: HelpProps) {
 
   const suggestTitles = () =>
     run(async () => {
-      const { data } = await api.POST("/api/kernel/ai/titles", { body: { ...chosen, topic, body: editor.text() } });
+      const { data } = await api.POST("/api/kernel/ai/titles", { body: { ...chosen, topic, body: editor.text().slice(0, READ) } });
       if (open.current && data) setTitles(data.titles);
     });
 
   const writeSummary = (most: number) =>
     run(async () => {
-      const { data } = await api.POST("/api/kernel/ai/summary", { body: { ...chosen, body: editor.text(), max: most } });
+      const { data } = await api.POST("/api/kernel/ai/summary", { body: { ...chosen, body: editor.text().slice(0, READ), max: most } });
       if (open.current && data) setSummary(data.summary);
     });
 
   const searchWords = () =>
     run(async () => {
       const title = editor.fields?.title?.value ?? "";
-      const { data } = await api.POST("/api/kernel/ai/search", { body: { ...chosen, title, body: editor.text() } });
+      const { data } = await api.POST("/api/kernel/ai/search", { body: { ...chosen, title, body: editor.text().slice(0, READ) } });
       if (open.current && data) setSearch(data);
     });
 

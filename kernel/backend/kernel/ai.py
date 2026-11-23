@@ -25,6 +25,7 @@ A module's own AI task (a generated cover) calls `client(db)` and `write`.
 
 from __future__ import annotations
 
+import html
 import json
 import re
 from dataclasses import dataclass
@@ -495,10 +496,17 @@ _AFTER_BARE = ".,;:!?*_"
 _IN_TEXT = re.compile(r"\A\s*<text>(.*)</text>\s*\Z", re.DOTALL)
 
 
+#: An address in the HTML the kernel makes of a text: a link's or an image's.
+_RENDERED = re.compile(r'\b(?:href|src)="([^"]*)"')
+
+
 def addresses(text: str) -> set[str]:
-    """Every address a text's links and images point at."""
+    """Every address a text's links and images point at: as written (inline,
+    autolinks and bare addresses), and as the kernel renders it, so a
+    reference-style link or image counts too (Codex on #135)."""
     found = set(_TARGET.findall(text)) | set(_AUTOLINK.findall(text))
     found |= {address.rstrip(_AFTER_BARE) for address in _BARE.findall(text)}
+    found |= {html.unescape(address) for address in _RENDERED.findall(markdown.render(text))}
     found.discard("")
     return found
 

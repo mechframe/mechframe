@@ -368,6 +368,36 @@ async def test_a_rewrite_that_drops_a_link_is_refused_and_the_text_kept(
     assert "left out 1 link or image" in str(lost.value.detail)
 
 
+REFERENCED = "Hear [the album][album] and see ![the cover][cover].\n\n[album]: /music/album\n[cover]: /media/c.png\n"
+
+
+@pytest.mark.parametrize(
+    "rewritten",
+    [
+        # The link and its definition both gone.
+        "Hear the album and see ![the cover][cover].\n\n[cover]: /media/c.png\n",
+        # The definition kept, its link gone: the page no longer links it.
+        "Hear the album and see ![the cover][cover].\n\n[album]: /music/album\n[cover]: /media/c.png\n",
+    ],
+)
+async def test_a_rewrite_that_drops_a_reference_link_is_refused(
+    fake: FakeAnthropic, rewritten: str
+) -> None:
+    """Reference-style links and images count as the inline ones do (Codex on #135)."""
+    fake.queue(rewritten)
+    with pytest.raises(Problem) as lost:
+        await ai.rewrite(_writer(), what="Post body", text=REFERENCED, style=None)
+    assert lost.value.code == "kernel.ai_rewrite_lost"
+
+
+async def test_a_rewrite_keeping_its_reference_links_goes_in(fake: FakeAnthropic) -> None:
+    kept = REFERENCED.replace("Hear", "Listen to")
+    fake.queue(kept)
+    assert (
+        await ai.rewrite(_writer(), what="Post body", text=REFERENCED, style=None) == kept.strip()
+    )
+
+
 def test_addresses_are_every_link_image_and_bare_address() -> None:
     assert ai.addresses(BODY) == {
         "/music/album",
