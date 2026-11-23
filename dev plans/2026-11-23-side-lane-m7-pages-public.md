@@ -41,7 +41,7 @@ MechFrame: website modules on a FastAPI + Postgres kernel (`CLAUDE.md`, `SPEC.md
    - `python -m mechframe catalog` (with `cli` on `PYTHONPATH`);
    - `python -m tools.openapi`, then `npm run api:types`;
    - `docs/progress.json`, then `python -m tools.progress`.
-5. **Land it:** merge `main` and make the generated files again from main's copies. Run the suites green. Take the PR number from GitHub just before you push, and push once. Land by fast-forward once "CI result" is green and the bots are clear (`CLAUDE.md`, Rules).
+5. **Land it:** merge `main` and make the generated files again from main's copies. Run the suites green. Just before the push, read GitHub's newest issue or PR number and write the next one where `progress.json` and the changelog name this PR. Then push once and open the PR, and check that it got that number. Land by fast-forward once "CI result" is green and the bots are clear (`CLAUDE.md`, Rules).
 
 ## 4. Evidence
 

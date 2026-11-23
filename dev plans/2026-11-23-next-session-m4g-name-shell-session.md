@@ -49,7 +49,7 @@ Each contract's open questions; the section order's shape if it changes the mani
 ## 7. Evidence and next IDs
 
 - **Evidence:** `docs/HANDOFF.md`; `dev plans/contracts/kernel-ai.md`, "Changes after approval"; `dev plans/done/`.
-- **IDs:** yours are 0061, 0063, 0064, `kernel_0017`, `kernel_0018`; the side lane's 0062, 0065 and up, `pages_0002`. PR numbers come from GitHub just before each push.
+- **IDs:** yours are 0061, 0063, 0064, `kernel_0017`, `kernel_0018`; the side lane's 0062, 0065 and up, `pages_0002`. Before each push, read the next PR number from GitHub (the newest issue or PR plus one) for the files that name it.
 
 ## 8. Candidates for `knowledge/`
 
