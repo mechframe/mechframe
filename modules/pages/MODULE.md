@@ -41,7 +41,12 @@ None.
 
 ## Extension points
 
-None yet. A page's title in search results, left empty, is "{title} · {site name}", as the kernel titles its own pages.
+**Its page read** (0.1.1), for a site whose own page answers `/:address` (the same rank as pages', which the site's route takes) and draws pages' live page in its own look:
+
+- **Web, `@/modules/pages/public`** (decision 0057): `usePage(address)`, the address with its slash or without it as a route's parameter gives it. It answers a `LivePage` (`{title, address, html, search_title, search_description, updated_at}`), or a `PageMoved` (`{moved}`) that `isMoved` tells apart; any other address is a 404 `pages.page_not_found`. pages' own `PublicPage` reads through the same hook.
+- **The server copy stays pages' own:** the site's page draws the same words in the same order (an `h1`, then the body), so the site adds nothing for `/:address`. There's no backend read for a site's server copy yet.
+
+A page's title in search results, left empty, is "{title} · {site name}", as the kernel titles its own pages.
 
 ## Known limits
 

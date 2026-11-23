@@ -9,6 +9,7 @@ export const { api, useApiQuery, useApiMutation } = createApiClient<paths>();
 export type Full = components["schemas"]["Full"];
 export type Listed = components["schemas"]["Listed"];
 export type LivePage = components["schemas"]["LivePage"];
+export type PageMoved = components["schemas"]["Moved"];
 export type NewPage = components["schemas"]["NewPage"];
 export type Change = components["schemas"]["PageChange"];
 export type Status = Listed["status"];

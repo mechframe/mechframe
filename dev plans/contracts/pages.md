@@ -3,7 +3,7 @@ feature: The pages module, the site's fixed pages such as About and Credits (Vib
 status: approved
 plan: `docs/plans/vibrant-mindz-backend/extraction/pages.md`; `dev plans/2026-11-21-vibrant-mindz-push-plan.md` (M4); the canvas's AdminPages and AdminPost boards (`C:\DEV\VM Website\design\site\AdminPages.dc.html`, `AdminPost.dc.html`)
 approved: 2026-11-21 (the owner's four answers in §8: 2 and 3 as recommended; 1 for now, with VybeSite's builder to follow; 4, header and footer)
-pr: the kernel's editor first (decision 0055, #118), then `pages` (decision 0056, #121)
+pr: the kernel's editor first (decision 0055, #118), then `pages` (decision 0056, #121); 0.1.1, its page read and the editor's crossed saves (§10, #138)
 ---
 
 # Contract: `pages`
@@ -86,3 +86,22 @@ SPEC 4 to 9 and 16; `skills/mechframe-module-extractor/SKILL.md` and `module-con
 - 2026-11-22, in #121: the kernel exports its `NotFound` page, which the public page draws for an address with no live page.
 - 2026-11-22, in #121 (CodeRabbit): the address a page holds is its own, live or not, so a page that takes an address ends any move there; a draft or an unpublished page's address answers 404, never another page's 301.
 - 2026-11-22, in #121 (Codex and CodeRabbit): each new page reads the loaded menus again once they're a minute old, and an editor's save, publish, unpublish or delete has the site's menus read again at once.
+
+## 10. 0.1.1: its page read in `public.ts`, and the editor's crossed saves
+
+Asked by VM Website (Dev 12, `C:\DEV\VM Website\dev plans\contracts\written-page.md` §8, 1, with the owner's OK, 2026-11-23): a site whose own page answers `/:address` draws pages' live page in its own look, as blog 0.1.1 (#128) let a site's own Blog and Post pages draw blog's posts.
+
+- **The read, `web/public.ts`,** reached as `@/modules/pages/public` (decision 0057, SPEC 7):
+  - `usePage(address)`, the hook `PublicPage` reads through: `GET /page?address=/<address>`, the address with its slash or without it (`useParams` gives `about`). It answers a `LivePage`, or a `PageMoved` for an address a live page left, which `isMoved` tells apart. Any other address is an `ApiProblem`, 404 `pages.page_not_found`.
+  - The answer's types, `LivePage` (`{title, address, html, search_title, search_description, updated_at}`) and `PageMoved` (`{moved}`).
+  - pages' own `PublicPage` reads through the same hook (`web/reads.ts`), so the two can't drift.
+- **Unchanged:**
+  - the route and its answer;
+  - the server copy: the site's page draws the same words in the same order, so pages' `server_copy.py` still answers crawlers and the site adds nothing for `/:address`;
+  - the menus: a site places `nav.public` and `nav.footer` itself, as now.
+  - There's no `pages.public` for a site's server copy yet: nobody has asked for one.
+- **The editor's crossed saves** (`web/pages/AdminPage.tsx`), the two gaps blog closed in #123 (CodeRabbit). A save someone else got to first is now worked out from the fields as they stand when the 409 lands, not as they were sent:
+  - a field typed back to its saved value while the save waited is asked about, not quietly taken as theirs;
+  - what was typed while the save waited survives the conflict's choice;
+  - and a third blog closed then, found while porting: a publish or unpublish that lands while a field is asked about shows in the Publish panel, its fields' merge base unchanged.
+- **No migration, decision or new route.** `module.json` 0.1.1, the changelog and `MODULE.md`'s "Extension points".

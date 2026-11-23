@@ -1,7 +1,7 @@
 {
   "id": "pages",
   "name": "Pages",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "status": "experimental",
   "category": "content",
   "summary": "The site's fixed pages, About to Privacy, written in Markdown and placed in the header's and footer's menus.",

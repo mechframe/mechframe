@@ -352,6 +352,98 @@ describe("the editor", () => {
     expect(title).toHaveValue("About us");
   });
 
+  it("keeps a field typed back to its saved value while the save waits, and asks about it (pages 0.1.1)", async () => {
+    let answer: (value: Answer) => void = () => undefined;
+    let patches = 0;
+    routed({
+      [`GET ${ONE}`]: { status: 200, body: full({ title: "A" }) },
+      [`PATCH ${ONE}`]: () => {
+        patches += 1;
+        return patches === 1
+          ? new Promise<Answer>((resolve) => {
+              answer = resolve;
+            })
+          : { status: 200, body: full({ title: "A", version: 3 }) };
+      },
+    });
+    renderApp({ path: `/admin/pages/${ID}`, modules: [pages], session: editor });
+
+    const title = await screen.findByRole("textbox", { name: "Title" });
+    await userEvent.clear(title);
+    await userEvent.type(title, "B");
+    await userEvent.click(screen.getAllByRole("button", { name: "Save draft" })[0] as HTMLElement);
+    await waitFor(() => {
+      expect(patches).toBe(1);
+    });
+    await userEvent.clear(title);
+    await userEvent.type(title, "A");
+    answer(problem(409, "pages.changed", { page: full({ title: "B", version: 2 }) }));
+
+    // Theirs is B and yours is A again: that's a choice, not theirs by default.
+    expect(await screen.findByRole("radio", { name: "Keep mine" })).toBeInTheDocument();
+    expect(title).toHaveValue("A");
+  });
+
+  it("keeps what's typed while the save waits through the conflict's choice (pages 0.1.1)", async () => {
+    let answer: (value: Answer) => void = () => undefined;
+    let patches = 0;
+    const sent = routed({
+      [`GET ${ONE}`]: { status: 200, body: full() },
+      [`PATCH ${ONE}`]: () => {
+        patches += 1;
+        return patches === 1
+          ? new Promise<Answer>((resolve) => {
+              answer = resolve;
+            })
+          : { status: 200, body: full({ title: "My title", body: "We make music. More.", version: 3 }) };
+      },
+    });
+    renderApp({ path: `/admin/pages/${ID}`, modules: [pages], session: editor });
+
+    const title = await screen.findByRole("textbox", { name: "Title" });
+    await userEvent.clear(title);
+    await userEvent.type(title, "My title");
+    await userEvent.click(screen.getAllByRole("button", { name: "Save draft" })[0] as HTMLElement);
+    await waitFor(() => {
+      expect(patches).toBe(1);
+    });
+    const body = screen.getByRole("textbox", { name: "Page body" });
+    await userEvent.type(body, " More.");
+    answer(problem(409, "pages.changed", { page: full({ title: "Their title", version: 2 }) }));
+
+    await userEvent.click(await screen.findByRole("radio", { name: "Keep mine" }));
+    await userEvent.click(screen.getByRole("button", { name: /Save with these choices/ }));
+    await waitFor(() => {
+      expect(patches).toBe(2);
+    });
+    const second = sent.filter((each) => each.method === "PATCH")[1] as Request;
+    expect(await json(second)).toEqual({ version: 2, title: "My title", body: "We make music. More." });
+    expect(body).toHaveValue("We make music. More.");
+  });
+
+  it("shows a page as live once its publish lands, even while it asks about a field (pages 0.1.1)", async () => {
+    let answer: (value: Answer) => void = () => undefined;
+    routed({
+      [`GET ${ONE}`]: { status: 200, body: full() },
+      [`POST ${ONE}/publish`]: () =>
+        new Promise<Answer>((resolve) => {
+          answer = resolve;
+        }),
+    });
+    renderApp({ path: `/admin/pages/${ID}`, modules: [pages], session: editor });
+
+    const title = await screen.findByRole("textbox", { name: "Title" });
+    await userEvent.click(screen.getByRole("button", { name: "Publish" }));
+    // Typed while the publish is on its way, and someone else saved the title too.
+    await userEvent.type(title, "!");
+    answer({ status: 200, body: full({ title: "Their title", status: "published", published_at: "2026-11-23T12:00:00+00:00", version: 2 }) });
+
+    expect(await screen.findByText("Their title")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Back to the form" }));
+    expect(await screen.findByText("Live. Saving changes the page on the site at once.")).toBeInTheDocument();
+    expect(title).toHaveValue("About!");
+  });
+
   it("takes in someone else's save an Unpublish answers with, keeping your changes (Codex on #121)", async () => {
     const sent = routed({
       [`GET ${ONE}`]: { status: 200, body: full({ status: "published", published_at: "2026-11-20T12:00:00+00:00" }) },

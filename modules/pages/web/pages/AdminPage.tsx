@@ -50,6 +50,7 @@ import {
   conflictOf,
   formOf,
   merged,
+  mineOf,
   openingWords,
   problems,
   rebased,
@@ -108,7 +109,8 @@ function Editor({ saved: first, start }: { saved: Full | null; start: Form }) {
   const [busy, setBusy] = useState(false);
   const [refused, setRefused] = useState<unknown>(null);
   const [checked, setChecked] = useState<Partial<Record<FormField, string>>>({});
-  const [conflict, setConflict] = useState<{ said: SettingsConflict; theirs: Full; mine: Form } | null>(null);
+  // `mine` is the form when the conflict came, typing since the save included; `fields` what the person changed.
+  const [conflict, setConflict] = useState<{ said: SettingsConflict; theirs: Full; mine: Form; fields: FormField[] } | null>(null);
   const [scheduling, setScheduling] = useState(false);
   const [at, setAt] = useState("");
   const [deleting, setDeleting] = useState(false);
@@ -174,14 +176,19 @@ function Editor({ saved: first, start }: { saved: Full | null; start: Form }) {
     } catch (error) {
       if (error instanceof ApiProblem && error.code === "pages.changed") {
         const theirs = error.extra.page as Full;
-        const said = conflictOf(error.detail, formOf(onto), from, theirs);
+        // The fields as they stand now, typing since the save went included, even
+        // a field typed back to what's saved (pages 0.1.1, as blog's #123).
+        const latest = formNow.current;
+        const fields = mineOf(latest, formOf(onto), from);
+        const said = conflictOf(error.detail, formOf(onto), latest, theirs, fields);
         if (said.conflicts.length === 0) {
           // They changed only what you didn't: theirs, with yours on top, saved again.
+          const next = merged(formOf(onto), latest, theirs, new Set(), fields);
           setSaved(theirs);
-          setForm((now) => merged(formOf(onto), now, theirs, new Set()));
-          return save(merged(formOf(onto), from, theirs, new Set()), theirs);
+          setForm(next);
+          return save(next, theirs);
         }
-        setConflict({ said, theirs, mine: from });
+        setConflict({ said, theirs, mine: latest, fields });
       }
       throw error;
     }
@@ -199,9 +206,14 @@ function Editor({ saved: first, start }: { saved: Full | null; start: Form }) {
       return;
     }
     const before = formOf(held);
-    const said = conflictOf("Someone saved this page since you opened it. Here is how it reads now.", before, formNow.current, answer);
+    const latest = formNow.current;
+    const fields = changed(latest, before);
+    const said = conflictOf("Someone saved this page since you opened it. Here is how it reads now.", before, latest, answer, fields);
     if (said.conflicts.length > 0) {
-      setConflict({ said, theirs: answer, mine: formNow.current });
+      // The publish or unpublish happened: the panel says so while the fields wait on a
+      // choice, and the fields' merge base stays the one this editor had (pages 0.1.1, as blog's #123).
+      setSaved({ ...held, status: answer.status, publish_at: answer.publish_at, published_at: answer.published_at });
+      setConflict({ said, theirs: answer, mine: latest, fields });
       return;
     }
     setForm((now) => merged(before, now, answer, new Set()));
@@ -305,7 +317,7 @@ function Editor({ saved: first, start }: { saved: Full | null; start: Form }) {
           format={(field, value) => (field === "menu" ? MENUS.find((each) => each.value === value)?.label : field === "body" ? openingWords(String(value), 120) : undefined) ?? String(value)}
           onResolve={(choices) => {
             const keep = new Set(Object.entries(choices).filter(([, choice]) => choice === "theirs").map(([field]) => field));
-            const next = merged(formOf(saved ?? conflict.theirs), conflict.mine, conflict.theirs, keep);
+            const next = merged(formOf(saved ?? conflict.theirs), conflict.mine, conflict.theirs, keep, conflict.fields);
             setSaved(conflict.theirs);
             setForm(next);
             // A resolution may send nothing (every field kept as theirs): it's done all the same (CodeRabbit on #121).
