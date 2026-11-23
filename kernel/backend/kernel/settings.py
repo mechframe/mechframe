@@ -62,7 +62,7 @@ from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from kernel import audit, crypto, events
-from kernel.errors import Problem
+from kernel.errors import Problem, field_message
 from kernel.models import Setting, SettingVersion
 
 #: The first key of every settings advisory lock: pg_advisory_xact_lock(LOCK_CLASS, module).
@@ -342,7 +342,9 @@ class SettingsRegistry:
         except ValidationError as error:
             errors: dict[str, list[str]] = {}
             for item in error.errors():
-                errors.setdefault(".".join(str(p) for p in item["loc"]), []).append(item["msg"])
+                errors.setdefault(".".join(str(p) for p in item["loc"]), []).append(
+                    field_message(item)
+                )
             raise Problem(
                 "kernel.invalid_request", 422, "Some of these settings aren't valid.", errors=errors
             ) from None

@@ -38,7 +38,7 @@ function sayStyle(error: unknown): string {
   if (error instanceof ApiProblem && STYLE_PROBLEMS[error.code]) return STYLE_PROBLEMS[error.code] ?? "";
   if (error instanceof ApiProblem && error.code === "kernel.invalid_request") {
     const first = Object.values(error.errors)[0];
-    return first?.join(" ").replace(/^Value error, /, "") ?? sayAi(error);
+    return first?.join(" ") ?? sayAi(error);
   }
   return sayAi(error);
 }

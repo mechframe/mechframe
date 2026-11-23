@@ -131,11 +131,22 @@ async def _http(_request: Request, exc: Exception) -> JSONResponse:
     return Problem(code, error.status_code, detail, headers=error.headers).response()
 
 
+def field_message(item: Mapping[str, Any]) -> str:
+    """A pydantic error's words for its field: a validator's own sentence when
+    it raised ValueError, which pydantic words "Value error, <sentence>"; else
+    pydantic's message (VM Website Dev 12, 2026-11-23)."""
+    if item.get("type") == "value_error":
+        cause = (item.get("ctx") or {}).get("error")
+        if cause is not None and str(cause):
+            return str(cause)
+    return str(item.get("msg", ""))
+
+
 async def _invalid(_request: Request, exc: Exception) -> JSONResponse:
     error = cast(RequestValidationError, exc)
     errors: dict[str, list[str]] = {}
     for item in error.errors():
-        errors.setdefault(_field(item.get("loc", ())), []).append(str(item.get("msg", "")))
+        errors.setdefault(_field(item.get("loc", ())), []).append(field_message(item))
     return Problem(
         "kernel.invalid_request", 422, "Some of what was sent isn't valid.", errors=errors
     ).response()

@@ -58,7 +58,7 @@ export default function AiSettings() {
     } catch (error) {
       if (error instanceof ApiProblem && error.code === "kernel.invalid_request") {
         const why = error.errors.api_key?.join(" ");
-        setRefused(why ? why.replace(/^Value error, /, "") : sayAi(error));
+        setRefused(why ?? sayAi(error));
       } else if (error instanceof ApiProblem && error.code === "kernel.settings_conflict") {
         toast({ tone: "danger", text: "Someone else changed the key meanwhile. Reload the page to see it." });
       } else {

@@ -60,7 +60,7 @@ describe("Settings → AI", () => {
   it("says why a paste isn't a key, beside the field", async () => {
     const refused = problem(422, "kernel.invalid_request");
     (refused.body as Record<string, unknown>).errors = {
-      api_key: ["Value error, An API key has no spaces or line breaks in it. Copy it again from the Anthropic console."],
+      api_key: ["An API key has no spaces or line breaks in it. Copy it again from the Anthropic console."],
     };
     answers(false, {}, { "PUT /api/kernel/admin/settings/kernel.ai": refused });
     const user = userEvent.setup();
