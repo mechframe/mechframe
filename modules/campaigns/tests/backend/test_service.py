@@ -19,12 +19,15 @@ from campaigns import privacy, sending, service
 from campaigns import seed as campaigns_seed
 from campaigns.models import Delivery, Email, SetAside, Subscriber
 from campaigns.schemas import CampaignEmailChange, NewCampaignEmail
+from cryptography.fernet import Fernet
 from sqlalchemy import delete, func, select, text, update
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from kernel import Problem, clock, crypto, email
 from kernel import privacy as kernel_privacy
 from kernel import seed as seeding
+from kernel.config import reset_config
 
 from ..conftest import make_person
 
@@ -830,3 +833,90 @@ async def test_a_commit_slower_than_a_minute_still_holds_the_pace(
     assert await _run(db) == 2
     monkeypatch.setattr(db, "commit", commit)
     assert await _run(db) == 0  # the two just committed are still in this minute
+
+
+async def test_a_bounce_holds_the_subscriber_while_it_sets_them_aside(
+    database: Any, db: AsyncSession, queued: Queued
+) -> None:
+    """CodeRabbit on #134: the bounce path takes the subscriber's row first, as the
+    send run does, so a run deciding their copy waits for it, or it for the run."""
+    address = _address("bounce")
+    await _subscribed(db, queued, address)
+    assert await service.set_aside_if_known(db, address, "bounced", "address: 5.1.1")
+    async with database.sessions() as other:
+        with pytest.raises(DBAPIError):
+            await other.execute(
+                select(Subscriber)
+                .where(Subscriber.email_normal == address)
+                .with_for_update(nowait=True)
+            )
+        await other.rollback()
+    await db.rollback()
+
+
+async def test_a_pending_token_no_key_opens_is_replaced_with_a_working_one(
+    db: AsyncSession, queued: Queued
+) -> None:
+    """CodeRabbit on #134: a pending address whose sealed token no key opens still
+    gets its confirmation, after the wait, with a new link that confirms."""
+    address = _address("lost")
+    await _ask(db, address)
+    await db.execute(
+        update(Subscriber).where(Subscriber.email_normal == address).values(token_sealed="lost")
+    )
+    await db.commit()
+    await _ask(db, address)
+    assert len(queued.to(address)) == 1  # the wait still holds
+    clock.advance(service.RESEND_AFTER.total_seconds() + 1)
+    await _ask(db, address)
+    sent = queued.to(address)
+    assert len(sent) == 2
+    token = _token_in(sent[1])
+    assert token != _token_in(sent[0])
+    assert (await service.confirm(db, token))["subscribed"] is True
+
+
+async def test_the_prune_reseals_tokens_with_the_newest_key(
+    db: AsyncSession, queued: Queued, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """CodeRabbit on #134: a night after a new key goes in front, every token is
+    sealed with it, so the old key can leave and no link is lost."""
+    old, new = Fernet.generate_key().decode(), Fernet.generate_key().decode()
+
+    def keys(*given: str) -> None:
+        monkeypatch.setenv("ENCRYPTION_KEYS", ",".join(given))
+        reset_config()
+
+    try:
+        keys(old)
+        address = _address("kept")
+        await _subscribed(db, queued, address)
+        before = await _row(db, address)
+        assert before is not None
+        hashed = before.token_hash
+        keys(new, old)
+        await service.prune(db)
+        await db.commit()
+        keys(new)
+        after = await _row(db, address)
+        assert after is not None
+        assert after.token_hash == hashed
+        assert service._hash(crypto.open(after.token_sealed)) == hashed
+    finally:
+        monkeypatch.undo()
+        reset_config()
+
+
+async def test_only_an_address_sent_that_newsletter_is_vouched_for(
+    db: AsyncSession, queued: Queued
+) -> None:
+    """CodeRabbit on #134: Resend's word about mail stands only for a newsletter copy,
+    told by its subject and its address; a sign-in link's bounce is left alone."""
+    reader, other = _address("reader"), _address("other")
+    await _subscribed(db, queued, reader, other)
+    row = await _email(db)
+    await _send_now(db, row)
+    assert await _run(db) == 2
+    assert await service.sent_copies(db, "Winter shows", [reader.upper(), _address()]) == {reader}
+    assert await service.sent_copies(db, "Sign in to Test Site", [reader]) == set()
+    assert await service.sent_copies(db, "", [reader]) == set()

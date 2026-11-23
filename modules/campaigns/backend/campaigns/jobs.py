@@ -71,7 +71,8 @@ async def read_mailbox(
                 continue  # not a bounce or spam report: left where it is
             if verdicts:
                 async with sessions() as db:
-                    await service.apply(db, verdicts, tokens)
+                    vouched = await service.vouched_by_tokens(db, tokens)
+                    await service.apply(db, verdicts, vouched)
                     await db.commit()
             try:
                 await asyncio.to_thread(mailbox.done, uid)

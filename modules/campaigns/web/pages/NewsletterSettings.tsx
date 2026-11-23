@@ -2,6 +2,8 @@
 // `dev plans/contracts/campaigns.md` §2): whether sign-ups are open, the postal
 // address every newsletter carries, the footer's note, and the send pace. The Site
 // tab's one Save sends it.
+import { useState } from "react";
+
 import { Field, Input, LoadError, Switch, TextArea, useSettings } from "@/kernel";
 
 import "../campaigns.css";
@@ -10,6 +12,8 @@ const text = (value: unknown): string => (typeof value === "string" ? value : ""
 
 export default function NewsletterSettings() {
   const form = useSettings("campaigns");
+  // The pace field's words while it's being typed in: null shows the setting.
+  const [typed, setTyped] = useState<string | null>(null);
   if (form.read === "failed") {
     return <LoadError what="The newsletter's settings" error={form.problem} onRetry={form.retry} inline />;
   }
@@ -62,10 +66,17 @@ export default function NewsletterSettings() {
           inputMode="numeric"
           min={1}
           max={10000}
-          value={String(pace)}
+          value={typed ?? String(pace)}
           onChange={(event) => {
-            const value = Number.parseInt(event.target.value, 10);
-            form.set("send_per_hour", Number.isNaN(value) ? 1 : value);
+            // The field keeps what's typed, empty included; only a whole number
+            // becomes the setting, which the server checks for its range
+            // (CodeRabbit on #134). Leaving the field shows the setting again.
+            const words = event.target.value;
+            setTyped(words);
+            if (/^\d+$/.test(words)) form.set("send_per_hour", Number.parseInt(words, 10));
+          }}
+          onBlur={() => {
+            setTyped(null);
           }}
         />
       </Field>

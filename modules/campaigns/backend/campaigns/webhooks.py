@@ -106,6 +106,13 @@ def verdicts(event: Mapping[str, Any]) -> list[tuple[str, bounces.Verdict]]:
     return [(address, verdict) for address in _recipients(data)]
 
 
+def subject_of(event: Mapping[str, Any]) -> str:
+    """The subject of the message an event is about, as Resend sent it."""
+    data = event.get("data")
+    subject = data.get("subject") if isinstance(data, Mapping) else None
+    return subject if isinstance(subject, str) else ""
+
+
 def parsed(body: bytes) -> Mapping[str, Any]:
     try:
         event = json.loads(body)

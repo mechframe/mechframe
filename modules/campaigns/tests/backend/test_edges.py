@@ -264,8 +264,13 @@ async def test_a_bounce_report_about_an_address_set_aside_twice_counts_once(
     address = _address()
     await service.request_news(db, address=address, name=None, source="form")
     verdict = bounces.Verdict("bounced", "address: 5.1.1")
-    assert await service.apply(db, [(address, verdict), (address, verdict)]) == 1
-    assert await service.apply(db, [(_address("stranger"), verdict)]) == 0
+    vouched = {address.lower()}
+    assert await service.apply(db, [(address, verdict), (address, verdict)], vouched) == 1
+    assert await service.apply(db, [(_address("stranger"), verdict)], vouched) == 0
+    # A verdict about an address nothing vouches for sets nobody aside (CodeRabbit on #134).
+    unvouched = _address("unvouched")
+    await service.request_news(db, address=unvouched, name=None, source="form")
+    assert await service.apply(db, [(unvouched, verdict)], vouched) == 0
     await db.commit()
 
 

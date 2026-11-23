@@ -110,7 +110,12 @@ async def resend_webhook(request: Request, db: AsyncSession = Depends(get_db)) -
         raise Problem("campaigns.bad_signature", 401, "This delivery isn't signed by Resend.")
     if not await service.first_time(db, f"resend:{delivery}"):
         raise Problem("campaigns.replayed", 409, "This delivery was taken already.")
-    await service.apply(db, webhooks.verdicts(webhooks.parsed(body)))
+    event = webhooks.parsed(body)
+    found = webhooks.verdicts(event)
+    copies = await service.sent_copies(
+        db, webhooks.subject_of(event), [address for address, _ in found]
+    )
+    await service.apply(db, found, copies)
     await db.commit()
     return {"received": True}
 

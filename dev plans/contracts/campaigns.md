@@ -210,9 +210,11 @@ For later, not a choice:
   - **One send run at a time** (a transaction's advisory lock): Send now's run and the minute's can't each spend the same allowance. A run that finds it held leaves the work to the other.
   - **An email too long once rendered is 422 `campaigns.too_long`** at Send and at a scheduled email's save, under the mailer's 256 KiB a part. One that gets past it anyway (a footer changed since) stops, so it never holds the sends behind it.
 - 2026-11-23, CodeRabbit on #134:
-  - **A report from the bounce mailbox sets an address aside only when it returns that address's own copy:** the unsubscribe token in the returned message's List-Unsubscribe (or a link in its body). Anyone can mail the mailbox, so a forged report sets nobody aside. Resend's webhook is signed, so its word stands without one.
+  - **A report from the bounce mailbox sets an address aside only when it returns that address's own copy:** the unsubscribe token in the returned message's List-Unsubscribe (or a link in its body). Anyone can mail the mailbox, so a forged report sets nobody aside. Resend's webhook is signed, and its word stands only for an address queued a newsletter copy with the subject its event names, since its events carry the subject and not the headers: a bounce of a sign-in link or a notice to a subscriber sets nobody aside.
   - **A Resend bounce with no status code is unclear:** General can be a policy block, and NoEmail says only that the address couldn't be read back. Every doubt sets nobody aside.
   - **The hour holds:** a run queues no more than `send_per_hour` less what went in the last hour, so a setting under 60 isn't raised to one a minute.
+  - **Tokens are resealed with the newest key each night** (the prune), so the key before can leave a night after a new one goes in front. A pending sign-up whose token no key opens gets a new one when it asks again, after the usual ten minutes.
+  - **The bounce path holds the subscriber's row before it sets them aside,** as the send run does, so neither overtakes the other.
   - **A token no key opens skips that copy alone;** a report the reader can't parse moves to the read folder anyway; the reader's limit counts only bounce and spam reports.
   - **The webhook refuses malformed headers with 401,** never a 500: a timestamp of a few ASCII digits, signatures compared as bytes.
   - **NewsletterSignup's done state says "if"**: an address already on the list gets the same answer and no second confirmation.

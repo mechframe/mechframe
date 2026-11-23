@@ -427,6 +427,31 @@ describe("the Newsletter settings", () => {
     expect(screen.getByRole("switch", { name: "Sign-ups open" })).toHaveAttribute("aria-checked", "true");
     expect(screen.getByRole("spinbutton", { name: "Emails an hour" })).toHaveValue(6000);
   });
+
+  it("keeps the pace field as it's typed, cleared included (CodeRabbit on #134)", async () => {
+    const form = (version: number, values: Record<string, unknown>): Answer => ({ status: 200, body: { version, values } });
+    const empty = { status: 200, body: { items: [], next_cursor: null, people: {} } };
+    const sent = routed({
+      "GET /api/kernel/admin/settings/kernel.site": form(1, { description: "", kind: "Organization", logo: "", card_image: "", same_as: [], llms_summary: "", ai_crawlers: "allow" }),
+      "GET /api/kernel/admin/settings/kernel.auth": form(0, { sign_up_mode: "closed" }),
+      "GET /api/kernel/admin/settings/campaigns": form(2, { signups_open: true, postal_address: "P.O. Box 12", footer_note: "", send_per_hour: 400 }),
+      "GET /api/kernel/admin/settings/kernel.site/history": empty,
+      "GET /api/kernel/admin/settings/kernel.auth/history": empty,
+      "GET /api/kernel/admin/settings/campaigns/history": empty,
+      "PUT /api/kernel/admin/settings/campaigns": { status: 200, body: { version: 3, changed: ["send_per_hour"], merged: [] } },
+    });
+    const user = userEvent.setup();
+    renderApp({ path: "/admin/settings", modules: [campaigns], session: sender });
+    const pace = await screen.findByRole("spinbutton", { name: "Emails an hour" });
+    await user.clear(pace);
+    expect(pace).toHaveValue(null);
+    await user.type(pace, "200");
+    expect(pace).toHaveValue(200);
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByText("Settings saved.")).toBeInTheDocument();
+    const [put] = sentTo(sent, "PUT", "/api/kernel/admin/settings/campaigns");
+    expect(put && (await json(put))).toEqual({ version: 2, changes: { send_per_hour: 200 } });
+  });
 });
 
 describe("the words", () => {

@@ -566,11 +566,23 @@ def _signed(body: bytes, delivery: str | None = None, key: bytes = KEY) -> dict[
     }
 
 
-def _event(kind: str, address: str, **bounce: str) -> bytes:
-    data: dict[str, Any] = {"email_id": str(uuid.uuid4()), "to": [address]}
+def _event(kind: str, address: str, subject: str, **bounce: str) -> bytes:
+    data: dict[str, Any] = {"email_id": str(uuid.uuid4()), "to": [address], "subject": subject}
     if bounce:
         data["bounce"] = bounce
     return json.dumps({"type": kind, "created_at": "2026-11-23T10:00:00Z", "data": data}).encode()
+
+
+async def _newsletter(browser: Browser, *addresses: str) -> str:
+    """A newsletter sent to the list, these addresses on it: its subject, which
+    Resend's events name the copy by."""
+    draft = await _draft(browser)
+    await _send(browser, draft["id"])
+    await browser.advance(120)  # the copies other tests queued fall out of the pace's minute
+    await browser.run_job("campaigns.send")
+    for address in addresses:
+        assert await _newsletters(browser, address, draft["subject"])
+    return str(draft["subject"])
 
 
 async def _aside_reason(browser: Browser, address: str) -> str | None:
@@ -589,6 +601,7 @@ async def test_the_webhook_fails_closed_and_refuses_a_bad_signature_and_a_replay
     body = _event(
         "email.bounced",
         address,
+        await _newsletter(browser, address),
         type="Permanent",
         subType="General",
         message="550 5.1.1 no such user",
@@ -623,14 +636,30 @@ async def test_a_complaint_sets_aside_and_a_soft_bounce_doesn_t(
 ) -> None:
     await _fresh(browser)
     monkeypatch.setenv("CAMPAIGNS_RESEND_WEBHOOK_SECRET", SECRET)
-    soft, complained = _address("soft"), _address("spam")
-    await _subscribed(browser, soft, complained)
+    soft, complained, elsewhere = _address("soft"), _address("spam"), _address("elsewhere")
+    await _subscribed(browser, soft, complained, elsewhere)
+    subject = await _newsletter(browser, soft, complained, elsewhere)
     resend = browser.stranger()
     for body in (
         _event(
-            "email.bounced", soft, type="Transient", subType="MailboxFull", message="452 4.2.2 full"
+            "email.bounced",
+            soft,
+            subject,
+            type="Transient",
+            subType="MailboxFull",
+            message="452 4.2.2 full",
         ),
-        _event("email.complained", complained),
+        _event("email.complained", complained, subject),
+        # About other mail the site sent: no newsletter copy has its subject, so the
+        # subscriber stays (CodeRabbit on #134).
+        _event(
+            "email.bounced",
+            elsewhere,
+            "Sign in to the site",
+            type="Permanent",
+            subType="General",
+            message="550 5.1.1 no such user",
+        ),
     ):
         taken = await resend.http.post(
             f"{API}/webhooks/resend", content=body, headers=_signed(body)
@@ -638,6 +667,7 @@ async def test_a_complaint_sets_aside_and_a_soft_bounce_doesn_t(
         assert taken.status_code == 200, taken.text
     assert await _aside_reason(browser, soft) is None
     assert await _aside_reason(browser, complained) == "complained"
+    assert await _aside_reason(browser, elsewhere) is None
 
 
 # --- events from contact and blog -------------------------------------------------------------
@@ -732,6 +762,7 @@ async def test_a_bounce_shows_as_the_attention_card(
     body = _event(
         "email.bounced",
         address,
+        await _newsletter(browser, address),
         type="Permanent",
         subType="General",
         message="550 5.1.1 The email account that you tried to reach does not exist",

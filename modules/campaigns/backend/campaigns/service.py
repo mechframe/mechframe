@@ -164,15 +164,20 @@ async def set_aside(db: AsyncSession, address: str, why: Why, detail: str = "") 
 async def set_aside_if_known(db: AsyncSession, address: str, why: Why, detail: str) -> bool:
     """A bounce or a complaint about one of the newsletter's addresses sets it
     aside. One about other mail the site sent (a sign-in link, a notice) is
-    left alone: it isn't the newsletter's."""
-    known = await db.scalar(select(Subscriber.id).where(Subscriber.email_normal == normal(address)))
+    left alone: it isn't the newsletter's. The subscriber's row is held first, as
+    the send run holds it while it decides their copy, so the run waits for this
+    or this for the run (CodeRabbit on #134)."""
+    known = await db.scalar(
+        select(Subscriber.id).where(Subscriber.email_normal == normal(address)).with_for_update()
+    )
     if known is None:
         return False
     return await set_aside(db, address, why, detail)
 
 
-async def _vouched(db: AsyncSession, tokens: set[str]) -> set[str]:
-    """The addresses whose own tokens these are."""
+async def vouched_by_tokens(db: AsyncSession, tokens: set[str]) -> set[str]:
+    """The addresses whose own tokens these are: a bounce report's word stands for
+    them, as only mail the newsletter sent them carries their token."""
     if not tokens:
         return set()
     hashes = [_hash(token) for token in tokens]
@@ -181,21 +186,41 @@ async def _vouched(db: AsyncSession, tokens: set[str]) -> set[str]:
     )
 
 
+async def sent_copies(db: AsyncSession, subject: str, addresses: list[str]) -> set[str]:
+    """Those of the addresses queued a newsletter copy with this subject: Resend's word
+    about a message stands for them. Its events carry the subject, not the headers, so
+    a bounce of a sign-in link or a notice to a subscriber names no copy and sets
+    nobody aside (CodeRabbit on #134)."""
+    wanted = {normal(address) for address in addresses}
+    if not subject or not wanted:
+        return set()
+    return set(
+        await db.scalars(
+            select(Delivery.email_normal)
+            .join(Email, Delivery.email_id == Email.id)
+            .where(
+                Email.subject == subject,
+                Delivery.email_normal.in_(wanted),
+                Delivery.queued_at.is_not(None),
+            )
+            .distinct()
+        )
+    )
+
+
 async def apply(
-    db: AsyncSession,
-    verdicts: list[tuple[str, bounces.Verdict]],
-    tokens: set[str] | None = None,
+    db: AsyncSession, verdicts: list[tuple[str, bounces.Verdict]], vouched: set[str]
 ) -> int:
     """A report's or a webhook's verdicts applied: answers how many were set aside.
-    Resend's webhook is signed, so its word stands (`tokens` None). Anyone can mail
-    the bounce mailbox, so a report's verdict stands only for an address whose own
-    token the returned message carries (CodeRabbit on #134)."""
-    vouched = None if tokens is None else await _vouched(db, tokens)
+    A verdict stands only for an address `vouched` holds, one the message was the
+    newsletter's to: a report's by the token the returned message carries (anyone
+    can mail the bounce mailbox), Resend's by the copy its subject names
+    (CodeRabbit on #134)."""
     count = 0
     for address, verdict in verdicts:
         if verdict.set_aside is None:
             continue
-        if vouched is not None and normal(address) not in vouched:
+        if normal(address) not in vouched:
             continue
         if await set_aside_if_known(db, address, verdict.set_aside, verdict.why):
             count += 1
@@ -254,7 +279,7 @@ async def request_news(
     if await is_set_aside(db, key):
         return
     now = clock.now()
-    _, hashed, sealed = _token()
+    token, hashed, sealed = _token()
     await db.execute(
         insert(Subscriber)
         .values(
@@ -285,7 +310,13 @@ async def request_news(
     if row.confirm_sent_at is not None and now - row.confirm_sent_at < RESEND_AFTER:
         return
     row.confirm_sent_at = now
-    link = render.confirm_page(email.site_url(), crypto.open(row.token_sealed))
+    try:
+        token = crypto.open(row.token_sealed)
+    except crypto.SealError:
+        # Sealed with a key since removed: the link sent before can't be sent again,
+        # so a new one replaces it and this confirmation carries it (CodeRabbit on #134).
+        row.token_hash, row.token_sealed = hashed, sealed
+    link = render.confirm_page(email.site_url(), token)
     await email.queue(db, CONFIRM, row.email, {"link": link})
 
 
@@ -984,4 +1015,29 @@ async def prune(db: AsyncSession) -> int:
     )
     await db.execute(delete(WebhookSeen).where(WebhookSeen.seen_at < now - KEEP_SEEN))
     await db.execute(delete(Delivery).where(Delivery.queued_at < now - KEEP_DELIVERIES))
+    await reseal(db)
     return int(gone.rowcount or 0)
+
+
+async def reseal(db: AsyncSession) -> int:
+    """Every token sealed again with the newest key, so the key before it can leave
+    a night after a new one goes in front (`kernel.crypto`; CodeRabbit on #134).
+    One no key opens is left: the send skips its copy, and a pending one is
+    replaced when it asks again. Answers how many were resealed."""
+    count = 0
+    rows = await db.execute(select(Subscriber.id, Subscriber.token_sealed))
+    for row_id, sealed in rows.all():
+        if crypto.sealed_with_newest(sealed):
+            continue
+        try:
+            fresh = crypto.rotate(sealed)
+        except crypto.SealError:
+            continue
+        # Only if it's still the value read: a change since keeps the newer one.
+        await db.execute(
+            update(Subscriber)
+            .where(Subscriber.id == row_id, Subscriber.token_sealed == sealed)
+            .values(token_sealed=fresh)
+        )
+        count += 1
+    return count
