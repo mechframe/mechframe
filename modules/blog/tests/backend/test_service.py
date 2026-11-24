@@ -482,6 +482,33 @@ async def test_a_post_is_announced_once_with_its_choices(
     assert (await service.get(db, post_id)).announced_at is not None
 
 
+async def test_the_announcement_carries_the_summary_as_version_2(
+    db: AsyncSession, database: Database, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """blog 0.1.3: campaigns' email holds the summary (SPEC 11, a new payload version)."""
+    said: list[Any] = []
+
+    async def emit(session: AsyncSession, name: str, payload: Any) -> int:
+        said.append(payload)
+        return 1
+
+    post = await _live(db, summary="Ten years of shows, in one night.", email_subscribers=True)
+    monkeypatch.setattr(kernel_events, "emit", emit)
+    heard = kernel_events.Event(
+        uuid.uuid4(),
+        "kernel.content.published",
+        1,
+        clock.now(),
+        {"type": "blog.post", "id": str(post.id)},
+    )
+    await events._announce(SimpleNamespace(sessions=database.sessions), heard)  # type: ignore[arg-type]
+
+    assert kernel_events.declaration(events.PostPublished) == ("blog.post.published", 2)
+    assert [(each.summary, each.email_subscribers) for each in said] == [
+        ("Ten years of shows, in one night.", True)
+    ]
+
+
 # --- the hooks -----------------------------------------------------------------------------
 
 

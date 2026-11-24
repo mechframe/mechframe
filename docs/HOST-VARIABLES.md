@@ -203,7 +203,7 @@ The kernel's defaults suit a small site on one service. Change these only with a
 
 Each module's own host variables, from its `module.json`, and the settings its admin page holds. A planned module's are as its scaffold has them so far; they grow as it's built.
 
-### `blog` 0.1.2 (experimental)
+### `blog` 0.1.3 (experimental)
 
 Dated posts in Markdown, with categories, a cover from the media library, scheduling and related posts.
 

@@ -160,8 +160,12 @@ function Editor({ saved: first, start }: { saved: Full | null; start: Form }) {
     void queryClient.invalidateQueries({ queryKey: ["get", PUBLIC_LIST] });
   }
 
-  /** Saves what changed; the post as the server now has it, or throws why not. */
-  async function save(from: Form = form, onto: Full | null = saved): Promise<Full> {
+  /**
+   * Saves what changed; the post as the server now has it, or throws why not.
+   * `carried` are the fields a retry already knows are the person's, so a field
+   * typed back to its saved value stays theirs to ask about (blog 0.1.3, as pages').
+   */
+  async function save(from: Form = form, onto: Full | null = saved, carried: readonly FormField[] = []): Promise<Full> {
     const found = problems(from, onto === null);
     setChecked(found);
     if (Object.keys(found).length > 0) throw new Error("Some fields need fixing first: they're marked.");
@@ -196,14 +200,17 @@ function Editor({ saved: first, start }: { saved: Full | null; start: Form }) {
         const theirs = error.extra.post as Full;
         // The form as it is now, typing since the save went included (CodeRabbit on #123).
         const latest = formNow.current;
-        const fields = mineOf(latest, formOf(onto), from);
+        const fields = [...new Set([...carried, ...mineOf(latest, formOf(onto), from)])];
         const conflicting = conflictOf(error.detail, formOf(onto), latest, theirs, fields);
         if (conflicting.conflicts.length === 0) {
           // They changed only what you didn't: theirs, with yours on top, saved again.
           const next = merged(formOf(onto), latest, theirs, new Set(), fields);
           setSaved(theirs);
           setForm(next);
-          return save(next, theirs);
+          // The fields read as `next` at once, before React draws it, so a retry
+          // answered first never takes their change for yours (blog 0.1.3, as pages').
+          formNow.current = next;
+          return save(next, theirs, fields);
         }
         setConflict({ said: conflicting, theirs, mine: latest, fields });
       }
@@ -336,10 +343,13 @@ function Editor({ saved: first, start }: { saved: Full | null; start: Form }) {
           onResolve={(choices) => {
             const keep = new Set(Object.entries(choices).filter(([, choice]) => choice === "theirs").map(([field]) => field));
             const next = merged(formOf(saved ?? conflict.theirs), conflict.mine, conflict.theirs, keep, conflict.fields);
+            // Your fields stay yours for the save that follows, but those you gave them (blog 0.1.3, as pages').
+            const carried = conflict.fields.filter((field) => !keep.has(field));
             setSaved(conflict.theirs);
             setForm(next);
+            formNow.current = next;
             void act(async () => {
-              await save(next, conflict.theirs);
+              await save(next, conflict.theirs, carried);
               setConflict(null);
             }, "Saved.");
           }}
