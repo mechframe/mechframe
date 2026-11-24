@@ -1,8 +1,9 @@
 """The AI's writing help over HTTP (decision 0058; `dev plans/contracts/kernel-ai.md`),
 under `/api/kernel`: the editor's tasks for anyone holding `kernel.ai.write`,
 the writing styles for `kernel.writing.manage`, and the key's state and check
-for `kernel.settings.manage`. The key and the writing rules themselves are
-saved through the settings routes (`kernel.ai`, `kernel.writing`).
+and the model's list and save (decision 0064) for `kernel.settings.manage`.
+The key and the writing rules themselves are saved through the settings
+routes (`kernel.ai`, `kernel.writing`); the model only through its own.
 
 Every task is billed, so all of them share one budget a person
 (AI_RATE_LIMIT), counted after the permission check and before the key is
@@ -27,6 +28,7 @@ from kernel.auth.models import User
 from kernel.db import get_db
 from kernel.errors import Problem
 from kernel.ratelimit import rate_limit
+from kernel.settings import settings
 
 router = APIRouter(tags=["kernel"])
 
@@ -36,6 +38,10 @@ SETTINGS = "kernel.settings.manage"
 
 #: The longest text a task reads, in characters.
 TEXT_MAX = 20_000
+#: Opening Settings → AI reads Anthropic's list: free, so a budget of its own,
+#: not the writing help's (the owner, 2026-11-24).
+MODELS_RATE = "60/1h"
+NOT_OFFERED = "Anthropic doesn't offer that model to this key now. Choose one from the list."
 
 
 async def budget(request: Request) -> None:
@@ -286,7 +292,9 @@ async def ai_style_rules(
 class AiKey(Answer):
     #: Where the key in use comes from: saved in Settings, the host's, or none.
     source: ai.Source
+    #: The model in use, and where it comes from (decision 0064).
     model: str
+    model_source: ai.ModelSource
     unreadable: bool
 
 
@@ -296,7 +304,91 @@ async def ai_key(
 ) -> dict[str, Any]:
     """The key's state, never the key."""
     state = await ai.readiness(db)
-    return {"source": await ai.source(db), "model": ai.model(), "unreadable": state.unreadable}
+    model, model_source = await ai.model_in_use(db)
+    return {
+        "source": await ai.source(db),
+        "model": model,
+        "model_source": model_source,
+        "unreadable": state.unreadable,
+    }
+
+
+class ModelOffered(Answer):
+    id: str
+    #: Anthropic's display name: Claude Opus 5.5.
+    name: str
+
+
+class ModelInUse(Answer):
+    id: str
+    #: None when Anthropic doesn't list it for the key.
+    name: str | None
+    source: ai.ModelSource
+    #: False for a retired model, or a host value with a typo.
+    listed: bool
+
+
+class AiModels(Answer):
+    #: The newest Opus, Sonnet and Haiku, in that order.
+    models: list[ModelOffered]
+    in_use: ModelInUse
+
+
+async def models_budget(request: Request) -> None:
+    await rate_limit(MODELS_RATE, key="account", scope="kernel.ai.models")(request)
+
+
+async def _offer(db: AsyncSession) -> dict[str, Any]:
+    """Anthropic's list read now, with the key in use: 503 without a working
+    key, 502 when Anthropic can't be read."""
+    listed = await (await ai.client(db)).models()
+    model, source = await ai.model_in_use(db)
+    return ai.offer(listed, model, source)
+
+
+@router.get("/admin/ai/models", response_model=AiModels)
+async def ai_models(
+    _: User = Depends(require_permission(SETTINGS)),
+    __: None = Depends(models_budget),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, Any]:
+    """The models Settings → AI offers, read from Anthropic each time: never cached."""
+    return await _offer(db)
+
+
+class ModelPick(BaseModel):
+    """`{version, model}`: the section's version as the form read it; null is the host's model."""
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    version: int = Field(ge=0)
+    model: str | None = Field(max_length=ai.MAX_MODEL_LENGTH)
+
+
+class ModelSaved(Answer):
+    version: int
+    changed: list[str]
+    merged: list[str]
+
+
+@router.put("/admin/ai/model", response_model=ModelSaved)
+async def ai_model(
+    body: ModelPick,
+    user: User = Depends(require_permission(SETTINGS)),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, Any]:
+    """Saves the model picked, once Anthropic's list, read now, offers it;
+    null goes back to the host's. Nothing is saved when the list can't be read."""
+    if body.model is not None:
+        offered = {each["id"] for each in (await _offer(db))["models"]}
+        if body.model not in offered:
+            raise Problem(
+                "kernel.invalid_request", 422, NOT_OFFERED, errors={"model": [NOT_OFFERED]}
+            )
+    saved = await settings.save(
+        db, ai.SECTION, {"model": body.model}, version=body.version, by=user.id, via="ai.model"
+    )
+    return {"version": saved.version, "changed": saved.changed, "merged": saved.merged}
 
 
 class Checked(Answer):

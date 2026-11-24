@@ -420,3 +420,79 @@ async def test_a_save_that_changes_something_is_heard_with_its_version(
     with pytest.raises(Problem):
         await found.save(db, module_id, {"posts_per_page": 0}, version=1)
     assert await heard.drain() == [("kernel.settings.changed", {"module": module_id, "version": 1})]
+
+
+class Picked(BaseModel):
+    shown: str = ""
+    picked: str | None = None
+
+
+@pytest.mark.db
+async def test_a_field_with_its_own_route_is_refused_by_the_form(db: AsyncSession) -> None:
+    """Decision 0064: a field another route checks first (the AI's model) can't be
+    changed through the settings form; the route that checks it can."""
+    found = SettingsRegistry()
+    module_id = unique_id("picked")
+    found.register(module_id, Picked, own_route={"picked": "Pick it from the list."})
+    with pytest.raises(Problem) as refused:
+        await found.save(db, module_id, {"shown": "x", "picked": "a"}, version=0)
+    await db.rollback()
+    assert (refused.value.status, refused.value.errors) == (
+        422,
+        {"picked": ["Pick it from the list."]},
+    )
+    # The form's other fields save, and so does the field sent as it already is.
+    saved = await found.save(db, module_id, {"shown": "x", "picked": None}, version=0)
+    assert saved.changed == ["shown"]
+    # The positive control: its own route saves it.
+    routed = await found.save(db, module_id, {"picked": "a"}, version=saved.version, via="ai.model")
+    assert routed.changed == ["picked"]
+    assert (await found.for_module(db, module_id)).model_dump() == {"shown": "x", "picked": "a"}
+
+
+@pytest.mark.db
+async def test_a_stale_form_sending_its_routed_field_unchanged_merges(db: AsyncSession) -> None:
+    """CodeRabbit on #144: the field read as it stood at the form's version is no
+    change, so the form's save merges and keeps the route's newer value."""
+    found = SettingsRegistry()
+    module_id = unique_id("picked")
+    found.register(module_id, Picked, own_route={"picked": "Pick it from the list."})
+    first = await found.save(db, module_id, {"picked": "a"}, version=0, via="ai.model")
+    newer = await found.save(db, module_id, {"picked": "b"}, version=first.version, via="ai.model")
+    # A form read at the first version sends picked as it read it, with its own change.
+    stale = await found.save(db, module_id, {"shown": "x", "picked": "a"}, version=first.version)
+    assert (stale.changed, stale.merged) == (["shown"], ["picked"])
+    assert (await found.for_module(db, module_id)).model_dump() == {"shown": "x", "picked": "b"}
+    # Changing it from what that version held is still refused.
+    with pytest.raises(Problem) as refused:
+        await found.save(db, module_id, {"picked": "c"}, version=newer.version)
+    await db.rollback()
+    assert refused.value.errors == {"picked": ["Pick it from the list."]}
+
+
+class Guarded(BaseModel):
+    shown: str = ""
+    token: SecretStr | None = None
+
+
+@pytest.mark.db
+async def test_a_secret_with_its_own_route_is_refused_by_the_form(db: AsyncSession) -> None:
+    """CodeRabbit on #144: a typed secret is a change too, replaced or cleared."""
+    found = SettingsRegistry()
+    module_id = unique_id("guarded")
+    found.register(module_id, Guarded, own_route={"token": "Check it on its own page."})
+    for typed in ("a-new-token", ""):
+        with pytest.raises(Problem) as refused:
+            await found.save(db, module_id, {"token": typed}, version=0)
+        await db.rollback()
+        assert refused.value.errors == {"token": ["Check it on its own page."]}
+    # None keeps a secret, so the form's other fields still save; and its own route saves it.
+    saved = await found.save(db, module_id, {"shown": "x", "token": None}, version=0)
+    assert saved.changed == ["shown"]
+    routed = await found.save(db, module_id, {"token": "a-new-token"}, version=1, via="checked")
+    assert routed.changed == ["token"]
+
+
+def test_only_a_field_of_the_model_has_its_own_route() -> None:
+    with pytest.raises(ValueError, match="nothing"):
+        SettingsRegistry().register(unique_id("picked"), Picked, own_route={"nothing": "No."})
