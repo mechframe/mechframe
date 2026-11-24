@@ -152,3 +152,18 @@ None. The owner's answers, 2026-11-24, as recommended:
   - **This project has no `docs/TESTING.md`.** The new dependency is in `CLAUDE.md`'s Stack, `requirements.in` and `requirements.txt` (`resvg-py==0.5.0`, hashed).
   - **The fonts are in** (the owner's OK, 2026-11-24: "Yes, download it"). `Inter-4.1.zip` (33,707,794 bytes) from rsms/inter's v4.1 release went into an empty scratch folder. Only `extras/ttf/`'s Regular, SemiBold and Bold (1.25 MB together, more than the 900 KB first said) and `LICENSE.txt` were copied into `kernel/backend/kernel/fonts/`, where the OFL's text travels with them into every site. NOTICE names them, and `.gitattributes` marks `*.ttf` binary. A test draws words, with a control showing they draw nothing without the kernel's fonts.
   - **Still to build:** media 0.1.4's `store`, blog's task and routes, the fake's `COVER`, the dialog, the docs and the generated files.
+- 2026-11-24, **the board** (VM Website Dev 15, with the owner's OK): "Admin: Post editor" at canvas version 104 (`https://claude.ai/artifact/W7EZQumtcK36K3xczG8mNH`, version id 1795535061-c2ef). The local copy, read only, is `C:\DEV\VM Website\design\site\AdminPost.dc.html`; every state at 1440 and 390 is in `C:\DEV\VM Website\dev plans\2026-11-24-draw-a-cover-states.jpg`. Its words are in VM Website's `design/generators/test_ai_boards.py` (`DRAWN_AHEAD`). The board wins where it differs:
+  - **Its Tweaks states:** Draw a cover; Draw a cover, Custom; Cover drawn; Cover didn't draw; Cover in place. Key unreadable shows the card without the button.
+  - **The card:** "Draw a cover" (sparkle) comes before "Change", in one row under the card's title, since the two don't fit beside it at 320 px. Without a working key the row holds "Change" alone, beside the title, as now.
+  - **The ask:** under Style, a line for the style chosen:
+    - Editorial: "The post's title, large, with one accent line and quiet shapes."
+    - Signal: "Thin waveform or network lines, with no title."
+    - Minimal: "The post's title, small, with one accent detail."
+    - Custom: "Drawn from what you describe."
+    - Generator: `build_step1_admin.py`, `COVER_HINT`.
+  - **The switches' hints:** "In the site's colours" has "The theme's background, text and accent colours."; "With the site's name" has "In the top-left corner of the cover."
+  - **The two text boxes:** "Up to 600 characters." under "What to draw" and under "What to change". Draw is disabled for Custom until "What to draw" has words.
+  - **Cancel** is in every state of the dialog, the kit's `Dialog`.
+  - **The drawn state:** the cover at 1200 × 630 (aspect-ratio, full width, 10 px corners); Alt text with its hint; "What to change" with "Change it" beside its box; then Cancel, "Draw again" and "Use this cover" (primary).
+  - **The failure** is an alert above the ask's buttons: "The AI couldn't draw a cover this time. Try again, or change what you asked for."
+  - **Focus:** opening the dialog, and a draw that finishes, put focus on the dialog's title. Cancel, Use this cover and the toast's Close give it back to "Draw a cover".
