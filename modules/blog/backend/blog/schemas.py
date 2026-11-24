@@ -330,10 +330,14 @@ class CoverAsk(BaseModel):
 
 
 class CoverDrawn(Answer):
-    """A cover drawn and cleaned: the SVG to show, and its alt text."""
+    """A cover drawn and cleaned: the SVG to keep or change, its alt text, and
+    its preview, the kernel's own render of it as the PNG kept will be."""
 
     svg: str
     alt: str
+    #: A `data:image/png;base64,` address at the card's size, drawn with the
+    #: kernel's Inter: a browser draws an SVG's words in its own fonts (Codex on #147).
+    preview: str
 
 
 class CoverUse(BaseModel):

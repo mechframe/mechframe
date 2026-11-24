@@ -2,8 +2,8 @@
 // AdminPost board at canvas version 104): the AI draws the post's cover from it
 // as it stands, in one of four styles. The ask: Style with a line for the one
 // chosen; for Custom, What to draw and In the site's colours; With the site's
-// name; Draw. The drawn cover: shown as an image of the cleaned SVG, where no
-// script can run; its Alt text; What to change with Change it; Draw again and
+// name; Draw. The drawn cover: shown as the server's own render of it, the PNG
+// it will be kept as, drawn with the kernel's Inter; its Alt text; What to change with Change it; Draw again and
 // Use this cover, which keeps it as a PNG in the media library. Focus starts on
 // the title, and goes back to it when a draw finishes.
 import { useEffect, useRef, useState, type RefObject } from "react";
@@ -53,11 +53,6 @@ export function themeColours(from: Element): Colours | null {
   const ink = hex(style.getPropertyValue("--mf-color-text"));
   const accent = hex(style.getPropertyValue("--mf-color-accent"));
   return ground && ink && accent ? { ground, ink, accent } : null;
-}
-
-/** A cleaned SVG as an image's address: drawn as a picture, where nothing in it can run. */
-export function drawnAddress(svg: string): string {
-  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
 export type CoverDialogProps = {
@@ -155,7 +150,7 @@ export function CoverDialog({ post, opener, onClose, onUse }: CoverDialogProps) 
       <div className="mf-blog-cover-form">
         {drawn ? (
           <>
-            <img className="mf-blog-cover-drawn" src={drawnAddress(drawn.svg)} alt={alt.trim() || "The cover the AI drew"} width={1200} height={630} />
+            <img className="mf-blog-cover-drawn" src={drawn.preview} alt={alt.trim() || "The cover the AI drew"} width={1200} height={630} />
             <Field label="Alt text" hint="Says what the cover shows, for anyone who can't see it.">
               <Input
                 value={alt}

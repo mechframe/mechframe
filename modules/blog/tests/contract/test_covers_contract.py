@@ -6,6 +6,8 @@ fake Anthropic. Nothing here imports blog."""
 
 from __future__ import annotations
 
+import base64
+import struct
 import uuid
 from collections.abc import AsyncIterator
 from typing import Any
@@ -96,7 +98,13 @@ async def test_post_covers_draw(keyed: Browser) -> None:
 
     assert drawn.status_code == 200, drawn.text
     answer = drawn.json()
-    assert set(answer) == {"svg", "alt"}
+    assert set(answer) == {"svg", "alt", "preview"}
+    # The preview is the kernel's own render, Inter and all, as the PNG kept will be (Codex on #147).
+    head = "data:image/png;base64,"
+    assert answer["preview"].startswith(head)
+    png = base64.b64decode(answer["preview"][len(head) :])
+    assert png[1:4] == b"PNG"
+    assert struct.unpack(">II", png[16:24]) == (1200, 630)
     assert answer["svg"].startswith('<svg xmlns="http://www.w3.org/2000/svg"')
     assert 'id="cover-wordmark"' in answer["svg"]
     assert answer["alt"] == "Words for the test."

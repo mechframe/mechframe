@@ -19,6 +19,7 @@ model sees the drawing, and the answer gets it back once.
 
 from __future__ import annotations
 
+import base64
 import re
 from dataclasses import dataclass
 from typing import Any, Literal
@@ -407,3 +408,11 @@ async def _attempt(writer: ai.Writer, asked: str) -> Any:
 async def png(drawing: str) -> bytes:
     """A cleaned cover as the PNG kept, twice the card."""
     return await svg.png(drawing, width=PNG_WIDTH, height=PNG_HEIGHT)
+
+
+async def preview(drawing: str) -> str:
+    """A cleaned cover as the dialog shows it: the kernel's own render at the
+    card's size, as a `data:` address. The browser would draw the SVG's words
+    in whatever fonts it has, so what's approved could differ from what's kept."""
+    made = await svg.png(drawing, width=WIDTH, height=HEIGHT)
+    return "data:image/png;base64," + base64.b64encode(made).decode("ascii")

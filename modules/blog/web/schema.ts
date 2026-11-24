@@ -253,9 +253,9 @@ export interface paths {
         put?: never;
         /**
          * Draw Cover
-         * @description A cover drawn by the AI from the post as it stands, cleaned: one call
-         *     against the AI's budget, its repair try included. For a revision,
-         *     `current` and `changes`.
+         * @description A cover drawn by the AI from the post as it stands, cleaned, with its
+         *     preview rendered as the PNG kept will be: one call against the AI's budget,
+         *     its repair try included. For a revision, `current` and `changes`.
          */
         post: operations["draw_cover_api_blog_admin_covers_draw_post"];
         delete?: never;
@@ -390,13 +390,16 @@ export interface components {
         };
         /**
          * CoverDrawn
-         * @description A cover drawn and cleaned: the SVG to show, and its alt text.
+         * @description A cover drawn and cleaned: the SVG to keep or change, its alt text, and
+         *     its preview, the kernel's own render of it as the PNG kept will be.
          */
         CoverDrawn: {
             /** Svg */
             svg: string;
             /** Alt */
             alt: string;
+            /** Preview */
+            preview: string;
         };
         /**
          * CoverState

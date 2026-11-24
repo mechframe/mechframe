@@ -220,9 +220,9 @@ async def cover_state() -> dict[str, Any]:
     dependencies=[Depends(WRITE), Depends(AI), Depends(ai.budget)],
 )
 async def draw_cover(body: CoverAsk, db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
-    """A cover drawn by the AI from the post as it stands, cleaned: one call
-    against the AI's budget, its repair try included. For a revision,
-    `current` and `changes`."""
+    """A cover drawn by the AI from the post as it stands, cleaned, with its
+    preview rendered as the PNG kept will be: one call against the AI's budget,
+    its repair try included. For a revision, `current` and `changes`."""
     if body.style == "custom" and not body.description.strip():
         raise _asked("description", "Say what to draw.")
     if body.style != "custom" and not (body.title.strip() or body.body.strip()):
@@ -248,7 +248,11 @@ async def draw_cover(body: CoverAsk, db: AsyncSession = Depends(get_db)) -> dict
         current=current,
         changes=body.changes,
     )
-    return {"svg": drawn.svg, "alt": drawn.alt}
+    try:
+        shown = await covers.preview(drawn.svg)
+    except svg.Refused:
+        raise Problem("kernel.ai_failed", 502, covers.FAILED) from None
+    return {"svg": drawn.svg, "alt": drawn.alt, "preview": shown}
 
 
 @router.post("/admin/covers", response_model=CoverStored, status_code=201)

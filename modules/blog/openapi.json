@@ -792,7 +792,7 @@
     "/api/blog/admin/covers/draw": {
       "post": {
         "summary": "Draw Cover",
-        "description": "A cover drawn by the AI from the post as it stands, cleaned: one call\nagainst the AI's budget, its repair try included. For a revision,\n`current` and `changes`.",
+        "description": "A cover drawn by the AI from the post as it stands, cleaned, with its\npreview rendered as the PNG kept will be: one call against the AI's budget,\nits repair try included. For a revision, `current` and `changes`.",
         "operationId": "draw_cover_api_blog_admin_covers_draw_post",
         "requestBody": {
           "content": {
@@ -1107,16 +1107,21 @@
           "alt": {
             "type": "string",
             "title": "Alt"
+          },
+          "preview": {
+            "type": "string",
+            "title": "Preview"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
           "svg",
-          "alt"
+          "alt",
+          "preview"
         ],
         "title": "CoverDrawn",
-        "description": "A cover drawn and cleaned: the SVG to show, and its alt text."
+        "description": "A cover drawn and cleaned: the SVG to keep or change, its alt text, and\nits preview, the kernel's own render of it as the PNG kept will be."
       },
       "CoverState": {
         "properties": {

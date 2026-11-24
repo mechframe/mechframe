@@ -193,3 +193,16 @@ async def test_the_alt_text_is_trimmed_or_taken_from_the_drawings_title(
 
     fake.queue(answer={"svg": COVER, "alt": "   "})
     assert (await _draw()).alt == "A test cover"
+
+
+def test_blog_needs_the_media_whose_store_it_calls() -> None:
+    """Codex on #147: media 0.1.3 has neither `public.store` nor `public.storage_on`."""
+    import json
+    from pathlib import Path
+
+    from mechframe.ranges import satisfies
+
+    manifest = json.loads((Path(covers.__file__).parents[2] / "module.json").read_text("utf-8"))
+    needed = manifest["requires"]["modules"]["media"]
+    assert not satisfies("0.1.3", needed)
+    assert satisfies("0.1.4", needed)

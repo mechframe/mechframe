@@ -12,7 +12,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderApp, testUser } from "@/kernel/testing";
 
 import type { Full } from "../../web/api";
-import { drawnAddress, themeColours } from "../../web/components/CoverDialog";
+import { themeColours } from "../../web/components/CoverDialog";
 import blog from "../../web/module.web";
 
 type Answer = { status: number; body?: unknown };
@@ -22,6 +22,8 @@ const ID = "11111111-1111-4111-8111-111111111111";
 const ONE = `/api/blog/admin/posts/${ID}`;
 const ME = "00000000-0000-4000-8000-000000000001";
 const SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630"><rect width="1200" height="630" fill="#101828"/></svg>';
+/** The server's own render of a drawing, which the dialog shows (Codex on #147: the browser has no Inter). */
+const PREVIEW = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYGD4DwABBAEAwS2OUAAAAABJRU5ErkJggg==";
 const FAILED = "The AI couldn't draw a cover this time. Try again, or change what you asked for.";
 const COVER = {
   id: "61111111-1111-4111-8111-111111111111",
@@ -162,6 +164,7 @@ describe("Draw a cover", () => {
           body: {
             svg: SVG.replace("#101828", draws > 1 ? "#202020" : "#101828"),
             alt: "A dark field",
+            preview: PREVIEW,
           },
         };
       },
@@ -181,7 +184,7 @@ describe("Draw a cover", () => {
 
     await userEvent.click(dialog.getByRole("button", { name: "Draw" }));
     const drawn = await dialog.findByRole("img", { name: "A dark field" });
-    expect(drawn).toHaveAttribute("src", drawnAddress(SVG));
+    expect(drawn).toHaveAttribute("src", PREVIEW);
     expect(dialog.getByRole("heading", { name: "Draw a cover" })).toHaveFocus();
     expect(await bodyOf(sent, "/api/blog/admin/covers/draw")).toEqual({
       title: "Ten years",
@@ -225,7 +228,7 @@ describe("Draw a cover", () => {
     const sent = routed({
       "POST /api/blog/admin/covers/draw": {
         status: 200,
-        body: { svg: SVG, alt: "The sea" },
+        body: { svg: SVG, alt: "The sea", preview: PREVIEW },
       },
     });
     renderApp({ path: `/admin/blog/${ID}`, modules: [blog], session: writer });
@@ -285,7 +288,7 @@ describe("Codex on #147", () => {
     const sent = routed({
       "POST /api/blog/admin/covers/draw": () =>
         sent.filter((each) => new URL(each.url).pathname.endsWith("/draw")).length > 1
-          ? { status: 200, body: { svg: SVG, alt: "Again" } }
+          ? { status: 200, body: { svg: SVG, alt: "Again", preview: PREVIEW } }
           : new Promise<Answer>((resolve) => {
               answer = resolve;
             }),
@@ -299,7 +302,7 @@ describe("Codex on #147", () => {
     expect(dialog.getByRole("combobox", { name: "Style" })).toBeDisabled();
     expect(dialog.getByRole("switch", { name: "With the site's name" })).toBeDisabled();
 
-    answer({ status: 200, body: { svg: SVG, alt: "First" } });
+    answer({ status: 200, body: { svg: SVG, alt: "First", preview: PREVIEW } });
     await userEvent.click(await dialog.findByRole("button", { name: "Draw again" }));
     expect(await dialog.findByRole("img", { name: "Again" })).toBeInTheDocument();
     expect(await bodyOf(sent, "/api/blog/admin/covers/draw", 1)).toMatchObject({ style: "editorial", wordmark: false });

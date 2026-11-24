@@ -24,7 +24,7 @@
       "requires": {
         "kernel": "^0.1",
         "modules": {
-          "media": "^0.1"
+          "media": "^0.1.4"
         }
       },
       "conflicts": []
