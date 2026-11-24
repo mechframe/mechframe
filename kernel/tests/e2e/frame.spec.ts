@@ -120,3 +120,62 @@ for (const [theme, canvas] of Object.entries(THEMES)) {
     });
   });
 }
+
+// A first load doesn't move the footer (decision 0066, `dev plans/contracts/footer-shift.md`): the
+// frame paints before a page's code arrives, and everything after an empty <main> waits for it. Every
+// script is held back, so the frame always paints first, as on a phone. The footer is as tall as VM
+// Website's (327 px), set by a stylesheet outside any layer, as a site's own footer styles are, with a
+// display of its own; a layout-shift observer sums what moved, from the first load until the page is
+// drawn. Without the frame's rule, the footer moves from under the header to under the page.
+const SHIFTS = `
+  window.__shifts = 0;
+  new PerformanceObserver((list) => {
+    for (const entry of list.getEntries()) if (!entry.hadRecentInput) window.__shifts += entry.value;
+  }).observe({ type: "layout-shift", buffered: true });
+  document.addEventListener("DOMContentLoaded", () => {
+    const own = document.createElement("style");
+    own.textContent = ".mf-site-footer { display: flex; min-height: 327px; }";
+    document.head.append(own);
+  });
+`;
+
+async function firstLoad(page: Page, address: string): Promise<number> {
+  await page.addInitScript(SHIFTS);
+  await page.route("**/*.js", async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    await route.continue();
+  });
+  await page.goto(address);
+  await expect(page.locator("#main > *").first()).toBeVisible();
+  const footer = page.locator(".mf-site > #main ~ footer").first();
+  await expect(footer).toBeVisible();
+  // The footer is under the page, not over it.
+  const [mainBottom, footerTop] = await page.evaluate(() => {
+    const main = document.getElementById("main")?.getBoundingClientRect();
+    const foot = document.querySelector(".mf-site > #main ~ footer")?.getBoundingClientRect();
+    return [main?.bottom ?? 0, foot?.top ?? -1];
+  });
+  expect(footerTop).toBeGreaterThanOrEqual(mainBottom - 1);
+  // Two frames after the page is in, any shift it caused has been reported.
+  await page.evaluate(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))));
+  return page.evaluate(() => (window as unknown as { __shifts: number }).__shifts);
+}
+
+for (const [width, height] of [
+  [412, 823],
+  [1440, 900],
+] as const) {
+  test.describe(`a first load at ${String(width)}`, () => {
+    // The site's policy refuses an inline stylesheet, the test's tall footer included.
+    test.use({ viewport: { width, height }, bypassCSP: true });
+
+    // The kernel's home and its 404 page. A module's page that draws its heading first and its
+    // content once its read answers still grows under the footer then: that's the page's own.
+    for (const address of ["/", "/no-such-page"]) {
+      test(`doesn't move the footer on ${address}`, async ({ page }) => {
+        // The header's links, loaded from the modules, nudge it a little (under 0.003): not the footer.
+        expect(await firstLoad(page, address)).toBeLessThanOrEqual(0.01);
+      });
+    }
+  });
+}

@@ -59,6 +59,13 @@
     border-bottom: 0;
   }
 
+  /* Nothing after <main> is drawn while it's empty: the page and the footer arrive together, so
+     the page's arrival never moves the footer (decision 0066). Important, because these rules are
+     in the layer mf.base, and a site's own footer styles, outside any layer, would win otherwise. */
+  .mf-site > #main:empty ~ * {
+    display: none !important;
+  }
+
   .mf-site-header nav,
   .mf-site-footer nav,
   .mf-slot-links {
