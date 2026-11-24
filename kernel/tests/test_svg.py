@@ -220,8 +220,10 @@ def test_what_is_written_out_is_never_over_the_limit() -> None:
         _svg("<title><![CDATA[</svg> a title]]></title>" + DRAWN),
         "<!-- <svg> --> Here: " + _svg(DRAWN),
         f'<svg xmlns="{NS}" aria-label="a/>b" viewBox="0 0 100 50">{DRAWN}</svg>',
+        _svg("<?note </svg> ?>" + DRAWN),
+        '<?xml version="1.0" encoding="UTF-8"?>' + _svg(DRAWN),
     ],
 )
-def test_a_tag_in_a_comment_cdata_or_quoted_value_doesnt_end_the_drawing(answer: str) -> None:
+def test_a_tag_in_a_comment_cdata_instruction_or_value_doesnt_end_the_drawing(answer: str) -> None:
     """CodeRabbit on #147, again: only real <svg> tags count, not words that look like one."""
     assert "<rect" in _clean(answer)
