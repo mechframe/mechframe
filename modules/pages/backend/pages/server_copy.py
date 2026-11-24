@@ -3,8 +3,8 @@
 
 module.json's `routes.public` is `/:address`, the least fixed pattern there
 is, so any other module's or the site's page wins its address. Each live page
-answers its title, search words, cleaned HTML under its own `h1` and a
-`WebPage` JSON-LD; an address a live page left answers a 301 to it; anything
+answers its title, search words, cleaned HTML under its own `h1` and the day
+it last changed, and a `WebPage` JSON-LD; an address a live page left answers a 301 to it; anything
 else is a real 404. The words are the API's own (`service`), so the two never
 say different things.
 """
@@ -36,7 +36,13 @@ class LivePages(server_copy.Pages):
             service.search_title(found, site.name),
             description,
             server_copy.article(
-                server_copy.h1(found.title), server_copy.cleaned(markdown.render(found.body))
+                server_copy.h1(found.title),
+                # When it last changed, as the page draws it (pages 0.1.1, VM Website's ask).
+                server_copy.p(
+                    "Updated ",
+                    server_copy.time(found.updated_at, f"{found.updated_at:%Y-%m-%d}"),
+                ),
+                server_copy.cleaned(markdown.render(found.body)),
             ),
             data=(
                 {

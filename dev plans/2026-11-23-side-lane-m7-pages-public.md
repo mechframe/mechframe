@@ -57,6 +57,7 @@ AI DevKit Development 40 WT, 2026-11-23, branch `feat/pages-0-1-1`, **#138**.
   - `web/public.ts` (`@/modules/pages/public`) gives `usePage(address)`, with or without the slash, plus `isMoved`, `LivePage` and `PageMoved`. `PublicPage` reads through it (`web/reads.ts`). The server copy is unchanged.
   - The editor's crossed saves: the two gaps asked for, plus blog's third from #123 (a publish landing while a field is asked about now shows in the panel).
   - A fourth, from CodeRabbit on #138: a conflict-free retry carries the person's fields into the next conflict check.
+  - VM Website Dev 13's ask, with the owner's OK, folded into #138: a live page's "Updated" line under its `h1`, in the server copy (ISO date in a `time`) and on `PublicPage` (the reader's format, `day`, also exported). The e2e spec compares the line without its date.
   - No migration, decision or route. The IDs 0065+ and `pages_0002` weren't used.
 - **Tests:**
   - `pages/tests/web/public.test.tsx`;
@@ -66,6 +67,6 @@ AI DevKit Development 40 WT, 2026-11-23, branch `feat/pages-0-1-1`, **#138**.
 - **The owner's choices:** none were asked. VM Website's ask came with the owner's OK.
 - **For the main lane's handoff:**
   - pages 0.1.1 landed (#138), with its page read in `public.ts`.
-  - VM Website Dev 12 has the PR number, and gets a message when it lands.
+  - VM Website Dev 12 and Dev 13 have the PR number, and each gets a message when it lands.
   - **Blog has the CodeRabbit gap:** its `save` recursion in `modules/blog/web/pages/AdminPost.tsx` doesn't carry its fields into a retry. That's a small blog 0.1.3 fix (see pages' `save(…, carried)`).
 - **Cleanup:** take the worktree's `node_modules` junction off (`cmd /c rmdir node_modules`) before `git worktree remove`.

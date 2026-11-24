@@ -2,7 +2,8 @@
 
 ## 0.1.1
 
-- Its page read, for a site whose own page answers `/:address`: `web/public.ts` (`usePage`, `isMoved` and the answer's types `LivePage` and `PageMoved`, as `@/modules/pages/public`). pages' own page reads through the same hook (MODULE.md, "Extension points").
+- Its page read, for a site whose own page answers `/:address`: `web/public.ts` (`usePage`, `isMoved`, `day` and the answer's types `LivePage` and `PageMoved`, as `@/modules/pages/public`). pages' own page reads through the same hook (MODULE.md, "Extension points").
+- A live page says when it last changed, "Updated" and the day, under its title: in the server copy and on pages' own page.
 - The editor's crossed saves, as blog's #123: a save that meets someone else's works from the fields as they stand when it's answered. A field typed back to its saved value while the save waited is asked about, what was typed while it waited survives the conflict's choice, and a publish that lands while a field is asked about shows in the Publish panel.
 
 ## 0.1.0

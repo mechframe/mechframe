@@ -93,11 +93,14 @@ Asked by VM Website (Dev 12, `C:\DEV\VM Website\dev plans\contracts\written-page
 
 - **The read, `web/public.ts`,** reached as `@/modules/pages/public` (decision 0057, SPEC 7):
   - `usePage(address)`, the hook `PublicPage` reads through: `GET /page?address=/<address>`, the address with its slash or without it (`useParams` gives `about`). It answers a `LivePage`, or a `PageMoved` for an address a live page left, which `isMoved` tells apart. Any other address is an `ApiProblem`, 404 `pages.page_not_found`.
-  - The answer's types, `LivePage` (`{title, address, html, search_title, search_description, updated_at}`) and `PageMoved` (`{moved}`).
+  - The answer's types, `LivePage` (`{title, address, html, search_title, search_description, updated_at}`) and `PageMoved` (`{moved}`), and `day(at)`, a date in the reader's own words.
   - pages' own `PublicPage` reads through the same hook (`web/reads.ts`), so the two can't drift.
+- **The Updated line** (VM Website Dev 13's ask, with the owner's OK, 2026-11-23; `written-page.md` §8, 4): a live page says when it last changed, under its title.
+  - In the server copy, as blog's byline gives its date: `<p>Updated <time datetime="…">2026-11-23</time></p>` after the `h1`, from `updated_at`.
+  - pages' own `PublicPage` draws the same line, the date in the reader's format (`day`), so the server copy and the page agree for every site.
 - **Unchanged:**
   - the route and its answer;
-  - the server copy: the site's page draws the same words in the same order, so pages' `server_copy.py` still answers crawlers and the site adds nothing for `/:address`;
+  - the server copy otherwise: the site's page draws the same words in the same order, so pages' `server_copy.py` still answers crawlers and the site adds nothing for `/:address`;
   - the menus: a site places `nav.public` and `nav.footer` itself, as now.
   - There's no `pages.public` for a site's server copy yet: nobody has asked for one.
 - **The editor's crossed saves** (`web/pages/AdminPage.tsx`), the two gaps blog closed in #123 (CodeRabbit). A save someone else got to first is now worked out from the fields as they stand when the 409 lands, not as they were sent:

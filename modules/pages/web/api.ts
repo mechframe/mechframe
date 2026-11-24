@@ -30,6 +30,11 @@ export async function preview(body: string): Promise<string> {
   return data?.html ?? "";
 }
 
+/** A day in the reader's own words, such as "22 November 2026": a live page's Updated line. */
+export function day(at: string): string {
+  return new Date(at).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
+}
+
 /** How a page's state reads in the admin. */
 export const STATUS_WORDS: Record<Status, string> = { draft: "Draft", scheduled: "Scheduled", published: "Live" };
 

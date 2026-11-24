@@ -106,6 +106,11 @@ describe("a live page", () => {
     expect(await screen.findByRole("heading", { level: 1, name: "About" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 2, name: "Who we are" })).toBeInTheDocument();
     expect(screen.getByText("Boston")).toBeInTheDocument();
+    // When it last changed, under its title, as the server copy says it (pages 0.1.1).
+    const updated = screen.getByText(/^Updated/);
+    expect(updated.previousElementSibling).toBe(screen.getByRole("heading", { level: 1, name: "About" }));
+    expect(updated.querySelector("time")).toHaveAttribute("datetime", "2026-11-22T12:00:00+00:00");
+    expect(updated.querySelector("time")?.textContent).toContain("2026");
     await waitFor(() => {
       expect(document.title).toBe("About · Test Site");
     });

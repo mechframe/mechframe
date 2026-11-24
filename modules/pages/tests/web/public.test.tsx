@@ -9,7 +9,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ApiProblem } from "@/kernel";
 import { renderWithKernel } from "@/kernel/testing";
-import { isMoved, usePage, type LivePage, type PageMoved } from "@/modules/pages/public";
+import { day, isMoved, usePage, type LivePage, type PageMoved } from "@/modules/pages/public";
 
 type Answer = { status: number; body?: unknown };
 
@@ -86,8 +86,9 @@ describe("pages' public surface", () => {
     expect(sent.map((url) => url.searchParams.get("address"))).toEqual(["/about"]);
   });
 
-  it("tells a move from a page", () => {
+  it("tells a move from a page, and says the day it last changed", () => {
     expect(isMoved({ moved: "/about" })).toBe(true);
     expect(isMoved(LIVE)).toBe(false);
+    expect(day(LIVE.updated_at)).toContain("2026");
   });
 });
