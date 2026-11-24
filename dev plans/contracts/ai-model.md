@@ -120,7 +120,7 @@ None. The owner's answers, 2026-11-24, as recommended:
   - **The answer is built by `ai.offer(listed, model, source)`,** from `ai.newest_of_each_kind` and `Writer.models()`, which answers every model as an `ai.Listed`. So a model in use that Anthropic doesn't list is held by a unit test, `test_a_model_in_use_that_anthropic_no_longer_lists_is_unnamed`. Over HTTP the harness's model is always listed, and the route refuses an unlisted one.
   - **A slow or unreachable list** is held by `test_a_list_that_is_slow_or_unreachable_is_a_plain_failure`, not over HTTP. The contract suite holds a refusing Anthropic (401) for the read, and a failing one (500) for the save.
   - **The budget** has a test of its own, `test_the_model_list_has_its_own_budget`: the 61st read is 429, and the writing help still answers.
-  - **The warning** is the kit's `Attention`: "Anthropic doesn't list {id} for this key" as its what, "So the AI's writing help may fail. Choose another, or use the host's model." as its why.
+  - **The warning** is the kit's `Attention`, in the words of VM Website's Model not listed state (canvas version 102): "Anthropic doesn't list {id} for this key, so the AI's writing help may fail." as its what, "Choose another, or use the host's model." as its why. The model in use, when it isn't one of the three, is listed first.
   - **The toasts** say "Saved the model." and "Using the host's model." The second isn't on the board yet.
   - **The settings form's refusal** reads "Choose the model from Anthropic's list, in Settings → AI.", with the kernel's arrow, as its other words have it.
   - **`docs/HOST-VARIABLES.md`'s ANTHROPIC_MODEL line** comes from `tools/host_variables.py`, which says "until an admin saves one in Settings → AI".

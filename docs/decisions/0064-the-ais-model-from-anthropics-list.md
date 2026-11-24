@@ -10,7 +10,7 @@
   2. **The list is read every time,** server-side with the key in use, every page, never cached: `GET /api/kernel/admin/ai/models`, for `kernel.settings.manage`. For each kind (`claude-opus-…`, `claude-sonnet-…`, `claude-haiku-…`), it keeps the newest by `created_at`, named by Anthropic's `display_name`. It also answers the model in use, and whether Anthropic lists it for the key at all.
   3. **A model is saved only through `PUT /api/kernel/admin/ai/model`,** which reads the list again and refuses an id it doesn't offer (the owner's answer 1). The settings form can't change the field. That's the new `own_route` of SPEC 7: a field registered with a sentence is refused, with 422 and that sentence, by a save `via="form"`, and saved by any other.
   4. **The list has its own budget,** 60 an hour a person (the owner's answer 2). Listing is free, and opening Settings shouldn't spend the writing help's AI_RATE_LIMIT.
-  5. **A model in use that Anthropic doesn't list** (retired, or a host value with a typo) stays in the dropdown, unnamed, under a warning: "Anthropic doesn't list {id} for this key", "So the AI's writing help may fail. Choose another, or use the host's model." (the owner's answer 3). VM Website draws it on the board.
+  5. **A model in use that Anthropic doesn't list** (retired, or a host value with a typo) stays in the dropdown, first and unnamed, under a warning: "Anthropic doesn't list {id} for this key, so the AI's writing help may fail." and "Choose another, or use the host's model." (the owner's answer 3, as VM Website drew it).
 - **Rejected:**
   - **Caching the list:** the owner asked for it read when the page opens.
   - **Checking a saved model only in the browser:** the settings form would still take any id.

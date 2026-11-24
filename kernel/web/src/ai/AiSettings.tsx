@@ -61,7 +61,7 @@ function ModelRow({ list, model, source, version, onSaved }: { list: ModelList; 
   const choices = list.data
     ? list.data.models.some((each) => each.id === list.data.in_use.id)
       ? list.data.models
-      : [...list.data.models, { id: list.data.in_use.id, name: list.data.in_use.name ?? list.data.in_use.id }]
+      : [{ id: list.data.in_use.id, name: list.data.in_use.name ?? list.data.in_use.id }, ...list.data.models]
     : [{ id: model, name: model }];
   const chosen = picked ?? inUse?.id ?? model;
   const noKey = list.error instanceof ApiProblem && NO_WORKING_KEY.has(list.error.code);
@@ -89,7 +89,7 @@ function ModelRow({ list, model, source, version, onSaved }: { list: ModelList; 
   return (
     <div className="mf-ai-form">
       {inUse && !inUse.listed ? (
-        <Attention tone="warning" what={`Anthropic doesn't list ${inUse.id} for this key`} why="So the AI's writing help may fail. Choose another, or use the host's model." />
+        <Attention tone="warning" what={`Anthropic doesn't list ${inUse.id} for this key, so the AI's writing help may fail.`} why="Choose another, or use the host's model." />
       ) : null}
       <Field label="Model" hint="Anthropic's newest model of each kind, listed when this page opens.">
         <Select

@@ -194,15 +194,18 @@ describe("Settings → AI's model (decision 0064)", () => {
     expect(screen.getByRole("button", { name: "Save the model" })).toBeDisabled();
   });
 
-  it("warns when Anthropic doesn't list the model in use, and keeps it in the list", async () => {
-    answers(false, { source: "environment", model: "claude-opus-4-typo" }, {
-      [MODELS]: listed({ id: "claude-opus-4-typo", name: null, listed: false }),
+  it("warns when Anthropic doesn't list the model saved, and lists it first (Model not listed)", async () => {
+    answers(true, { source: "settings", model: "claude-opus-4-typo", model_source: "settings" }, {
+      [MODELS]: listed({ id: "claude-opus-4-typo", name: null, source: "settings", listed: false }),
     });
-    await opened();
-    expect(await screen.findByText("Anthropic doesn't list claude-opus-4-typo for this key")).toBeInTheDocument();
-    expect(screen.getByText("So the AI's writing help may fail. Choose another, or use the host's model.")).toBeInTheDocument();
+    renderApp({ path: "/admin/settings/ai", session: admin });
+    expect(await screen.findByText("Anthropic doesn't list claude-opus-4-typo for this key, so the AI's writing help may fail.")).toBeInTheDocument();
+    expect(screen.getByText("Choose another, or use the host's model.")).toBeInTheDocument();
     const picker = await model();
-    expect(offered(picker)).toEqual(["Claude Opus 5.5", "Claude Sonnet 5.5", "Claude Haiku 5.5", "claude-opus-4-typo"]);
+    expect(offered(picker)).toEqual(["claude-opus-4-typo", "Claude Opus 5.5", "Claude Sonnet 5.5", "Claude Haiku 5.5"]);
     expect(picker).toHaveValue("claude-opus-4-typo");
+    expect(screen.getByText(modelSourceWords("settings"))).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Use the host's model" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Save the model" })).toBeDisabled();
   });
 });
