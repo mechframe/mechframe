@@ -4,43 +4,36 @@
   "version": "0.1.0",
   "status": "experimental",
   "category": "media",
-  "summary": "One site-wide player with waveforms and a queue, where only one thing plays at a time across every player.",
+  "summary": "One player for the site's own audio: waveforms, a queue, one thing at a time, and plays counted with no personal data.",
   "use_when": [
-    "The site plays its own audio: albums, singles, beats or readings",
-    "Several players on one page must never play over each other"
+    "The site plays its own audio, such as albums, singles or readings, and another module hands the player what to play",
+    "Several players on one page, a YouTube player among them, must never play over each other",
+    "The team wants to know how often each track is played, without a cookie or a consent banner for it"
   ],
   "avoid_when": [
-    "The audio only lives on SoundCloud or Spotify and a provider embed is enough; use embeds"
+    "The audio only lives on SoundCloud or Spotify and a provider's own player is enough: that's embeds",
+    "Music must keep playing while a visitor moves between pages: this player stops on a page move"
   ],
   "requires": {
     "kernel": "^0.1",
     "modules": {}
   },
   "conflicts": [],
-  "permissions": [
-    {
-      "key": "audio-player.stats.read",
-      "description": "See play counts",
-      "default_roles": [
-        "admin",
-        "editor"
-      ]
-    }
-  ],
+  "permissions": [],
   "settings": [
     {
       "key": "autoplay_next",
       "type": "bool",
       "default": true,
       "secret": false,
-      "description": "Move to the next item in a queue when one ends"
+      "description": "Play the next track in the queue when one ends"
     },
     {
       "key": "count_after_seconds",
       "type": "int",
       "default": 30,
       "secret": false,
-      "description": "Seconds of listening before a play counts"
+      "description": "Seconds really heard before a play counts, from 5 to 120 (or the whole of a shorter track)"
     }
   ],
   "env": [],
@@ -51,6 +44,7 @@
     "admin": []
   },
   "tables": [
+    "audio_player_salt",
     "audio_player_play",
     "audio_player_play_daily"
   ],
@@ -59,18 +53,20 @@
     "listens": []
   },
   "slots": [
-    "admin.dashboard.widget"
+    "admin.settings.section"
   ],
   "bindings": [
     "web"
   ],
   "jobs": [
     {
-      "name": "rollup_plays",
+      "name": "prune",
       "schedule": "15 3 * * *"
     }
   ],
   "notifications": [],
+  "vocabularies": [],
+  "content_types": [],
   "data_hooks": {
     "export": false,
     "delete": false

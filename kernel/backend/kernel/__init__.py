@@ -12,7 +12,8 @@ dependencies (`current_user`, `optional_user`, `require_permission`,
 From K4: `Answer`, `answer`, `Id` and `When`, for every route's answer model.
 The contract hooks (decision 0052): `lifecycle`, `taxonomy`, `search`, `seed`,
 `bot` with its `BotProof`, `consent`, `privacy` with its `Subject`, and the
-Dashboard's `attention` and `setup`.
+Dashboard's `attention` and `setup`. For audio-player (decision 0071):
+`client_address`, who a request comes from as the rate limits read it.
 """
 
 from kernel import (
@@ -51,7 +52,7 @@ from kernel.bot import BotProof
 from kernel.db import Base, Database, for_saving, get_db, one_row_only
 from kernel.errors import Problem
 from kernel.modules import InstalledModule, Manifest, load_module, require_module
-from kernel.ratelimit import rate_limit
+from kernel.ratelimit import client_address, rate_limit
 from kernel.settings import settings
 from kernel.version import __version__
 
@@ -72,6 +73,7 @@ __all__ = [
     "attention",
     "audit",
     "bot",
+    "client_address",
     "consent",
     "create_app",
     "crypto",

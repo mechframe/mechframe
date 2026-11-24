@@ -214,7 +214,7 @@ Modules MUST import only from the kernel's public surface: `kernel/__init__.py` 
 | `require_module(id)` | 404 while the module is switched off (VybeSite's `require_part`) | Added by the kernel to every module router | K1 |
 | `settings.for_module(db, id)` | The module's typed, versioned settings | `cfg = await settings.for_module(db, "blog")` | K1 |
 | `one_row_only(table)`, `for_saving(db, Model)` | A table that holds one row, and that row made safely on first save | A module's singleton config row | K1 |
-| `rate_limit(rule, key=, scope=)` | Per-IP or per-account limits | `rate_limit("5/15m", key="account")` | K1 |
+| `rate_limit(rule, key=, scope=)`, `client_address(request)` | Per-IP or per-account limits; who a request comes from as they read it, an IPv4 address or an IPv6 /64 behind the host's proxy (decision 0071) | `rate_limit("5/15m", key="account")` | K1 |
 | `crypto.seal / open` | Encrypts secrets at rest, with key rotation (`ENCRYPTION_KEYS`) | Stored API keys for a third party | K1 |
 | `Problem(code, status, detail)` | The one error shape (section 7) | `raise Problem("blog.post_not_found", 404)` | K1 |
 | `current_user`, `optional_user` | The signed-in user, or 401 / `None` | `user: User = Depends(current_user)` | K2 |
@@ -915,6 +915,7 @@ All eleven were answered on 2026-11-12, and the sections above already reflect t
 
 | Date | Change |
 | --- | --- |
+| 2026-11-24 | The eighth module, `audio-player` (`dev plans/contracts/audio-player.md`, decision 0071): one player for a site's own audio that modules hand items to, one thing playing at a time, SoundCloud behind its controls in the consent category `media`, and plays counted once per listener a day with nothing kept that identifies anyone; section 6's `rate_limit` row gains `client_address` |
 | 2026-11-24 | The seventh module, `discography` (`dev plans/contracts/discography.md`, decision 0070): the music library's releases, tracks, credits and streaming links, a track playing from an upload made into an MP3 stream by a job (soundfile, libsndfile under LGPL-2.1) or from a SoundCloud link; section 6's storage row and section 15's third-party hosts say the public bucket's origin joins `media-src` while it's set |
 | 2026-11-23 | The account's name (decision 0061, `dev plans/contracts/account-name.md`): 14.1 says who sets `display_name` and how it's cleaned; 14.10 audits name changes without the name; 14.11 lists the display name on `auth_user` |
 | 2026-11-23 | The sixth module, `campaigns` (`dev plans/contracts/campaigns.md`): the newsletter's sign-up, confirmed by email, and its emails written in Markdown, tested, scheduled and sent to each subscriber with a one-click unsubscribe; an address that bounces, complains or unsubscribes set aside for good. `email.queue_message` joins the kernel's public surface, for a message a module renders itself (decision 0062) (6) |
