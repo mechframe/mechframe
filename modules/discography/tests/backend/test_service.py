@@ -8,6 +8,7 @@ from __future__ import annotations
 import asyncio
 import io
 import os
+import threading
 import time
 import uuid
 from pathlib import Path
@@ -678,23 +679,39 @@ async def test_a_persons_credits_are_told_apart_by_release_not_title(db: AsyncSe
     )
 
 
-async def test_deleting_a_track_waits_for_its_release_before_it_holds_the_track(
-    db: AsyncSession, database: Database
-) -> None:
-    """A reorder holds the release, then its tracks: a delete takes them in that order too,
-    so the two never deadlock."""
-    release = await _release(db)
-    track = await _linked(db, release)
+async def _until_waiting(probe: AsyncSession) -> None:
+    """Until a session on this database waits on a lock, for 5 seconds at most
+    (CodeRabbit on #145: a fixed sleep can probe before the act gets there)."""
+    for _ in range(100):
+        waiting = await probe.scalar(
+            text(
+                "SELECT count(*) FROM pg_stat_activity "
+                "WHERE datname = current_database() AND wait_event_type = 'Lock'"
+            )
+        )
+        await probe.rollback()
+        if waiting:
+            return
+        await asyncio.sleep(0.05)
+    raise AssertionError("Nothing waited on the release's lock.")
+
+
+async def _track_free_while_it_waits(
+    database: Database, release_id: uuid.UUID, track_id: uuid.UUID, act: Any
+) -> bool:
+    """With the release held, `act` runs until it waits on the release: is the track
+    still free then? A reorder holds the release, then its tracks, so an act that
+    takes them the other way round can deadlock with it."""
     async with database.sessions() as holder:
-        await holder.execute(select(Release).where(Release.id == release.id).with_for_update())
-        async with database.sessions() as deleter:
-            task = asyncio.ensure_future(service.remove_track(deleter, track.id, by=None))
-            await asyncio.sleep(0.5)  # the delete waits on the release by now
+        await holder.execute(select(Release.id).where(Release.id == release_id).with_for_update())
+        async with database.sessions() as actor:
+            task = asyncio.ensure_future(act(actor))
             async with database.sessions() as probe:
+                await _until_waiting(probe)
                 try:
                     await probe.execute(
                         text("SELECT 1 FROM discography_track WHERE id = :id FOR UPDATE NOWAIT"),
-                        {"id": track.id},
+                        {"id": track_id},
                     )
                     free = True
                 except DBAPIError:
@@ -702,8 +719,37 @@ async def test_deleting_a_track_waits_for_its_release_before_it_holds_the_track(
                 await probe.rollback()
             await holder.rollback()
             await task
-            await deleter.rollback()
-    assert free
+            await actor.rollback()
+    return free
+
+
+async def test_deleting_a_track_waits_for_its_release_before_it_holds_the_track(
+    db: AsyncSession, database: Database
+) -> None:
+    release = await _release(db)
+    track = await _linked(db, release)
+    assert await _track_free_while_it_waits(
+        database,
+        release.id,
+        track.id,
+        lambda actor: service.remove_track(actor, track.id, by=None),
+    )
+
+
+async def test_a_tracks_save_waits_for_its_release_before_it_holds_the_track(
+    db: AsyncSession, database: Database
+) -> None:
+    """CodeRabbit on #145: a new address on a live release writes a move, which reads the
+    release: the save holds it first, as a delete does."""
+    release = await _live(db)
+    track = await _linked(db, release)
+    version = track.version
+    assert await _track_free_while_it_waits(
+        database,
+        release.id,
+        track.id,
+        lambda actor: service.change_track(actor, track.id, version, {"slug": slug()}, by=None),
+    )
 
 
 async def test_a_tracks_old_address_never_lands_on_another_track(db: AsyncSession) -> None:
@@ -728,11 +774,13 @@ async def test_a_tracks_old_address_never_lands_on_another_track(db: AsyncSessio
 async def test_a_null_explicit_leaves_the_track_as_it_was(db: AsyncSession) -> None:
     release = await _release(db)
     track = await _linked(db, release)
+    track = await service.change_track(db, track.id, track.version, {"explicit": True}, by=None)
+    await db.commit()
     saved = await service.change_track(
         db, track.id, track.version, {"explicit": None, "title": "Renamed"}, by=None
     )
     await db.commit()
-    assert (saved.explicit, saved.title) == (False, "Renamed")
+    assert (saved.explicit, saved.title) == (True, "Renamed")  # not reset to False
 
 
 async def test_the_seed_credits_a_name_thats_there_under_another_id(db: AsyncSession) -> None:
@@ -800,14 +848,19 @@ async def test_the_job_waits_for_its_encoder_before_it_lets_the_files_go(
     release = await _release(db)
     track = await _uploaded(db, release, master(1.0))
     closed: list[bool] = []
+    # The encoder holds until the percent's write has failed (CodeRabbit on #145:
+    # timing alone can let it finish first), then works on a while.
+    failed = threading.Event()
 
     def slow(source: BinaryIO, into: BinaryIO, *, kbps: int, progress: Any) -> audio.Made:
         progress(10)
-        time.sleep(0.4)
+        assert failed.wait(5)
+        time.sleep(0.3)
         closed.append(into.closed)
         return audio.Made(duration_ms=1000, peaks=[0] * 1000, samplerate=44100, channels=2)
 
     async def unwritten(*args: Any) -> None:
+        failed.set()
         raise RuntimeError("the percent couldn't be written")
 
     monkeypatch.setattr(audio, "make_stream", slow)
@@ -816,6 +869,78 @@ async def test_the_job_waits_for_its_encoder_before_it_lets_the_files_go(
     with pytest.raises(RuntimeError, match="percent"):
         await _process(database, track)
     assert closed == [False]
+
+
+async def test_a_last_try_that_runs_out_of_time_fails_the_track(
+    db: AsyncSession, database: Database, store: Store, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """CodeRabbit on #145: the worker's own timeout cancels the handler, which no
+    `except Exception` hears; the job's deadline comes first and says so."""
+    release = await _release(db)
+    track = await _uploaded(db, release, master(1.0))
+
+    def stuck(source: BinaryIO, into: BinaryIO, *, kbps: int, progress: Any) -> audio.Made:
+        time.sleep(1.0)
+        return audio.Made(duration_ms=1000, peaks=[0] * 1000, samplerate=44100, channels=2)
+
+    monkeypatch.setattr(audio, "make_stream", stuck)
+    monkeypatch.setattr(jobs, "DEADLINE", 0.1, raising=False)
+    monkeypatch.setattr(jobs, "ENCODER_GRACE", 0.05, raising=False)
+    with pytest.raises((TimeoutError, asyncio.TimeoutError)):
+        await asyncio.wait_for(_process(database, track, try_number=jobs.TRIES), timeout=0.5)
+    await db.refresh(track)
+    assert (track.audio_state, track.audio_error) == ("failed", "discography.process_failed")
+
+
+async def test_a_percent_never_lands_on_the_master_that_replaced_its_own(
+    db: AsyncSession, database: Database, store: Store
+) -> None:
+    """CodeRabbit on #145: the percent's write holds the row while it checks the master."""
+    release = await _release(db)
+    track = await _uploaded(db, release, master(1.0))
+    old = track.master_key
+    assert old is not None
+    ctx = SimpleNamespace(sessions=database.sessions, try_number=1)
+    async with database.sessions() as replacing:
+        row = await replacing.scalar(select(Track).where(Track.id == track.id).with_for_update())
+        assert row is not None
+        row.master_key, row.processing_percent = "discography/masters/new.wav", 0
+        await replacing.flush()
+        task = asyncio.ensure_future(jobs._percent(ctx, track.id, old, 55))  # type: ignore[arg-type]
+        await asyncio.sleep(0.3)
+        await replacing.commit()
+    await task
+    await db.refresh(track)
+    assert (track.master_key, track.processing_percent) == ("discography/masters/new.wav", 0)
+
+
+async def test_a_stream_whose_commit_reply_was_lost_is_kept_when_its_track_names_it(
+    db: AsyncSession, database: Database, store: Store
+) -> None:
+    """CodeRabbit on #145: a commit can land and its reply be lost; the file goes only
+    if no track names it."""
+    release = await _release(db)
+    track = await _uploaded(db, release, master(1.0))
+
+    def sessions() -> AsyncSession:
+        session = database.sessions()
+        real = session.commit
+
+        async def commit() -> None:
+            await real()
+            raise ConnectionError("the commit's reply was lost")
+
+        session.commit = commit  # type: ignore[method-assign]
+        return session
+
+    ctx = SimpleNamespace(sessions=sessions, try_number=1)
+    with pytest.raises(ConnectionError):
+        await jobs.process_track.run(  # type: ignore[arg-type]
+            ctx, {"track_id": str(track.id), "master_key": track.master_key}
+        )
+    await db.refresh(track)
+    assert track.stream_key is not None
+    assert store.keys(public=True) == [track.stream_key]
 
 
 async def test_search_drops_lyrics_once_the_site_stops_showing_them(

@@ -186,7 +186,8 @@ Files: masters in the private bucket at `discography/masters/<track_id>/<n>.<ext
 ## Changes as built (CodeRabbit's review of #145)
 
 - **A release holds 100 tracks at most** (`MAX_TRACKS`), as many as a save's `track_ids` orders: adding the 101st, linked or uploaded, answers 409 `discography.too_many_tracks` before a master is stored.
-- **A job's last try that fails** in a way the job doesn't name (storage down, say) fails the track with `discography.process_failed`, "Try again" on the board, rather than leaving it processing. A stream file whose result isn't committed is deleted at once.
+- **A job's last try that fails** in a way the job doesn't name (storage down, or out of time: the job's own deadline is two minutes under the worker's 30) fails the track with `discography.process_failed`, "Try again" on the board, rather than leaving it processing. A stream file whose result isn't committed is deleted at once, unless a commit whose reply was lost left a track naming it.
+- **A track's save and its delete hold the release before the track,** as a reorder does.
 - **Search follows `show_lyrics`:** discography hears `kernel.settings.changed` for itself (`discography.reindex_on_settings`) and indexes its live releases again.
 - **A track's old address** whose track can't play any more answers 404, never another track that took its slug since.
 - **The track panel's audio answer** asks, as a save does, where someone else saved a field the person had changed. The editors keep what's typed when a read in the background fails, and a field typed back to its saved value while a save waits still counts as a change.

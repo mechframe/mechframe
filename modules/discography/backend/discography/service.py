@@ -21,6 +21,7 @@ same save. Covers are media's images, recorded as the release's uses.
 
 from __future__ import annotations
 
+import asyncio
 import re
 import secrets
 import unicodedata
@@ -234,6 +235,22 @@ async def get_track(db: AsyncSession, track_id: uuid.UUID, *, lock: bool = False
     if found is None:
         raise _not_found("track")
     return found
+
+
+async def _release_then_track(db: AsyncSession, track_id: uuid.UUID) -> tuple[Release, Track]:
+    """The track's release held, then the track, as a reorder holds them: a save
+    or a delete that took the track first could deadlock with it (CodeRabbit on
+    #145). The track is read again once held."""
+    release = await get_release(db, (await get_track(db, track_id)).release_id, lock=True)
+    track = await db.scalar(
+        select(Track)
+        .where(Track.id == track_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if track is None:
+        raise _not_found("track")
+    return release, track
 
 
 async def tracks_of(
@@ -1257,7 +1274,7 @@ async def upload_track(
 ) -> Track:
     """A new track at the end of the release from an uploaded master, titled
     from its tags or its name, queued for processing."""
-    probed = probe(source, size)
+    probed = await asyncio.to_thread(probe, source, size)  # file reads, off the event loop
     name = _clean_name(filename)
     release = await get_release(db, release_id, lock=True)
     await _room_for_one(db, release.id)
@@ -1292,7 +1309,7 @@ async def replace_audio(
 ) -> Track:
     """A new master for the track: its stream is made again. The old stream
     plays until the new one is ready."""
-    probed = probe(source, size)
+    probed = await asyncio.to_thread(probe, source, size)  # file reads, off the event loop
     track = await get_track(db, track_id, lock=True)
     await _store_master(db, track, source, size, _clean_name(filename), probed)
     track.version += 1
@@ -1341,10 +1358,9 @@ async def change_track(
     *,
     by: uuid.UUID | None,
 ) -> Track:
-    track = await get_track(db, track_id, lock=True)
+    release, track = await _release_then_track(db, track_id)
     if version != track.version:
         raise _changed("track", {"track": await full_track(db, track)})
-    release = await get_release(db, track.release_id)
     old_slug = track.slug
     slug = fields.get("slug") or old_slug
     if "soundcloud_url" in fields:
@@ -1389,18 +1405,7 @@ async def change_track(
 async def remove_track(db: AsyncSession, track_id: uuid.UUID, *, by: uuid.UUID | None) -> None:
     from discography.events import TrackDeleted
 
-    # The release first, then the track, as a reorder holds them: the other way
-    # round, a delete and a reorder can deadlock (CodeRabbit on #145).
-    release_id = (await get_track(db, track_id)).release_id
-    release = await get_release(db, release_id, lock=True)
-    track = await db.scalar(
-        select(Track)
-        .where(Track.id == track_id)
-        .with_for_update()
-        .execution_options(populate_existing=True)
-    )
-    if track is None:
-        raise _not_found("track")
+    release, track = await _release_then_track(db, track_id)
     files = _files_of(track)
     await db.delete(track)
     await db.flush()

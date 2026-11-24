@@ -706,6 +706,34 @@ describe("CodeRabbit on #145", () => {
     answer({ status: 200, body: { ...silent, title: "B", version: 2 } });
   });
 
+  it("stays on the track when Stay comes while Save and leave waits", async () => {
+    let answer: (value: Answer) => void = () => undefined;
+    routed({
+      [LIST]: { status: 200, body: { items: [track(), silent], next_cursor: null, total: 2, releases: 1 } },
+      [`GET ${TRACK}`]: { status: 200, body: silent },
+      [`GET /api/discography/admin/tracks/${T1}`]: { status: 200, body: fullTrack() },
+      [`PATCH ${TRACK}`]: () =>
+        new Promise<Answer>((resolve) => {
+          answer = resolve;
+        }),
+    });
+    renderApp({ path: `/admin/music/tracks?track=${T2}`, modules: [discography], session: editor });
+
+    await userEvent.type(await screen.findByRole("textbox", { name: "Lyrics" }), "Pray for you");
+    await userEvent.click(screen.getByRole("button", { name: "Gather Around" }));
+    const asking = within(await screen.findByRole("dialog", { name: "You have changes that aren't saved" }));
+    await userEvent.click(asking.getByRole("button", { name: "Save and leave" }));
+    await userEvent.click(asking.getByRole("button", { name: "Stay" }));
+    await act(async () => {
+      answer({ status: 200, body: { ...silent, version: 2, lyrics: "Pray for you", has_lyrics: true } });
+      await Promise.resolve();
+    });
+    await waitFor(() => {
+      expect(screen.getByRole("textbox", { name: "Lyrics" })).toHaveValue("Pray for you");
+    });
+    expect(screen.getByRole("button", { name: "Pray For You", pressed: true })).toBeInTheDocument();
+  });
+
   it("asks the album editor's leave when a field was typed back while its save waits", async () => {
     let answer: (value: Answer) => void = () => undefined;
     routed({

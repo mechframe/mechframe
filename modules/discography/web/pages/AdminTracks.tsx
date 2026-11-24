@@ -320,6 +320,7 @@ function TrackEditor({ server, notice, onGone, dirty: held, asked, onGo, onStay 
   const audio = (server.version === saved.version ? server : saved).audio;
   const [switchSaving, setSwitchSaving] = useState(false);
   const [switchError, setSwitchError] = useState("");
+  const switchTurn = useRef(0);
   useLayoutEffect(() => {
     held.current = dirty;
   });
@@ -461,9 +462,13 @@ function TrackEditor({ server, notice, onGone, dirty: held, asked, onGo, onStay 
     saving: switchSaving,
     error: switchError,
     saveAndLeave: () => {
+      // A Stay while the save waits keeps the person here: the save's answer
+      // doesn't move them on (CodeRabbit on #145, as the kit's guard counts turns).
+      const turn = (switchTurn.current += 1);
       setSwitchSaving(true);
       setSwitchError("");
       void saveToLeave().then((why) => {
+        if (turn !== switchTurn.current) return;
         setSwitchSaving(false);
         if (why === null) onGo();
         else setSwitchError(why);
@@ -471,6 +476,8 @@ function TrackEditor({ server, notice, onGone, dirty: held, asked, onGo, onStay 
     },
     leave: onGo,
     stay: () => {
+      switchTurn.current += 1;
+      setSwitchSaving(false);
       setSwitchError("");
       onStay();
     },

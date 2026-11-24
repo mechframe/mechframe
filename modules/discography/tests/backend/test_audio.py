@@ -117,3 +117,13 @@ def test_a_master_with_samples_that_arent_numbers_is_refused() -> None:
     sf.write(out, wave, 44100, format="WAV", subtype="FLOAT")
     with pytest.raises(audio.NotAudio):
         audio.make_stream(io.BytesIO(out.getvalue()), io.BytesIO(), kbps=128)
+
+
+def test_a_downmix_of_loud_float_channels_stays_a_number() -> None:
+    """CodeRabbit on #145: four float samples of 1e38 sum past float32's range; the
+    mix is worked out wider, so its peaks are numbers."""
+    wave = np.full((44100, 4), 1e38, dtype="float32")
+    out = io.BytesIO()
+    sf.write(out, wave, 44100, format="WAV", subtype="FLOAT")
+    made = audio.make_stream(io.BytesIO(out.getvalue()), io.BytesIO(), kbps=128)
+    assert max(made.peaks) == 255

@@ -210,7 +210,8 @@ def make_stream(
                     # A float master's NaN or infinity: no sound to stream, and no peak.
                     raise NotAudio("The file holds samples that aren't sound.")
                 if block.shape[1] > 2:
-                    mixed = block.mean(axis=1, keepdims=True)
+                    # Summed wider than float32: four loud float samples would pass its range.
+                    mixed = block.mean(axis=1, keepdims=True, dtype=np.float64).astype(np.float32)
                     block = np.repeat(mixed, 2, axis=1)
                 elif channels == 2 and block.shape[1] == 1:
                     block = np.repeat(block, 2, axis=1)

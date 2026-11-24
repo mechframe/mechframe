@@ -35,29 +35,43 @@ from kernel import events, jobs, storage
 PROGRESS_EVERY = 2.0
 #: process_track's tries: the last one that fails records why.
 TRIES = 3
+#: The worker's timeout for a try, in seconds: it cancels the handler, which no
+#: `except Exception` hears.
+TIMEOUT = 1800
+#: The job's own deadline, under the worker's, so a try that runs out of time
+#: ends in a TimeoutError it can record; a stop at shutdown is still a cancel,
+#: which the lease tries again (CodeRabbit on #145).
+DEADLINE = TIMEOUT - 120
+#: How long a try that ends early waits for its encoder's thread to let the files go.
+ENCODER_GRACE = 60.0
 
 
 async def _fail(ctx: jobs.Context, track_id: uuid.UUID, master_key: str, code: str) -> None:
     async with ctx.sessions() as db:
         track = await db.scalar(select(Track).where(Track.id == track_id).with_for_update())
         if track is not None and track.master_key == master_key:
+            if track.audio_state != "processing":
+                return  # its result landed after all: a commit whose reply was lost
             track.audio_state, track.audio_error, track.processing_percent = "failed", code, None
             await db.commit()
 
 
 async def _percent(ctx: jobs.Context, track_id: uuid.UUID, master_key: str, percent: int) -> None:
     async with ctx.sessions() as db:
-        track = await db.scalar(select(Track).where(Track.id == track_id))
+        # Held while the master is checked, as _fail and _finish hold it: a master
+        # replaced meanwhile never takes this one's percent (CodeRabbit on #145).
+        track = await db.scalar(select(Track).where(Track.id == track_id).with_for_update())
         if track is not None and track.master_key == master_key:
             track.processing_percent = percent
             await db.commit()
 
 
-@jobs.handler(service.PROCESS, tries=TRIES, timeout=1800)
+@jobs.handler(service.PROCESS, tries=TRIES, timeout=TIMEOUT)
 async def process_track(ctx: jobs.Context, payload: dict[str, Any]) -> None:
     track_id, master_key = uuid.UUID(payload["track_id"]), str(payload["master_key"])
     try:
-        await _process(ctx, track_id, master_key)
+        async with asyncio.timeout(DEADLINE):
+            await _process(ctx, track_id, master_key)
     except Exception:
         if ctx.try_number >= TRIES:
             # No try is left: the track says so, rather than processing for ever.
@@ -90,8 +104,9 @@ async def _process(ctx: jobs.Context, track_id: uuid.UUID, master_key: str) -> N
                     await _percent(ctx, track_id, master_key, told)
         except BaseException:
             # The encoder's thread still reads and writes the two files: they
-            # close once it's done, and the error goes on (CodeRabbit on #145).
-            await asyncio.wait([work])
+            # close once it's done, or once a stuck one has had its grace, and
+            # the error goes on (CodeRabbit on #145).
+            await asyncio.wait([work], timeout=ENCODER_GRACE)
             raise
         try:
             made = work.result()
@@ -107,16 +122,31 @@ async def _process(ctx: jobs.Context, track_id: uuid.UUID, master_key: str) -> N
         stream.seek(0)
         key = storage.unguessable_key("discography/stream", ".mp3")
         await storage.put(key, stream, content_type="audio/mpeg", public=True)
+    committing = False
     async with ctx.sessions() as db:
         try:
             await _finish(db, track_id, master_key, key, made)
+            committing = True
             await db.commit()
         except BaseException:
             # Uncommitted, nothing names the file it stored: it goes again now,
-            # as no commit will queue its delete (CodeRabbit on #145).
-            with contextlib.suppress(Exception):
-                await storage.delete(key, public=True)
+            # as no commit will queue its delete. A commit that may have landed,
+            # its reply lost, keeps the file while a track names it (CodeRabbit
+            # on #145).
+            if not committing or not await _named(ctx, key):
+                with contextlib.suppress(Exception):
+                    await storage.delete(key, public=True)
             raise
+
+
+async def _named(ctx: jobs.Context, key: str) -> bool:
+    """Whether a track names `key` as its stream file; True when that can't be read,
+    as a file kept is better than a track naming one that's gone."""
+    try:
+        async with ctx.sessions() as db:
+            return await db.scalar(select(Track.id).where(Track.stream_key == key)) is not None
+    except Exception:
+        return True
 
 
 async def _finish(
