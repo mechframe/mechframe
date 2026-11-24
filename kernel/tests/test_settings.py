@@ -450,6 +450,26 @@ async def test_a_field_with_its_own_route_is_refused_by_the_form(db: AsyncSessio
     assert (await found.for_module(db, module_id)).model_dump() == {"shown": "x", "picked": "a"}
 
 
+@pytest.mark.db
+async def test_a_stale_form_sending_its_routed_field_unchanged_merges(db: AsyncSession) -> None:
+    """CodeRabbit on #144: the field read as it stood at the form's version is no
+    change, so the form's save merges and keeps the route's newer value."""
+    found = SettingsRegistry()
+    module_id = unique_id("picked")
+    found.register(module_id, Picked, own_route={"picked": "Pick it from the list."})
+    first = await found.save(db, module_id, {"picked": "a"}, version=0, via="ai.model")
+    newer = await found.save(db, module_id, {"picked": "b"}, version=first.version, via="ai.model")
+    # A form read at the first version sends picked as it read it, with its own change.
+    stale = await found.save(db, module_id, {"shown": "x", "picked": "a"}, version=first.version)
+    assert (stale.changed, stale.merged) == (["shown"], ["picked"])
+    assert (await found.for_module(db, module_id)).model_dump() == {"shown": "x", "picked": "b"}
+    # Changing it from what that version held is still refused.
+    with pytest.raises(Problem) as refused:
+        await found.save(db, module_id, {"picked": "c"}, version=newer.version)
+    await db.rollback()
+    assert refused.value.errors == {"picked": ["Pick it from the list."]}
+
+
 def test_only_a_field_of_the_model_has_its_own_route() -> None:
     with pytest.raises(ValueError, match="nothing"):
         SettingsRegistry().register(unique_id("picked"), Picked, own_route={"nothing": "No."})

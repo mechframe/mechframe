@@ -212,6 +212,28 @@ describe("Settings → AI's model (decision 0064)", () => {
     expect(screen.queryByText(/Couldn't load Anthropic's model list/)).toBeNull();
   });
 
+  it("shows the model in use alone when a later read of the list fails, not the list read before (CodeRabbit on #144)", async () => {
+    let asks = 0;
+    answers(false, { source: "environment" }, {
+      [MODELS]: () => {
+        asks += 1;
+        return asks === 1 ? listed() : problem(502, "kernel.ai_failed");
+      },
+      "PUT /api/kernel/admin/settings/kernel.ai": { status: 200, body: { version: 1, changed: ["api_key"], merged: [] } },
+    });
+    const user = userEvent.setup();
+    const field = await opened();
+    expect(offered(await model())).toEqual(["Claude Opus 5.5", "Claude Sonnet 5.5", "Claude Haiku 5.5"]);
+    // A key saved reads the list again, and Anthropic refuses it this time.
+    await user.type(field, "sk-ant-typed-key-0123456789");
+    await user.click(screen.getByRole("button", { name: "Save the key" }));
+    expect(await screen.findByText("Couldn't load Anthropic's model list, so the model in use is the only one shown.")).toBeInTheDocument();
+    const picker = screen.getByRole("combobox", { name: "Model" });
+    expect(offered(picker)).toEqual(["claude-opus-5-5"]);
+    expect(picker).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Save the model" })).toBeDisabled();
+  });
+
   it("waits for a working key before it lists (No key)", async () => {
     answers(false, { source: "none" }, { [MODELS]: problem(503, "kernel.ai_off") });
     await opened();

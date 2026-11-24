@@ -314,11 +314,19 @@ class SettingsRegistry:
             stored,
             self._as_json(module_id, {n: v for n, v in changes.items() if n not in secrets}),
         )
+        # The form as it was read: the version the save says, or what's stored now.
+        base = now
+        if version < current:
+            older = await self._version(db, module_id, version)
+            base = older.values if older else self._masked(model, {})
         if via == "form":
-            # A field its own route saves, changed through the form (decision 0064);
-            # sent as it already is, it's no change and goes through.
+            # A field its own route saves, changed through the form (decision 0064).
+            # Sent as the form read it, it's no change: a crossed save keeps the
+            # route's newer value (CodeRabbit on #144).
             routed = self.own_routes.get(module_id, {})
-            barred = sorted(name for name in routed if name in yours and yours[name] != now[name])
+            barred = sorted(
+                name for name in routed if name in yours and yours[name] != base.get(name)
+            )
             if barred:
                 raise Problem(
                     "kernel.invalid_request",
@@ -329,8 +337,6 @@ class SettingsRegistry:
 
         merged: list[str] = []
         if version < current:
-            older = await self._version(db, module_id, version)
-            base = older.values if older else self._masked(model, {})
             conflicts, kept = self._merge(model, base, now, yours, typed, changes)
             if conflicts:
                 newest = await self._version(db, module_id, current)

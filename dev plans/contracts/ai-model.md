@@ -125,3 +125,8 @@ None. The owner's answers, 2026-11-24, as recommended:
   - **The settings form's refusal** reads "Choose the model from Anthropic's list, in Settings → AI.", with the kernel's arrow, as its other words have it.
   - **`docs/HOST-VARIABLES.md`'s ANTHROPIC_MODEL line** comes from `tools/host_variables.py`, which says "until an admin saves one in Settings → AI".
   - **A pick keeps the version it began at** (Codex on #144): the section read again meanwhile, by a key saved or another admin's save, never moves it, so a crossed save of the model is a 409, not an overwrite. Use the host's model sends the version read.
+  - **From CodeRabbit on #144:**
+    - The settings form's check compares a routed field with the form's own version, not the stored value. So a stale form sending the model as it read it merges and keeps the route's newer one, while changing it is still refused.
+    - A read of the list that fails after one that worked shows the model in use alone, not the list kept from before.
+    - The budget test spends the writing budget with a draft, which `GET /ai` never did.
+    - Each has a test seen failing first.

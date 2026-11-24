@@ -324,9 +324,10 @@ async def test_the_model_list_has_its_own_budget(api: Api, keyed: Api) -> None:
         assert (await keyed.http.get(MODELS)).status_code == 200
     spent = await keyed.http.get(MODELS)
     assert (spent.status_code, spent.json()["code"]) == (429, "kernel.rate_limited")
-    # The writing help's budget is untouched.
-    editor_state = await keyed.http.get(AI)
-    assert editor_state.status_code == 200
+    # The writing help's budget is untouched: a task, which spends it, still goes
+    # through (CodeRabbit on #144; `GET /ai` spends none).
+    drafted = await keyed.http.post(f"{AI}/draft", json={**TASK, "topic": "Spring"})
+    assert drafted.status_code == 200, drafted.text
 
 
 async def test_put_admin_ai_model(api: Api, keyed: Api) -> None:

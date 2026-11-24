@@ -61,11 +61,14 @@ function ModelRow({ list, model, source, version, onSaved }: { list: ModelList; 
   // (Codex on #144, as useSettings keeps a draft's version).
   const [pickedAt, setPickedAt] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
-  const inUse = list.data?.in_use;
-  const choices = list.data
-    ? list.data.models.some((each) => each.id === list.data.in_use.id)
-      ? list.data.models
-      : [{ id: list.data.in_use.id, name: list.data.in_use.name ?? list.data.in_use.id }, ...list.data.models]
+  // A read that failed shows the model in use alone, never a list read before
+  // it, which TanStack keeps (CodeRabbit on #144).
+  const shown = list.isError ? undefined : list.data;
+  const inUse = shown?.in_use;
+  const choices = shown
+    ? shown.models.some((each) => each.id === shown.in_use.id)
+      ? shown.models
+      : [{ id: shown.in_use.id, name: shown.in_use.name ?? shown.in_use.id }, ...shown.models]
     : [{ id: model, name: model }];
   const chosen = picked ?? inUse?.id ?? model;
   const noKey = list.error instanceof ApiProblem && NO_WORKING_KEY.has(list.error.code);
@@ -99,7 +102,7 @@ function ModelRow({ list, model, source, version, onSaved }: { list: ModelList; 
       <Field label="Model" hint="Anthropic's newest model of each kind, listed when this page opens.">
         <Select
           value={chosen}
-          disabled={!list.data || saving}
+          disabled={!shown || saving}
           onChange={(event) => {
             setPicked(event.target.value);
             setPickedAt((at) => at ?? version);
@@ -128,7 +131,7 @@ function ModelRow({ list, model, source, version, onSaved }: { list: ModelList; 
             Use the host's model
           </Button>
         ) : null}
-        <Button variant="primary" disabled={saving || !list.data || chosen === (inUse?.id ?? model)} onClick={() => void pick(chosen, "Saved the model.")}>
+        <Button variant="primary" disabled={saving || !shown || chosen === (inUse?.id ?? model)} onClick={() => void pick(chosen, "Saved the model.")}>
           {saving ? "Saving…" : "Save the model"}
         </Button>
       </div>
