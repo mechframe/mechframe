@@ -11,7 +11,7 @@ MechFrame: website modules on a FastAPI + Postgres kernel (`CLAUDE.md`, `SPEC.md
   - it already has the junction to the main checkout's `node_modules`;
   - its Python is `C:\DEV\AI-DevKit\.venv\Scripts\python.exe`, which now has soundfile 0.14.0 and numpy 2.5.5;
   - Playwright config on port 8781 (`dev plans/done/2026-11-22-side-lane-m5.md` §4, and the memory note `worktree-playwright-config`).
-- **Tell the main lane** before and after every end-to-end run (`ListAgents`: the newest "AI DevKit Development" in the main checkout; on 2026-11-24 that was `AI DevKit Development 42* [31da4e]`).
+- **Tell the main lane** before and after every end-to-end run (`ListAgents`: the newest "AI DevKit Development" in the main checkout; on 2026-11-24 that was `AI DevKit Development 41`, which runs blog's and the AI's end-to-end specs).
 - **Never edit `C:\DEV\VM Website`.** Send VM Website Dev 12 the PR number when it's pushed and when it lands.
 
 ## 2. What you own, and what you don't
@@ -35,7 +35,7 @@ MechFrame: website modules on a FastAPI + Postgres kernel (`CLAUDE.md`, `SPEC.md
 - **The backend is done to the contract:** models, `audio` (soundfile), service, router, job, events, `public.py`, server copy, search, seed, dashboard and the migration. ruff, black and mypy are clean.
 - **The backend tests pass:** `modules/discography/tests/backend`, 43 tests (audio, service, job, server copy, seed and dashboard). `tests/test_migrations.py`: all 60 pass, the round trip with a row in each of discography's six tables included (the full suite hasn't run; CI's will).
 - **The web is still the scaffold's stubs:** `modules/discography/web/`.
-- **Main lane:** handoff PR #142 was open. Check `gh pr list` and `git log -1 origin/main`.
+- **Main lane:** #142 (its handoff) landed, with main at `c923962`; blog 0.1.3 was about to push. Merge `main` into this branch before the suites. Check `gh pr list` and `git log -1 origin/main`.
 
 ## 4. The job, in order
 
