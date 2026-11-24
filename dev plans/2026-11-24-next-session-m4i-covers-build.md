@@ -15,16 +15,15 @@ MechFrame (`CLAUDE.md`, `SPEC.md`), public at mechframe/mechframe; M4 of `dev pl
 
 ## 3. State (verify it)
 
-- **main:** this handoff's docs PR, on #144 (the AI's model, decision 0064). Check `git log -1 origin/main` and `gh pr list`.
-- **Covers, `feat/blog-covers`:** local only, four commits on `7b01b9f`: `kernel.svg` (28 tests), resvg-py 0.5.0 pinned, Inter 4.1's three weights (the owner's OK for the download), the contract.
+- **main:** this handoff's docs PR, on `083342a`, #144 (the AI's model, decision 0064). Check `git log -1 origin/main` and `gh pr list`.
+- **Covers, `feat/blog-covers`:** local only, four commits on `7b01b9f` ending `dacb1ca`: `kernel.svg` (28 tests), resvg-py 0.5.0 pinned, Inter 4.1's three weights (the owner's OK for the download), media 0.1.4's `store`, the contract.
 - **The side lane:** `discography` 0.1.0 is #145 (`feat/discography`, its worktree `.claude/worktrees/discography-0-1-0`); its result is §9 of its own prompt, `dev plans/2026-11-24-side-lane-m8b-discography-web.md`. Fold it into your handoff when it lands. It adds `security.public_origin` and the bucket's origin to `media-src` in `app.py` (decision 0070).
-- **Remove `.claude/worktrees/ai-model`** once #144 is on `main`, its `node_modules` junction first (`cmd /c rmdir`).
 
 ## 4. The job, in order
 
 0. Land this handoff's PR if it's open, on a green "CI result" with the bots clear.
 1. **Finish generated covers** on `feat/blog-covers`. Merge `main` first. The contract is `dev plans/contracts/blog-covers.md`, approved. Its "Changes after approval" says what's built, what's left, and the board's words (canvas version 104), which win where they differ.
-   Left: media 0.1.4's `store`; blog's `covers.py`, two routes and 0.1.4; the fake's `COVER`; `CoverDialog.tsx`; SPEC 6 and 15, decision 0065's record, the generated files.
+   Left: blog's `covers.py`, two routes and 0.1.4; the fake's `COVER`; `CoverDialog.tsx`; SPEC 6 and 15, decision 0065's record, the generated files.
 2. **VM Website Dev 15's ask, with the owner's OK:** every page's footer shifts on first load (CLS 0.40), because `SiteFrame` paints before the lazy page fills `<main>`. Write a contract first. Dev 15's record, to read only, is `C:\DEV\VM Website\dev plans\2026-11-24-lighthouse-after-141.md`. **Ask the owner first** whether it goes before or after covers (§5).
 3. **Social posting:** ask `blog.md` §8, 7 first (its home, and Buffer's key), then write its contract.
 

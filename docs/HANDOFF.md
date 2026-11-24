@@ -7,7 +7,7 @@ Overwritten every session. This one: 2026-11-24, about 07:45 to 12:00 Eastern (C
 - **#143, blog 0.1.3,** landed at `7b01b9f`:
   - `blog.post.published` is version 2 and carries the post's `summary`, so campaigns' email holds it. A payload refuses fields it doesn't declare, so the field had to be a new version (SPEC 11 and 13).
   - The editor's three crossed-save gaps are closed as pages' were (#138), each with a test seen failing first.
-- **#144, the AI's model from Anthropic's list** (decision 0064; `dev plans/contracts/ai-model.md`, approved as recommended), landed at LANDED_SHA:
+- **#144, the AI's model from Anthropic's list** (decision 0064; `dev plans/contracts/ai-model.md`, approved as recommended), landed at `083342a`, with Codex's one finding and CodeRabbit's four fixed, each with a test seen failing first:
   - Settings → AI's Model row is a dropdown of the newest Opus, Sonnet and Haiku. It's read from Anthropic each time the page opens, with a budget of its own (60 an hour a person).
   - A saved model wins over `ANTHROPIC_MODEL`, and it's saved only through `PUT /admin/ai/model`, which checks it against the list. That's settings' new `own_route` (SPEC 7).
   - The six states are VM Website's boards (AdminAI, canvas versions 101 and 102).
@@ -15,11 +15,13 @@ Overwritten every session. This one: 2026-11-24, about 07:45 to 12:00 Eastern (C
   - `kernel.svg`, the cleaner and the PNG step, with 28 tests and two mutants seen caught;
   - resvg-py 0.5.0, pinned with hashes;
   - Inter 4.1's Regular, SemiBold and Bold, downloaded with the owner's OK, its OFL licence beside them, in NOTICE;
+  - media 0.1.4's `public.store`, with its test;
   - the contract, with what's left and the board's words, in its "Changes after approval".
+  - That's four commits on `7b01b9f`, ending at `dacb1ca`.
 - **The tests:**
   - #144's branch, merged with #143: full Python suite 3,526 passed, 97.86%; web 973 passed, 93.45% of lines; `ai.spec.ts` 4 passed;
   - #143: 3,507 passed, and `blog.spec.ts` in both themes.
-- **The ledger:** LEDGER.
+- **The ledger:** `steps` points at `/_blob/3de1f2c6100eb28a99d08e6fb1e413f9`, the rows from `083342a`. v1.0 is still 80% (49 of 61). Its `data/users/me` `check` isn't written yet: the page hasn't drawn. Once one passes, delete the older assets, the M4g handoff's list plus `6c0facbe467733921b7f2f3d765230d2`.
 - **The side lane** (AI DevKit Development 44 WT) opened **`discography` 0.1.0 as #145** (`feat/discography`, from `.claude/worktrees/discography-0-1-0`). It will merge `main` again after #144, before landing.
   - Its result is §9 of its own prompt, `dev plans/2026-11-24-side-lane-m8b-discography-web.md`, in that PR.
   - Besides the module, #145 touches SPEC 6 and 15, `docs/progress.json` (Step 2), `catalog.json`, `docs/HOST-VARIABLES.md` and `package.json`'s `api:*` scripts.
@@ -58,7 +60,6 @@ Overwritten every session. This one: 2026-11-24, about 07:45 to 12:00 Eastern (C
   - Another session switched this checkout's branch 37 seconds after I made one (the reflog shows it). Check `git branch --show-current` before committing.
   - CodeRabbit's free reviews run out after a few pushes an hour. It answers "Review limit reached".
   - ruff's S314 flags `xml.etree`. `kernel.svg` refuses a DOCTYPE or an entity in the whole input first, with a `noqa` that says why.
-- **Remove `.claude/worktrees/ai-model`** once #144 is on `main`, its `node_modules` junction first.
 - **Still true:**
   - Run the full suite with `$env:PYTHONUTF8 = "1"`. It takes about 85 minutes here.
   - Commit with `git commit -F <file>`.
