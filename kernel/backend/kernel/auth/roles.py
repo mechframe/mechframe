@@ -3,7 +3,8 @@ additions 4 and 5; SPEC.md 14.1 and 14.8; docs/contracts/auth-api.md, Staff).
 
 - **`GET /admin/users?q=&cursor=&limit=`** (`auth.user.manage`): every account
   but a deleted one, the newest first, in pages (SPEC 7). `q` finds the
-  addresses holding it, as typed, never as a pattern.
+  addresses and names holding it (decision 0061), as typed, never as a
+  pattern.
 - **`PUT /admin/users/{id}/roles`** (`auth.role.assign`, step-up): the
   person's roles become the ones sent, and their next request gets a new
   session token (14.5).
@@ -44,7 +45,7 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Path, Query, Request
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-from sqlalchemy import delete, func, insert, select, update
+from sqlalchemy import delete, func, insert, or_, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import Response
@@ -83,7 +84,7 @@ RoleId = Annotated[str, Path(alias="id", max_length=64)]
 # --- what goes out ------------------------------------------------------------------
 
 
-async def _people(db: AsyncSession, users: Sequence[User]) -> list[dict[str, Any]]:
+async def people_items(db: AsyncSession, users: Sequence[User]) -> list[dict[str, Any]]:
     """The People list's items for `users`, in their order: four reads for
     the whole page, never one per person."""
     ids = [user.id for user in users]
@@ -198,7 +199,13 @@ async def list_people(
 ) -> dict[str, Any]:
     query = select(User).where(User.status != "deleted")
     if q:
-        query = query.where(func.lower(User.email).contains(q.lower(), autoescape=True))
+        typed = q.lower()
+        query = query.where(
+            or_(
+                func.lower(User.email).contains(typed, autoescape=True),
+                func.lower(User.display_name).contains(typed, autoescape=True),
+            )
+        )
     if cursor is not None:
         at, last = _after(cursor)
         query = query.where((User.created_at < at) | ((User.created_at == at) & (User.id < last)))
@@ -207,7 +214,7 @@ async def list_people(
     )
     page = found[:limit]
     return {
-        "items": await _people(db, page),
+        "items": await people_items(db, page),
         "next_cursor": _cursor_of(page[-1]) if len(found) > limit else None,
     }
 
@@ -306,7 +313,7 @@ async def set_roles(
             events.UserRoleChanged(user_id=user_id, added=added, removed=removed),
         )
         await db.flush()
-    (item,) = await _people(db, [person])
+    (item,) = await people_items(db, [person])
     await db.commit()
     return item
 

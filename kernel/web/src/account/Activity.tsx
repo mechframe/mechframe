@@ -41,6 +41,7 @@ export const DONE: Readonly<Record<string, string>> = {
   "auth.passkey_added": "Added a passkey",
   "auth.passkey_renamed": "Renamed a passkey",
   "auth.passkey_removed": "Removed a passkey",
+  "auth.name_changed": "Changed the name",
   "auth.second_factor_undone": "Removed a second factor from its email",
   "auth.user.suspended": "The account was suspended",
   "auth.user.restored": "The account was restored",

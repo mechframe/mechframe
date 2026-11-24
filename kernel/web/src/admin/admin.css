@@ -679,6 +679,18 @@
     color: var(--mf-color-text-muted);
   }
 
+  /* The name, above the roles, with its own Save (decision 0061). */
+  .mf-people-name {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin: 0 0 1.25rem;
+  }
+
+  .mf-people-name .mf-dialog-actions {
+    margin: 0;
+  }
+
   .mf-people-roles,
   .mf-role-permissions {
     display: flex;

@@ -53,6 +53,31 @@ async def roles_of(db: AsyncSession, user_id: uuid.UUID) -> set[str]:
     return set(rows)
 
 
+async def outranks(db: AsyncSession, actor: uuid.UUID, person: uuid.UUID) -> bool:
+    """Whether `actor` may act on `person`'s account or content: an owner only
+    by an owner, anyone else by someone holding every permission they hold
+    (decision 0013's rule). Suspension, moderation and a rename by staff
+    (decision 0061) all ask it. Everyone outranks themselves."""
+    actor_roles = await roles_of(db, actor)
+    # What every member holds is no rank: a module's permission for members
+    # mustn't stop an admin suspending one.
+    their_roles = await roles_of(db, person) - {"member"}
+    if OWNER in actor_roles:
+        return True
+    if OWNER in their_roles:
+        return False
+    return await _held(db, their_roles) <= await _held(db, actor_roles)
+
+
+async def _held(db: AsyncSession, roles: set[str]) -> set[str]:
+    if not roles:
+        return set()
+    found = await db.scalars(
+        select(RolePermission.permission).where(RolePermission.role_id.in_(roles))
+    )
+    return set(found)
+
+
 async def can(
     db: AsyncSession,
     user_id: uuid.UUID,

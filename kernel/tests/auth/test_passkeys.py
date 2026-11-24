@@ -331,6 +331,21 @@ async def test_a_name_holds_no_line_break_or_control_character(site: Site, name:
     assert (refused.status_code, refused.json()["code"]) == (422, "kernel.invalid_request")
 
 
+async def test_a_new_passkey_is_shown_by_the_name(site: Site) -> None:
+    """The authenticator's account picker shows the person's name, else the
+    address; `user.name` stays the address (decision 0061)."""
+    person = await _person(site)
+    unnamed = (await _options(person))["user"]
+    assert (unnamed["name"], unnamed["displayName"]) == (person.email, person.email)
+    async with site.db() as db:
+        row = await db.get(User, person.id)
+        assert row is not None
+        row.display_name = "Big Haas"
+        await db.commit()
+    named = (await _options(person, "Phone"))["user"]
+    assert (named["name"], named["displayName"]) == (person.email, "Big Haas")
+
+
 # --- the second factor -----------------------------------------------------------------
 
 

@@ -392,7 +392,7 @@ for (const [name, canvas] of Object.entries(THEMES)) {
     await page.getByLabel("Code from your app").fill(totp(user.totp));
     await page.getByRole("button", { name: "Continue" }).click();
     await onAccount(page);
-    for (const path of ["/account", "/account/notifications", "/account/activity"]) {
+    for (const path of ["/account/profile", "/account", "/account/notifications", "/account/activity"]) {
       await page.goto(path);
       await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
       await page.waitForLoadState("networkidle");

@@ -54,6 +54,19 @@ export function whyNotGrant(role: RoleView, held: ReadonlySet<string>, owner: bo
   return role.permissions.every((key) => held.has(key)) ? null : "It carries permissions you don't hold.";
 }
 
+/**
+ * Why the person can't change the name of someone holding `theirs`, or null
+ * when they can (decision 0061, by decision 0013's rule as suspending has it):
+ * an owner's only by an owner, anyone else's only by someone holding every
+ * permission they hold. `member` is no rank.
+ */
+export function whyNotRename(theirs: readonly string[], roles: readonly RoleView[], held: ReadonlySet<string>, owner: boolean): string | null {
+  if (owner) return null;
+  if (theirs.includes(OWNER)) return "Only an owner changes an owner's name.";
+  const needed = theirs.filter((id) => id !== MEMBER).flatMap((id) => roles.find((role) => role.id === id)?.permissions ?? []);
+  return needed.every((key) => held.has(key)) ? null : "They hold permissions you don't, so only someone who holds them all changes their name.";
+}
+
 export type PermissionGroup = { label: string; items: PermissionView[] };
 
 function groupOf(permission: PermissionView): string {

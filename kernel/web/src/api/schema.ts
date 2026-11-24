@@ -1472,6 +1472,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/auth/account/name": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set Own Name
+         * @description The person's own name becomes `name`, or none when it's empty.
+         */
+        put: operations["set_own_name_api_auth_account_name_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/admin/users/{id}/name": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set Name
+         * @description Someone's name becomes `name`, by staff who outrank them.
+         */
+        put: operations["set_name_api_auth_admin_users__id__name_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/sessions": {
         parameters: {
             query?: never;
@@ -2267,6 +2307,11 @@ export interface components {
         ModulesOn: {
             /** On */
             on: string[];
+        };
+        /** NameBody */
+        NameBody: {
+            /** Name */
+            name: string;
         };
         /** NewRole */
         NewRole: {
@@ -6466,6 +6511,92 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RequestOptions"];
+                };
+            };
+            /** @description A problem (RFC 9457) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    set_own_name_api_auth_account_name_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NameBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionAnswer"];
+                };
+            };
+            /** @description What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description A problem (RFC 9457) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    set_name_api_auth_admin_users__id__name_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NameBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Person"];
+                };
+            };
+            /** @description What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             /** @description A problem (RFC 9457) */

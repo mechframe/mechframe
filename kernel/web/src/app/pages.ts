@@ -26,6 +26,7 @@ export const KERNEL_PAGES: readonly KernelPage[] = [
   { path: "/auth/second-factor/undo", title: "Remove the new sign-in step", access: "public" },
   { path: "/notifications/unsubscribe", title: "Unsubscribe", access: "public" },
   { path: "/account", title: "Your account", access: "member" },
+  { path: "/account/profile", title: "Profile", access: "member" },
   { path: "/account/notifications", title: "Notifications", access: "member" },
   { path: "/account/activity", title: "Your activity", access: "member" },
   { path: "/admin", title: "Dashboard", access: "admin" },

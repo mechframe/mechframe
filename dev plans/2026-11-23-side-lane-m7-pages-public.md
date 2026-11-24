@@ -63,7 +63,7 @@ AI DevKit Development 40 WT, 2026-11-23, branch `feat/pages-0-1-1`, **#138**.
   - `pages/tests/web/public.test.tsx`;
   - four in `pages.test.tsx`, each seen failing first;
   - pages' web (28) and Python suites, and the generated-file tests, green; lint, types, ruff, black, mypy and the schemas clean.
-  - The end-to-end specs weren't run (the side lane's rule).
+  - `pages.spec.ts` passed in both themes at `4f0791c`. It ran from the worktree on port 8781 (a throwaway config, since deleted), after the main lane's runs were done.
 - **The owner's choices:** none were asked. VM Website's ask came with the owner's OK.
 - **For the main lane's handoff:**
   - pages 0.1.1 landed (#138), with its page read in `public.ts`.

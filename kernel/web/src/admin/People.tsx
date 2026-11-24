@@ -1,17 +1,18 @@
 /**
  * `/admin/people` (K4 contract §2 addition 4 and §4 item 7; SPEC 14.1; VM
  * Website `AdminPeople.dc.html`): everyone with an account, the newest first,
- * fifty at a time, found by address (`GET /api/auth/admin/users`,
- * `auth.user.manage`). Open someone to change their roles
- * (`PUT /api/auth/admin/users/{id}/roles`, `auth.role.assign`, step-up).
+ * fifty at a time, found by name or address (`GET /api/auth/admin/users`,
+ * `auth.user.manage`). Open someone to change their name
+ * (`PUT /api/auth/admin/users/{id}/name`, `auth.user.manage`, step-up;
+ * decision 0061) or their roles (`PUT /api/auth/admin/users/{id}/roles`,
+ * `auth.role.assign`, step-up). Someone without a name shows by address.
  *
  * Left off, not faked: Invite someone and the Invites tab (K2 step 10),
  * Export, the Staff and Members chips (the list has no filter by role), the
- * reminders (no route sends one), suspending and restoring from here, and
- * names (nothing sets one yet: the address stands in).
+ * reminders (no route sends one), and suspending and restoring from here.
  */
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useState, type SubmitEvent } from "react";
 
 import { ApiProblem, api } from "../api/client";
 import type { components } from "../api/schema";
@@ -27,7 +28,7 @@ import { Pill, type Tone } from "../ui/Pill";
 import { Table, type Column } from "../ui/Table";
 import { useToast } from "../ui/Toast";
 import { AdminPage } from "./AdminPage";
-import { MEMBER, roleName, useHeld, useRoles, whyNotGrant, type RoleView } from "./roleAccess";
+import { MEMBER, roleName, useHeld, useRoles, whyNotGrant, whyNotRename, type RoleView } from "./roleAccess";
 
 export type Person = components["schemas"]["Person"];
 
@@ -82,36 +83,78 @@ const REFUSED: Readonly<Record<string, string>> = {
   "auth.account_not_active": "This account is being deleted, or yours is no longer active.",
 };
 
-function PersonRoles({ person, roles, onClose }: { person: Person; roles: readonly RoleView[]; onClose: () => void }) {
+const NAME_REFUSED: Readonly<Record<string, string>> = {
+  "auth.role_not_yours": "Only an owner changes an owner's name, and anyone else's only someone holding every permission they hold.",
+  "auth.account_not_active": "This account is being deleted, or yours is no longer active.",
+  "kernel.invalid_request": "A name is up to 120 characters, on one line.",
+};
+
+const PEOPLE = ["get", "/api/auth/admin/users"] as const;
+
+/**
+ * A person, opened from the list: their name, saved on its own with the
+ * dialog left open, then their roles for those who may grant them, saved and
+ * closed. Saving either of your own refreshes the session.
+ */
+function PersonDialog({ person, roles, canAssign, onClose }: { person: Person; roles: readonly RoleView[]; canAssign: boolean; onClose: () => void }) {
   const session = useSession();
   const queryClient = useQueryClient();
   const toast = useToast();
   const { held, owner } = useHeld();
+  const nameId = useId();
+  const [saved, setSaved] = useState(person.name ?? "");
+  const [typed, setTyped] = useState(person.name ?? "");
+  const [nameError, setNameError] = useState("");
   const [chosen, setChosen] = useState<ReadonlySet<string>>(new Set(person.roles));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const same = chosen.size === person.roles.length && person.roles.every((role) => chosen.has(role));
+  const yours = session.status === "signed-in" && session.user.id === person.id;
+  const noRename = whyNotRename(person.roles, roles, held, owner);
   // Not while a save is on its way: its ending closes this dialog, and would
   // close another person's opened meanwhile (CodeRabbit on #85).
   const close = () => {
     if (!busy) onClose();
   };
 
-  const save = async () => {
+  // A list still loading its first page (a search just begun) would be handed that read,
+  // begun before this save, rather than read again: stop it first (K4's gate).
+  const readAgain = async (alsoRoles: boolean) => {
+    await queryClient.cancelQueries({ queryKey: PEOPLE });
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: PEOPLE }),
+      alsoRoles ? queryClient.invalidateQueries({ queryKey: ["get", "/api/auth/admin/roles"] }) : Promise.resolve(),
+      // Yourself: the session is read again, a read begun before stopped.
+      yours ? refreshSession(queryClient) : Promise.resolve(),
+    ]);
+  };
+
+  const saveName = async (event: SubmitEvent) => {
+    event.preventDefault();
+    setBusy(true);
+    setNameError("");
+    try {
+      const { data } = await api.PUT("/api/auth/admin/users/{id}/name", { params: { path: { id: person.id } }, body: { name: typed } });
+      const now = data?.name ?? "";
+      setSaved(now);
+      setTyped(now);
+      await readAgain(false);
+      toast({ tone: "success", text: now ? `Saved the name ${now}.` : "Removed the name." });
+    } catch (caught) {
+      if (refusedQuietly(caught)) return;
+      setNameError(caught instanceof ApiProblem ? said(caught, NAME_REFUSED) : "That didn't work. Try again.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const saveRoles = async () => {
     setBusy(true);
     setError("");
     try {
       await api.PUT("/api/auth/admin/users/{id}/roles", { params: { path: { id: person.id } }, body: { roles: [...chosen] } });
-      // A list still loading its first page (a search just begun) would be handed that read,
-      // begun before this save, rather than read again: stop it first (K4's gate).
-      await queryClient.cancelQueries({ queryKey: ["get", "/api/auth/admin/users"] });
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["get", "/api/auth/admin/users"] }),
-        queryClient.invalidateQueries({ queryKey: ["get", "/api/auth/admin/roles"] }),
-        // Your own roles: the session is read again, a read begun before stopped.
-        session.status === "signed-in" && session.user.id === person.id ? refreshSession(queryClient) : Promise.resolve(),
-      ]);
-      toast({ tone: "success", text: `Saved ${person.name ?? person.email}'s roles.` });
+      await readAgain(true);
+      toast({ tone: "success", text: `Saved ${saved || person.email}'s roles.` });
       onClose();
     } catch (caught) {
       if (refusedQuietly(caught)) return;
@@ -122,42 +165,69 @@ function PersonRoles({ person, roles, onClose }: { person: Person; roles: readon
   };
 
   return (
-    <Dialog title={person.name ?? person.email} onClose={close}>
-      <p className="mf-people-dialog-lead">
-        Their roles decide what they can do. Staff roles need a second factor before the admin opens for them.
-      </p>
-      <fieldset className="mf-people-roles">
-        <legend>Roles</legend>
-        {roles.map((role) => {
-          const why = whyNotGrant(role, held, owner);
-          return (
-            <Switch
-              key={role.id}
-              label={role.name}
-              hint={why ?? (role.description || undefined)}
-              checked={chosen.has(role.id)}
-              disabled={why !== null || busy}
-              onChange={(on) => {
-                const next = new Set(chosen);
-                if (on) next.add(role.id);
-                else next.delete(role.id);
-                setChosen(next);
-              }}
-            />
-          );
-        })}
-      </fieldset>
-      {error ? (
-        <p className="mf-dialog-error" role="alert">
-          {error}
-        </p>
+    <Dialog title={saved || person.email} onClose={close}>
+      <form className="mf-people-name" noValidate onSubmit={(event) => void saveName(event)}>
+        <Field label="Name" id={nameId} hint={noRename ?? "How the site names them. Leave it empty for none."} error={nameError || undefined}>
+          <Input
+            id={nameId}
+            autoComplete="off"
+            maxLength={240}
+            value={typed}
+            readOnly={noRename !== null}
+            onChange={(event) => {
+              setTyped(event.target.value);
+            }}
+          />
+        </Field>
+        {noRename === null ? (
+          <div className="mf-dialog-actions">
+            <Button type="submit" disabled={busy || typed.trim() === saved}>
+              Save name
+            </Button>
+          </div>
+        ) : null}
+      </form>
+      {canAssign ? (
+        <>
+          <p className="mf-people-dialog-lead">
+            Their roles decide what they can do. Staff roles need a second factor before the admin opens for them.
+          </p>
+          <fieldset className="mf-people-roles">
+            <legend>Roles</legend>
+            {roles.map((role) => {
+              const why = whyNotGrant(role, held, owner);
+              return (
+                <Switch
+                  key={role.id}
+                  label={role.name}
+                  hint={why ?? (role.description || undefined)}
+                  checked={chosen.has(role.id)}
+                  disabled={why !== null || busy}
+                  onChange={(on) => {
+                    const next = new Set(chosen);
+                    if (on) next.add(role.id);
+                    else next.delete(role.id);
+                    setChosen(next);
+                  }}
+                />
+              );
+            })}
+          </fieldset>
+          {error ? (
+            <p className="mf-dialog-error" role="alert">
+              {error}
+            </p>
+          ) : null}
+        </>
       ) : null}
       <div className="mf-dialog-actions">
-        <Button variant="primary" disabled={busy || same} onClick={() => void save()}>
-          Save roles
-        </Button>
+        {canAssign ? (
+          <Button variant="primary" disabled={busy || same} onClick={() => void saveRoles()}>
+            Save roles
+          </Button>
+        ) : null}
         <Button disabled={busy} onClick={close}>
-          Cancel
+          {canAssign ? "Cancel" : "Close"}
         </Button>
       </div>
     </Dialog>
@@ -227,7 +297,7 @@ export default function People() {
         return <Pill tone={shown.tone}>{shown.label}</Pill>;
       },
     },
-    ...(canAssign && known
+    ...(known
       ? [
           {
             key: "open",
@@ -250,14 +320,13 @@ export default function People() {
   ];
 
   return (
-    <AdminPage page="People" title="People" lead="Everyone with an account. Open someone to change their roles.">
+    <AdminPage page="People" title="People" lead={canAssign ? "Everyone with an account. Open someone to change their name or roles." : "Everyone with an account. Open someone to change their name."}>
       <div className="mf-people-search">
-        <Field label="Search by email" id={searchId}>
+        <Field label="Search by name or email" id={searchId}>
           <Input
             id={searchId}
             type="search"
             value={typed}
-            placeholder="name@example.com"
             onChange={(event) => {
               setTyped(event.target.value);
             }}
@@ -273,12 +342,12 @@ export default function People() {
       ) : pages.isPending ? null : (
         <Card flush>
           <Table
-            caption={q ? `People whose email holds "${q}", newest first` : "People, newest first"}
+            caption={q ? `People whose name or email holds "${q}", newest first` : "People, newest first"}
             captionHidden
             columns={columns}
             rows={people}
             rowKey={(person) => person.id}
-            empty={<p className="mf-needs-clear">{q ? "No one's email holds that." : "No one has an account yet."}</p>}
+            empty={<p className="mf-needs-clear">{q ? "No one's name or email holds that." : "No one has an account yet."}</p>}
           />
           {pages.hasNextPage ? (
             <div className="mf-activity-more">
@@ -290,9 +359,10 @@ export default function People() {
         </Card>
       )}
       {open && known ? (
-        <PersonRoles
+        <PersonDialog
           person={open}
           roles={known}
+          canAssign={canAssign}
           onClose={() => {
             setOpen(null);
           }}

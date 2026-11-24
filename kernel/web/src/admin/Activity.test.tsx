@@ -137,6 +137,7 @@ describe("the activity log", () => {
       "auth.data_export_requested",
       "auth.data_export_ready",
       "auth.data_export_downloaded",
+      "auth.name_changed",
       "auth.user.",
       "auth.role.",
     ]);

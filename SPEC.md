@@ -590,6 +590,7 @@ MechFrame owns all of auth: the design, the data and the tests. It never hand-ro
 - Public sign-up creates only `member` accounts. Staff roles come from an owner or admin, or from an invite that names the role.
 - **Who can grant what** (decision 0013): a role can be granted or removed only by someone who holds every permission it carries. `member`, which anyone gets by signing up, is no rank (decision 0045). Only an owner grants, removes or suspends an owner, and the last owner can't be removed, demoted or suspended. Built-in roles can't be deleted. The same rules bind invites.
 - The first owner is made from the server with `mechframe create-owner <email>`, which runs the site's `python -m app.owner <email>`: the address's account (made if there's none) gets the owner role, every way into it is closed, and the command prints a one-time link to set its password, a reset link (14.7). Nothing is mailed, and there's no setup token at first boot. With an active owner, only an owner's own address gets a new link; any other is refused, and an owner grants the role in Admin, People (decision 0051).
+- **An account's name** (`display_name`, decision 0061) is what the site shows for the person: to staff, and on what they publish. The person sets it on their account's Profile page, and staff holding `auth.user.manage` set it in People for someone they outrank, by the same rule as suspending. It is NFC, one line, its spaces squeezed and its ends trimmed, at most 120 characters, with no control character or direction override; empty is no name. It needn't be unique, and nothing asks for one at sign-up.
 
 ### 14.2 Sign-in methods
 
@@ -719,7 +720,7 @@ Both limits are site settings (Q6).
 
 ### 14.10 Audit log
 
-- `kernel_audit_event` is the one audit log, auth's and every module's, written through `audit.record` (section 6, decision 0037). It is append-only: Postgres refuses to change an entry, to empty the table, and to delete an entry but in the nightly pruning. Auth records sign-ins and failures, second-factor and passkey changes, password and email changes, provider links, role changes, ended sessions, API keys, suspensions and deletions; modules record what they act on.
+- `kernel_audit_event` is the one audit log, auth's and every module's, written through `audit.record` (section 6, decision 0037). It is append-only: Postgres refuses to change an entry, to empty the table, and to delete an entry but in the nightly pruning. Auth records sign-ins and failures, second-factor and passkey changes, password and email changes, name changes (never the name itself), provider links, role changes, ended sessions, API keys, suspensions and deletions; modules record what they act on.
 - Each row holds the time, actor, subject, action, result, target, IP, user agent and details. Rows are kept 1 year by default (`AUDIT_KEEP_DAYS`, at least 30), then `kernel.prune_audit` removes them.
 - Staff holding `auth.audit.read` see all of it (`GET /api/kernel/admin/audit`, behind the admin gate), filtered by person, action (several at once), target and time, each page naming the people its entries do and saying how long entries are kept; the admin's Activity page reads it (decision 0044). Each person sees their own security activity on the account page (`GET /api/auth/activity`), told whether they did it but never which staff member did. Moderators holding `kernel.moderation.act` see a narrower slice, moderation and suspensions only, with no IP or browser (`GET /api/kernel/admin/moderation/log`, decision 0039).
 
@@ -727,7 +728,7 @@ Both limits are site settings (Q6).
 
 | Table | Holds |
 | --- | --- |
-| `auth_user` | Email, verified time, when the address was set, password hash, status, session epoch, the end of a time-out, timestamps |
+| `auth_user` | Email, verified time, when the address was set, password hash, display name, status, session epoch, the end of a time-out, timestamps |
 | `auth_role`, `auth_user_role`, `auth_role_permission` | Roles and their grants |
 | `auth_permission_override` | Per-resource grants and denials |
 | `auth_identity` | Linked providers: provider, subject, email, verified flag |
@@ -914,6 +915,7 @@ All eleven were answered on 2026-11-12, and the sections above already reflect t
 
 | Date | Change |
 | --- | --- |
+| 2026-11-23 | The account's name (decision 0061, `dev plans/contracts/account-name.md`): 14.1 says who sets `display_name` and how it's cleaned; 14.10 audits name changes without the name; 14.11 lists the display name on `auth_user` |
 | 2026-11-23 | The sixth module, `campaigns` (`dev plans/contracts/campaigns.md`): the newsletter's sign-up, confirmed by email, and its emails written in Markdown, tested, scheduled and sent to each subscriber with a one-click unsubscribe; an address that bounces, complains or unsubscribes set aside for good. `email.queue_message` joins the kernel's public surface, for a message a module renders itself (decision 0062) (6) |
 | 2026-11-23 | The kernel's AI writing help (decision 0058, `dev plans/contracts/kernel-ai.md`): section 6's `ai.client()` is `await ai.client(db)` and its `Writer`; the key saved in Settings → AI wins over `ANTHROPIC_API_KEY`; Settings → Writing's rules and styles; Write with AI in every `MarkdownEditor`, which gains `fields`; blog 0.1.2 hands it its title, summary and search fields |
 | 2026-11-22 | The fifth module, `embeds` (`dev plans/contracts/embeds.md`): a YouTube, SoundCloud, Spotify or Bandcamp link alone in its paragraph drawn as the provider's player, behind a facade until `media` is granted; the editor's Embed button; `VideoPlaylist` and `recognise` in its `public.ts` and `public.py`. Two text slots, `editor.tools` and `prose.embed`, which the kit draws through `TextPartsContext`, the kernel's own editor buttons first (decision 0060) (8) |
