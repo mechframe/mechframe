@@ -11,6 +11,8 @@ export default tseslint.config(
       "**/dist/**",
       "**/coverage/**",
       ".venv/**",
+      // Claude Code's worktrees, each a whole copy of the repo: linted in their own checkout.
+      ".claude/**",
       "modules/_template/**",
       "templates/**",
       // The CLI's fixture modules: linted in a site the smoke makes (tools/site_smoke.py).

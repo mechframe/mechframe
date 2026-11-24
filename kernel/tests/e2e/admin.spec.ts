@@ -3,7 +3,8 @@
 // staff with a second factor land on the Dashboard with what needs them, Ctrl K jumps to a
 // page, the activity log shows the sign-in that brought them, the notices open and shut, the
 // phone's Menu opens the sidebar; each admin page answers (a smoke test); nothing scrolls
-// sideways at 390 px; axe finds nothing serious in either theme, a dialog or panel open too.
+// sideways at 390 px; the shell sits where the boards draw it; axe finds nothing serious in
+// either theme, a dialog or panel open too.
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
 import { PASSWORD, THEMES, axe, makeUser, signInTo, theme } from "./support";
@@ -176,6 +177,51 @@ for (const [name, canvas] of Object.entries(THEMES)) {
     await expect(page.getByRole("dialog", { name: "Jump to a page" })).toBeVisible();
     await theme(page, name, canvas);
     expect(await axe(page), "Jump to").toEqual([]);
+  });
+}
+
+/** `selector`'s first box on the page, and its padding box's right edge, in CSS pixels. */
+async function boxOf(page: Page, selector: string): Promise<{ left: number; right: number; top: number; bottom: number; inner: number }> {
+  return page.locator(selector).first().evaluate((found) => {
+    const box = found.getBoundingClientRect();
+    const style = getComputedStyle(found);
+    const inner = box.right - parseFloat(style.borderRightWidth) - parseFloat(style.paddingRight);
+    return { left: box.left, right: box.right, top: box.top, bottom: box.bottom, inner };
+  });
+}
+
+for (const [name, canvas] of Object.entries(THEMES)) {
+  // VM Website Dev 12's round 4 on /admin/media against its board (decision 0044, amended): the five
+  // differences, each where the board draws it.
+  test(`the shell sits where the boards draw it, at 1440 and 390, in ${name}`, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await signedInAdmin(page, "/admin/media");
+    await expect(page.getByRole("heading", { level: 1, name: "Media" })).toBeVisible();
+    await page.waitForLoadState("networkidle");
+    await theme(page, name, canvas);
+
+    const content = page.getByRole("list", { name: "Content" });
+    await expect.soft(content.getByRole("link")).toHaveText(["Pages", "Blog", "Newsletter", "Inbox", "Media"]);
+    expect.soft(await content.getByRole("link").first().evaluate((link) => getComputedStyle(link).lineHeight)).toBe("normal");
+
+    // The bell's icon, not its 32px box, sits a gap from View site; View site's icon ends at the card's edge.
+    const bell = await boxOf(page, ".mf-admin-icon-button svg");
+    const viewSite = await boxOf(page, ".mf-admin-view-site");
+    expect.soft(viewSite.left - bell.right).toBeCloseTo(16, 0);
+    const card = await boxOf(page, ".mf-admin-person");
+    expect.soft((await boxOf(page, ".mf-admin-person-site svg")).right).toBeCloseTo(card.inner, 0);
+
+    // At 390 Menu takes 26px of the phone bar, the board's logo's height, so the bar is the board's
+    // 55px unless the brand is taller (not 61), open or shut; and its words end at the bar's padding.
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(page.getByRole("button", { name: "Menu" })).toBeVisible();
+    for (const state of ["shut", "open"]) {
+      const bar = await boxOf(page, ".mf-admin-phone-bar");
+      const brand = await boxOf(page, ".mf-admin-phone-bar .mf-admin-brand");
+      expect.soft(bar.bottom - bar.top, state).toBeCloseTo(Math.max(brand.bottom - brand.top, 26) + 14 + 14 + 1, 0);
+      expect.soft((await boxOf(page, ".mf-admin-menu")).inner, state).toBeCloseTo(bar.inner, 0);
+      if (state === "shut") await page.getByRole("button", { name: "Menu" }).click();
+    }
   });
 }
 

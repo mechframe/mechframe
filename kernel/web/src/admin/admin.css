@@ -92,7 +92,7 @@
     color: var(--mf-color-text-muted);
     font-size: 0.9375rem;
     font-weight: 500;
-    line-height: 1.4;
+    line-height: normal;
     text-decoration: none;
     transition:
       background-color var(--mf-motion-fast),
@@ -170,6 +170,8 @@
     min-width: 1.5rem;
     min-height: 1.5rem;
     margin-left: auto;
+    /* The boards' icon ends at the card's padding, not 3px inside it. */
+    margin-right: -3px;
     border-radius: var(--mf-radius-control);
     color: var(--mf-color-text-muted);
   }
@@ -278,6 +280,8 @@
     justify-content: center;
     width: 2rem;
     height: 2rem;
+    /* The boards space the bell's icon, not its 32px box, from what's beside it. */
+    margin: 0 -7px;
     padding: 0;
     border: 0;
     border-radius: var(--mf-radius-control);
@@ -827,6 +831,8 @@
       align-items: center;
       gap: 0.375rem;
       min-height: 2rem;
+      /* The boards' bar is 55px: the button takes 26px of it, not 32, and its words end at the bar's padding. */
+      margin: -3px -10px -3px 0;
       padding: 0 0.625rem;
       border: 0;
       border-radius: var(--mf-radius-control);
@@ -849,11 +855,6 @@
     .mf-admin-jump,
     .mf-admin-view-site {
       display: none;
-    }
-
-    /* After the breadcrumb, as the boards draw it at 390: only the hidden search pushed it right. */
-    .mf-admin-notices {
-      margin-left: 0;
     }
 
     .mf-admin-main {

@@ -223,6 +223,43 @@ describe("the admin sidebar's order", () => {
     const [top] = adminSidebar([{ label: "x", to: "/admin/x", icon: "bell", module: "m", key: "m:0" }], [], () => false);
     expect(top?.items[1]).toEqual({ label: "x", to: "/admin/x", icon: "bell" });
   });
+
+  it("puts a section's pages in the order the site lists them, then the rest as they come", () => {
+    const groups = adminSidebar(
+      [entry("posts", "Content"), entry("media", "Content"), entry("pages", "Content"), entry("odd", "Content")],
+      [
+        { label: "Content", icon: "document", pages: ["/admin/pages", "/admin/gone", "/admin/posts"] },
+        { label: "Content", icon: "people", pages: ["/admin/odd"] },
+      ],
+      () => false,
+    );
+    expect(groups[1]?.items.map((item) => item.label)).toEqual(["pages", "posts", "media", "odd"]);
+  });
+
+  it("draws a page once, however often its section lists it (CodeRabbit on #140)", () => {
+    const groups = adminSidebar(
+      [entry("posts", "Content"), entry("pages", "Content")],
+      [{ label: "Content", icon: "document", pages: ["/admin/pages", "/admin/posts", "/admin/pages"] }],
+      () => false,
+    );
+    expect(groups[1]?.items.map((item) => item.label)).toEqual(["pages", "posts"]);
+  });
+
+  it("has the boards' order in Content: Pages, Blog, Newsletter, Inbox, Media (VM Website's admin boards)", () => {
+    const placed = (label: string, to: string): Placed<"nav.admin"> => ({ label, to, section: "Content", module: "m", key: to });
+    const groups = adminSidebar(
+      [
+        placed("Blog", "/admin/blog"),
+        placed("Newsletter", "/admin/campaigns"),
+        placed("Inbox", "/admin/contact"),
+        placed("Media", "/admin/media"),
+        placed("Pages", "/admin/pages"),
+      ],
+      ADMIN_SECTIONS,
+      () => false,
+    );
+    expect(groups[1]?.items.map((item) => item.label)).toEqual(["Pages", "Blog", "Newsletter", "Inbox", "Media"]);
+  });
 });
 
 describe("links a module loads (decision 0056)", () => {
