@@ -263,7 +263,7 @@ No host variables of its own.
 
 **From the kernel:** Uploads need storage with its public pair, `STORAGE_PUBLIC_BUCKET` and `STORAGE_PUBLIC_URL`; until they're set, uploads answer 503 `media.storage_off`.
 
-### `pages` 0.1.0 (experimental)
+### `pages` 0.1.1 (experimental)
 
 The site's fixed pages, About to Privacy, written in Markdown and placed in the header's and footer's menus.
 

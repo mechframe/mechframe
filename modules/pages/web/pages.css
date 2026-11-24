@@ -6,6 +6,12 @@
   max-width: 44rem;
 }
 
+/* When it last changed, under its title, quieter than the words. */
+.mf-page-updated {
+  font: var(--mf-type-small);
+  color: var(--mf-color-text-muted);
+}
+
 /* The list (VM Website's AdminPages board): the note, then the table. */
 .mf-pages-list {
   display: grid;

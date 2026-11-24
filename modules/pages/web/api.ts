@@ -9,6 +9,7 @@ export const { api, useApiQuery, useApiMutation } = createApiClient<paths>();
 export type Full = components["schemas"]["Full"];
 export type Listed = components["schemas"]["Listed"];
 export type LivePage = components["schemas"]["LivePage"];
+export type PageMoved = components["schemas"]["Moved"];
 export type NewPage = components["schemas"]["NewPage"];
 export type Change = components["schemas"]["PageChange"];
 export type Status = Listed["status"];
@@ -27,6 +28,11 @@ export async function menu(place: "header" | "footer"): Promise<LinkEntry[]> {
 export async function preview(body: string): Promise<string> {
   const { data } = await api.POST("/api/pages/admin/preview", { body: { body } });
   return data?.html ?? "";
+}
+
+/** A day in the reader's own words, such as "22 November 2026": a live page's Updated line. */
+export function day(at: string): string {
+  return new Date(at).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
 }
 
 /** How a page's state reads in the admin. */

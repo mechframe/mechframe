@@ -17,7 +17,7 @@ Use it for pages the site's people write and change themselves, chosen page by p
   - `GET /menu?place=header` or `footer` (public): `{items}`, the live pages in that menu, in order;
   - `GET /admin/pages` (`{items}`, every page, not paged), `POST /admin/pages` (409 `pages.address_taken`, naming who answers the address), `GET` and `PATCH /admin/pages/{id}` (with `version`; 409 `pages.changed` with the page as it is now), `POST /admin/preview`: `pages.page.write`;
   - `POST /admin/pages/{id}/publish` (`{at?}`, a time with its zone to schedule it), `POST /admin/pages/{id}/unpublish`, `DELETE /admin/pages/{id}`: `pages.page.publish`.
-- **Public pages:** `/:address`, the least fixed pattern there is, so any other module's or the site's page wins its address. The server copy answers each live page with its head, its words under one `h1`, a `WebPage` JSON-LD, and lists it in the sitemap and `llms.txt`.
+- **Public pages:** `/:address`, the least fixed pattern there is, so any other module's or the site's page wins its address. The server copy answers each live page with its head, its words under one `h1` and the day it last changed ("Updated"), a `WebPage` JSON-LD, and lists it in the sitemap and `llms.txt`.
 - **Menus:** `nav.public` and `nav.footer`, loaded from `GET /menu` (decision 0056). A site with its own header and footer places them with `SlotOutlet name="nav.public"` and `SlotOutlet name="nav.footer"`.
 - **The admin pages:** `/admin/pages`, the list with New page, and `/admin/pages/:id` (`new` for a new page), the editor: Title, the kit's `MarkdownEditor` (Write and Preview), Publish, Details (Address, Menu, Place in the menu) and Search and sharing (`SearchFields`). Under Content in the sidebar.
 - **Tables:** `pages_page` and `pages_move` (migration `pages_0001`).
@@ -41,7 +41,12 @@ None.
 
 ## Extension points
 
-None yet. A page's title in search results, left empty, is "{title} · {site name}", as the kernel titles its own pages.
+**Its page read** (0.1.1), for a site whose own page answers `/:address` (the same rank as pages', which the site's route takes) and draws pages' live page in its own look:
+
+- **Web, `@/modules/pages/public`** (decision 0057): `usePage(address)`, the address with its slash or without it as a route's parameter gives it. It answers a `LivePage` (`{title, address, html, search_title, search_description, updated_at}`), or a `PageMoved` (`{moved}`) that `isMoved` tells apart; any other address is a 404 `pages.page_not_found`. `day(at)` says a date in the reader's own words. pages' own `PublicPage` reads through the same hook.
+- **The server copy stays pages' own:** the site's page draws the same words in the same order (an `h1`, the "Updated" line with its `time`, then the body), so the site adds nothing for `/:address`. There's no backend read for a site's server copy yet.
+
+A page's title in search results, left empty, is "{title} · {site name}", as the kernel titles its own pages.
 
 ## Known limits
 

@@ -11,9 +11,13 @@ import { THEMES, axe, makeUser, signInTo, theme } from "../../../../kernel/tests
 
 const WORDS = ":is(h1, h2, h3, p)";
 
+/** The page's headings and paragraphs, the Updated line without its date: the page says it in the reader's own format. */
 async function visibleWords(page: Page, within: string): Promise<string[]> {
   const found = await page.locator(`${within} ${WORDS}`).filter({ visible: true }).allInnerTexts();
-  return found.map((text) => text.replace(/\s+/g, " ").trim()).filter(Boolean);
+  return found
+    .map((text) => text.replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .map((text) => (text.startsWith("Updated ") ? "Updated" : text));
 }
 
 for (const [name, canvas] of Object.entries(THEMES)) {

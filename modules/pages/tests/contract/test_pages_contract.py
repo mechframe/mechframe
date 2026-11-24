@@ -250,6 +250,11 @@ async def test_the_server_copy_of_a_live_page_its_moves_and_a_draft(browser: Bro
     assert "<title>About us · " in html
     assert '<meta name="description" content="Who A crew from Boston." />' in html
     assert "<h1>About us</h1>" in html
+    # When it last changed, under its title (pages 0.1.1, VM Website's ask).
+    assert re.search(
+        r'<h1>About us</h1><p>Updated <time datetime="\d{4}-\d{2}-\d{2}T[^"]+">\d{4}-\d{2}-\d{2}</time></p>',
+        html,
+    ), html
     assert "<h2>Who</h2>" in html
     assert "<p>A crew from <strong>Boston</strong>.</p>" in html
     (data,) = [each for each in _json_ld(html) if each.get("@type") == "WebPage"]

@@ -106,6 +106,11 @@ describe("a live page", () => {
     expect(await screen.findByRole("heading", { level: 1, name: "About" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 2, name: "Who we are" })).toBeInTheDocument();
     expect(screen.getByText("Boston")).toBeInTheDocument();
+    // When it last changed, under its title, as the server copy says it (pages 0.1.1).
+    const updated = screen.getByText(/^Updated/);
+    expect(updated.previousElementSibling).toBe(screen.getByRole("heading", { level: 1, name: "About" }));
+    expect(updated.querySelector("time")).toHaveAttribute("datetime", "2026-11-22T12:00:00+00:00");
+    expect(updated.querySelector("time")?.textContent).toContain("2026");
     await waitFor(() => {
       expect(document.title).toBe("About · Test Site");
     });
@@ -350,6 +355,205 @@ describe("the editor", () => {
     });
     expect(body).toHaveValue("We make music. More.");
     expect(title).toHaveValue("About us");
+  });
+
+  it("keeps a field typed back to its saved value while the save waits, and asks about it (pages 0.1.1)", async () => {
+    let answer: (value: Answer) => void = () => undefined;
+    let patches = 0;
+    routed({
+      [`GET ${ONE}`]: { status: 200, body: full({ title: "A" }) },
+      [`PATCH ${ONE}`]: () => {
+        patches += 1;
+        return patches === 1
+          ? new Promise<Answer>((resolve) => {
+              answer = resolve;
+            })
+          : { status: 200, body: full({ title: "A", version: 3 }) };
+      },
+    });
+    renderApp({ path: `/admin/pages/${ID}`, modules: [pages], session: editor });
+
+    const title = await screen.findByRole("textbox", { name: "Title" });
+    await userEvent.clear(title);
+    await userEvent.type(title, "B");
+    await userEvent.click(screen.getAllByRole("button", { name: "Save draft" })[0] as HTMLElement);
+    await waitFor(() => {
+      expect(patches).toBe(1);
+    });
+    await userEvent.clear(title);
+    await userEvent.type(title, "A");
+    answer(problem(409, "pages.changed", { page: full({ title: "B", version: 2 }) }));
+
+    // Theirs is B and yours is A again: that's a choice, not theirs by default.
+    expect(await screen.findByRole("radio", { name: "Keep mine" })).toBeInTheDocument();
+    expect(title).toHaveValue("A");
+  });
+
+  it("still asks about a field typed back to its saved value when a retry meets another save (CodeRabbit on #138)", async () => {
+    let answer: (value: Answer) => void = () => undefined;
+    let patches = 0;
+    routed({
+      [`GET ${ONE}`]: { status: 200, body: full({ title: "A" }) },
+      [`PATCH ${ONE}`]: () => {
+        patches += 1;
+        if (patches === 1) {
+          return new Promise<Answer>((resolve) => {
+            answer = resolve;
+          });
+        }
+        // The retry meets a third save, which changed the title.
+        if (patches === 2) return problem(409, "pages.changed", { page: full({ title: "C", in_header: true, version: 3 }) });
+        return { status: 200, body: full({ title: "C", in_header: true, body: "We make music. More.", version: 4 }) };
+      },
+    });
+    renderApp({ path: `/admin/pages/${ID}`, modules: [pages], session: editor });
+
+    const title = await screen.findByRole("textbox", { name: "Title" });
+    await userEvent.clear(title);
+    await userEvent.type(title, "B");
+    await userEvent.type(screen.getByRole("textbox", { name: "Page body" }), " More.");
+    await userEvent.click(screen.getAllByRole("button", { name: "Save draft" })[0] as HTMLElement);
+    await waitFor(() => {
+      expect(patches).toBe(1);
+    });
+    await userEvent.clear(title);
+    await userEvent.type(title, "A");
+    // Someone else changed only the menu: no question, so the save goes again with the body.
+    answer(problem(409, "pages.changed", { page: full({ title: "A", in_header: true, version: 2 }) }));
+
+    // Your A is still yours when the retry meets their C: a choice, not theirs by default.
+    expect(await screen.findByRole("radio", { name: "Keep mine" })).toBeInTheDocument();
+    expect(title).toHaveValue("A");
+    expect(patches).toBe(2);
+  });
+
+  it("still asks about a field typed back to its saved value after a choice, when the save meets another (CodeRabbit on #138)", async () => {
+    let answer: (value: Answer) => void = () => undefined;
+    let patches = 0;
+    routed({
+      [`GET ${ONE}`]: { status: 200, body: full() },
+      [`PATCH ${ONE}`]: () => {
+        patches += 1;
+        if (patches === 1) {
+          return new Promise<Answer>((resolve) => {
+            answer = resolve;
+          });
+        }
+        // The save with the choice meets a third save, which changed the body.
+        if (patches === 2) return problem(409, "pages.changed", { page: full({ title: "Their title", body: "Their words.", version: 3 }) });
+        return { status: 200, body: full({ title: "My title", body: "Their words.", version: 4 }) };
+      },
+    });
+    renderApp({ path: `/admin/pages/${ID}`, modules: [pages], session: editor });
+
+    const title = await screen.findByRole("textbox", { name: "Title" });
+    const body = screen.getByRole("textbox", { name: "Page body" });
+    await userEvent.clear(title);
+    await userEvent.type(title, "My title");
+    await userEvent.type(body, " More.");
+    await userEvent.click(screen.getAllByRole("button", { name: "Save draft" })[0] as HTMLElement);
+    await waitFor(() => {
+      expect(patches).toBe(1);
+    });
+    await userEvent.clear(body);
+    await userEvent.type(body, "We make music.");
+    answer(problem(409, "pages.changed", { page: full({ title: "Their title", version: 2 }) }));
+
+    await userEvent.click(await screen.findByRole("radio", { name: "Keep mine" }));
+    await userEvent.click(screen.getByRole("button", { name: /Save with these choices/ }));
+
+    // Your body, typed back, is still yours when their body changes: asked, not taken.
+    const asked = await screen.findByRole("group", { name: "Page body" });
+    expect(within(asked).getByText("Their words.")).toBeInTheDocument();
+    expect(patches).toBe(2);
+    expect(body).toHaveValue("We make music.");
+  });
+
+  it("sends only your fields when a retry meets another save at once (CodeRabbit on #138)", async () => {
+    let patches = 0;
+    const sent = routed({
+      [`GET ${ONE}`]: { status: 200, body: full() },
+      [`PATCH ${ONE}`]: () => {
+        patches += 1;
+        // Someone put the page in the header; then someone else changed its body.
+        if (patches === 1) return problem(409, "pages.changed", { page: full({ in_header: true, version: 2 }) });
+        if (patches === 2) return problem(409, "pages.changed", { page: full({ in_header: true, body: "Their words.", version: 3 }) });
+        return { status: 200, body: full({ title: "My title", in_header: true, body: "Their words.", version: 4 }) };
+      },
+    });
+    renderApp({ path: `/admin/pages/${ID}`, modules: [pages], session: editor });
+
+    const title = await screen.findByRole("textbox", { name: "Title" });
+    await userEvent.clear(title);
+    await userEvent.type(title, "My title");
+    await userEvent.click(screen.getAllByRole("button", { name: "Save draft" })[0] as HTMLElement);
+
+    await waitFor(() => {
+      expect(patches).toBe(3);
+    });
+    const third = sent.filter((each) => each.method === "PATCH")[2] as Request;
+    // Their menu and their body stay theirs: only the title, at the newest version.
+    expect(await json(third)).toEqual({ version: 3, title: "My title" });
+  });
+
+  it("keeps what's typed while the save waits through the conflict's choice (pages 0.1.1)", async () => {
+    let answer: (value: Answer) => void = () => undefined;
+    let patches = 0;
+    const sent = routed({
+      [`GET ${ONE}`]: { status: 200, body: full() },
+      [`PATCH ${ONE}`]: () => {
+        patches += 1;
+        return patches === 1
+          ? new Promise<Answer>((resolve) => {
+              answer = resolve;
+            })
+          : { status: 200, body: full({ title: "My title", body: "We make music. More.", version: 3 }) };
+      },
+    });
+    renderApp({ path: `/admin/pages/${ID}`, modules: [pages], session: editor });
+
+    const title = await screen.findByRole("textbox", { name: "Title" });
+    await userEvent.clear(title);
+    await userEvent.type(title, "My title");
+    await userEvent.click(screen.getAllByRole("button", { name: "Save draft" })[0] as HTMLElement);
+    await waitFor(() => {
+      expect(patches).toBe(1);
+    });
+    const body = screen.getByRole("textbox", { name: "Page body" });
+    await userEvent.type(body, " More.");
+    answer(problem(409, "pages.changed", { page: full({ title: "Their title", version: 2 }) }));
+
+    await userEvent.click(await screen.findByRole("radio", { name: "Keep mine" }));
+    await userEvent.click(screen.getByRole("button", { name: /Save with these choices/ }));
+    await waitFor(() => {
+      expect(patches).toBe(2);
+    });
+    const second = sent.filter((each) => each.method === "PATCH")[1] as Request;
+    expect(await json(second)).toEqual({ version: 2, title: "My title", body: "We make music. More." });
+    expect(body).toHaveValue("We make music. More.");
+  });
+
+  it("shows a page as live once its publish lands, even while it asks about a field (pages 0.1.1)", async () => {
+    let answer: (value: Answer) => void = () => undefined;
+    routed({
+      [`GET ${ONE}`]: { status: 200, body: full() },
+      [`POST ${ONE}/publish`]: () =>
+        new Promise<Answer>((resolve) => {
+          answer = resolve;
+        }),
+    });
+    renderApp({ path: `/admin/pages/${ID}`, modules: [pages], session: editor });
+
+    const title = await screen.findByRole("textbox", { name: "Title" });
+    await userEvent.click(screen.getByRole("button", { name: "Publish" }));
+    // Typed while the publish is on its way, and someone else saved the title too.
+    await userEvent.type(title, "!");
+    answer({ status: 200, body: full({ title: "Their title", status: "published", published_at: "2026-11-23T12:00:00+00:00", version: 2 }) });
+
+    expect(await screen.findByText("Their title")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Back to the form" }));
+    expect(await screen.findByText("Live. Saving changes the page on the site at once.")).toBeInTheDocument();
+    expect(title).toHaveValue("About!");
   });
 
   it("takes in someone else's save an Unpublish answers with, keeping your changes (Codex on #121)", async () => {
