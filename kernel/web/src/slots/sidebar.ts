@@ -1,12 +1,14 @@
 /**
  * The admin sidebar's order (K4 contract §2): Dashboard, then the modules'
  * entries grouped by `section` in `adminSections` order (sections it doesn't
- * list after, as they appear), then People and access, then Settings. An
- * entry with no section sits under Dashboard. A group with nothing the person
- * may open isn't shown. The kernel's own carry the boards' icons (VM Website
- * `AdminDashboard.dc.html`): Dashboard's grid, People and access's lock,
- * Settings' gear. A site that gives no sections of its own gets the boards'
- * (`ADMIN_SECTIONS`), so a module's group has its icon too.
+ * list after, as they appear) and each section's pages in its `pages` order
+ * (pages it doesn't list after, as they appear), then People and access, then
+ * Settings. An entry with no section sits under Dashboard. A group with nothing
+ * the person may open isn't shown. The kernel's own carry the boards' icons (VM
+ * Website `AdminDashboard.dc.html`): Dashboard's grid, People and access's
+ * lock, Settings' gear. A site that gives no sections of its own gets the
+ * boards' (`ADMIN_SECTIONS`), so a module's group has its icon, and Content's
+ * pages their order.
  */
 import type { AdminSection } from "../app/context";
 import type { Placed } from "./slots";
@@ -17,7 +19,7 @@ export type SidebarGroup = { label?: string; icon?: IconName; items: SidebarItem
 
 type KernelItem = SidebarItem & { permission?: string };
 
-/** The boards' module sections, in their order, each with its icon (VM Website's admin boards' sidebar). */
+/** The boards' module sections, in their order, each with its icon, and Content's pages in the boards' order (VM Website's admin boards' sidebar). */
 export const ADMIN_SECTIONS: readonly AdminSection[] = [
   { label: "Homepage", icon: "home" },
   { label: "Music", icon: "music" },
@@ -25,7 +27,11 @@ export const ADMIN_SECTIONS: readonly AdminSection[] = [
   { label: "Marketplace", icon: "shop" },
   { label: "Collective", icon: "people" },
   { label: "Community", icon: "chat" },
-  { label: "Content", icon: "document" },
+  {
+    label: "Content",
+    icon: "document",
+    pages: ["/admin/pages", "/admin/blog", "/admin/campaigns", "/admin/contact", "/admin/media"],
+  },
 ];
 
 const PEOPLE: KernelItem[] = [
@@ -42,6 +48,12 @@ const SETTINGS: KernelItem[] = [
 
 function item(entry: Placed<"nav.admin">): SidebarItem {
   return entry.icon === undefined ? { label: entry.label, to: entry.to } : { label: entry.label, to: entry.to, icon: entry.icon };
+}
+
+/** `items` with those `pages` names first, in its order; the rest after, as they come. */
+function inOrder(items: SidebarItem[], pages: readonly string[]): SidebarItem[] {
+  const listed = pages.flatMap((to) => items.filter((each) => each.to === to));
+  return [...listed, ...items.filter((each) => !pages.includes(each.to))];
 }
 
 /** The sidebar's groups, from the entries the person may see (`useSlot("nav.admin")`). */
@@ -64,8 +76,9 @@ export function adminSidebar(
   const listed = [...new Set(sections.map((section) => section.label))];
   const order = [...listed.filter((label) => named.has(label)), ...[...named.keys()].filter((label) => !listed.includes(label))];
   const modules = order.map((label): SidebarGroup => {
-    const icon = sections.find((section) => section.label === label)?.icon;
-    const items = named.get(label) ?? [];
+    const first = sections.find((section) => section.label === label);
+    const icon = first?.icon;
+    const items = inOrder(named.get(label) ?? [], first?.pages ?? []);
     return icon === undefined ? { label, items } : { label, icon, items };
   });
   const groups: SidebarGroup[] = [
