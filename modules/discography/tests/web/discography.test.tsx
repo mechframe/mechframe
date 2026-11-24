@@ -682,7 +682,44 @@ describe("CodeRabbit on #145", () => {
     expect(screen.getByRole("textbox", { name: "Lyrics" })).toHaveValue("Pray for you");
   });
 
-  it("asks before another pick when a field was typed back while its save waits", async () => {
+  it("waits for a save before another pick, asks about a field typed back since, and saves it on the way", async () => {
+    let answer: (value: Answer) => void = () => undefined;
+    let patches = 0;
+    const sent = routed({
+      [LIST]: { status: 200, body: { items: [track(), silent], next_cursor: null, total: 2, releases: 1 } },
+      [`GET ${TRACK}`]: { status: 200, body: silent },
+      [`GET /api/discography/admin/tracks/${T1}`]: { status: 200, body: fullTrack() },
+      [`PATCH ${TRACK}`]: () => {
+        patches += 1;
+        return patches === 1
+          ? new Promise<Answer>((resolve) => {
+              answer = resolve;
+            })
+          : { status: 200, body: { ...silent, version: 3 } };
+      },
+    });
+    renderApp({ path: `/admin/music/tracks?track=${T2}`, modules: [discography], session: editor });
+
+    const title = await screen.findByRole("textbox", { name: "Title" });
+    await userEvent.clear(title);
+    await userEvent.type(title, "B");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await userEvent.clear(title);
+    await userEvent.type(title, "Pray For You");
+    await userEvent.click(screen.getByRole("button", { name: "Gather Around" }));
+    // Nothing asks while the save waits: what to ask about is known once it's answered.
+    expect(screen.queryByRole("dialog", { name: "You have changes that aren't saved" })).toBeNull();
+    await act(async () => {
+      answer({ status: 200, body: { ...silent, title: "B", version: 2 } });
+      await Promise.resolve();
+    });
+    const asking = within(await screen.findByRole("dialog", { name: "You have changes that aren't saved" }));
+    await userEvent.click(asking.getByRole("button", { name: "Save and leave" }));
+    expect(await screen.findByRole("button", { name: "Gather Around", pressed: true })).toBeInTheDocument();
+    expect(await json(sent.filter((each) => each.method === "PATCH")[1] as Request)).toEqual({ version: 2, title: "Pray For You" });
+  });
+
+  it("waits for a save before another pick, and goes without asking when nothing was typed since", async () => {
     let answer: (value: Answer) => void = () => undefined;
     routed({
       [LIST]: { status: 200, body: { items: [track(), silent], next_cursor: null, total: 2, releases: 1 } },
@@ -699,11 +736,15 @@ describe("CodeRabbit on #145", () => {
     await userEvent.clear(title);
     await userEvent.type(title, "B");
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
-    await userEvent.clear(title);
-    await userEvent.type(title, "Pray For You");
     await userEvent.click(screen.getByRole("button", { name: "Gather Around" }));
-    expect(await screen.findByRole("dialog", { name: "You have changes that aren't saved" })).toBeInTheDocument();
-    answer({ status: 200, body: { ...silent, title: "B", version: 2 } });
+    expect(screen.queryByRole("dialog", { name: "You have changes that aren't saved" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Pray For You", pressed: true })).toBeInTheDocument(); // the save first
+    await act(async () => {
+      answer({ status: 200, body: { ...silent, title: "B", version: 2 } });
+      await Promise.resolve();
+    });
+    expect(await screen.findByRole("button", { name: "Gather Around", pressed: true })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "You have changes that aren't saved" })).toBeNull();
   });
 
   it("stays on the track when Stay comes while Save and leave waits", async () => {
@@ -734,16 +775,23 @@ describe("CodeRabbit on #145", () => {
     expect(screen.getByRole("button", { name: "Pray For You", pressed: true })).toBeInTheDocument();
   });
 
-  it("asks the album editor's leave when a field was typed back while its save waits", async () => {
+  it("asks the album editor's leave when a field was typed back while its save waits, and saves it after that save", async () => {
     let answer: (value: Answer) => void = () => undefined;
-    routed({
+    let patches = 0;
+    const sent = routed({
       [`GET ${ONE}`]: { status: 200, body: full({ title: "A" }) },
-      [`PATCH ${ONE}`]: () =>
-        new Promise<Answer>((resolve) => {
-          answer = resolve;
-        }),
+      [`PATCH ${ONE}`]: () => {
+        patches += 1;
+        return patches === 1
+          ? new Promise<Answer>((resolve) => {
+              answer = resolve;
+            })
+          : { status: 200, body: full({ title: "A", version: 3 }) };
+      },
+      "GET /api/discography/admin/tracks": { status: 200, body: { items: [], next_cursor: null, total: 0, releases: 0 } },
+      [`GET /api/discography/admin/tracks/${T1}`]: { status: 200, body: fullTrack() },
     });
-    renderApp({ path: `/admin/music/${ID}`, modules: [discography], session: editor });
+    const { router } = renderApp({ path: `/admin/music/${ID}`, modules: [discography], session: editor });
 
     const title = await screen.findByRole("textbox", { name: "Title" });
     await userEvent.clear(title);
@@ -752,8 +800,16 @@ describe("CodeRabbit on #145", () => {
     await userEvent.clear(title);
     await userEvent.type(title, "A");
     await userEvent.click(screen.getByRole("link", { name: "Gather Around" }));
-    expect(await screen.findByRole("dialog", { name: "You have changes that aren't saved" })).toBeInTheDocument();
-    answer({ status: 200, body: full({ title: "B", version: 2 }) });
+    const asking = within(await screen.findByRole("dialog", { name: "You have changes that aren't saved" }));
+    await userEvent.click(asking.getByRole("button", { name: "Save and leave" }));
+    await act(async () => {
+      answer({ status: 200, body: full({ title: "B", version: 2 }) });
+      await Promise.resolve();
+    });
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/admin/music/tracks");
+    });
+    expect(await json(sent.filter((each) => each.method === "PATCH")[1] as Request)).toEqual({ version: 2, title: "A" });
   });
 
   it("asks when a new file's answer crosses someone else's save of a field the person changed", async () => {

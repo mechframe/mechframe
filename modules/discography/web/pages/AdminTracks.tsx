@@ -100,9 +100,10 @@ export default function AdminTracks() {
   const first = listed.data?.pages[0];
   const tracks = listed.data?.pages.flatMap((page) => page.items) ?? [];
   const silent = tracks.find((track) => !track.audio.plays_from && track.audio.state !== "processing");
-  // Whether the open panel holds changes, and the track picked while it did:
-  // another pick asks first, as a move to another page does (Codex on #145).
-  const dirty = useRef(false);
+  // Whether the open panel holds changes, once a save it's waiting on is answered,
+  // and the track picked while it did: another pick asks first, as a move to
+  // another page does (Codex and CodeRabbit on #145).
+  const settle = useRef<(() => Promise<boolean>) | null>(null);
   const [pending, setPending] = useState<string | null>(null);
 
   function go(id: string) {
@@ -113,8 +114,9 @@ export default function AdminTracks() {
     setSearch(next, { replace: true });
   }
 
-  function pick(id: string) {
-    if (dirty.current && id !== picked) setPending(id);
+  async function pick(id: string) {
+    const changes = id !== picked && settle.current ? await settle.current() : false;
+    if (changes) setPending(id);
     else go(id);
   }
 
@@ -136,7 +138,7 @@ export default function AdminTracks() {
             className="mf-music-pick"
             aria-pressed={track.id === picked}
             onClick={() => {
-              pick(track.id);
+              void pick(track.id);
             }}
           >
             {track.title}
@@ -224,7 +226,7 @@ export default function AdminTracks() {
             <TrackPanel
               key={picked}
               id={picked}
-              dirty={dirty}
+              settle={settle}
               asked={pending !== null}
               onGo={() => {
                 go(pending ?? "");
@@ -248,8 +250,8 @@ export default function AdminTracks() {
 }
 
 type Switching = {
-  /** Set to whether the panel holds changes, for the board's next pick. */
-  dirty: RefObject<boolean>;
+  /** Set to the panel's question for the board's next pick: once any save it's waiting on is answered, does it hold changes? */
+  settle: RefObject<(() => Promise<boolean>) | null>;
   /** Another track was picked while it did: the panel asks. */
   asked: boolean;
   onGo: () => void;
@@ -277,7 +279,7 @@ function TrackPanel({ id, onGone, ...switching }: { id: string; onGone: () => vo
   return <TrackEditor server={read.data} notice={stale} onGone={onGone} {...switching} />;
 }
 
-function TrackEditor({ server, notice, onGone, dirty: held, asked, onGo, onStay }: { server: FullTrack; notice: ReactNode; onGone: () => void } & Switching) {
+function TrackEditor({ server, notice, onGone, settle: settleRef, asked, onGo, onStay }: { server: FullTrack; notice: ReactNode; onGone: () => void } & Switching) {
   const queryClient = useQueryClient();
   const toast = useToast();
   const roles = useApiQuery("get", ROLES);
@@ -292,8 +294,13 @@ function TrackEditor({ server, notice, onGone, dirty: held, asked, onGo, onStay 
   const file = useRef<HTMLInputElement>(null);
   const saveButton = useRef<HTMLButtonElement>(null);
   const formNow = useRef(form);
+  // The track as saved, kept at once by each answer, and the save still waiting:
+  // a save or a pick waits for it, then reads what it answered (CodeRabbit on #145).
+  const savedNow = useRef(saved);
+  const inflight = useRef<Promise<FullTrack> | null>(null);
   useLayoutEffect(() => {
     formNow.current = form;
+    savedNow.current = saved;
   });
   const roleNames = useMemo(() => new Map((roles.data?.items ?? []).map((each) => [each.id, each.name])), [roles.data]);
 
@@ -312,24 +319,44 @@ function TrackEditor({ server, notice, onGone, dirty: held, asked, onGo, onStay 
     was.current = state;
   }, [state, queryClient]);
 
-  // While a save waits, the form is held against what it sent: a field typed back
-  // to what's saved since then is still a change (CodeRabbit on #145).
+  // While a save waits, the form is held against what it sent, as that's what
+  // the track will be: a field typed back to what was saved before is a change,
+  // and nothing typed since is none (CodeRabbit on #145).
   const [sending, setSending] = useState<TrackForm | null>(null);
   const edits = changed(form, base);
-  const dirty = edits.length > 0 || (sending !== null && changed(form, sending).length > 0);
+  const dirty = sending !== null ? changed(form, sending).length > 0 : edits.length > 0;
   const audio = (server.version === saved.version ? server : saved).audio;
   const [switchSaving, setSwitchSaving] = useState(false);
   const [switchError, setSwitchError] = useState("");
   const switchTurn = useRef(0);
+
+  /** For the board's pick: once a save that's waiting is answered, are there changes past it? */
+  async function settleChanges(): Promise<boolean> {
+    const waiting = inflight.current;
+    if (waiting) {
+      try {
+        await waiting;
+      } catch {
+        return true; // refused: what was sent is still the person's
+      }
+    }
+    return changed(formNow.current, trackFormOf(savedNow.current)).length > 0;
+  }
   useLayoutEffect(() => {
-    held.current = dirty;
+    settleRef.current = settleChanges;
   });
   useEffect(
     () => () => {
-      held.current = false;
+      settleRef.current = null;
     },
-    [held],
+    [settleRef],
   );
+
+  /** The track as saved now: kept at once, for a save or a pick that reads it before the next draw. */
+  function keep(track: FullTrack) {
+    savedNow.current = track;
+    setSaved(track);
+  }
   const errorOf = (field: FormField, ...also: string[]) => checked[field] ?? fieldErrors(refused, field, ...also);
 
   function set<Name extends FormField>(field: Name, value: TrackForm[Name]) {
@@ -352,17 +379,34 @@ function TrackEditor({ server, notice, onGone, dirty: held, asked, onGo, onStay 
    */
   function adopt(track: FullTrack) {
     remember(track);
-    const before = trackFormOf(saved);
+    const before = trackFormOf(savedNow.current);
     const latest = formNow.current;
     const now = trackFormOf(track);
     const fields = changed(latest, before).filter((field) => field !== "length");
     const crossed = conflictOf("Someone saved this track while its audio changed. Here is how it reads now.", before, latest, now, track, fields);
     setForm(rebased(latest, before, now));
-    setSaved(track);
+    keep(track);
     if (crossed.conflicts.length > 0) setConflict({ said: crossed, theirs: track, mine: latest, fields });
   }
 
-  async function save(from: TrackForm = form, onto: FullTrack = saved): Promise<FullTrack> {
+  /**
+   * Saves the form as it is now onto the track as saved now, once a save that's
+   * still waiting is answered: a second save never reads what the first one
+   * replaces (CodeRabbit on #145). The conflict dialog's choice passes both.
+   */
+  async function save(from?: TrackForm, onto?: FullTrack): Promise<FullTrack> {
+    const waiting = inflight.current;
+    if (waiting) await waiting.catch(() => undefined);
+    const run = send(from ?? formNow.current, onto ?? savedNow.current);
+    inflight.current = run;
+    try {
+      return await run;
+    } finally {
+      if (inflight.current === run) inflight.current = null;
+    }
+  }
+
+  async function send(from: TrackForm, onto: FullTrack): Promise<FullTrack> {
     const found = trackProblems(from);
     setChecked(found);
     if (Object.keys(found).length > 0) throw new Error("Some fields need fixing first: they're marked.");
@@ -377,7 +421,7 @@ function TrackEditor({ server, notice, onGone, dirty: held, asked, onGo, onStay 
       const { data } = answered;
       if (!data) throw new Error("The site answered without the track.");
       remember(data);
-      setSaved(data);
+      keep(data);
       setForm((now) => rebased(now, from, trackFormOf(data)));
       setConflict(null);
       return data;
@@ -390,9 +434,9 @@ function TrackEditor({ server, notice, onGone, dirty: held, asked, onGo, onStay 
         const conflicting = conflictOf(error.detail, trackFormOf(onto), latest, now, theirs, fields);
         if (conflicting.conflicts.length === 0) {
           const next = merged(latest, now, new Set(), fields);
-          setSaved(theirs);
+          keep(theirs);
           setForm(next);
-          return save(next, theirs);
+          return send(next, theirs);
         }
         setConflict({ said: conflicting, theirs, mine: latest, fields });
       }
@@ -496,9 +540,9 @@ function TrackEditor({ server, notice, onGone, dirty: held, asked, onGo, onStay 
           returnTo={saveButton}
           format={(_field, value) => said(value, roleNames)}
           onResolve={(choices) => {
-            const keep = new Set(Object.entries(choices).filter(([, choice]) => choice === "theirs").map(([field]) => field));
-            const next = merged(conflict.mine, trackFormOf(conflict.theirs), keep, conflict.fields);
-            setSaved(conflict.theirs);
+            const taken = new Set(Object.entries(choices).filter(([, choice]) => choice === "theirs").map(([field]) => field));
+            const next = merged(conflict.mine, trackFormOf(conflict.theirs), taken, conflict.fields);
+            keep(conflict.theirs);
             setForm(next);
             void act(async () => {
               await save(next, conflict.theirs);

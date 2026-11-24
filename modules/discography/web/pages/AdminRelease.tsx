@@ -146,8 +146,13 @@ function Editor({ server, notice }: { server: FullRelease; notice: ReactNode }) 
   const saveButton = useRef<HTMLButtonElement>(null);
   const atId = useId();
   const formNow = useRef(form);
+  // The release as saved, kept at once by each answer, and the save still waiting:
+  // a save waits for it, then reads what it answered (CodeRabbit on #145).
+  const savedNow = useRef(saved);
+  const inflight = useRef<Promise<FullRelease> | null>(null);
   useLayoutEffect(() => {
     formNow.current = form;
+    savedNow.current = saved;
   });
 
   // The server's tracks, read again (a track added, removed or processed): the
@@ -162,11 +167,12 @@ function Editor({ server, notice }: { server: FullRelease; notice: ReactNode }) 
     }
   }
 
-  // While a save waits, the form is held against what it sent: a field typed back
-  // to what's saved since then is still a change (CodeRabbit on #145).
+  // While a save waits, the form is held against what it sent, as that's what
+  // the release will be: a field typed back to what was saved before is a
+  // change, and nothing typed since is none (CodeRabbit on #145).
   const [sending, setSending] = useState<ReleaseForm | null>(null);
   const edits = changed(form, base);
-  const dirty = edits.length > 0 || (sending !== null && changed(form, sending).length > 0);
+  const dirty = sending !== null ? changed(form, sending).length > 0 : edits.length > 0;
   const live = saved.status === "published";
   const titles = useMemo(
     () => new Map([...(conflict?.theirs.tracks ?? []), ...saved.tracks, ...server.tracks].map((track) => [track.id, track.title])),
@@ -196,8 +202,31 @@ function Editor({ server, notice }: { server: FullRelease; notice: ReactNode }) 
     void queryClient.invalidateQueries({ queryKey: ["get", TRACKS] });
   }
 
-  /** Saves what changed; the release as the server now has it, or throws why not. */
-  async function save(from: ReleaseForm = form, onto: FullRelease = saved): Promise<FullRelease> {
+  /** The release as saved now: kept at once, for a save that reads it before the next draw. */
+  function keep(release: FullRelease) {
+    savedNow.current = release;
+    setSaved(release);
+  }
+
+  /**
+   * Saves what changed, the form as it is now onto the release as saved now,
+   * once a save that's still waiting is answered (CodeRabbit on #145): the
+   * release as the server now has it, or throws why not. The conflict dialog's
+   * choice passes both.
+   */
+  async function save(from?: ReleaseForm, onto?: FullRelease): Promise<FullRelease> {
+    const waiting = inflight.current;
+    if (waiting) await waiting.catch(() => undefined);
+    const run = send(from ?? formNow.current, onto ?? savedNow.current);
+    inflight.current = run;
+    try {
+      return await run;
+    } finally {
+      if (inflight.current === run) inflight.current = null;
+    }
+  }
+
+  async function send(from: ReleaseForm, onto: FullRelease): Promise<FullRelease> {
     const found = releaseProblems(from);
     setChecked(found);
     if (Object.keys(found).length > 0) throw new Error("Some fields need fixing first: they're marked.");
@@ -217,7 +246,7 @@ function Editor({ server, notice }: { server: FullRelease; notice: ReactNode }) 
       const { data } = answered;
       if (!data) throw new Error("The site answered without the release.");
       remember(data);
-      setSaved(data);
+      keep(data);
       setForm((now) => withTracks(rebased(now, from, releaseFormOf(data)), data));
       setConflict(null);
       return data;
@@ -231,9 +260,9 @@ function Editor({ server, notice }: { server: FullRelease; notice: ReactNode }) 
         const conflicting = conflictOf(error.detail, releaseFormOf(onto), latest, now, theirs, fields);
         if (conflicting.conflicts.length === 0) {
           const next = withTracks(merged(latest, now, new Set(), fields), theirs);
-          setSaved(theirs);
+          keep(theirs);
           setForm(next);
-          return save(next, theirs);
+          return send(next, theirs);
         }
         setConflict({ said: conflicting, theirs, mine: latest, fields });
       }
@@ -259,7 +288,7 @@ function Editor({ server, notice }: { server: FullRelease; notice: ReactNode }) 
   /** Takes in the release a Publish or Unpublish answered with: someone else's save since asks, as a Save would. */
   function adopt(answer: FullRelease, held: FullRelease) {
     if (answer.version === held.version) {
-      setSaved(answer);
+      keep(answer);
       return;
     }
     const before = releaseFormOf(held);
@@ -268,17 +297,17 @@ function Editor({ server, notice }: { server: FullRelease; notice: ReactNode }) 
     const now = releaseFormOf(answer);
     const conflicting = conflictOf("Someone saved this release since you opened it. Here is how it reads now.", before, latest, now, answer, fields);
     if (conflicting.conflicts.length > 0) {
-      setSaved({ ...held, status: answer.status, publish_at: answer.publish_at, published_at: answer.published_at });
+      keep({ ...held, status: answer.status, publish_at: answer.publish_at, published_at: answer.published_at });
       setConflict({ said: conflicting, theirs: answer, mine: latest, fields });
       return;
     }
     setForm((mine) => withTracks(merged(mine, now, new Set(), fields), answer));
-    setSaved(answer);
+    keep(answer);
   }
 
   async function publish(schedule: boolean) {
     if (schedule && !at) throw new Error("Choose its release day.");
-    const release = dirty ? await save() : saved;
+    const release = dirty || inflight.current ? await save() : savedNow.current;
     const { data } = await api.POST("/api/discography/admin/releases/{release_id}/publish", {
       params: { path: { release_id: release.id } },
       body: schedule ? { at: new Date(at).toISOString() } : {},
@@ -396,9 +425,9 @@ function Editor({ server, notice }: { server: FullRelease; notice: ReactNode }) 
             field === "track_ids" && Array.isArray(value) ? (value as string[]).map((each) => titles.get(each) ?? each).join(", ") || "None" : said(value, roleNames)
           }
           onResolve={(choices) => {
-            const keep = new Set(Object.entries(choices).filter(([, choice]) => choice === "theirs").map(([field]) => field));
-            const next = withTracks(merged(conflict.mine, releaseFormOf(conflict.theirs), keep, conflict.fields), conflict.theirs);
-            setSaved(conflict.theirs);
+            const taken = new Set(Object.entries(choices).filter(([, choice]) => choice === "theirs").map(([field]) => field));
+            const next = withTracks(merged(conflict.mine, releaseFormOf(conflict.theirs), taken, conflict.fields), conflict.theirs);
+            keep(conflict.theirs);
             setForm(next);
             void act(async () => {
               await save(next, conflict.theirs);
