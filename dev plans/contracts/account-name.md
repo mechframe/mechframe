@@ -3,7 +3,7 @@ feature: The account's name (decision 0061): a person sets the name the site sho
 status: approved
 approved: 2026-11-23, as recommended ("Approve as recommended"): §8's three answers
 plan: `dev plans/2026-11-21-vibrant-mindz-push-plan.md` (M4); `dev plans/2026-11-23-next-session-m4g-name-shell-session.md` §4, 1
-pr: #138
+pr: #139
 ---
 
 # Contract: the account's name
@@ -116,7 +116,7 @@ None. The owner's answers, 2026-11-23, as recommended:
 
 ## Changes after approval
 
-- 2026-11-23, as built (#138):
+- 2026-11-23, as built (#139):
   - **The 409s** are tested in `test_names.py` only. The contract suite can't make a departing account over HTTP, and its other statuses are all in `test_put_admin_user_name`.
   - **The admin's Activity** lists `auth.name_changed` under "Accounts and roles", beside the other account changes, not with sign-ins.
   - **People's dialog** for a reader without `auth.role.assign` ends with Close in place of Cancel.
