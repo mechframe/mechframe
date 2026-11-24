@@ -55,6 +55,8 @@ export type { Consent, ConsentCategory, ConsentGateProps } from "./src/consent/c
 // A settings section's admin form, for a module's admin.settings.section part (K4.8).
 export { useSettings } from "./src/settings/useSettings";
 export type { SaveOutcome, SettingsForm, SettingsValues } from "./src/settings/useSettings";
+// The AI's problems in the editor's words, for a module's own AI task (a generated cover, decision 0065).
+export { sayAi } from "./src/ai/words";
 export { Seo } from "./src/seo/Seo";
 export type { SeoProps } from "./src/seo/Seo";
 
