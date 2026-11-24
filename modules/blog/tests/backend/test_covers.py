@@ -238,3 +238,17 @@ async def test_a_cover_over_the_limit_once_its_name_is_set_is_refused(fake: Fake
     assert len(fake.asked) == 2
     assert "over 100 KB" in _asked(fake)
     assert len(drawn.svg.encode("utf-8")) <= svg.MAX_BYTES
+
+
+async def test_a_cover_over_the_element_limit_once_its_name_is_set_is_refused(
+    fake: FakeAnthropic,
+) -> None:
+    """CodeRabbit on #147: the site's name adds four elements, so a drawing at the limit is repaired."""
+    paths = "".join('<path d="M0 0"/>' for _ in range(svg.MAX_ELEMENTS - 2))
+    full = f'<svg xmlns="http://www.w3.org/2000/svg">{paths}<rect width="1200" height="630"/></svg>'
+    assert covers.clean(full)  # 5,000 elements, the root's included: within the limit alone
+    fake.queue(answer={"svg": full, "alt": "x"})
+    drawn = await _draw(wordmark=True)
+    assert len(fake.asked) == 2
+    assert f"over {svg.MAX_ELEMENTS} elements" in _asked(fake)
+    assert covers.clean(drawn.svg) == drawn.svg

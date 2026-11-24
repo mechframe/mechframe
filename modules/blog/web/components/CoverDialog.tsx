@@ -157,6 +157,7 @@ export function CoverDialog({ post, opener, onClose, onUse }: CoverDialogProps) 
               <Input
                 value={alt}
                 maxLength={MAX_ALT}
+                disabled={busy !== ""}
                 onChange={(event) => {
                   setAlt(event.target.value);
                 }}

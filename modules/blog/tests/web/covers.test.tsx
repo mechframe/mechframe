@@ -336,6 +336,33 @@ describe("CodeRabbit on #147", () => {
     expect(await dialog.findByRole("img", { name: "Warmer" })).toBeInTheDocument();
     expect(box).toHaveValue("Warmer. Then bluer.");
   });
+
+  it("locks Alt text while a request is pending, so no edit is lost", async () => {
+    let answer: (value: Answer) => void = () => undefined;
+    let draws = 0;
+    routed({
+      "POST /api/blog/admin/covers/draw": () => {
+        draws += 1;
+        return draws === 1
+          ? { status: 200, body: { svg: SVG, alt: "First", preview: PREVIEW } }
+          : new Promise<Answer>((resolve) => {
+              answer = resolve;
+            });
+      },
+    });
+    renderApp({ path: `/admin/blog/${ID}`, modules: [blog], session: writer });
+
+    await userEvent.click(await screen.findByRole("button", { name: "Draw a cover" }));
+    const dialog = within(await screen.findByRole("dialog", { name: "Draw a cover" }));
+    await userEvent.click(dialog.getByRole("button", { name: "Draw" }));
+    const alt = await dialog.findByRole("textbox", { name: "Alt text" });
+    expect(alt).toBeEnabled();
+    await userEvent.click(dialog.getByRole("button", { name: "Draw again" }));
+    expect(alt).toBeDisabled();
+    answer({ status: 200, body: { svg: SVG, alt: "Second", preview: PREVIEW } });
+    expect(await dialog.findByRole("img", { name: "Second" })).toBeInTheDocument();
+    expect(alt).toBeEnabled();
+  });
 });
 
 describe("the theme's colours", () => {

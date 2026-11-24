@@ -370,12 +370,9 @@ async def draw(
             raise svg.Refused("The answer has no svg field. Answer the SVG in svg.")
         # Without anything under the wordmark's id, something must still be drawn (CodeRabbit on #147).
         bare = clean(without_wordmark(clean(drawing)))
-        shown = with_wordmark(bare, writer.site_name, plate) if wordmark else bare
-        # With the site's name added, `POST /covers` must still take it whole (CodeRabbit on #147).
-        if len(shown.encode("utf-8")) > svg.MAX_BYTES:
-            raise svg.Refused(
-                f"The SVG is over {svg.MAX_BYTES // 1000} KB once the site's name is set. Draw it more simply."
-            )
+        # With the site's name added, cleaned again, so `POST /covers` takes it whole: its
+        # bytes and its elements both within the limits (CodeRabbit on #147).
+        shown = clean(with_wordmark(bare, writer.site_name, plate)) if wordmark else bare
         return Drawn(svg=shown, alt=_alt(answer.get("alt"), bare))
 
     first = await _attempt(writer, asked)
