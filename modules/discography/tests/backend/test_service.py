@@ -679,21 +679,20 @@ async def test_a_persons_credits_are_told_apart_by_release_not_title(db: AsyncSe
     )
 
 
-async def _until_waiting(probe: AsyncSession) -> None:
-    """Until a session on this database waits on a lock, for 5 seconds at most
-    (CodeRabbit on #145: a fixed sleep can probe before the act gets there)."""
+async def _until_blocked(probe: AsyncSession, actor: int, holder: int) -> None:
+    """Until the holder's backend blocks the actor's, for 5 seconds at most
+    (CodeRabbit on #145: a fixed sleep, or any session waiting, can probe before
+    the act gets to the release)."""
     for _ in range(100):
-        waiting = await probe.scalar(
-            text(
-                "SELECT count(*) FROM pg_stat_activity "
-                "WHERE datname = current_database() AND wait_event_type = 'Lock'"
-            )
+        blocked = await probe.scalar(
+            text("SELECT CAST(:holder AS integer) = ANY(pg_blocking_pids(:actor))"),
+            {"holder": holder, "actor": actor},
         )
         await probe.rollback()
-        if waiting:
+        if blocked:
             return
         await asyncio.sleep(0.05)
-    raise AssertionError("Nothing waited on the release's lock.")
+    raise AssertionError("The act never waited on the release's lock.")
 
 
 async def _track_free_while_it_waits(
@@ -704,10 +703,13 @@ async def _track_free_while_it_waits(
     takes them the other way round can deadlock with it."""
     async with database.sessions() as holder:
         await holder.execute(select(Release.id).where(Release.id == release_id).with_for_update())
+        holder_pid = int(await holder.scalar(text("SELECT pg_backend_pid()")) or 0)
         async with database.sessions() as actor:
+            # Its transaction holds this one connection to the end: the act runs on it.
+            actor_pid = int(await actor.scalar(text("SELECT pg_backend_pid()")) or 0)
             task = asyncio.ensure_future(act(actor))
             async with database.sessions() as probe:
-                await _until_waiting(probe)
+                await _until_blocked(probe, actor_pid, holder_pid)
                 try:
                     await probe.execute(
                         text("SELECT 1 FROM discography_track WHERE id = :id FOR UPDATE NOWAIT"),

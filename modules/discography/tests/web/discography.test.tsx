@@ -826,7 +826,36 @@ describe("CodeRabbit on #145", () => {
     await userEvent.upload(screen.getByLabelText("Upload a file", { selector: "input" }), new File(["RIFF"], "v2.wav", { type: "audio/wav" }));
     expect(await screen.findByRole("radio", { name: "Keep mine" })).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Title" })).toHaveValue("My title");
-    expect(screen.getAllByText("Their title").length).toBeGreaterThan(1); // the panel's heading and the choice
+    expect(screen.getByText("Their title")).toBeInTheDocument(); // the choice; the fields stay at the version they were read at
+  });
+
+  it.each(["the form's Save", "Back to the form, then Save"])("asks again when a crossed audio answer is passed by with %s", async (how) => {
+    const theirs = { ...silent, title: "Their title", version: 2, audio: audio({ state: "processing", plays_from: null, percent: 0, stream_url: null }) };
+    const sent = routed({
+      [LIST]: { status: 200, body: { items: [silent], next_cursor: null, total: 1, releases: 1 } },
+      [`GET ${TRACK}`]: { status: 200, body: silent },
+      [`PUT ${TRACK}/audio`]: { status: 200, body: theirs },
+      // The server's version is 2: a save sent from 1 is refused with the track as it is.
+      [`PATCH ${TRACK}`]: async (request) => ((await json(request)).version === 2 ? { status: 200, body: { ...theirs, title: "My title", version: 3 } } : problem(409, "discography.changed", { track: theirs })),
+    });
+    renderApp({ path: `/admin/music/tracks?track=${T2}`, modules: [discography], session: editor });
+
+    const title = await screen.findByRole("textbox", { name: "Title" });
+    await userEvent.clear(title);
+    await userEvent.type(title, "My title");
+    await userEvent.upload(screen.getByLabelText("Upload a file", { selector: "input" }), new File(["RIFF"], "v2.wav", { type: "audio/wav" }));
+    expect(await screen.findByRole("radio", { name: "Keep mine" })).toBeInTheDocument();
+    if (how !== "the form's Save") {
+      await userEvent.click(screen.getByRole("button", { name: "Back to the form" }));
+      expect(screen.queryByRole("radio", { name: "Keep mine" })).toBeNull();
+    }
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => {
+      expect(sent.some((each) => each.method === "PATCH")).toBe(true);
+    });
+    // Sent from the version the person's fields were read at, so the server asks: never over theirs.
+    expect(await json(sent.find((each) => each.method === "PATCH") as Request)).toMatchObject({ version: 1, title: "My title" });
+    expect(await screen.findByRole("radio", { name: "Keep mine" })).toBeInTheDocument();
   });
 
   it("names the tracks, not their ids, when two orders cross", async () => {

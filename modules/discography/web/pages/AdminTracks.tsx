@@ -379,14 +379,22 @@ function TrackEditor({ server, notice, onGone, settle: settleRef, asked, onGo, o
    */
   function adopt(track: FullTrack) {
     remember(track);
-    const before = trackFormOf(savedNow.current);
+    const held = savedNow.current;
+    const before = trackFormOf(held);
     const latest = formNow.current;
     const now = trackFormOf(track);
     const fields = changed(latest, before).filter((field) => field !== "length");
     const crossed = conflictOf("Someone saved this track while its audio changed. Here is how it reads now.", before, latest, now, track, fields);
     setForm(rebased(latest, before, now));
-    keep(track);
-    if (crossed.conflicts.length > 0) setConflict({ said: crossed, theirs: track, mine: latest, fields });
+    if (crossed.conflicts.length === 0) {
+      keep(track);
+      return;
+    }
+    // Only the new audio is taken in: the fields stay at the version they were
+    // read at, so a save that passes the choice by, from the form or after Back
+    // to the form, is refused and asks again (CodeRabbit on #145).
+    keep({ ...held, audio: track.audio, peaks: track.peaks });
+    setConflict({ said: crossed, theirs: track, mine: latest, fields });
   }
 
   /**
