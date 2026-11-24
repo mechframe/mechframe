@@ -292,7 +292,7 @@ async def test_a_get_on_a_magic_link_signs_nobody_in(api: Api) -> None:
     ):
         response = await scanner.http.get(path, extensions=UNCHECKED)
         assert "__Host-mf_session" not in response.headers.get("set-cookie", "")
-    assert (await scanner.session()).status_code == 401
+    assert await scanner.who() is None
     # The scanner used nothing up: the person's own click still works.
     assert (await api.http.post("/api/auth/link/confirm", json={"token": token})).status_code == 200
 
@@ -450,7 +450,7 @@ async def test_step_up_counts_from_signing_in_not_from_activity(api: Api) -> Non
     await api.signed_in_as(await api.make_user(totp=True))
     for _ in range(2):
         await api.advance(5 * MINUTE)
-        assert (await api.session()).status_code == 200  # busy all along
+        assert await api.who() is not None  # busy all along
     await api.advance(1 * MINUTE)
     response = await api.http.post("/api/auth/recovery-codes")
     assert (response.status_code, response.json()["code"]) == (403, "auth.step_up_required")
@@ -484,7 +484,7 @@ async def test_five_failed_step_ups_end_the_session(api: Api) -> None:
     await api.advance(11 * MINUTE)
     for _ in range(5):
         await api.http.post("/api/auth/step-up", json={"password": "a wrong password 1"})
-    assert (await api.session()).status_code == 401
+    assert await api.who() is None
 
 
 # 7. A password change ends every other session (and a reset ends them all)
@@ -500,8 +500,8 @@ async def test_a_password_change_ends_every_other_session(api: Api) -> None:
         json={"current_password": PASSWORD, "new_password": NEW_PASSWORD},
     )
     assert _shape(response) == (200, {"status": "password_changed"})
-    assert (await api.session()).status_code == 200
-    assert (await other.session()).status_code == 401
+    assert await api.who() is not None
+    assert await other.who() is None
 
 
 async def test_after_a_password_change_only_the_new_one_signs_in(api: Api) -> None:
@@ -523,7 +523,7 @@ async def test_a_password_change_needs_the_current_password(api: Api) -> None:
         json={"current_password": OTHER_PASSWORD, "new_password": NEW_PASSWORD},
     )
     assert (refused.status_code, refused.json()["code"]) == (401, "auth.invalid_credentials")
-    assert (await api.session()).status_code == 200  # the session is kept
+    assert await api.who() is not None  # the session is kept
     assert (await api.another_browser().sign_in(user)).status_code == 200
 
 
@@ -548,7 +548,7 @@ async def test_a_reset_ends_every_session(api: Api) -> None:
         "/api/auth/password/reset", json={"token": token, "password": NEW_PASSWORD}
     )
     assert reset.status_code == 200
-    assert (await api.session()).status_code == 401
+    assert await api.who() is None
 
 
 # 8. A provider identity with an unverified email never links automatically
@@ -575,7 +575,7 @@ async def test_an_unverified_provider_email_never_links(api: Api) -> None:
     callback = await _oauth(api, "sub-1", user.email, verified=False, next_="/account")
     assert callback.status_code == 302
     assert callback.headers["location"].startswith("/sign-in?link=test")
-    assert (await api.session()).status_code == 401
+    assert await api.who() is None
 
 
 @not_built
@@ -584,7 +584,7 @@ async def test_a_verified_provider_email_never_links_to_an_unverified_account(ap
     callback = await _oauth(api, "sub-4", user.email, verified=True, next_="/account")
     assert callback.status_code == 302
     assert callback.headers["location"].startswith("/sign-in?link=test")
-    assert (await api.session()).status_code == 401
+    assert await api.who() is None
 
 
 @not_built
@@ -631,7 +631,7 @@ async def test_a_callback_with_a_bad_state_is_refused(api: Api, state: str | Non
         params["state"] = state
     response = await api.http.get("/api/auth/oauth/test/callback", params=params)
     assert (response.status_code, response.json()["code"]) == (400, "auth.oauth_state_invalid")
-    assert (await api.session()).status_code == 401
+    assert await api.who() is None
 
 
 @not_built
@@ -701,7 +701,7 @@ async def test_a_write_from_another_origin_is_refused(api: Api, headers: dict[st
     forged = {"Origin": api.http.headers["Origin"], "Sec-Fetch-Site": "same-origin", **headers}
     response = await api.http.post("/api/auth/sign-out", headers=forged)
     assert (response.status_code, response.json()["code"]) == (403, "kernel.cross_site_write")
-    assert (await api.session()).status_code == 200
+    assert await api.who() is not None
 
 
 # 11. The session token changes at sign-in and on a role change
@@ -730,11 +730,11 @@ async def test_the_token_changes_on_a_role_change(api: Api) -> None:
         f"/api/auth/admin/users/{member.id}/roles", json={"roles": ["editor"]}
     )
     assert response.status_code == 200
-    assert (await member_side.session()).status_code == 200
+    assert await member_side.who() is not None
     assert member_side.session_cookie not in {None, before}
     stale = api.another_browser()
     stale.plant_cookie("__Host-mf_session", before)
-    assert (await stale.session()).status_code == 401
+    assert await stale.who() is None
 
 
 # Who can grant what (14.1, decision 0013)
@@ -830,7 +830,38 @@ async def test_the_device_cookie_outlives_sign_out_and_is_no_session(api: Api) -
     device = api.http.cookies.get("__Host-mf_device")
     assert device
     assert device != api.session_cookie
-    assert (await api.session()).status_code == 401
+    assert await api.who() is None
+
+
+async def test_get_session(api: Api) -> None:
+    """200 with the user, or 200 `{"user": null}` with no session that counts,
+    never cached, and a dead cookie left where it is (decision 0063)."""
+    user = await api.make_user()
+    stranger = await api.session()
+    assert (stranger.status_code, stranger.json()) == (200, {"user": None})
+    assert stranger.headers["cache-control"] == "no-store"
+
+    await api.signed_in_as(user)
+    shown = await api.session()
+    assert (shown.status_code, shown.json()["user"]["id"]) == (200, user.id)
+    assert shown.headers["cache-control"] == "no-store"
+
+    unknown = api.another_browser()
+    unknown.plant_cookie("__Host-mf_session", "no-such-session")
+    ended = api.another_browser()
+    await ended.signed_in_as(user)
+    dead = ended.session_cookie
+    await ended.http.post("/api/auth/sign-out")
+    assert dead
+    ended.plant_cookie("__Host-mf_session", dead)
+    for browser in (unknown, ended):
+        answer = await browser.session()
+        assert (answer.status_code, answer.json()) == (200, {"user": None})
+        assert answer.headers["cache-control"] == "no-store"
+        assert "__Host-mf_session" not in answer.headers.get("set-cookie", "")
+
+    await api.advance(31 * 24 * 60 * 60)  # past a member's absolute limit
+    assert await api.who() is None
 
 
 async def test_codes_3_per_email_per_15_minutes(api: Api) -> None:
@@ -1064,7 +1095,7 @@ async def test_the_old_address_can_undo_a_change(api: Api) -> None:
     token = await api.new_token(user.email, "/auth/email/undo", not_="")
     undone = await api.another_browser().http.post("/api/auth/email/undo", json={"token": token})
     assert _shape(undone) == (200, {"status": "email_restored"})
-    assert (await api.session()).status_code == 401  # every session ended
+    assert await api.who() is None  # every session ended
     assert (await api.another_browser().sign_in(user)).status_code == 200
     moved = User(id=user.id, email=new, password=user.password)
     assert (await api.another_browser().sign_in(moved)).status_code == 401
@@ -1244,10 +1275,10 @@ async def test_five_wrong_codes_end_the_session(api: Api) -> None:
     for _ in range(4):
         wrong = await _confirm_totp(api, wrong_totp(secret))
         assert (wrong.status_code, wrong.json()["code"]) == (401, "auth.invalid_second_factor")
-    assert (await api.session()).status_code == 200  # four leave it
+    assert await api.who() is not None  # four leave it
     fifth = await _confirm_totp(api, wrong_totp(secret))
     assert (fifth.status_code, fifth.json()["code"]) == (401, "kernel.not_signed_in")
-    assert (await api.session()).status_code == 401
+    assert await api.who() is None
 
 
 async def test_the_code_that_confirms_cant_be_used_again(api: Api) -> None:
@@ -1323,10 +1354,10 @@ async def test_removing_a_totp_ends_every_other_session(api: Api) -> None:
     await api.signed_in_as(user)
     other, first = await _second_factor(api, user)
     assert (await _finish(other, first["challenge"], totp=_next_step(user.totp_secret))).is_success
-    assert (await other.session()).status_code == 200  # the control
+    assert await other.who() is not None  # the control
     removed = await api.http.delete("/api/auth/totp")
     assert (removed.status_code, removed.content) == (204, b"")
-    assert (await other.session()).status_code == 401
+    assert await other.who() is None
     mine = await api.session()
     assert mine.status_code == 200
     assert mine.json()["user"]["second_factor"] is False
@@ -1355,7 +1386,7 @@ async def test_removing_with_no_totp_ends_nothing(api: Api) -> None:
     other = api.another_browser()
     await other.signed_in_as(user)
     assert (await api.http.delete("/api/auth/totp")).status_code == 204
-    assert (await other.session()).status_code == 200
+    assert await other.who() is not None
 
 
 async def test_new_recovery_codes_replace_the_old(api: Api) -> None:
@@ -1584,7 +1615,7 @@ async def test_one_passkey_answer_sent_twice_at_once_signs_in_once(api: Api) -> 
     )
     assert sorted(response.status_code for response in answers) == [200, 401]
     [winner] = [b for b, response in zip(browsers, answers, strict=True) if response.is_success]
-    assert (await winner.session()).status_code == 200
+    assert await winner.who() is not None
 
 
 async def test_a_passkey_whose_sign_count_goes_back_is_refused(api: Api) -> None:
@@ -1719,7 +1750,7 @@ async def test_five_wrong_passkeys_at_step_up_end_the_session(api: Api) -> None:
         )
         expected = "auth.invalid_passkey" if attempt < 4 else "kernel.not_signed_in"
         assert _code(wrong) == (401, expected)
-    assert (await api.session()).status_code == 401
+    assert await api.who() is None
 
 
 async def test_step_up_passkey_options_need_a_passkey(api: Api) -> None:
@@ -1748,8 +1779,8 @@ async def test_removing_a_passkey_ends_every_other_session(api: Api) -> None:
     assert (await _sign_in_by_passkey(other, key)).status_code == 200  # by the one kept
     removed = await api.http.delete(f"/api/auth/passkeys/{made['id']}")
     assert (removed.status_code, removed.content) == (204, b"")
-    assert (await other.session()).status_code == 401
-    assert (await api.session()).status_code == 200
+    assert await other.who() is None
+    assert await api.who() is not None
     listed = (await api.http.get("/api/auth/passkeys")).json()["items"]
     assert [item["id"] for item in listed] == [kept["id"]]
     gone = await _sign_in_by_passkey(api.another_browser(), key, credential=key.credentials[0])
@@ -1803,7 +1834,7 @@ async def test_a_passkey_added_is_undone_from_its_mail(api: Api) -> None:
     token = await api.new_token(user.email, UNDO_LINK, not_="")
     undone = await api.another_browser().http.post(UNDO, json={"token": token})
     assert _shape(undone) == (200, {"status": "second_factor_undone"})
-    assert (await api.session()).status_code == 401  # every session ended
+    assert await api.who() is None  # every session ended
     gone = await _sign_in_by_passkey(api.another_browser(), key)
     assert _code(gone) == (401, "auth.invalid_passkey")
     signed = await api.another_browser().sign_in(user)
@@ -1822,7 +1853,7 @@ async def test_a_totp_added_is_undone_from_its_mail(api: Api) -> None:
     token = await api.new_token(user.email, UNDO_LINK, not_="")
     undone = await api.another_browser().http.post(UNDO, json={"token": token})
     assert _shape(undone) == (200, {"status": "second_factor_undone"})
-    assert (await api.session()).status_code == 401
+    assert await api.who() is None
     signed = await api.another_browser().sign_in(user)
     assert signed.json()["status"] == "signed_in"  # the TOTP is gone
 
@@ -1933,8 +1964,8 @@ async def test_signing_out_a_device_ends_its_session(api: Api) -> None:
     (theirs,) = [item for item in await _devices(api) if not item["current"]]
     ended = await api.http.delete(f"{SESSIONS}/{theirs['id']}")
     assert ended.status_code == 204
-    assert (await phone.session()).status_code == 401
-    assert (await api.session()).status_code == 200  # this one stays
+    assert await phone.who() is None
+    assert await api.who() is not None  # this one stays
     assert [item["current"] for item in await _devices(api)] == [True]
 
 
@@ -1946,7 +1977,7 @@ async def test_another_accounts_session_cant_be_signed_out(api: Api) -> None:
     for session_id in (theirs["id"], ZERO_ID):
         refused = await api.http.delete(f"{SESSIONS}/{session_id}")
         assert _code(refused) == (404, "auth.session_not_found")
-    assert (await stranger.session()).status_code == 200
+    assert await stranger.who() is not None
 
 
 async def test_signing_out_this_device_signs_out(api: Api) -> None:
@@ -1955,8 +1986,8 @@ async def test_signing_out_this_device_signs_out(api: Api) -> None:
     ended = await api.http.delete(f"{SESSIONS}/{mine['id']}")
     assert ended.status_code == 204
     assert api.session_cookie is None  # the cookie cleared, as sign-out clears it
-    assert (await api.session()).status_code == 401
-    assert (await phone.session()).status_code == 200
+    assert await api.who() is None
+    assert await phone.who() is not None
 
 
 async def test_sign_out_everywhere_else_keeps_only_this_one(api: Api) -> None:
@@ -1966,8 +1997,8 @@ async def test_sign_out_everywhere_else_keeps_only_this_one(api: Api) -> None:
     assert len(await _devices(api)) == 3
     ended = await api.http.post(SIGN_OUT_OTHERS)
     assert ended.status_code == 204
-    assert [(await browser.session()).status_code for browser in (phone, laptop)] == [401, 401]
-    assert (await api.session()).status_code == 200
+    assert [await browser.who() for browser in (phone, laptop)] == [None, None]
+    assert await api.who() is not None
     assert [item["current"] for item in await _devices(api)] == [True]
 
 
@@ -2001,7 +2032,7 @@ async def test_signing_devices_out_from_another_site_is_refused(api: Api) -> Non
     for method, path in (("DELETE", f"{SESSIONS}/{theirs['id']}"), ("POST", SIGN_OUT_OTHERS)):
         refused = await api.http.request(method, path, headers=forged)
         assert _code(refused) == (403, "kernel.cross_site_write")
-    assert (await phone.session()).status_code == 200  # still signed in there
+    assert await phone.who() is not None  # still signed in there
 
 
 async def test_the_device_routes_need_a_session(api: Api) -> None:

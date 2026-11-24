@@ -111,7 +111,7 @@ async def test_signing_out_a_device_is_audited_with_the_session(site: Site) -> N
     (row,) = await _audit(site, "auth.session_ended")
     assert (row.actor_id, row.subject_id) == (user_id, user_id)
     assert row.details == {"reason": "signed_out", "session": phones}
-    assert (await phone.get("/api/auth/session")).status_code == 401
+    assert (await phone.get("/api/auth/session")).json()["user"] is None
 
 
 async def test_signing_out_everywhere_else_is_audited_with_how_many(site: Site) -> None:
@@ -185,7 +185,7 @@ async def test_signing_out_this_device_after_a_role_change_sets_no_new_token(sit
     ]
     (cleared,) = set_cookies  # the clearing alone, never the replaced token
     assert cleared.startswith(f'{SESSION_COOKIE}="";')
-    assert (await laptop.get("/api/auth/session")).status_code == 401
+    assert (await laptop.get("/api/auth/session")).json()["user"] is None
 
 
 async def test_the_security_summary_says_when_there_is_no_password(site: Site) -> None:

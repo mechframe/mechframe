@@ -323,7 +323,8 @@ async def test_confirming_moves_the_account_and_mails_the_old_address(site: Site
     assert row.email_normal == normal_email(person.email)
     assert row.data == {"kind": "undo", "email": person.email, "verified_at": None}
     assert row.expires_at - row.created_at == timedelta(days=7)
-    assert (await person.browser.get("/api/auth/session")).status_code == 200  # still signed in
+    # Still signed in.
+    assert (await person.browser.get("/api/auth/session")).json()["user"] is not None
     [event] = await _audit(site, "auth.email_changed")
     assert (event.result, event.subject_id) == ("success", person.id)
 
@@ -398,7 +399,7 @@ async def test_undoing_restores_the_address_and_ends_every_session(site: Site) -
     assert (restored.status_code, restored.json()) == (200, {"status": "email_restored"})
     user = await _account(site, person)
     assert (user.email, user.email_verified_at) == (person.email, before)
-    assert (await person.browser.get("/api/auth/session")).status_code == 401
+    assert (await person.browser.get("/api/auth/session")).json()["user"] is None
     notice = site.mail.to(person.email)[-1]
     assert "token=" not in notice.text
     [event] = await _audit(site, "auth.email_restored")

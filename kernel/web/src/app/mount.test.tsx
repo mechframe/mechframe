@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { retryUnlessRefused } from "../api/client";
 import { defineModule, type ModuleDefinition } from "../modules";
-import { problem, routedFetch } from "../test-fetch";
+import { routedFetch } from "../test-fetch";
 import { checkModules, kernelQueryClient, mountApp } from "./mount";
 
 const site = { name: "Mounted", description: "Words from the API.", kind: "Organization", logo: "", card_image: "", same_as: [] };
@@ -28,7 +28,7 @@ describe("mountApp", () => {
     routedFetch({
       "GET /api/kernel/site": { status: 200, body: site },
       "GET /api/kernel/modules": { status: 200, body: { on: [] } },
-      "GET /api/auth/session": problem(401, "kernel.not_signed_in"),
+      "GET /api/auth/session": { status: 200, body: { user: null } },
     });
     document.body.innerHTML = '<div id="root"><div data-server-copy><h1>The server\'s words</h1></div></div>';
     await mount({ modules: [] });
@@ -41,7 +41,7 @@ describe("mountApp", () => {
     routedFetch({
       "GET /api/kernel/site": { status: 200, body: site },
       "GET /api/kernel/modules": { status: 200, body: { on: ["pages"] } },
-      "GET /api/auth/session": problem(401, "kernel.not_signed_in"),
+      "GET /api/auth/session": { status: 200, body: { user: null } },
     });
     const posts = defineModule({
       id: "posts",

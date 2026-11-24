@@ -488,7 +488,7 @@ async def test_a_wrong_step_up_is_refused(site: Site, body: dict[str, str], code
     await _signed_in(site.http, await _person(site))
     response = await site.http.post("/api/auth/step-up", json=body)
     assert (response.status_code, response.json()["code"]) == (401, code)
-    assert (await site.http.get("/api/auth/session")).status_code == 200  # still signed in
+    assert (await site.http.get("/api/auth/session")).json()["user"] is not None  # still signed in
 
 
 async def test_the_fifth_failed_step_up_ends_the_session_and_its_cookie(site: Site) -> None:
@@ -628,7 +628,7 @@ async def test_a_step_up_right_after_a_role_change_sets_one_working_cookie(site:
         v for v in response.headers.get_list("set-cookie") if v.startswith(sessions.SESSION_COOKIE)
     ]
     assert len(cookies) == 1
-    assert (await site.http.get("/api/auth/session")).status_code == 200
+    assert (await site.http.get("/api/auth/session")).json()["user"] is not None
 
 
 async def test_the_wait_grows_with_the_failures(site: Site) -> None:

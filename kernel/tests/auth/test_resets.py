@@ -321,10 +321,10 @@ async def test_a_reset_ends_every_session(site: Site) -> None:
     person = await _person(site)
     signed = site.browser()
     assert (await _sign_in(signed, person, PASSWORD)).status_code == 200
-    assert (await signed.get("/api/auth/session")).status_code == 200  # the control
+    assert (await signed.get("/api/auth/session")).json()["user"] is not None  # the control
     await _ask(site.http, person.email)
     await _reset(site.http, _mailed(site, person))
-    assert (await signed.get("/api/auth/session")).status_code == 401
+    assert (await signed.get("/api/auth/session")).json()["user"] is None
 
 
 async def test_a_reset_ends_an_open_second_factor_challenge(site: Site) -> None:

@@ -58,7 +58,7 @@ from kernel.auth.answers import (
     AccountStatus,
     OwnActivity,
     SecondFactorNeeded,
-    SessionAnswer,
+    SessionRead,
     SignedIn,
     SignInAnswer,
     SteppedUp,
@@ -67,6 +67,7 @@ from kernel.auth.ceremonies import AssertionCredential
 from kernel.auth.dependencies import (
     current_user,
     lifetimes_of,
+    optional_user,
     require_permission,
     require_recent_auth,
     signed_in,
@@ -326,11 +327,20 @@ def new_device_mail(device: str, at: datetime) -> mails.Mail:
 # --- the session ---------------------------------------------------------------
 
 
-@router.get("/session", response_model=SessionAnswer)
+@router.get("/session", response_model=SessionRead)
 async def session(
-    request: Request, user: User = Depends(current_user), db: AsyncSession = Depends(get_db)
-) -> dict[str, Any]:
-    return {"user": await accounts.view(db, user, declared=request.app.state.declared_permissions)}
+    request: Request,
+    user: User | None = Depends(optional_user),
+    db: AsyncSession = Depends(get_db),
+) -> Response:
+    """Who is signed in: the user, or `null` when no session counts, so a
+    signed-out visitor's page logs no 401 (decision 0063). A dead cookie is
+    left where it is: this read can land after a sign-in in another tab, and
+    clearing it then would sign that tab out. Never cached: it names the person."""
+    shown = None
+    if user is not None:
+        shown = await accounts.view(db, user, declared=request.app.state.declared_permissions)
+    return answer(SessionRead, {"user": shown}, headers={"Cache-Control": "no-store"})
 
 
 @router.get("/activity", response_model=OwnActivity)

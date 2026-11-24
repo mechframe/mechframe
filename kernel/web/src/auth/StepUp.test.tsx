@@ -98,7 +98,7 @@ describe("the step-up dialog", () => {
 
   it("closes when the fifth wrong try ends the session", async () => {
     const { answers } = guarded();
-    routedFetch({ ...answers, "POST /api/auth/step-up": problem(401, "kernel.not_signed_in"), "GET /api/auth/session": problem(401, "kernel.not_signed_in") });
+    routedFetch({ ...answers, "POST /api/auth/step-up": problem(401, "kernel.not_signed_in"), "GET /api/auth/session": { status: 200, body: { user: null } } });
     const outcomes: Outcome[] = [];
     renderWithKernel(writer(outcomes), { session: testUser() });
     await userEvent.click(screen.getByRole("button", { name: "Write" }));

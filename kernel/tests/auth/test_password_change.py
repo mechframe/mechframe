@@ -160,8 +160,8 @@ async def test_a_change_keeps_this_session_and_ends_every_other(site: Site) -> N
     assert (await _sign_in(other, person.email, PASSWORD)).status_code == 200
     changed = await _change(person.browser)
     assert (changed.status_code, changed.json()) == (200, {"status": "password_changed"})
-    assert (await person.browser.get("/api/auth/session")).status_code == 200
-    assert (await other.get("/api/auth/session")).status_code == 401
+    assert (await person.browser.get("/api/auth/session")).json()["user"] is not None
+    assert (await other.get("/api/auth/session")).json()["user"] is None
     assert (await _sign_in(site.browser(), person.email, PASSWORD)).status_code == 401
     assert (await _sign_in(site.browser(), person.email, NEW)).status_code == 200
 
@@ -186,10 +186,10 @@ async def test_a_wrong_current_password_is_refused_and_counts_as_a_failed_step_u
     for _ in range(4):
         refused = await _change(person.browser, current=OTHER)
         assert (refused.status_code, refused.json()["code"]) == (401, "auth.invalid_credentials")
-        assert (await person.browser.get("/api/auth/session")).status_code == 200
+        assert (await person.browser.get("/api/auth/session")).json()["user"] is not None
     fifth = await _change(person.browser, current=OTHER)
     assert (fifth.status_code, fifth.json()["code"]) == (401, "kernel.not_signed_in")
-    assert (await person.browser.get("/api/auth/session")).status_code == 401
+    assert (await person.browser.get("/api/auth/session")).json()["user"] is None
     assert (await _sign_in(site.browser(), person.email, PASSWORD)).status_code == 200
 
 
@@ -204,7 +204,7 @@ async def test_a_refused_new_password_changes_nothing(site: Site, new: str) -> N
     assert (refused.status_code, refused.json()["code"]) == (422, "auth.password_rejected")
     assert refused.json()["detail"]
     assert await _hash(site, person) == before
-    assert (await other.get("/api/auth/session")).status_code == 200
+    assert (await other.get("/api/auth/session")).json()["user"] is not None
 
 
 async def test_an_account_without_a_password_is_refused(site: Site) -> None:

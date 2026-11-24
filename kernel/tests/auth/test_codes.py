@@ -325,7 +325,7 @@ async def test_a_right_code_signs_in_and_uses_up_the_link(site: Site) -> None:
     assert _signed_in(signed)
     assert signed.json()["status"] == "signed_in"
     assert signed.json()["user"]["id"] == str(person.id)
-    assert (await site.http.get("/api/auth/session")).status_code == 200
+    assert (await site.http.get("/api/auth/session")).json()["user"] is not None
     late = await _confirm(site.browser(), token)
     assert (late.status_code, late.json()["code"]) == (401, "auth.invalid_link")
     [event] = await _audit(site, "auth.sign_in")

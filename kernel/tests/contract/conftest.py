@@ -345,6 +345,15 @@ class Api:
     async def session(self) -> httpx.Response:
         return await self.http.get("/api/auth/session")
 
+    async def who(self) -> dict[str, Any] | None:
+        """Who the session read names: the user, or None once no session
+        counts (decision 0063). It always answers 200, never cached."""
+        response = await self.session()
+        assert response.status_code == 200, response.text
+        assert response.headers.get("cache-control") == "no-store"
+        user: dict[str, Any] | None = response.json()["user"]
+        return user
+
 
 @dataclass
 class User:

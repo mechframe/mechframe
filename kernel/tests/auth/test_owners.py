@@ -157,11 +157,11 @@ async def test_an_account_already_there_is_made_the_owner_and_shut_out_until_its
         "/api/auth/sign-in", json={"email": "owner@site.test", "password": PASSWORD}
     )
     assert signed.status_code == 200, signed.text
-    assert (await site.http.get("/api/auth/session")).status_code == 200  # the control
+    assert (await site.http.get("/api/auth/session")).json()["user"] is not None  # the control
 
     token = await _create(site, "owner@site.test")
     assert await _roles(site, early.id) == {"owner", "member"}
-    assert (await site.http.get("/api/auth/session")).status_code == 401
+    assert (await site.http.get("/api/auth/session")).json()["user"] is None
     async with site.db() as db:
         assert await db.scalar(select(Session).where(Session.user_id == early.id)) is None
     again = await site.http.post(

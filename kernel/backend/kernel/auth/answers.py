@@ -54,6 +54,13 @@ class SessionAnswer(Answer):
     user: UserView
 
 
+class SessionRead(Answer):
+    """`GET /session`'s answer: the user, or None with no session that counts
+    (decision 0063)."""
+
+    user: UserView | None
+
+
 class OwnActivity(Answer):
     items: list[OwnActivityEntry]
     next_cursor: str | None

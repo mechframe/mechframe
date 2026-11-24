@@ -290,7 +290,7 @@ describe("the hooks", () => {
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true);
     });
-    expect(result.current.data?.user.email).toBe("a@mechframe.test");
+    expect(result.current.data?.user?.email).toBe("a@mechframe.test");
   });
 
   it("useApiMutation gives a refusal as an ApiProblem", async () => {

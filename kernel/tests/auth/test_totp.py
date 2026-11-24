@@ -479,7 +479,7 @@ async def test_removing_a_setup_not_confirmed_ends_nothing(site: Site) -> None:
     site.mail.clear()
     assert (await person.browser.delete("/api/auth/totp")).status_code == 204
     assert await _totp(site, person) is None
-    assert (await other.get("/api/auth/session")).status_code == 200
+    assert (await other.get("/api/auth/session")).json()["user"] is not None
     assert site.mail.to(person.email) == []  # no factor was removed
 
 
@@ -578,7 +578,7 @@ async def test_after_a_role_change_the_answers_that_roll_back_carry_the_new_cook
     new = _cookie(response, "__Host-mf_session")
     assert new
     assert new != old
-    assert (await person.browser.get("/api/auth/session")).status_code == 200
+    assert (await person.browser.get("/api/auth/session")).json()["user"] is not None
 
 
 # --- sign-in and step-up take the account first too (decision 0027) ------------------
@@ -703,4 +703,4 @@ async def test_two_step_ups_on_one_cookie_that_meet_at_the_account_issue_one_tok
     assert [answer.status_code for answer in answers] == [200, 200]
     issued = [a for a in answers if "__Host-mf_session" in a.headers.get("set-cookie", "")]
     assert len(issued) == 1
-    assert (await person.browser.get("/api/auth/session")).status_code == 200
+    assert (await person.browser.get("/api/auth/session")).json()["user"] is not None

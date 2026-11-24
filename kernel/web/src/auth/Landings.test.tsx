@@ -120,7 +120,7 @@ describe("choosing a new password", () => {
   it("sends the token with the new password, and says to sign in", async () => {
     const { sent } = routedFetch({
       "POST /api/auth/password/reset": { status: 200, body: { status: "password_reset" } },
-      "GET /api/auth/session": problem(401, "kernel.not_signed_in"),
+      "GET /api/auth/session": { status: 200, body: { user: null } },
     });
     renderApp({ path: "/auth/reset?token=r-1" });
     await userEvent.type(await screen.findByLabelText("New password"), "copper heron valley");
@@ -162,7 +162,7 @@ describe("a landing that ends every session", () => {
     it(`${landing.path.split("?")[0] ?? ""} shows this browser signed out too, so Sign in opens the form (Codex on #83)`, async () => {
       routedFetch({
         [`POST ${landing.api}`]: { status: 200, body: { status: "done" } },
-        "GET /api/auth/session": problem(401, "kernel.not_signed_in"),
+        "GET /api/auth/session": { status: 200, body: { user: null } },
       });
       const { router } = renderApp({ path: landing.path, session: testUser() });
       if (landing.fill) await userEvent.type(await screen.findByLabelText("New password"), "copper heron valley");
@@ -181,7 +181,7 @@ describe("a landing whose session check fails", () => {
       "POST /api/auth/password/reset": { status: 200, body: { status: "password_reset" } },
       "GET /api/auth/session": () => {
         reads += 1;
-        return reads === 1 ? problem(503, "kernel.busy") : problem(401, "kernel.not_signed_in");
+        return reads === 1 ? problem(503, "kernel.busy") : { status: 200, body: { user: null } };
       },
     });
     const { router } = renderApp({ path: "/auth/reset?token=t", session: testUser() });

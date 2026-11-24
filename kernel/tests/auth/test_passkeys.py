@@ -451,7 +451,7 @@ async def test_removing_a_passkey_voids_every_other_way_in(site: Site) -> None:
             )
         )
     assert live == 0
-    assert (await person.browser.get("/api/auth/session")).status_code == 200
+    assert (await person.browser.get("/api/auth/session")).json()["user"] is not None
 
 
 # --- lock order and races -----------------------------------------------------------------

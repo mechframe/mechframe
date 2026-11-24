@@ -2,7 +2,8 @@
  * Who is signed in (K4 contract §2): `useSession` and `useSignOut`.
  *
  * The session is `GET /api/auth/session`, read once and kept in the query
- * cache under its own key. A 401 there shows the person signed out. A 401 on
+ * cache under its own key. Its `user: null` shows the person signed out
+ * (decision 0063), as a 401 there does from a server before it. A 401 on
  * any other call (the client's `setApiHandlers`) reads the session again and
  * forgets what was the person's only if it's gone: the call may have been
  * sent before a sign-in (cubic on #79). A sign-in's answer sets it directly
@@ -36,6 +37,7 @@ async function readSession(): Promise<SessionUser | null> {
     if (!data) throw ApiProblem.unreachable();
     return data.user;
   } catch (error) {
+    // A server before decision 0063 answers a signed-out visitor 401.
     if (error instanceof ApiProblem && error.status === 401) return null;
     throw error;
   }
@@ -73,8 +75,9 @@ function forget(queryClient: QueryClient): void {
 /**
  * A call found no session, or one that answered success ended it (a reset,
  * an undo from mail): read it again, joining a read already on its way (so
- * the session read's own 401 asks nothing more), and forget only if it's
- * gone. If it can't be read, nothing changes. Says whether it was read.
+ * a 401 from an older server's session read asks nothing more), and forget
+ * only if it's gone. If it can't be read, nothing changes. Says whether it
+ * was read.
  */
 export async function recheckSession(queryClient: QueryClient): Promise<boolean> {
   let user: SessionUser | null;

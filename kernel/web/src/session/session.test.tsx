@@ -53,7 +53,15 @@ describe("useSession", () => {
     });
   });
 
-  it("is signed out on a 401", async () => {
+  it("is signed out on a 200 with no user (decision 0063)", async () => {
+    routedFetch({ "GET /api/auth/session": { status: 200, body: { user: null } } });
+    const { result } = renderHook(() => useSession(), { wrapper: setUp().wrapper });
+    await waitFor(() => {
+      expect(result.current.status).toBe("signed-out");
+    });
+  });
+
+  it("is signed out on a 401 too, from a server not yet upgraded", async () => {
     routedFetch({ "GET /api/auth/session": problem(401, "kernel.not_signed_in") });
     const { result } = renderHook(() => useSession(), { wrapper: setUp().wrapper });
     await waitFor(() => {
@@ -88,7 +96,7 @@ describe("useSession", () => {
     routedFetch({
       "GET /api/auth/session": () => {
         reads += 1;
-        return reads === 1 ? { status: 200, body: { user: member } } : problem(401, "kernel.not_signed_in");
+        return reads === 1 ? { status: 200, body: { user: member } } : { status: 200, body: { user: null } };
       },
       "GET /api/kernel/notifications": problem(401, "kernel.not_signed_in"),
     });

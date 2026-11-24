@@ -167,7 +167,7 @@ async def test_an_old_totp_link_leaves_a_totp_set_up_since(site: Site) -> None:
     totp = await _totp(site, person)
     assert totp is not None
     assert totp.confirmed_at is not None  # still there
-    assert (await person.browser.get("/api/auth/session")).status_code == 401
+    assert (await person.browser.get("/api/auth/session")).json()["user"] is None
     [row] = await _audit(site, "auth.second_factor_undone")
     assert row.details == {"method": "totp", "removed": False}
 

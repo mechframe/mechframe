@@ -906,7 +906,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Session */
+        /**
+         * Session
+         * @description Who is signed in: the user, or `null` when no session counts, so a
+         *     signed-out visitor's page logs no 401 (decision 0063). A dead cookie is
+         *     left where it is: this read can land after a sign-in in another tab, and
+         *     clearing it then would sign that tab out. Never cached: it names the person.
+         */
         get: operations["session_api_auth_session_get"];
         put?: never;
         post?: never;
@@ -2850,6 +2856,14 @@ export interface components {
         /** SessionAnswer */
         SessionAnswer: {
             user: components["schemas"]["UserView"];
+        };
+        /**
+         * SessionRead
+         * @description `GET /session`'s answer: the user, or None with no session that counts
+         *     (decision 0063).
+         */
+        SessionRead: {
+            user: components["schemas"]["UserView"] | null;
         };
         /**
          * SettingsForm
@@ -5294,7 +5308,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SessionAnswer"];
+                    "application/json": components["schemas"]["SessionRead"];
                 };
             };
             /** @description A problem (RFC 9457) */

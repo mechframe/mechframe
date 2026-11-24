@@ -284,7 +284,7 @@ async def test_a_holders_next_request_carries_a_new_token(api: Api) -> None:
     assert "auth.user.manage" not in session.json()["user"]["permissions"]
     stale = api.another_browser()
     stale.plant_cookie("__Host-mf_session", before)
-    assert (await stale.session()).status_code == 401
+    assert await stale.who() is None
 
 
 async def test_a_permission_you_dont_hold_is_refused(api: Api) -> None:

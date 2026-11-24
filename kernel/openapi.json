@@ -2797,6 +2797,7 @@
     "/api/auth/session": {
       "get": {
         "summary": "Session",
+        "description": "Who is signed in: the user, or `null` when no session counts, so a\nsigned-out visitor's page logs no 401 (decision 0063). A dead cookie is\nleft where it is: this read can land after a sign-in in another tab, and\nclearing it then would sign that tab out. Never cached: it names the person.",
         "operationId": "session_api_auth_session_get",
         "responses": {
           "200": {
@@ -2804,7 +2805,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SessionAnswer"
+                  "$ref": "#/components/schemas/SessionRead"
                 }
               }
             }
@@ -8095,6 +8096,27 @@
           "user"
         ],
         "title": "SessionAnswer"
+      },
+      "SessionRead": {
+        "properties": {
+          "user": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UserView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "user"
+        ],
+        "title": "SessionRead",
+        "description": "`GET /session`'s answer: the user, or None with no session that counts\n(decision 0063)."
       },
       "SettingsForm": {
         "properties": {
