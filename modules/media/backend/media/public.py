@@ -5,7 +5,8 @@ draw it, and records the place with `use`, in its own transaction, so the
 library shows where each image is and keeps it from being deleted while it's
 placed. `release` takes every image off one thing, such as a post deleted.
 `store` takes another module's own image, such as blog's generated cover, as
-an upload is taken, with its alt text (media 0.1.4, decision 0065).
+an upload is taken, with its alt text, and `storage_on` says whether it can
+now (media 0.1.4, decision 0065).
 """
 
 from __future__ import annotations
@@ -61,6 +62,12 @@ async def pictures(db: AsyncSession, ids: Iterable[uuid.UUID]) -> dict[uuid.UUID
         return {}
     rows = await db.scalars(select(MediaImage).where(MediaImage.id.in_(wanted)))
     return {row.id: _picture(row) for row in rows}
+
+
+def storage_on() -> bool:
+    """Whether images can be stored now: the public bucket is set. While it
+    isn't, `store` and an upload answer 503 `media.storage_off`."""
+    return service.storage_on()
 
 
 async def store(

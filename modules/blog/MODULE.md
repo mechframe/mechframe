@@ -24,10 +24,11 @@ Use it for dated writing with an author, a category and a cover, drafted and sch
   - `GET /categories` (public): `{items}`, each category with its live posts;
   - `GET /admin/posts?q=&status=&cursor=` (`{items, next_cursor, needs_cover}`, 50 a page, newest edit first), `POST /admin/posts` (409 `blog.slug_taken`), `GET` and `PATCH /admin/posts/{id}` (with `version`; 409 `blog.changed` with the post as it is now), `POST /admin/preview`, `GET /admin/categories` and `GET /admin/authors`: `blog.post.write`;
   - `POST /admin/posts/{id}/publish` (`{at?}`, a time with its zone to schedule it), `POST /admin/posts/{id}/unpublish`, `DELETE /admin/posts/{id}`: `blog.post.publish`;
-  - 422 `blog.category_not_found`, `blog.cover_not_found`, `blog.author_not_allowed`, `blog.related_refused` and `blog.announced` for a field that can't be kept.
+  - 422 `blog.category_not_found`, `blog.cover_not_found`, `blog.author_not_allowed`, `blog.related_refused` and `blog.announced` for a field that can't be kept;
+  - generated covers (0.1.4, decision 0065): `GET /admin/covers` (`{storage}`, whether a cover could be kept now; `blog.post.write`); `POST /admin/covers/draw` (`{title, summary, body, style, description?, colours?, wordmark, current?, changes?}`, answering `{svg, alt}` cleaned; `blog.post.write` and `kernel.ai.write`, one call against the kernel's AI_RATE_LIMIT, 503 and 502 as the AI's routes); `POST /admin/covers` (`{svg, alt}`, cleaned again, kept as a 2400 × 1260 PNG through `media.public.store`, answering 201 `{cover}`; `blog.post.write` and `media.image.upload`; 422 `blog.cover_refused`, 503 `media.storage_off`).
 - **Public pages:** `/blog`, the latest post first and larger, the rest as cards, filtered by category; `/blog/:slug`, the post. The server copy answers both, and lists every live post in the sitemap and `llms.txt`.
 - **Menus:** Blog in `nav.public`.
-- **The admin pages:** `/admin/blog`, the board (the note for a scheduled post with no cover, Search posts, All, Live, Scheduled and Drafts, the table, Categories), and `/admin/blog/:id` (`new` for a new post), the editor: Title, the kit's `MarkdownEditor`, Publish, Details (Category, Author, Address, Summary, Cover image through media's `ImagePicker`), Related posts, Search and sharing (`SearchFields`) and After publishing. Under Content in the sidebar.
+- **The admin pages:** `/admin/blog`, the board (the note for a scheduled post with no cover, Search posts, All, Live, Scheduled and Drafts, the table, Categories), and `/admin/blog/:id` (`new` for a new post), the editor: Title, the kit's `MarkdownEditor`, Publish, Details (Category, Author, Address, Summary, Cover image through media's `ImagePicker`, or Draw a cover's dialog: Style, What to draw for Custom, In the site's colours, With the site's name, then the cover drawn with its Alt text, What to change, Draw again and Use this cover), Related posts, Search and sharing (`SearchFields`) and After publishing. Under Content in the sidebar.
 - **Tables:** `blog_post`, `blog_slug_move` and `blog_post_related` (migration `blog_0001`, after the kernel's `kernel_0014` and media's `media_0001`; its downgrade takes the posts' terms, search documents and covers' uses with it).
 - **Permissions:**
   - `blog.post.write` (list, write, save, preview) and `blog.post.publish` (publish, schedule, unpublish, delete);
@@ -43,7 +44,7 @@ Use it for dated writing with an author, a category and a cover, drafted and sch
 
 ## Settings and env vars
 
-None.
+None of its own. Draw a cover (0.1.4) shows while the AI has a key, the host's `ANTHROPIC_API_KEY` or one saved in Settings → AI, and media's public bucket is set (`STORAGE_PUBLIC_BUCKET`, `STORAGE_PUBLIC_URL`). Each draw counts against the kernel's `AI_RATE_LIMIT`.
 
 ## Install notes
 
@@ -63,7 +64,8 @@ None.
 - One category a post: no tags, series or categories under categories.
 - No comments, reactions, community posts or newsletter sends here: the switches wait for those modules.
 - No embeds in a body (`embeds`, M5): an image in the body is Markdown's `![alt](address)`.
-- No AI writing help or generated covers yet: they're the blog's next PRs (`dev plans/contracts/blog.md` §8).
+- A generated cover is a vector drawing in Inter, made a PNG: no photograph, no image model, and no logo file inside it (the site's name is set in Inter). It's drawn when asked, never on publishing, and only for posts. The AI reads the theme's colours where the editor is drawn, so a token that isn't `#rrggbb` leaves the default theme's.
+- No social posting yet: its home is the owner's to decide (`dev plans/contracts/blog.md` §8, 7).
 - No revision history, and no redirect from a deleted post.
 
 ## Source and license

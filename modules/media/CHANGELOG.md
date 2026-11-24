@@ -2,7 +2,7 @@
 
 ## 0.1.4
 
-- `public.store(db, data, *, filename, alt, by)`: another module's own image, such as blog's generated cover, taken as an upload is and stored with its alt text. The same bytes again answer the image already kept (decision 0065).
+- `public.store(db, data, *, filename, alt, by)`: another module's own image, such as blog's generated cover, taken as an upload is and stored with its alt text. The same bytes again answer the image already kept (decision 0065). `public.storage_on()` says whether it can store now, so blog's Draw a cover shows only while a cover could be kept.
 
 ## 0.1.3
 

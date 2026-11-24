@@ -1,7 +1,8 @@
 // One post's editor, /admin/blog/:id and /admin/blog/new (`dev plans/contracts/blog.md`;
 // the canvas's AdminPost board): the title and the body in the kit's MarkdownEditor,
 // whose Write with AI (the kernel's, decision 0058) may fill the title, summary and search words,
-// then Publish, Details (Category, Author, Address, Summary, Cover image), Related
+// then Publish, Details (Category, Author, Address, Summary, Cover image, which
+// Draw a cover can fill: decision 0065's generated cover), Related
 // posts, Search and sharing, and After publishing beside them. A live post's save
 // changes the site at once (pages' contract §8, 3): its panel says Live, and its
 // button Update. A save someone else got to first asks field by field (the kit's
@@ -33,6 +34,7 @@ import {
   useModuleEnabled,
   useSession,
   useSite,
+  useApiQuery as useKernelQuery,
   useToast,
   useUnsavedGuard,
   when,
@@ -42,6 +44,7 @@ import { ImagePicker, Picture } from "@/modules/media/public";
 
 import { CATEGORIES, LIST, ONE, PUBLIC_LIST, STATUS_TONE, STATUS_WORDS, api, pathOf, preview, useApiQuery, type Full, type NewPost } from "../api";
 import "../blog.css";
+import { CoverDialog } from "../components/CoverDialog";
 import { RelatedPicker } from "../components/RelatedPicker";
 import {
   BLANK,
@@ -123,6 +126,13 @@ function Editor({ saved: first, start }: { saved: Full | null; start: Form }) {
   const [at, setAt] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [picking, setPicking] = useState(false);
+  const [drawing, setDrawing] = useState(false);
+  const drawButton = useRef<HTMLButtonElement>(null);
+  // Draw a cover shows to someone who may use the AI and upload, while a key works and a cover could be kept.
+  const mayDraw = session.status === "signed-in" && session.can("kernel.ai.write") && session.can("media.image.upload");
+  const aiState = useKernelQuery("get", "/api/kernel/ai", {}, { enabled: mayDraw });
+  const coverState = useApiQuery("get", "/api/blog/admin/covers", {}, { enabled: mayDraw });
+  const drawsCovers = mayDraw && aiState.data?.ready === true && coverState.data?.storage === true;
   const saveButton = useRef<HTMLButtonElement>(null);
   const atId = useId();
   // The fields as they stand now, for an answer that lands after more typing.
@@ -548,7 +558,41 @@ function Editor({ saved: first, start }: { saved: Full | null; start: Form }) {
                 />
               </Field>
               <div className="mf-blog-cover">
-                <span className="mf-blog-cover-label">Cover image</span>
+                <div className="mf-blog-cover-head">
+                  <span className="mf-blog-cover-label">Cover image</span>
+                  <div className="mf-blog-actions">
+                    {drawsCovers ? (
+                      <Button
+                        ref={drawButton}
+                        size="small"
+                        icon="sparkle"
+                        onClick={() => {
+                          setDrawing(true);
+                        }}
+                      >
+                        Draw a cover
+                      </Button>
+                    ) : null}
+                    <Button
+                      size="small"
+                      onClick={() => {
+                        setPicking(true);
+                      }}
+                    >
+                      {form.cover ? "Change" : "Choose a cover"}
+                    </Button>
+                    {form.cover ? (
+                      <Button
+                        size="small"
+                        onClick={() => {
+                          set("cover", null);
+                        }}
+                      >
+                        Remove
+                      </Button>
+                    ) : null}
+                  </div>
+                </div>
                 {form.cover ? (
                   <Picture image={form.cover} sizes="320px" className="mf-blog-cover-picture" />
                 ) : (
@@ -559,26 +603,6 @@ function Editor({ saved: first, start }: { saved: Full | null; start: Form }) {
                     {each}
                   </p>
                 ))}
-                <div className="mf-blog-actions">
-                  <Button
-                    size="small"
-                    onClick={() => {
-                      setPicking(true);
-                    }}
-                  >
-                    {form.cover ? "Change" : "Choose a cover"}
-                  </Button>
-                  {form.cover ? (
-                    <Button
-                      size="small"
-                      onClick={() => {
-                        set("cover", null);
-                      }}
-                    >
-                      Remove
-                    </Button>
-                  ) : null}
-                </div>
               </div>
             </div>
           </Card>
@@ -675,6 +699,20 @@ function Editor({ saved: first, start }: { saved: Full | null; start: Form }) {
           }}
           onClose={() => {
             setPicking(false);
+          }}
+        />
+      ) : null}
+      {drawing ? (
+        <CoverDialog
+          opener={drawButton}
+          post={() => ({ title: formNow.current.title, summary: formNow.current.summary, body: formNow.current.body })}
+          onClose={() => {
+            setDrawing(false);
+          }}
+          onUse={(cover) => {
+            set("cover", cover);
+            setDrawing(false);
+            toast({ tone: "success", text: "The cover is in place. Save the post to keep it.", returnTo: drawButton });
           }}
         />
       ) : null}

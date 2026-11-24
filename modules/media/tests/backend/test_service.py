@@ -553,3 +553,16 @@ async def test_store_takes_another_modules_image_with_its_alt(
     # The same bytes again answer the image kept, its alt as it was.
     again = await public.store(db, data, filename="cover.png", alt="Something else", by=person)
     assert (again.id, again.alt) == (first.id, "Ten years, in gold.")
+
+
+async def test_another_module_can_ask_whether_images_can_be_stored(
+    db: AsyncSession, bucket: Bucket
+) -> None:
+    """blog's Draw a cover shows only while the cover could be kept."""
+    assert public.storage_on()
+    bucket.on = False
+    assert not public.storage_on()
+    refused = await _problem(
+        public.store(db, unique_image(), filename="cover.png", alt="x", by=None)
+    )
+    assert (refused.code, refused.status) == ("media.storage_off", 503)

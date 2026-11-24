@@ -287,3 +287,71 @@ class PublishPost(BaseModel):
     model_config = ConfigDict(strict=True, extra="forbid")
 
     at: str | None = Field(default=None, max_length=40)
+
+
+# --- generated covers (decision 0065, `dev plans/contracts/blog-covers.md` §2) ----------------
+
+#: A colour as the editor reads it from the theme.
+HEX_COLOUR = r"^#[0-9a-fA-F]{6}$"
+#: The most a drawing sent back holds: the kernel's SVG limit, 100 KB.
+MAX_DRAWING = 100_000
+
+
+class CoverColours(BaseModel):
+    """The site's colours, from the theme's surface, text and accent tokens."""
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    ground: str = Field(pattern=HEX_COLOUR)
+    ink: str = Field(pattern=HEX_COLOUR)
+    accent: str = Field(pattern=HEX_COLOUR)
+
+
+class CoverAsk(BaseModel):
+    """What to draw: the editor's fields as they stand, so a post not yet
+    saved can have a cover; for a revision, the cover shown and the changes."""
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    title: str = Field(default="", max_length=MAX_TITLE)
+    summary: str = Field(default="", max_length=MAX_SUMMARY)
+    body: str = Field(default="", max_length=MAX_BODY)
+    style: Literal["editorial", "signal", "minimal", "custom"]
+    #: What to draw, for Custom.
+    description: str = Field(default="", max_length=600)
+    #: The site's colours: always for the house styles; for Custom only "In the site's colours".
+    colours: CoverColours | None = None
+    #: The site's name in the top-left corner.
+    wordmark: bool = False
+    #: The cover shown, to change.
+    current: str | None = Field(default=None, max_length=MAX_DRAWING)
+    #: What to change in it.
+    changes: str = Field(default="", max_length=600)
+
+
+class CoverDrawn(Answer):
+    """A cover drawn and cleaned: the SVG to show, and its alt text."""
+
+    svg: str
+    alt: str
+
+
+class CoverUse(BaseModel):
+    """The cover shown, to keep with its alt text: cleaned again on the server."""
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    svg: str = Field(min_length=1, max_length=MAX_DRAWING)
+    alt: str = Field(default="", max_length=250)
+
+
+class CoverStored(Answer):
+    """The cover kept in the media library, as the post's Cover field holds it."""
+
+    cover: PostCover
+
+
+class CoverState(Answer):
+    """Whether a drawn cover could be kept now: media's storage is on."""
+
+    storage: bool

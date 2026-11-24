@@ -317,6 +317,49 @@
   border-radius: var(--mf-radius-md);
 }
 
+/* The block's title, with Draw a cover, Change and Remove beside it, or under
+   it where they don't fit (the board's Cover image card at 320 px). */
+.mf-blog-cover-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mf-space-2) var(--mf-space-3);
+}
+
+.mf-blog-cover-head .mf-blog-cover-label {
+  margin-bottom: 0;
+}
+
+/* Draw a cover (decision 0065): its ask, and the cover drawn at the card's shape. */
+.mf-blog-cover-form {
+  display: grid;
+  gap: var(--mf-space-4);
+}
+
+.mf-blog-cover-drawn {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1200 / 630;
+  border-radius: 10px;
+}
+
+.mf-blog-cover-change {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--mf-space-2);
+}
+
+.mf-blog-cover-change > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.mf-blog-cover-problem {
+  margin: 0;
+}
+
 .mf-blog-delete {
   justify-self: start;
 }

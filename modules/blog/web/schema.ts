@@ -217,6 +217,53 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/blog/admin/covers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Cover State
+         * @description Whether a drawn cover could be kept now: Draw a cover shows only while it could.
+         */
+        get: operations["cover_state_api_blog_admin_covers_get"];
+        put?: never;
+        /**
+         * Keep Cover
+         * @description The cover shown, cleaned again, made a PNG twice the card and kept in
+         *     the media library with its alt text. It spends no AI budget.
+         */
+        post: operations["keep_cover_api_blog_admin_covers_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/blog/admin/covers/draw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Draw Cover
+         * @description A cover drawn by the AI from the post as it stands, cleaned: one call
+         *     against the AI's budget, its repair try included. For a revision,
+         *     `current` and `changes`.
+         */
+        post: operations["draw_cover_api_blog_admin_covers_draw_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -283,6 +330,101 @@ export interface components {
             id: string;
             /** Name */
             name: string;
+        };
+        /**
+         * CoverAsk
+         * @description What to draw: the editor's fields as they stand, so a post not yet
+         *     saved can have a cover; for a revision, the cover shown and the changes.
+         */
+        CoverAsk: {
+            /**
+             * Title
+             * @default
+             */
+            title?: string;
+            /**
+             * Summary
+             * @default
+             */
+            summary?: string;
+            /**
+             * Body
+             * @default
+             */
+            body?: string;
+            /**
+             * Style
+             * @enum {string}
+             */
+            style: "editorial" | "signal" | "minimal" | "custom";
+            /**
+             * Description
+             * @default
+             */
+            description?: string;
+            colours?: components["schemas"]["CoverColours"] | null;
+            /**
+             * Wordmark
+             * @default false
+             */
+            wordmark?: boolean;
+            /** Current */
+            current?: string | null;
+            /**
+             * Changes
+             * @default
+             */
+            changes?: string;
+        };
+        /**
+         * CoverColours
+         * @description The site's colours, from the theme's surface, text and accent tokens.
+         */
+        CoverColours: {
+            /** Ground */
+            ground: string;
+            /** Ink */
+            ink: string;
+            /** Accent */
+            accent: string;
+        };
+        /**
+         * CoverDrawn
+         * @description A cover drawn and cleaned: the SVG to show, and its alt text.
+         */
+        CoverDrawn: {
+            /** Svg */
+            svg: string;
+            /** Alt */
+            alt: string;
+        };
+        /**
+         * CoverState
+         * @description Whether a drawn cover could be kept now: media's storage is on.
+         */
+        CoverState: {
+            /** Storage */
+            storage: boolean;
+        };
+        /**
+         * CoverStored
+         * @description The cover kept in the media library, as the post's Cover field holds it.
+         */
+        CoverStored: {
+            cover: components["schemas"]["PostCover"];
+        };
+        /**
+         * CoverUse
+         * @description The cover shown, to keep with its alt text: cleaned again on the server.
+         */
+        CoverUse: {
+            /** Svg */
+            svg: string;
+            /**
+             * Alt
+             * @default
+             */
+            alt?: string;
         };
         /**
          * FullPost
@@ -1134,6 +1276,119 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BlogAuthorList"];
+                };
+            };
+            /** @description A problem (RFC 9457) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    cover_state_api_blog_admin_covers_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoverState"];
+                };
+            };
+            /** @description A problem (RFC 9457) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    keep_cover_api_blog_admin_covers_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CoverUse"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoverStored"];
+                };
+            };
+            /** @description What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description A problem (RFC 9457) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    draw_cover_api_blog_admin_covers_draw_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CoverAsk"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoverDrawn"];
+                };
+            };
+            /** @description What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             /** @description A problem (RFC 9457) */
