@@ -132,8 +132,22 @@ class SettingsRegistry:
 
     def __init__(self) -> None:
         self.models: dict[str, type[BaseModel]] = {}
+        #: By module, the fields only their own route saves, each with what the form is told.
+        self.own_routes: dict[str, dict[str, str]] = {}
 
-    def register(self, module_id: str, model: type[BaseModel]) -> None:
+    def register(
+        self, module_id: str, model: type[BaseModel], *, own_route: Mapping[str, str] | None = None
+    ) -> None:
+        """`own_route` names the fields a save through the form (`via="form"`)
+        may not change, each with the sentence that save answers: a field another
+        route checks before it saves, such as the AI's model against Anthropic's
+        list (decision 0064)."""
+        routed = dict(own_route or {})
+        strangers = sorted(set(routed) - set(model.model_fields))
+        if strangers:
+            raise ValueError(
+                f"{module_id}'s settings have no {', '.join(strangers)} to give a route of its own."
+            )
         try:
             model()
         except ValidationError as error:
@@ -148,6 +162,7 @@ class SettingsRegistry:
                 "unsealed or as its mask."
             )
         self.models[module_id] = model
+        self.own_routes[module_id] = routed
 
     def model(self, module_id: str) -> type[BaseModel]:
         try:
@@ -299,11 +314,32 @@ class SettingsRegistry:
             stored,
             self._as_json(module_id, {n: v for n, v in changes.items() if n not in secrets}),
         )
-
-        merged: list[str] = []
+        # The form as it was read: the version the save says, or what's stored now.
+        base = now
         if version < current:
             older = await self._version(db, module_id, version)
             base = older.values if older else self._masked(model, {})
+        if via == "form":
+            # A field its own route saves, changed through the form (decision 0064).
+            # Sent as the form read it, it's no change: a crossed save keeps the
+            # route's newer value (CodeRabbit on #144).
+            # A secret typed, to replace or to clear it, is a change too.
+            routed = self.own_routes.get(module_id, {})
+            barred = sorted(
+                name
+                for name in routed
+                if name in typed or (name in yours and yours[name] != base.get(name))
+            )
+            if barred:
+                raise Problem(
+                    "kernel.invalid_request",
+                    422,
+                    "Some of these settings are saved on their own page.",
+                    errors={name: [routed[name]] for name in barred},
+                )
+
+        merged: list[str] = []
+        if version < current:
             conflicts, kept = self._merge(model, base, now, yours, typed, changes)
             if conflicts:
                 newest = await self._version(db, module_id, current)

@@ -405,7 +405,7 @@ KERNEL = [
         "ANTHROPIC_MODEL",
         "ai",
         "optional",
-        "The model every writing task asks for.",
+        "The model every writing task asks for, until an admin saves one in Settings → AI.",
     ),
     Var(
         "AI_RATE_LIMIT",

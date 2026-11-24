@@ -777,6 +777,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/kernel/admin/ai/models": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ai Models
+         * @description The models Settings → AI offers, read from Anthropic each time: never cached.
+         */
+        get: operations["ai_models_api_kernel_admin_ai_models_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/kernel/admin/ai/model": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Ai Model
+         * @description Saves the model picked, once Anthropic's list, read now, offers it;
+         *     null goes back to the host's. Nothing is saved when the list can't be read.
+         */
+        put: operations["ai_model_api_kernel_admin_ai_model_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/kernel/admin/ai/check": {
         parameters: {
             query?: never;
@@ -1713,8 +1754,19 @@ export interface components {
             source: "settings" | "environment" | "none";
             /** Model */
             model: string;
+            /**
+             * Model Source
+             * @enum {string}
+             */
+            model_source: "settings" | "environment";
             /** Unreadable */
             unreadable: boolean;
+        };
+        /** AiModels */
+        AiModels: {
+            /** Models */
+            models: components["schemas"]["ModelOffered"][];
+            in_use: components["schemas"]["ModelInUse"];
         };
         /** AiState */
         AiState: {
@@ -2244,6 +2296,46 @@ export interface components {
              * @enum {string}
              */
             worker: "ok" | "behind";
+        };
+        /** ModelInUse */
+        ModelInUse: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string | null;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "settings" | "environment";
+            /** Listed */
+            listed: boolean;
+        };
+        /** ModelOffered */
+        ModelOffered: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+        };
+        /**
+         * ModelPick
+         * @description `{version, model}`: the section's version as the form read it; null is the host's model.
+         */
+        ModelPick: {
+            /** Version */
+            version: number;
+            /** Model */
+            model: string | null;
+        };
+        /** ModelSaved */
+        ModelSaved: {
+            /** Version */
+            version: number;
+            /** Changed */
+            changed: string[];
+            /** Merged */
+            merged: string[];
         };
         /** ModerationLog */
         ModerationLog: {
@@ -4945,6 +5037,77 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AiKey"];
+                };
+            };
+            /** @description A problem (RFC 9457) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    ai_models_api_kernel_admin_ai_models_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiModels"];
+                };
+            };
+            /** @description A problem (RFC 9457) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    ai_model_api_kernel_admin_ai_model_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModelPick"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelSaved"];
+                };
+            };
+            /** @description What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             /** @description A problem (RFC 9457) */

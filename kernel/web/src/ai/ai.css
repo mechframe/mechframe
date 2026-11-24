@@ -18,6 +18,13 @@
   color: var(--mf-color-text-muted);
 }
 
+.mf-ai-model-failed {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mf-space-2);
+}
+
 .mf-ai-problem {
   margin: 0;
   font: var(--mf-type-small);

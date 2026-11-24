@@ -2378,6 +2378,90 @@
         }
       }
     },
+    "/api/kernel/admin/ai/models": {
+      "get": {
+        "tags": [
+          "kernel"
+        ],
+        "summary": "Ai Models",
+        "description": "The models Settings → AI offers, read from Anthropic each time: never cached.",
+        "operationId": "ai_models_api_kernel_admin_ai_models_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiModels"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/kernel/admin/ai/model": {
+      "put": {
+        "tags": [
+          "kernel"
+        ],
+        "summary": "Ai Model",
+        "description": "Saves the model picked, once Anthropic's list, read now, offers it;\nnull goes back to the host's. Nothing is saved when the list can't be read.",
+        "operationId": "ai_model_api_kernel_admin_ai_model_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModelPick"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelSaved"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/kernel/admin/ai/check": {
       "post": {
         "tags": [
@@ -4960,6 +5044,14 @@
             "type": "string",
             "title": "Model"
           },
+          "model_source": {
+            "type": "string",
+            "enum": [
+              "settings",
+              "environment"
+            ],
+            "title": "Model Source"
+          },
           "unreadable": {
             "type": "boolean",
             "title": "Unreadable"
@@ -4970,9 +5062,31 @@
         "required": [
           "source",
           "model",
+          "model_source",
           "unreadable"
         ],
         "title": "AiKey"
+      },
+      "AiModels": {
+        "properties": {
+          "models": {
+            "items": {
+              "$ref": "#/components/schemas/ModelOffered"
+            },
+            "type": "array",
+            "title": "Models"
+          },
+          "in_use": {
+            "$ref": "#/components/schemas/ModelInUse"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "models",
+          "in_use"
+        ],
+        "title": "AiModels"
       },
       "AiState": {
         "properties": {
@@ -6414,6 +6528,124 @@
           "worker"
         ],
         "title": "JobCounts"
+      },
+      "ModelInUse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "settings",
+              "environment"
+            ],
+            "title": "Source"
+          },
+          "listed": {
+            "type": "boolean",
+            "title": "Listed"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "source",
+          "listed"
+        ],
+        "title": "ModelInUse"
+      },
+      "ModelOffered": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "ModelOffered"
+      },
+      "ModelPick": {
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Version"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "version",
+          "model"
+        ],
+        "title": "ModelPick",
+        "description": "`{version, model}`: the section's version as the form read it; null is the host's model."
+      },
+      "ModelSaved": {
+        "properties": {
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "changed": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Changed"
+          },
+          "merged": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Merged"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "version",
+          "changed",
+          "merged"
+        ],
+        "title": "ModelSaved"
       },
       "ModerationLog": {
         "properties": {
