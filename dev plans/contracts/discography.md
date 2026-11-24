@@ -164,3 +164,11 @@ Files: masters in the private bucket at `discography/masters/<track_id>/<n>.<ext
   - It writes the stream as MP3 at a constant `stream_bitrate_kbps`, taken to MP3's nearest standard rate: 256 kbps measured at 257. MP3's patents have expired.
   - numpy reads the peaks. The ffmpeg program from apt, the third option, lost: not pinned by hash, and absent from the owner's PC.
   - Decision 0070 keeps the gate's table.
+
+## Changes as built (the backend, `feat/discography`)
+
+- **The 409 code is `discography.changed`,** as blog's and media's are, with the row as it is now. Not `kernel.save_conflict`.
+- **Masters are capped at 60 MB, not 64.** The form's own bytes share the route's 64 MB (`BODY_LIMITS`). A bigger file answers the kernel's 413 `kernel.too_large`, so the web checks the size first and shows the FLAC words.
+- **Search indexes releases only,** each document holding its playable tracks' titles, every credit and, under `show_lyrics`, the lyrics. A track is found by its name or a credit and lands on its release.
+- **The five roles are the migration's,** so a site without the seed has them; the seed adds releases only.
+- **`public.py`'s `Card`** is a frozen dataclass. A release's card carries its playable tracks as cards of their own (`tracks`), for the Releases deck.
