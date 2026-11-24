@@ -529,3 +529,27 @@ async def test_the_seed_gives_three_described_images_once(db: AsyncSession, buck
     assert sorted(row.filename for row in rows) == sorted(name for name, *_ in IMAGES)
     assert all(row.alt for row in rows)
     assert bucket.files == stored  # the second run stored nothing new
+
+
+# --- another module's image (media 0.1.4, decision 0065) ---------------------------------
+
+
+@pytest.mark.db
+async def test_store_takes_another_modules_image_with_its_alt(
+    db: AsyncSession, bucket: Bucket
+) -> None:
+    """blog's generated cover: stored as an upload is, with the alt it was drawn with."""
+    person = await make_person(db, "Pat Writer")
+    data = unique_image(size=(2400, 1260))
+    first = await public.store(
+        db, data, filename="cover.png", alt="  Ten years, in gold.  ", by=person
+    )
+    await db.commit()
+    assert (first.width, first.height, first.alt) == (2400, 1260, "Ten years, in gold.")
+    stored = await db.get(MediaImage, first.id)
+    assert stored is not None
+    assert stored.uploaded_by == person
+    assert bucket.under(f"media/{first.id}/")  # its files, smaller copies too
+    # The same bytes again answer the image kept, its alt as it was.
+    again = await public.store(db, data, filename="cover.png", alt="Something else", by=person)
+    assert (again.id, again.alt) == (first.id, "Ten years, in gold.")

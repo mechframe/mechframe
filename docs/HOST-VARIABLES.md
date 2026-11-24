@@ -255,7 +255,7 @@ YouTube, SoundCloud, Spotify and Bandcamp players from a pasted link, loaded onl
 
 No host variables of its own.
 
-### `media` 0.1.3 (experimental)
+### `media` 0.1.4 (experimental)
 
 Images uploaded once with alt text, cleaned of metadata, and placed by any module.
 

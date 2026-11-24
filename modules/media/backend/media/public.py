@@ -4,6 +4,8 @@ A module that places an image keeps its id, reads it back with `picture` to
 draw it, and records the place with `use`, in its own transaction, so the
 library shows where each image is and keeps it from being deleted while it's
 placed. `release` takes every image off one thing, such as a post deleted.
+`store` takes another module's own image, such as blog's generated cover, as
+an upload is taken, with its alt text (media 0.1.4, decision 0065).
 """
 
 from __future__ import annotations
@@ -17,7 +19,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from media import service
-from media.models import MAX_LABEL, MAX_LINK, MAX_OWNER, MediaImage, MediaUse
+from media.models import MAX_ALT, MAX_LABEL, MAX_LINK, MAX_OWNER, MediaImage, MediaUse
 
 
 @dataclass(frozen=True)
@@ -59,6 +61,19 @@ async def pictures(db: AsyncSession, ids: Iterable[uuid.UUID]) -> dict[uuid.UUID
         return {}
     rows = await db.scalars(select(MediaImage).where(MediaImage.id.in_(wanted)))
     return {row.id: _picture(row) for row in rows}
+
+
+async def store(
+    db: AsyncSession, data: bytes, *, filename: str, alt: str, by: uuid.UUID | None
+) -> Picture:
+    """Another module's image, through an upload's checks and stored with
+    `alt`. The same bytes again answer the image already kept, its alt as it
+    was. 503 `media.storage_off` while storage is off, as an upload."""
+    image, made = await service.upload(db, data, filename=filename, by=by)
+    if made:
+        image.alt = alt.strip()[:MAX_ALT] or None
+        await db.flush()
+    return _picture(image)
 
 
 async def use(db: AsyncSession, image_id: uuid.UUID, *, owner: str, label: str, link: str) -> None:

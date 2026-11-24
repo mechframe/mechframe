@@ -1,5 +1,9 @@
 # Changelog: media
 
+## 0.1.4
+
+- `public.store(db, data, *, filename, alt, by)`: another module's own image, such as blog's generated cover, taken as an upload is and stored with its alt text. The same bytes again answer the image already kept (decision 0065).
+
 ## 0.1.3
 
 - Round 3 against the board (canvas version 82, VM Website Dev 10's check): the alt text box draws no resize handle, as the board's draws none; it keeps its 64px least height and two rows. The alert above the library takes the kit's, its "what" now 16px (decision 0042, amended).
