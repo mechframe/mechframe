@@ -70,7 +70,7 @@ AI DevKit Development 40 WT, 2026-11-23, branch `feat/pages-0-1-1`, **#138**.
 - **The owner's choices:** none were asked. VM Website's ask came with the owner's OK.
 - **For the main lane's handoff:**
   - pages 0.1.1 landed (#138), with its page read in `public.ts`.
-  - VM Website Dev 12 and Dev 13 have the PR number, and each gets a message when it lands.
+  - VM Website Dev 12 and Dev 13 have had the PR number and the landing message.
   - **Blog has the same three gaps** in `modules/blog/web/pages/AdminPost.tsx`:
     - its retry and its conflict's choice don't carry the person's fields;
     - neither sets `formNow` before saving again.
