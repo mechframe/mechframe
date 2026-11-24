@@ -124,3 +124,4 @@ None. The owner's answers, 2026-11-24, as recommended:
   - **The toasts** say "Saved the model." and "Using the host's model." The second isn't on the board yet.
   - **The settings form's refusal** reads "Choose the model from Anthropic's list, in Settings → AI.", with the kernel's arrow, as its other words have it.
   - **`docs/HOST-VARIABLES.md`'s ANTHROPIC_MODEL line** comes from `tools/host_variables.py`, which says "until an admin saves one in Settings → AI".
+  - **A pick keeps the version it began at** (Codex on #144): the section read again meanwhile, by a key saved or another admin's save, never moves it, so a crossed save of the model is a 409, not an overwrite. Use the host's model sends the version read.

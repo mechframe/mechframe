@@ -151,6 +151,33 @@ describe("Settings → AI's model (decision 0064)", () => {
     expect(await put?.json()).toEqual({ version: 0, model: "claude-sonnet-5-5" });
   });
 
+  it("saves a pick at the version it began at, though the settings are read again meanwhile (Codex on #144)", async () => {
+    let reads = 0;
+    const { sent } = answers(false, { source: "environment" }, {
+      "GET /api/kernel/admin/settings/kernel.ai": () => {
+        reads += 1;
+        return { status: 200, body: { version: reads === 1 ? 0 : 1, values: { api_key: { kept: reads > 1, changes: reads > 1 ? 1 : 0 }, model: null } } };
+      },
+      "PUT /api/kernel/admin/settings/kernel.ai": { status: 200, body: { version: 1, changed: ["api_key"], merged: [] } },
+      "PUT /api/kernel/admin/ai/model": { status: 200, body: { version: 2, changed: ["model"], merged: [] } },
+    });
+    const user = userEvent.setup();
+    const field = await opened();
+    await user.selectOptions(await model(), "claude-sonnet-5-5");
+    // The section is read again at a newer version (here, after a key is saved).
+    await user.type(field, "sk-ant-typed-key-0123456789");
+    await user.click(screen.getByRole("button", { name: "Save the key" }));
+    expect(await screen.findByText("Key saved.")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(reads).toBeGreaterThan(1);
+    });
+    await user.click(screen.getByRole("button", { name: "Save the model" }));
+    expect(await screen.findByText("Saved the model.")).toBeInTheDocument();
+    const [put] = sentTo(sent, "PUT", "/api/kernel/admin/ai/model");
+    // The server merges from the version the pick began at, so a crossed save is a conflict, never overwritten.
+    expect(await put?.json()).toEqual({ version: 0, model: "claude-sonnet-5-5" });
+  });
+
   it("says a saved model is used, and Use the host's model clears it (Model saved)", async () => {
     const { sent } = answers(true, { source: "settings", model: SONNET.id, model_source: "settings" }, {
       [MODELS]: listed({ ...SONNET, source: "settings" }),

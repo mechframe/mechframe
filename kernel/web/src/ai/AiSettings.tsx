@@ -56,6 +56,10 @@ function useModels() {
 function ModelRow({ list, model, source, version, onSaved }: { list: ModelList; model: string; source: "settings" | "environment"; version: number; onSaved: () => void }) {
   const toast = useToast();
   const [picked, setPicked] = useState<string | null>(null);
+  // The section's version when the pick began: a save from it merges with
+  // any save since, so another admin's model is a conflict, never overwritten
+  // (Codex on #144, as useSettings keeps a draft's version).
+  const [pickedAt, setPickedAt] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const inUse = list.data?.in_use;
   const choices = list.data
@@ -70,8 +74,9 @@ function ModelRow({ list, model, source, version, onSaved }: { list: ModelList; 
   const pick = async (next: string | null, done: string) => {
     setSaving(true);
     try {
-      await api.PUT("/api/kernel/admin/ai/model", { body: { version, model: next } });
+      await api.PUT("/api/kernel/admin/ai/model", { body: { version: next === null ? version : (pickedAt ?? version), model: next } });
       setPicked(null);
+      setPickedAt(null);
       onSaved();
       toast({ tone: "success", text: done });
     } catch (error) {
@@ -97,6 +102,7 @@ function ModelRow({ list, model, source, version, onSaved }: { list: ModelList; 
           disabled={!list.data || saving}
           onChange={(event) => {
             setPicked(event.target.value);
+            setPickedAt((at) => at ?? version);
           }}
         >
           {choices.map((each) => (
