@@ -16,6 +16,8 @@ import type { components } from "../schema";
 type Style = components["schemas"]["CoverAsk"]["style"];
 type Colours = components["schemas"]["CoverColours"];
 type Drawn = components["schemas"]["CoverDrawn"];
+/** What a cover is asked for: Draw again and Change it ask again with what it was drawn with (Codex on #147). */
+type Asked = { style: Style; description: string; inColours: boolean; wordmark: boolean };
 
 /** The most What to draw and What to change hold. */
 export const MAX_ASK = 600;
@@ -74,7 +76,7 @@ export function CoverDialog({ post, opener, onClose, onUse }: CoverDialogProps) 
   const [description, setDescription] = useState("");
   const [inColours, setInColours] = useState(true);
   const [wordmark, setWordmark] = useState(true);
-  const [drawn, setDrawn] = useState<Drawn | null>(null);
+  const [drawn, setDrawn] = useState<(Drawn & { asked: Asked }) | null>(null);
   const [alt, setAlt] = useState("");
   const [changes, setChanges] = useState("");
   const [busy, setBusy] = useState<"" | "draw" | "change" | "use">("");
@@ -108,25 +110,29 @@ export function CoverDialog({ post, opener, onClose, onUse }: CoverDialogProps) 
     }
   };
 
-  const draw = (revise: boolean) =>
-    run(revise ? "change" : "draw", async () => {
-      const colours = !custom || inColours ? themeColours(opener.current ?? document.documentElement) : null;
+  const draw = (revise: boolean) => {
+    // The ask's options as they stand, or, for a drawn cover, the ones it was drawn with.
+    const asked: Asked = drawn ? drawn.asked : { style, description, inColours, wordmark };
+    const keep = asked.style === "custom";
+    return run(revise ? "change" : "draw", async () => {
+      const colours = !keep || asked.inColours ? themeColours(opener.current ?? document.documentElement) : null;
       const { data } = await api.POST("/api/blog/admin/covers/draw", {
         body: {
           ...post(),
-          style,
-          ...(custom ? { description } : {}),
+          style: asked.style,
+          ...(keep ? { description: asked.description } : {}),
           ...(colours ? { colours } : {}),
-          wordmark,
+          wordmark: asked.wordmark,
           ...(revise && drawn ? { current: drawn.svg, changes } : {}),
         },
       });
       if (!open.current || !data) return;
-      setDrawn(data);
+      setDrawn({ ...data, asked });
       setAlt(data.alt);
       setChanges("");
       setDraws((n) => n + 1);
     });
+  };
 
   const use = () =>
     run("use", async () => {
@@ -190,6 +196,7 @@ export function CoverDialog({ post, opener, onClose, onUse }: CoverDialogProps) 
             <Field label="Style" hint={hint}>
               <Select
                 value={style}
+                disabled={busy !== ""}
                 onChange={(event) => {
                   setStyle(event.target.value as Style);
                   setProblem("");
@@ -208,6 +215,7 @@ export function CoverDialog({ post, opener, onClose, onUse }: CoverDialogProps) 
                   rows={3}
                   maxLength={MAX_ASK}
                   value={description}
+                  disabled={busy !== ""}
                   onChange={(event) => {
                     setDescription(event.target.value);
                   }}
@@ -216,9 +224,21 @@ export function CoverDialog({ post, opener, onClose, onUse }: CoverDialogProps) 
             ) : null}
             <div className="mf-blog-panel">
               {custom ? (
-                <Switch label="In the site's colours" hint="The theme's background, text and accent colours." checked={inColours} onChange={setInColours} />
+                <Switch
+                  label="In the site's colours"
+                  hint="The theme's background, text and accent colours."
+                  checked={inColours}
+                  disabled={busy !== ""}
+                  onChange={setInColours}
+                />
               ) : null}
-              <Switch label="With the site's name" hint="In the top-left corner of the cover." checked={wordmark} onChange={setWordmark} />
+              <Switch
+                label="With the site's name"
+                hint="In the top-left corner of the cover."
+                checked={wordmark}
+                disabled={busy !== ""}
+                onChange={setWordmark}
+              />
             </div>
             {failure}
             <div className="mf-dialog-actions">

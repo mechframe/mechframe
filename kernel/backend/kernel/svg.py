@@ -14,18 +14,19 @@ goes with everything it holds; an attribute not listed goes alone. A link
 `font-family` becomes the kernel's own font, the only one `png` loads. The
 reason a `Refused` carries is written for the model's one repair try.
 
-**PNG.** resvg (resvg-py) draws it in a worker thread, with the kernel's
+**PNG.** resvg (resvg-py) draws it in a process of its own, with the kernel's
 fonts (`fonts/`) and never the system's, in at most `RENDER_SECONDS`.
 """
 
 from __future__ import annotations
 
 import asyncio
+import json
 import re
+import subprocess  # nosec B404: a render runs in a process of its own, so its time limit stops it
+import sys
 from pathlib import Path
 from xml.etree import ElementTree as ET
-
-import resvg_py
 
 SVG_NS = "http://www.w3.org/2000/svg"
 XLINK_NS = "http://www.w3.org/1999/xlink"
@@ -201,24 +202,44 @@ def _fonts() -> list[str]:
     return sorted(str(path) for path in FONTS.glob("*.ttf")) if FONTS.is_dir() else []
 
 
+#: The program a render runs in: a process of its own, so a render past its
+#: time is stopped, not left running in a thread (Codex on #147). It imports
+#: only resvg (`-I`: nothing from the working folder or the environment); the
+#: drawing goes in on stdin and the PNG comes out on stdout.
+_CHILD = "\n".join(
+    [
+        "import json, sys",
+        "import resvg_py",
+        "asked = json.loads(sys.argv[1])",
+        "drawing = sys.stdin.buffer.read().decode('utf-8')",
+        "made = resvg_py.svg_to_bytes(svg_string=drawing, width=asked['width'], height=asked['height'],"
+        " skip_system_fonts=True, font_files=asked['fonts'], font_family=asked['family'],"
+        " sans_serif_family=asked['family'])",
+        "sys.stdout.buffer.write(bytes(made))",
+    ]
+)
+
+
 async def png(drawing: str, *, width: int, height: int) -> bytes:
     """A cleaned SVG as a PNG, `width` by `height`, with the kernel's fonts
-    only. Refused when it takes longer than `RENDER_SECONDS`."""
+    only. Refused when it takes longer than `RENDER_SECONDS`, its process
+    stopped then, or when it fails."""
+    asked = json.dumps({"width": width, "height": height, "fonts": _fonts(), "family": FONT_FAMILY})
 
-    def render() -> bytes:
-        return bytes(
-            resvg_py.svg_to_bytes(
-                svg_string=drawing,
-                width=width,
-                height=height,
-                skip_system_fonts=True,
-                font_files=_fonts(),
-                font_family=FONT_FAMILY,
-                sans_serif_family=FONT_FAMILY,
+    def rendered() -> bytes:
+        try:
+            # A fixed program on this interpreter; the drawing is data, on stdin.
+            done = subprocess.run(  # noqa: S603  # nosec B603
+                [sys.executable, "-I", "-c", _CHILD, asked],
+                input=drawing.encode("utf-8"),
+                capture_output=True,
+                timeout=RENDER_SECONDS,
+                check=False,
             )
-        )
+        except subprocess.TimeoutExpired:  # run() has stopped the process
+            raise Refused("The drawing took too long to render. Draw it more simply.") from None
+        if done.returncode != 0 or not done.stdout:
+            raise Refused("The drawing couldn't be rendered. Draw it more simply.")
+        return done.stdout
 
-    try:
-        return await asyncio.wait_for(asyncio.to_thread(render), RENDER_SECONDS)
-    except TimeoutError:
-        raise Refused("The drawing took too long to render. Draw it more simply.") from None
+    return await asyncio.to_thread(rendered)

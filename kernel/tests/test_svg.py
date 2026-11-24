@@ -6,11 +6,11 @@ from __future__ import annotations
 
 import asyncio
 import struct
+import time
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
 import pytest
-import resvg_py
 
 from kernel import svg
 
@@ -162,15 +162,31 @@ def test_words_are_drawn_in_the_kernels_font(
     assert drawn(words) == drawn(blank)
 
 
-def test_a_render_that_takes_too_long_is_refused(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(svg, "RENDER_SECONDS", 0.01)
+def test_a_render_past_its_time_is_stopped_not_left_running(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Codex on #147: giving up the wait isn't enough; the render itself must end. A
+    renderer that would finish after 3 seconds, and write so, is stopped at the limit."""
+    finished = tmp_path / "finished"
+    slow = "\n".join(
+        [
+            "import time, pathlib",
+            "time.sleep(3)",
+            f"pathlib.Path({str(finished)!r}).write_text('yes')",
+        ]
+    )
+    monkeypatch.setattr(svg, "_CHILD", slow)
+    monkeypatch.setattr(svg, "RENDER_SECONDS", 0.5)
 
-    def slow(**_: object) -> bytes:
-        import time
-
-        time.sleep(0.5)
-        return b""
-
-    monkeypatch.setattr(resvg_py, "svg_to_bytes", slow)
+    started = time.monotonic()
     with pytest.raises(svg.Refused, match="too long"):
+        asyncio.run(svg.png(_clean(_svg(DRAWN)), width=24, height=12))
+    assert time.monotonic() - started < 2.5
+    time.sleep(3.5)
+    assert not finished.exists()
+
+
+def test_a_render_that_fails_is_refused_in_plain_words(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(svg, "_CHILD", "raise SystemExit(3)")
+    with pytest.raises(svg.Refused, match="couldn't be rendered"):
         asyncio.run(svg.png(_clean(_svg(DRAWN)), width=24, height=12))

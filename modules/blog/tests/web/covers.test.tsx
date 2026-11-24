@@ -279,6 +279,33 @@ describe("Draw a cover", () => {
   });
 });
 
+describe("Codex on #147", () => {
+  it("locks the drawing's options while it draws, and draws again with the ones it drew with", async () => {
+    let answer: (value: Answer) => void = () => undefined;
+    const sent = routed({
+      "POST /api/blog/admin/covers/draw": () =>
+        sent.filter((each) => new URL(each.url).pathname.endsWith("/draw")).length > 1
+          ? { status: 200, body: { svg: SVG, alt: "Again" } }
+          : new Promise<Answer>((resolve) => {
+              answer = resolve;
+            }),
+    });
+    renderApp({ path: `/admin/blog/${ID}`, modules: [blog], session: writer });
+
+    await userEvent.click(await screen.findByRole("button", { name: "Draw a cover" }));
+    const dialog = within(await screen.findByRole("dialog", { name: "Draw a cover" }));
+    await userEvent.click(dialog.getByRole("switch", { name: "With the site's name" }));
+    await userEvent.click(dialog.getByRole("button", { name: "Draw" }));
+    expect(dialog.getByRole("combobox", { name: "Style" })).toBeDisabled();
+    expect(dialog.getByRole("switch", { name: "With the site's name" })).toBeDisabled();
+
+    answer({ status: 200, body: { svg: SVG, alt: "First" } });
+    await userEvent.click(await dialog.findByRole("button", { name: "Draw again" }));
+    expect(await dialog.findByRole("img", { name: "Again" })).toBeInTheDocument();
+    expect(await bodyOf(sent, "/api/blog/admin/covers/draw", 1)).toMatchObject({ style: "editorial", wordmark: false });
+  });
+});
+
 describe("the theme's colours", () => {
   it("are read from the tokens as #rrggbb, or not at all", () => {
     const element = document.createElement("div");
