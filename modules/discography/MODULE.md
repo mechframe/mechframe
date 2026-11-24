@@ -37,11 +37,11 @@ Use it when the site belongs to an artist, band, label or collective whose relea
 - `show_explicit_badge` (bool, true): the Parental Advisory label on explicit releases and tracks.
 - `show_lyrics` (bool, true): lyrics on a track's page, for tracks that have them.
 
-No variables of its own: uploads need the kernel's storage with its public pair (`STORAGE_BUCKET`, `STORAGE_PUBLIC_BUCKET`, `STORAGE_PUBLIC_URL`). While `STORAGE_PUBLIC_URL` is set, the kernel adds its origin to `media-src` so a stream file plays (decision 0070).
+No variables of its own. Uploads need the kernel's storage: masters go in `STORAGE_BUCKET`, and until it's set an upload answers 503 `discography.storage_off`. Stream files go in `STORAGE_PUBLIC_BUCKET` at `STORAGE_PUBLIC_URL`; without that pair a track fails once its job's tries are used. While `STORAGE_PUBLIC_URL` is set, the kernel adds its origin to `media-src` so a stream file plays (decision 0070).
 
 ## Install notes
 
-`mechframe add media` and `mechframe add embeds` first, then `mechframe add discography`, then the migrations. `soundfile` and `numpy` come with it in `requirements.in` (hash-pinned). On a site with a separate jobs worker (`JOBS_IN_WEB=false`), processing runs there. Its web binding imports media's `ImagePicker` and `Picture` as `@/modules/media/public` (decision 0057).
+`mechframe add media` and `mechframe add embeds` first, then `mechframe add discography`, then the migrations. `soundfile` and `numpy` come with it: declared in `requirements.in`, installed from the hash-pinned `requirements.txt` compiled from it (`python -m pip install --require-hashes -r requirements.txt`). On a site with a separate jobs worker (`JOBS_IN_WEB=false`), processing runs there. Its web binding imports media's `ImagePicker` and `Picture` as `@/modules/media/public` (decision 0057).
 
 ## Extension points
 

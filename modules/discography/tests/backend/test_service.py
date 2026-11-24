@@ -5,21 +5,25 @@ the server copy, search, the announcement, the seed and the dashboard."""
 
 from __future__ import annotations
 
+import asyncio
 import io
 import os
+import time
 import uuid
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, BinaryIO
 
 import pytest
-from discography import dashboard, jobs, public, service
+from discography import audio, dashboard, jobs, public, service
 from discography import events as discography_events
-from discography.models import Person, Release, Track
+from discography import seed as discography_seed
+from discography.models import Credit, Person, Release, Track
 from discography.schemas import Settings
 from discography.seed import _NAMESPACE, RELEASES
 from discography.server_copy import PAGES, iso_duration
 from sqlalchemy import func, select, text
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from kernel import Database, Problem, clock, lifecycle, load_module, server_copy
@@ -69,8 +73,8 @@ async def _uploaded(db: AsyncSession, release: Release, data: bytes | None = Non
     return track
 
 
-async def _process(database: Database, track: Track) -> None:
-    ctx = SimpleNamespace(sessions=database.sessions)
+async def _process(database: Database, track: Track, try_number: int = 1) -> None:
+    ctx = SimpleNamespace(sessions=database.sessions, try_number=try_number)
     await jobs.process_track.run(  # type: ignore[arg-type]
         ctx, {"track_id": str(track.id), "master_key": track.master_key}
     )
@@ -584,9 +588,7 @@ async def test_the_seed_twice_gives_the_same(db: AsyncSession, store: Store) -> 
         row.id: (row.slug, row.status, row.version)
         for row in await db.scalars(select(Release).where(Release.id.in_(ids)))
     }
-    tracks = await db.scalar(
-        select(func.count()).select_from(Track).where(Track.release_id.in_(ids))
-    )
+    tracks = set(await db.scalars(select(Track.id).where(Track.release_id.in_(ids))))
     await seeding.run(db, [discography], environ=allowed)
     again = {
         row.id: (row.slug, row.status, row.version)
@@ -594,7 +596,251 @@ async def test_the_seed_twice_gives_the_same(db: AsyncSession, store: Store) -> 
     }
     assert first == again
     assert len(first) == 3
-    assert tracks == 4
+    assert len(tracks) == 4
+    # Read again after the second run: no track added, none made anew (CodeRabbit on #145).
+    assert set(await db.scalars(select(Track.id).where(Track.release_id.in_(ids)))) == tracks
     album = await db.get(Release, ids[0])
     assert album is not None
     assert album.status == lifecycle.PUBLISHED
+
+
+# --- CodeRabbit on #145 ----------------------------------------------------------------------
+
+
+async def test_a_release_takes_no_more_tracks_than_a_save_can_order(
+    db: AsyncSession, store: Store, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A save sends every track's id, at most MAX_TRACKS of them: adding one more is refused."""
+    monkeypatch.setattr(service, "MAX_TRACKS", 2)
+    release = await _release(db)
+    release_id = release.id  # a rollback expires the row
+    await _linked(db, release, "One")
+    await _linked(db, release, "Two")
+    with pytest.raises(Problem) as refused:
+        await service.create_track(db, release_id, "Three", LINK, by=None)
+    await db.rollback()
+    assert (refused.value.status, refused.value.code) == (409, "discography.too_many_tracks")
+    body = master(1.0)
+    with pytest.raises(Problem) as refused:
+        await service.upload_track(db, release_id, io.BytesIO(body), len(body), "x.wav", by=None)
+    await db.rollback()
+    assert refused.value.code == "discography.too_many_tracks"
+    assert store.keys(public=False) == []  # refused before the master is kept
+
+
+async def test_a_role_sent_twice_by_its_id_is_refused(db: AsyncSession) -> None:
+    roles = await service.every_role(db)
+    first = str(roles[0]["id"])
+    items = [
+        {"id": first, "name": "One name"},
+        {"id": first.upper(), "name": "Another name"},
+        *({"id": each["id"], "name": each["name"]} for each in roles[1:]),
+    ]
+    with pytest.raises(Problem) as refused:
+        await service.put_roles(db, items, by=None)
+    await db.rollback()
+    assert (refused.value.status, refused.value.code) == (422, "discography.role_twice")
+
+
+async def test_a_link_longer_than_a_row_holds_is_a_field_error(db: AsyncSession) -> None:
+    release = await _release(db)
+    long = "https://open.spotify.com/album/" + "a" * 500
+    with pytest.raises(Problem) as refused:
+        await service.change_release(db, release.id, release.version, {"links": [long]}, by=None)
+    await db.rollback()
+    assert (refused.value.status, refused.value.code) == (422, "discography.not_a_link")
+    assert "links" in refused.value.errors
+
+
+async def test_a_tracks_page_that_isnt_ascii_digits_is_a_field_error(db: AsyncSession) -> None:
+    with pytest.raises(Problem) as refused:
+        await service.every_track(db, q=None, show="all", cursor="²")
+    assert refused.value.status == 422
+
+
+async def test_a_persons_credits_are_told_apart_by_release_not_title(db: AsyncSession) -> None:
+    name = f"Ada {uuid.uuid4().hex[:6]}"
+    title = f"Greatest Hits {uuid.uuid4().hex[:6]}"
+    one, two = await _release(db, title=title), await _release(db, title=title)
+    for release, role in ((one, "Artist"), (two, "Mastered by")):
+        await service.change_release(
+            db,
+            release.id,
+            release.version,
+            {"credits": [{"role_id": await _role(db, role), "name": name}]},
+            by=None,
+        )
+    await db.commit()
+    [person] = [each for each in (await service.every_person(db))["items"] if each["name"] == name]
+    assert person["credited_for"] in (
+        f"Artist, {title}; Mastered by, {title}",
+        f"Mastered by, {title}; Artist, {title}",
+    )
+
+
+async def test_deleting_a_track_waits_for_its_release_before_it_holds_the_track(
+    db: AsyncSession, database: Database
+) -> None:
+    """A reorder holds the release, then its tracks: a delete takes them in that order too,
+    so the two never deadlock."""
+    release = await _release(db)
+    track = await _linked(db, release)
+    async with database.sessions() as holder:
+        await holder.execute(select(Release).where(Release.id == release.id).with_for_update())
+        async with database.sessions() as deleter:
+            task = asyncio.ensure_future(service.remove_track(deleter, track.id, by=None))
+            await asyncio.sleep(0.5)  # the delete waits on the release by now
+            async with database.sessions() as probe:
+                try:
+                    await probe.execute(
+                        text("SELECT 1 FROM discography_track WHERE id = :id FOR UPDATE NOWAIT"),
+                        {"id": track.id},
+                    )
+                    free = True
+                except DBAPIError:
+                    free = False
+                await probe.rollback()
+            await holder.rollback()
+            await task
+            await deleter.rollback()
+    assert free
+
+
+async def test_a_tracks_old_address_never_lands_on_another_track(db: AsyncSession) -> None:
+    """/music/a/x, renamed to y, moved to b, with a new x on b: once y can't play, a/x is
+    gone, not the new x."""
+    release = await _live(db)
+    track = await _linked(db, release, "Night Drive")
+    a, x = release.slug, track.slug
+    await service.change_track(db, track.id, track.version, {"slug": "night-ride"}, by=None)
+    await db.commit()
+    await service.change_release(db, release.id, release.version, {"slug": slug()}, by=None)
+    await db.commit()
+    await db.refresh(release)
+    await db.refresh(track)
+    newer = await _linked(db, release, "Night Drive")
+    assert newer.slug == x
+    await service.change_track(db, track.id, track.version, {"soundcloud_url": None}, by=None)
+    await db.commit()
+    assert await service.live_track(db, a, x) is None
+
+
+async def test_a_null_explicit_leaves_the_track_as_it_was(db: AsyncSession) -> None:
+    release = await _release(db)
+    track = await _linked(db, release)
+    saved = await service.change_track(
+        db, track.id, track.version, {"explicit": None, "title": "Renamed"}, by=None
+    )
+    await db.commit()
+    assert (saved.explicit, saved.title) == (False, "Renamed")
+
+
+async def test_the_seed_credits_a_name_thats_there_under_another_id(db: AsyncSession) -> None:
+    name = f"Ada {uuid.uuid4().hex[:6]}"
+    there_id = uuid.uuid4()  # a rollback expires the row
+    there = Person(
+        id=there_id,
+        version=1,
+        name=name.upper(),
+        profile="unlinked",
+        created_at=clock.now(),
+        updated_at=clock.now(),
+    )
+    db.add(there)
+    release = await _release(db)
+    ctx = SimpleNamespace(now=clock.now())
+    await discography_seed._credit(db, ctx, name, "Artist", release_id=release.id)  # type: ignore[arg-type]
+    await db.flush()
+    credited = await db.scalar(select(Credit.person_id).where(Credit.release_id == release.id))
+    await db.rollback()
+    assert credited == there_id
+
+
+async def test_a_stream_that_cant_be_stored_on_the_last_try_fails_the_track(
+    db: AsyncSession, database: Database, store: Store, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    release = await _release(db)
+    track = await _uploaded(db, release, master(1.0))
+
+    async def down(*args: Any, **kwargs: Any) -> None:
+        raise RuntimeError("storage is down")
+
+    monkeypatch.setattr(kernel_storage, "put", down)
+    with pytest.raises(RuntimeError):
+        await _process(database, track, try_number=1)
+    await db.refresh(track)
+    assert track.audio_state == "processing"  # a try is left: it runs again
+    with pytest.raises(RuntimeError):
+        await _process(database, track, try_number=jobs.TRIES)
+    await db.refresh(track)
+    assert (track.audio_state, track.audio_error) == ("failed", "discography.process_failed")
+    words = (await service.full_track(db, track))["audio"]["error_words"]
+    assert words
+    assert "Try again" in words
+
+
+async def test_a_stream_whose_track_cant_be_saved_is_taken_back_out(
+    db: AsyncSession, database: Database, store: Store, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    release = await _release(db)
+    track = await _uploaded(db, release, master(1.0))
+
+    async def refused(db: AsyncSession, release: Release) -> None:
+        raise RuntimeError("the save failed")
+
+    monkeypatch.setattr(service, "_touched", refused)
+    with pytest.raises(RuntimeError):
+        await _process(database, track)
+    assert store.keys(public=True) == []
+
+
+async def test_the_job_waits_for_its_encoder_before_it_lets_the_files_go(
+    db: AsyncSession, database: Database, store: Store, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    release = await _release(db)
+    track = await _uploaded(db, release, master(1.0))
+    closed: list[bool] = []
+
+    def slow(source: BinaryIO, into: BinaryIO, *, kbps: int, progress: Any) -> audio.Made:
+        progress(10)
+        time.sleep(0.4)
+        closed.append(into.closed)
+        return audio.Made(duration_ms=1000, peaks=[0] * 1000, samplerate=44100, channels=2)
+
+    async def unwritten(*args: Any) -> None:
+        raise RuntimeError("the percent couldn't be written")
+
+    monkeypatch.setattr(audio, "make_stream", slow)
+    monkeypatch.setattr(jobs, "_percent", unwritten)
+    monkeypatch.setattr(jobs, "PROGRESS_EVERY", 0.05)
+    with pytest.raises(RuntimeError, match="percent"):
+        await _process(database, track)
+    assert closed == [False]
+
+
+async def test_search_drops_lyrics_once_the_site_stops_showing_them(
+    db: AsyncSession, database: Database, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    release = await _live(db)
+    track = await _linked(db, release)
+    words = f"moonlit{uuid.uuid4().hex[:8]}"
+    await service.change_track(db, track.id, track.version, {"lyrics": words}, by=None)
+    await db.commit()
+    body = select(SearchDocument.body).where(SearchDocument.content_id == release.id)
+    assert words in (await db.scalar(body) or "")
+
+    async def hidden(db: AsyncSession) -> Settings:
+        return Settings(show_lyrics=False)
+
+    monkeypatch.setattr(service, "settings_of", hidden)
+    ctx = SimpleNamespace(sessions=database.sessions)
+    heard = kernel_events.Event(
+        uuid.uuid4(),
+        "kernel.settings.changed",
+        1,
+        clock.now(),
+        {"module": "discography", "version": 2},
+    )
+    await discography_events._settings_changed(ctx, heard)  # type: ignore[arg-type]
+    await db.commit()
+    assert words not in (await db.scalar(body) or "")

@@ -4,7 +4,7 @@
  * and Credits boards. Every answer comes from a fetch that answers by method and
  * path.
  */
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -12,7 +12,7 @@ import { renderApp, testUser } from "@/kernel/testing";
 
 import type { AdminRelease, AdminTrack, FullRelease, FullTrack, LiveRelease, LiveTrack, ReleaseCard, TrackAudio } from "../../web/api";
 import { clock, msOf } from "../../web/api";
-import { changed, mineOf, releaseBody, releaseFormOf } from "../../web/editing";
+import { changed, mineOf, movedTrack, releaseBody, releaseFormOf, same } from "../../web/editing";
 import discography from "../../web/module.web";
 
 type Answer = { status: number; body?: unknown };
@@ -624,5 +624,235 @@ describe("the forms' rules", () => {
     const now = { ...base, title: "A" };
     expect(changed(now, base)).toEqual([]);
     expect(mineOf(now, base, sent)).toEqual(["title"]);
+  });
+
+  it("compares lengths by their time and lyrics as typed (CodeRabbit on #145)", () => {
+    expect(same("length", "03:42", "3:42")).toBe(true);
+    expect(same("length", "3:4x", "3:42")).toBe(false);
+    expect(same("length", "", "3:42")).toBe(false);
+    expect(same("lyrics", "  Gather round", "Gather round")).toBe(false);
+    expect(same("lyrics", "   ", "")).toBe(true);
+    expect(same("title", " A ", "A")).toBe(true);
+  });
+
+  it("moves a track by its id past the next one shown (CodeRabbit on #145)", () => {
+    // A is in the form's order but gone from the server's: C moves above B, not B above A.
+    expect(movedTrack(["A", "B", "C"], ["B", "C"], "C", -1)).toEqual(["A", "C", "B"]);
+    expect(movedTrack(["A", "B", "C"], ["B", "C"], "B", 1)).toEqual(["A", "C", "B"]);
+    expect(movedTrack(["A", "B", "C"], ["B", "C"], "B", -1)).toEqual(["A", "B", "C"]);
+  });
+});
+
+describe("CodeRabbit on #145", () => {
+  const LIST = "GET /api/discography/admin/tracks";
+  const TRACK = `/api/discography/admin/tracks/${T2}`;
+  const T3 = "a1111111-1111-4111-8111-111111111111";
+  const silent = fullTrack({ id: T2, number: 2, title: "Pray For You", slug: "pray-for-you", audio: audio({ state: "none", plays_from: null, stream_url: null, duration_ms: null, master_name: null }) });
+  const RELEASE_KEY = ["get", "/api/discography/admin/releases/{release_id}"];
+  const TRACK_KEY = ["get", "/api/discography/admin/tracks/{track_id}"];
+
+  it("keeps the album editor and what's typed when a read in the background fails", async () => {
+    let reads = 0;
+    routed({ [`GET ${ONE}`]: () => ((reads += 1) === 1 ? { status: 200, body: full() } : problem(500, "kernel.internal")) });
+    const { queryClient } = renderApp({ path: `/admin/music/${ID}`, modules: [discography], session: editor });
+
+    const title = await screen.findByRole("textbox", { name: "Title" });
+    await userEvent.clear(title);
+    await userEvent.type(title, "Mine");
+    await act(async () => {
+      await queryClient.invalidateQueries({ queryKey: RELEASE_KEY });
+    });
+    expect(await screen.findByText("The release couldn't be loaded.")).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Title" })).toHaveValue("Mine");
+  });
+
+  it("keeps the track panel and what's typed when a read in the background fails", async () => {
+    let reads = 0;
+    routed({
+      [LIST]: { status: 200, body: { items: [silent], next_cursor: null, total: 1, releases: 1 } },
+      [`GET ${TRACK}`]: () => ((reads += 1) === 1 ? { status: 200, body: silent } : problem(500, "kernel.internal")),
+    });
+    const { queryClient } = renderApp({ path: `/admin/music/tracks?track=${T2}`, modules: [discography], session: editor });
+
+    await userEvent.type(await screen.findByRole("textbox", { name: "Lyrics" }), "Pray for you");
+    await act(async () => {
+      await queryClient.invalidateQueries({ queryKey: TRACK_KEY });
+    });
+    expect(await screen.findByText("The track couldn't be loaded.")).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Lyrics" })).toHaveValue("Pray for you");
+  });
+
+  it("asks before another pick when a field was typed back while its save waits", async () => {
+    let answer: (value: Answer) => void = () => undefined;
+    routed({
+      [LIST]: { status: 200, body: { items: [track(), silent], next_cursor: null, total: 2, releases: 1 } },
+      [`GET ${TRACK}`]: { status: 200, body: silent },
+      [`GET /api/discography/admin/tracks/${T1}`]: { status: 200, body: fullTrack() },
+      [`PATCH ${TRACK}`]: () =>
+        new Promise<Answer>((resolve) => {
+          answer = resolve;
+        }),
+    });
+    renderApp({ path: `/admin/music/tracks?track=${T2}`, modules: [discography], session: editor });
+
+    const title = await screen.findByRole("textbox", { name: "Title" });
+    await userEvent.clear(title);
+    await userEvent.type(title, "B");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await userEvent.clear(title);
+    await userEvent.type(title, "Pray For You");
+    await userEvent.click(screen.getByRole("button", { name: "Gather Around" }));
+    expect(await screen.findByRole("dialog", { name: "You have changes that aren't saved" })).toBeInTheDocument();
+    answer({ status: 200, body: { ...silent, title: "B", version: 2 } });
+  });
+
+  it("asks the album editor's leave when a field was typed back while its save waits", async () => {
+    let answer: (value: Answer) => void = () => undefined;
+    routed({
+      [`GET ${ONE}`]: { status: 200, body: full({ title: "A" }) },
+      [`PATCH ${ONE}`]: () =>
+        new Promise<Answer>((resolve) => {
+          answer = resolve;
+        }),
+    });
+    renderApp({ path: `/admin/music/${ID}`, modules: [discography], session: editor });
+
+    const title = await screen.findByRole("textbox", { name: "Title" });
+    await userEvent.clear(title);
+    await userEvent.type(title, "B");
+    await userEvent.click(screen.getAllByRole("button", { name: "Save" })[0] as HTMLElement);
+    await userEvent.clear(title);
+    await userEvent.type(title, "A");
+    await userEvent.click(screen.getByRole("link", { name: "Gather Around" }));
+    expect(await screen.findByRole("dialog", { name: "You have changes that aren't saved" })).toBeInTheDocument();
+    answer({ status: 200, body: full({ title: "B", version: 2 }) });
+  });
+
+  it("asks when a new file's answer crosses someone else's save of a field the person changed", async () => {
+    routed({
+      [LIST]: { status: 200, body: { items: [silent], next_cursor: null, total: 1, releases: 1 } },
+      [`GET ${TRACK}`]: { status: 200, body: silent },
+      [`PUT ${TRACK}/audio`]: { status: 200, body: { ...silent, title: "Their title", version: 2, audio: audio({ state: "processing", plays_from: null, percent: 0, stream_url: null }) } },
+    });
+    renderApp({ path: `/admin/music/tracks?track=${T2}`, modules: [discography], session: editor });
+
+    const title = await screen.findByRole("textbox", { name: "Title" });
+    await userEvent.clear(title);
+    await userEvent.type(title, "My title");
+    await userEvent.upload(screen.getByLabelText("Upload a file", { selector: "input" }), new File(["RIFF"], "v2.wav", { type: "audio/wav" }));
+    expect(await screen.findByRole("radio", { name: "Keep mine" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Title" })).toHaveValue("My title");
+    expect(screen.getAllByText("Their title").length).toBeGreaterThan(1); // the panel's heading and the choice
+  });
+
+  it("names the tracks, not their ids, when two orders cross", async () => {
+    const three = full({ tracks: [...full().tracks, track({ id: T3, number: 3, title: "Third One", slug: "third-one" })] });
+    routed({
+      [`GET ${ONE}`]: { status: 200, body: three },
+      [`PATCH ${ONE}`]: problem(409, "discography.changed", { release: { ...three, version: 2, tracks: [three.tracks[1], three.tracks[0], three.tracks[2]] } }),
+    });
+    renderApp({ path: `/admin/music/${ID}`, modules: [discography], session: editor });
+
+    await userEvent.click(await screen.findByRole("button", { name: "Move Third One up" }));
+    await userEvent.click(screen.getAllByRole("button", { name: "Save" })[0] as HTMLElement);
+    expect(await screen.findByText("Pray For You, Gather Around, Third One")).toBeInTheDocument();
+    expect(screen.getByText("Gather Around, Third One, Pray For You")).toBeInTheDocument();
+  });
+
+  it("refreshes the Tracks table once a stream file is ready, and an untouched length follows", async () => {
+    const LINK = "https://soundcloud.com/vibrantmindz/pray-for-you";
+    const making = { ...silent, audio: audio({ state: "processing", plays_from: "soundcloud", percent: 40, stream_url: null, soundcloud_url: LINK, soundcloud_kind: "track", duration_ms: 220_000 }) };
+    const ready = { ...silent, audio: audio({ soundcloud_url: LINK, soundcloud_kind: "track" }) };
+    let reads = 0;
+    let lists = 0;
+    routed({
+      [LIST]: () => ({ status: 200, body: { items: [(lists += 1) === 1 ? making : ready], next_cursor: null, total: 1, releases: 1 } }),
+      [`GET ${TRACK}`]: () => ({ status: 200, body: (reads += 1) === 1 ? making : ready }),
+    });
+    const { queryClient } = renderApp({ path: `/admin/music/tracks?track=${T2}`, modules: [discography], session: editor });
+
+    expect(await screen.findByRole("textbox", { name: "Length" })).toHaveValue("3:40");
+    await act(async () => {
+      await queryClient.invalidateQueries({ queryKey: TRACK_KEY });
+    });
+    await waitFor(() => {
+      expect(lists).toBe(2);
+    });
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+  });
+
+  it("keeps a person's editor open while its save waits, and takes in their change after a conflict", async () => {
+    const PEOPLE_ROUTE = "GET /api/discography/admin/people";
+    const PERSON = "81111111-1111-4111-8111-111111111111";
+    const petro = { id: PERSON, version: 1, name: "petro", profile: "unlinked", roster_profile_id: null, credited_for: "Artist, Catalyst", credits: 1 };
+    let lists = 0;
+    let patches = 0;
+    let answer: (value: Answer) => void = () => undefined;
+    const sent = routed({
+      [PEOPLE_ROUTE]: () => ({ status: 200, body: { items: [(lists += 1) === 1 ? petro : { ...petro, version: 2, name: "Petro D" }], unlinked: 1 } }),
+      [`PATCH /api/discography/admin/people/${PERSON}`]: () => {
+        patches += 1;
+        if (patches === 1) return problem(409, "discography.changed");
+        return new Promise<Answer>((resolve) => {
+          answer = resolve;
+        });
+      },
+    });
+    renderApp({ path: "/admin/music/credits", modules: [discography], session: editor });
+
+    await userEvent.click(await screen.findByRole("button", { name: "Edit petro" }));
+    const dialog = within(await screen.findByRole("dialog", { name: "Edit petro" }));
+    await userEvent.selectOptions(dialog.getByRole("combobox", { name: "Profile" }), "not_member");
+    await userEvent.click(dialog.getByRole("button", { name: "Save" }));
+    await waitFor(() => {
+      expect(dialog.getByRole("textbox", { name: "Name" })).toHaveValue("Petro D");
+    });
+    await userEvent.click(dialog.getByRole("button", { name: "Save" }));
+    await waitFor(() => {
+      expect(patches).toBe(2);
+    });
+    expect(await json(sent.filter((each) => each.method === "PATCH")[1] as Request)).toEqual({ version: 2, profile: "not_member" });
+    expect(dialog.getByRole("button", { name: "Cancel" })).toBeDisabled();
+    answer({ status: 200, body: { items: [{ ...petro, version: 3, name: "Petro D", profile: "not_member" }], unlinked: 0 } });
+  });
+
+  it("won't save a role credits name with its name blanked", async () => {
+    const sent = routed({ "GET /api/discography/admin/people": { status: 200, body: { items: [], unlinked: 0 } } });
+    renderApp({ path: "/admin/music/credits", modules: [discography], session: editor });
+
+    await userEvent.click(await screen.findByRole("button", { name: "Edit" }));
+    const dialog = within(await screen.findByRole("dialog", { name: "Edit the roles" }));
+    await userEvent.clear(dialog.getByRole("textbox", { name: "Role 1" }));
+    await userEvent.click(dialog.getByRole("button", { name: "Save the roles" }));
+    expect(await dialog.findByText("Credits name this role: give it a name.")).toBeInTheDocument();
+    expect(sent.some((each) => each.method === "PUT")).toBe(false);
+  });
+
+  it("keeps the new release dialog until its draft is made", async () => {
+    let answer: (value: Answer) => void = () => undefined;
+    routed({
+      "GET /api/discography/admin/releases": { status: 200, body: { items: [] } },
+      "POST /api/discography/admin/releases": () =>
+        new Promise<Answer>((resolve) => {
+          answer = resolve;
+        }),
+    });
+    renderApp({ path: "/admin/music", modules: [discography], session: editor });
+
+    await userEvent.click(await screen.findByRole("button", { name: "New release" }));
+    const dialog = within(await screen.findByRole("dialog", { name: "New release" }));
+    await userEvent.type(dialog.getByRole("textbox", { name: "Title" }), "Catalyst");
+    await userEvent.click(dialog.getByRole("button", { name: "Make the draft" }));
+    expect(dialog.getByRole("button", { name: "Cancel" })).toBeDisabled();
+    answer({ status: 201, body: full({ title: "Catalyst" }) });
+  });
+
+  it("says so when the artist's links can't be read", async () => {
+    routed({
+      "GET /api/discography/releases": { status: 200, body: { items: [card()], next_cursor: null } },
+      "GET /api/discography/links": problem(500, "kernel.internal"),
+    });
+    renderApp({ path: "/music", modules: [discography] });
+    expect(await screen.findByText("The artist's links couldn't be loaded.")).toBeInTheDocument();
   });
 });

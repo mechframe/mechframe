@@ -96,7 +96,8 @@
       "discography.track.deleted"
     ],
     "listens": [
-      "kernel.content.published"
+      "kernel.content.published",
+      "kernel.settings.changed"
     ]
   },
   "slots": [

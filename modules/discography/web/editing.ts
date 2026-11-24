@@ -105,9 +105,21 @@ export function trackFormOf(track: FullTrack): TrackForm {
   };
 }
 
-/** A field's value as it's compared: a cover by its image, lists by their rows in order, links without blanks. */
+/**
+ * A field's value as it's compared: a cover by its image, lists by their rows in
+ * order, links without blanks. A length that reads as one is its time, so 03:42
+ * is 3:42; lyrics are as typed, blank or not (CodeRabbit on #145).
+ */
 function keyOf(field: string, value: Value): string | boolean {
-  if (typeof value === "string" || typeof value === "boolean") return typeof value === "string" ? value.trim() : value;
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") {
+    if (field === "length") {
+      const ms = msOf(value);
+      return ms === null ? value.trim() : `ms:${String(ms)}`;
+    }
+    if (field === "lyrics") return value.trim() ? value : "";
+    return value.trim();
+  }
   if (value === null) return "";
   if (Array.isArray(value)) {
     const rows = value as (string | CreditRow)[];
@@ -160,6 +172,22 @@ export function rebased<Form extends { [K in keyof Form]: Value }>(now: Form, se
   for (const field of Object.keys(now) as (keyof Form & string)[]) {
     if (!same(field, now[field], sent[field])) next[field] = now[field];
   }
+  return next;
+}
+
+/**
+ * The order with `id` past the next track shown above (-1) or below (1) it: by
+ * id, as the form's order may hold a track the server no longer shows
+ * (CodeRabbit on #145). Unchanged at either end.
+ */
+export function movedTrack(order: readonly string[], shown: readonly string[], id: string, by: -1 | 1): string[] {
+  const neighbour = shown[shown.indexOf(id) + by];
+  const from = order.indexOf(id);
+  const to = neighbour === undefined ? -1 : order.indexOf(neighbour);
+  if (from < 0 || to < 0 || shown.indexOf(id) < 0) return [...order];
+  const next = [...order];
+  next[from] = neighbour as string;
+  next[to] = id;
   return next;
 }
 

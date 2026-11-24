@@ -5,7 +5,7 @@
 // SoundCloud link, lyrics and credits are saved. `?track=` picks one and `?show=`
 // a filter, so the album editor and the dashboard can send someone straight there.
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
-import { useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from "react";
+import { useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
 import { Link, useSearchParams } from "react-router";
 
 import {
@@ -94,6 +94,8 @@ export default function AdminTracks() {
       return data;
     },
     getNextPageParam: (last) => last.next_cursor,
+    // A row still making its stream file is read again until it's done, panel open or not (CodeRabbit on #145).
+    refetchInterval: (query) => (query.state.data?.pages.some((page) => page.items.some((each) => each.audio.state === "processing")) ? WHILE_PROCESSING : false),
   });
   const first = listed.data?.pages[0];
   const tracks = listed.data?.pages.flatMap((page) => page.items) ?? [];
@@ -261,7 +263,7 @@ function TrackPanel({ id, onGone, ...switching }: { id: string; onGone: () => vo
     { params: { path: { track_id: id } } },
     { refetchInterval: (query) => (query.state.data?.audio.state === "processing" ? WHILE_PROCESSING : false) },
   );
-  if (read.error) {
+  if (read.error && !read.data) {
     const gone = read.error instanceof ApiProblem && read.error.status === 404;
     return (
       <Card title="A track" level={2}>
@@ -270,10 +272,12 @@ function TrackPanel({ id, onGone, ...switching }: { id: string; onGone: () => vo
     );
   }
   if (!read.data) return null;
-  return <TrackEditor server={read.data} onGone={onGone} {...switching} />;
+  // A read again that failed keeps the editor and what's typed in it, and says so (CodeRabbit on #145).
+  const stale = read.error ? <LoadError what="The track" error={read.error} onRetry={() => void read.refetch()} inline /> : null;
+  return <TrackEditor server={read.data} notice={stale} onGone={onGone} {...switching} />;
 }
 
-function TrackEditor({ server, onGone, dirty: held, asked, onGo, onStay }: { server: FullTrack; onGone: () => void } & Switching) {
+function TrackEditor({ server, notice, onGone, dirty: held, asked, onGo, onStay }: { server: FullTrack; notice: ReactNode; onGone: () => void } & Switching) {
   const queryClient = useQueryClient();
   const toast = useToast();
   const roles = useApiQuery("get", ROLES);
@@ -293,11 +297,26 @@ function TrackEditor({ server, onGone, dirty: held, asked, onGo, onStay }: { ser
   });
   const roleNames = useMemo(() => new Map((roles.data?.items ?? []).map((each) => [each.id, each.name])), [roles.data]);
 
-  // The track read again while its stream file is made: the same version, its audio moved on.
-  if (server !== saved && server.version === saved.version && server.audio !== saved.audio) setSaved(server);
+  // The track read again while its stream file is made: the same version, its
+  // audio moved on. A field the person left follows it, the length a link's
+  // track shows among them (CodeRabbit on #145).
+  if (server !== saved && server.version === saved.version && server.audio !== saved.audio) {
+    setSaved(server);
+    setForm((now) => rebased(now, trackFormOf(saved), trackFormOf(server)));
+  }
+  // Its stream file made: the Tracks table reads it again, as it says "Making" until then.
+  const state = server.audio.state;
+  const was = useRef(state);
+  useEffect(() => {
+    if (was.current === "processing" && state !== "processing") void queryClient.invalidateQueries({ queryKey: ["get", TRACKS] });
+    was.current = state;
+  }, [state, queryClient]);
 
+  // While a save waits, the form is held against what it sent: a field typed back
+  // to what's saved since then is still a change (CodeRabbit on #145).
+  const [sending, setSending] = useState<TrackForm | null>(null);
   const edits = changed(form, base);
-  const dirty = edits.length > 0;
+  const dirty = edits.length > 0 || (sending !== null && changed(form, sending).length > 0);
   const audio = (server.version === saved.version ? server : saved).audio;
   const [switchSaving, setSwitchSaving] = useState(false);
   const [switchError, setSwitchError] = useState("");
@@ -324,11 +343,22 @@ function TrackEditor({ server, onGone, dirty: held, asked, onGo, onStay }: { ser
     void queryClient.invalidateQueries({ queryKey: ["get", PUBLIC_RELEASES] });
   }
 
-  /** A track an audio change answered with: the fields keep what the person changed. */
+  /**
+   * A track an audio change answered with: the fields keep what the person
+   * changed, and a field someone else saved differently since asks, as a save
+   * would, rather than being saved over next (CodeRabbit on #145). The length
+   * moves with the audio itself, so it never asks.
+   */
   function adopt(track: FullTrack) {
     remember(track);
-    setForm((now) => rebased(now, trackFormOf(saved), trackFormOf(track)));
+    const before = trackFormOf(saved);
+    const latest = formNow.current;
+    const now = trackFormOf(track);
+    const fields = changed(latest, before).filter((field) => field !== "length");
+    const crossed = conflictOf("Someone saved this track while its audio changed. Here is how it reads now.", before, latest, now, track, fields);
+    setForm(rebased(latest, before, now));
     setSaved(track);
+    if (crossed.conflicts.length > 0) setConflict({ said: crossed, theirs: track, mine: latest, fields });
   }
 
   async function save(from: TrackForm = form, onto: FullTrack = saved): Promise<FullTrack> {
@@ -339,7 +369,11 @@ function TrackEditor({ server, onGone, dirty: held, asked, onGo, onStay }: { ser
     const sent = changed(from, trackFormOf(onto));
     if (sent.length === 0) return onto;
     try {
-      const { data } = await api.PATCH(TRACK, { params: { path: { track_id: onto.id } }, body: { version: onto.version, ...trackBody(from, sent) } });
+      setSending(from);
+      const answered = await api.PATCH(TRACK, { params: { path: { track_id: onto.id } }, body: { version: onto.version, ...trackBody(from, sent) } }).finally(() => {
+        setSending(null);
+      });
+      const { data } = answered;
       if (!data) throw new Error("The site answered without the track.");
       remember(data);
       setSaved(data);
@@ -446,6 +480,7 @@ function TrackEditor({ server, onGone, dirty: held, asked, onGo, onStay }: { ser
   const hasUpload = Boolean(audio.master_name);
   return (
     <Card title={saved.title} level={2} description={`Track ${String(saved.number)} of ${saved.release_title}`}>
+      {notice}
       {conflict ? (
         <SaveConflict
           conflict={conflict.said}

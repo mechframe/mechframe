@@ -559,10 +559,12 @@ LEANS_ON = {
     "with `SMTP_HOST` or `RESEND_API_KEY`). Nothing sends until its postal address is set "
     "in Settings → Newsletter.",
     "pages": "Write with AI needs `ANTHROPIC_API_KEY` or a key saved in Settings → AI.",
-    "discography": "Uploads need storage with its public pair: masters go in "
-    "`STORAGE_BUCKET`, stream files in `STORAGE_PUBLIC_BUCKET` at `STORAGE_PUBLIC_URL`. "
-    "Until they're set, an upload answers 503 `discography.storage_off` and tracks play "
-    "from SoundCloud links. Its job runs where the jobs worker does (`JOBS_IN_WEB`).",
+    "discography": "Uploads need the site's storage (`STORAGE_ENDPOINT_URL`, "
+    "`STORAGE_ACCESS_KEY_ID`, `STORAGE_SECRET_ACCESS_KEY` and `STORAGE_BUCKET`, where "
+    "masters go): until it's set, an upload answers 503 `discography.storage_off` and tracks "
+    "play from SoundCloud links. Stream files go in `STORAGE_PUBLIC_BUCKET` at "
+    "`STORAGE_PUBLIC_URL`: without that pair, a stream file can't be made and the track "
+    "fails once its tries are used. Its job runs where the jobs worker does (`JOBS_IN_WEB`).",
 }
 
 _SECRET_WORDS = ("PASSWORD", "SECRET", "TOKEN", "API_KEY", "PRIVATE_KEY")

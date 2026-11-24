@@ -18,7 +18,7 @@ import struct
 import uuid
 import wave
 
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from discography import service
@@ -88,8 +88,10 @@ async def _master(db: AsyncSession, track: Track, hz: float) -> None:
 async def _credit(
     db: AsyncSession, ctx: seeding.Context, name: str, role: str, **on: uuid.UUID
 ) -> None:
-    person_id = uuid.uuid5(_NAMESPACE, f"person:{name}")
-    if await db.get(Person, person_id) is None:
+    # A name credited already is that person, whatever their id (CodeRabbit on #145).
+    there = await db.scalar(select(Person.id).where(func.lower(Person.name) == name.lower()))
+    person_id = there or uuid.uuid5(_NAMESPACE, f"person:{name}")
+    if there is None:
         profile = "collective" if name == ARTIST else "unlinked"
         db.add(
             Person(

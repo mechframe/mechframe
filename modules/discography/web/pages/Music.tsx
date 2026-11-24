@@ -73,6 +73,9 @@ export default function Music() {
           <p>No releases yet.</p>
         )
       ) : null}
+      {links.error ? (
+        <LoadError what="The artist's links" error={links.error} onRetry={() => void links.refetch()} inline />
+      ) : null}
       {links.data?.items.length ? (
         <section aria-labelledby="mf-music-everywhere" className="mf-music-words">
           <h2 id="mf-music-everywhere">Listen everywhere</h2>

@@ -182,3 +182,11 @@ Files: masters in the private bucket at `discography/masters/<track_id>/<n>.<ext
 - **The Credits board has no Add a credit:** a credit is a role on a release or a track, so it's added in the album editor and on the Tracks board. Its note for a name not linked has no Link it until roster (step 3).
 - **Not drawn, being other modules':** the Release board's Buy the CD (shop) and More music, and the Albums board's "On the Releases deck" and "Preview on the deck" (featured).
 - **The contract suite** sends real masters over HTTP (moto for both buckets): an 8-second WAV past the site's 1 MB body limit, run through the job; a 61-minute FLAC of silence (a few kilobytes); 60 MB and 64 MB bodies for the two limits.
+
+## Changes as built (CodeRabbit's review of #145)
+
+- **A release holds 100 tracks at most** (`MAX_TRACKS`), as many as a save's `track_ids` orders: adding the 101st, linked or uploaded, answers 409 `discography.too_many_tracks` before a master is stored.
+- **A job's last try that fails** in a way the job doesn't name (storage down, say) fails the track with `discography.process_failed`, "Try again" on the board, rather than leaving it processing. A stream file whose result isn't committed is deleted at once.
+- **Search follows `show_lyrics`:** discography hears `kernel.settings.changed` for itself (`discography.reindex_on_settings`) and indexes its live releases again.
+- **A track's old address** whose track can't play any more answers 404, never another track that took its slug since.
+- **The track panel's audio answer** asks, as a save does, where someone else saved a field the person had changed. The editors keep what's typed when a read in the background fails, and a field typed back to its saved value while a save waits still counts as a change.

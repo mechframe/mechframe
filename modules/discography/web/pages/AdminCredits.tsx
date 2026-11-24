@@ -43,6 +43,17 @@ function EditPerson({ person, onClose }: { person: AdminPerson; onClose: () => v
   const [profile, setProfile] = useState<Profile>(person.profile);
   const [refused, setRefused] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
+  // The name read again, as a conflict reads it: a field the person left takes
+  // theirs, one they changed stays, and the next Save sends the new version
+  // (CodeRabbit on #145).
+  const [held, setHeld] = useState(person);
+  if (held !== person) {
+    if (name.trim() === held.name) setName(person.name);
+    if (profile === held.profile) setProfile(person.profile);
+    setHeld(person);
+  }
+  // Kept open while a save waits: its answer closes this one (CodeRabbit on #145).
+  const close = busy ? () => undefined : onClose;
   async function save() {
     setBusy(true);
     setRefused(null);
@@ -64,7 +75,7 @@ function EditPerson({ person, onClose }: { person: AdminPerson; onClose: () => v
     }
   }
   return (
-    <Dialog title={`Edit ${person.name}`} onClose={onClose}>
+    <Dialog title={`Edit ${held.name}`} onClose={close}>
       <form
         className="mf-music-stack"
         onSubmit={(event) => {
@@ -98,9 +109,15 @@ function EditPerson({ person, onClose }: { person: AdminPerson; onClose: () => v
             ))}
           </Select>
         </Field>
-        {refused ? <p className="mf-music-error">{problemOf(refused)}</p> : null}
+        {refused ? (
+          <p className="mf-music-error">
+            {refused instanceof ApiProblem && refused.code === "discography.changed"
+              ? `Someone changed this name since you opened it. It reads “${person.name}”, ${PROFILE_WORDS[person.profile]}, now: save again to keep what you chose.`
+              : problemOf(refused)}
+          </p>
+        ) : null}
         <div className="mf-dialog-actions">
-          <Button type="button" onClick={onClose}>
+          <Button type="button" disabled={busy} onClick={close}>
             Cancel
           </Button>
           <Button type="submit" variant="primary" disabled={busy || !name.trim() || (name.trim() === person.name && profile === person.profile)}>
@@ -120,6 +137,10 @@ function EditRoles({ roles, onClose }: { roles: readonly AdminRole[]; onClose: (
   const [rows, setRows] = useState<RoleRow[]>(roles.map((each) => ({ id: each.id, name: each.name, credits: each.credits })));
   const [refused, setRefused] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
+  const [tried, setTried] = useState(false);
+  // A role credits name keeps a name: left blank, it would read as removed, and
+  // the whole save be refused (CodeRabbit on #145).
+  const unnamed = (row: RoleRow) => row.credits > 0 && !row.name.trim();
   function put(index: number, row: RoleRow) {
     setRows((now) => now.map((each, at) => (at === index ? row : each)));
   }
@@ -132,6 +153,8 @@ function EditRoles({ roles, onClose }: { roles: readonly AdminRole[]; onClose: (
     });
   }
   async function save() {
+    setTried(true);
+    if (rows.some(unnamed)) return;
     setBusy(true);
     setRefused(null);
     try {
@@ -159,7 +182,11 @@ function EditRoles({ roles, onClose }: { roles: readonly AdminRole[]; onClose: (
         <ol className="mf-music-list">
           {rows.map((row, index) => (
             <li key={row.id ?? `new-${String(index)}`} className="mf-music-credit">
-              <Field label={`Role ${String(index + 1)}`} hint={row.credits ? (row.credits === 1 ? "1 credit names it" : `${String(row.credits)} credits name it`) : undefined}>
+              <Field
+                label={`Role ${String(index + 1)}`}
+                hint={row.credits ? (row.credits === 1 ? "1 credit names it" : `${String(row.credits)} credits name it`) : undefined}
+                error={tried && unnamed(row) ? "Credits name this role: give it a name." : undefined}
+              >
                 <Input
                   value={row.name}
                   maxLength={MAX_ROLE}
@@ -296,7 +323,7 @@ export default function AdminCredits() {
       {editing ? (
         <EditPerson
           key={editing.id}
-          person={editing}
+          person={everyone.find((each) => each.id === editing.id) ?? editing}
           onClose={() => {
             setEditing(null);
           }}

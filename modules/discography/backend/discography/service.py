@@ -41,6 +41,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from discography import audio
 from discography.models import (
     MAX_SLUG,
+    MAX_TRACKS,
+    MAX_URL,
     PLATFORMS,
     SLUG_PATTERN,
     Credit,
@@ -97,6 +99,7 @@ ERROR_WORDS = {
         "Its sample rate can't be streamed: export it at 44.1 or 48 kHz."
     ),
     "discography.master_missing": "The uploaded file is gone from storage. Upload it again.",
+    "discography.process_failed": "The stream file couldn't be made this time. Try again.",
 }
 #: The roles a new site starts with, in order (the Credits board's).
 STARTER_ROLES = ("Artist", "Featuring", "Produced by", "Written by", "Mastered by")
@@ -203,10 +206,14 @@ def _taken(slug: str, title: str | None, what: str = "release") -> Problem:
 
 
 async def _flushed(db: AsyncSession, slug: str, what: str = "release") -> None:
+    """Flushes; 409 `discography.slug_taken` when the slug's unique key refuses it.
+    Any other integrity error is its own (CodeRabbit on #145)."""
     try:
         async with db.begin_nested():
             await db.flush()
-    except IntegrityError:
+    except IntegrityError as error:
+        if "_slug" not in str(error.orig):
+            raise
         raise _taken(slug, None, what) from None
 
 
@@ -434,6 +441,10 @@ async def _replace_credits(
 def platform_of(url: str) -> tuple[str, str]:
     """The platform a streaming link is on, from its host, and the link; 422 otherwise."""
     text = url.strip()
+    if len(text) > MAX_URL:
+        raise _invalid(
+            "links", "discography.not_a_link", f"A link is {MAX_URL} characters at most."
+        )
     try:
         parts = urlsplit(text)
         host = (parts.hostname or "").lower()
@@ -637,6 +648,12 @@ async def live(db: AsyncSession, slug: str) -> Release | str | None:
 
 
 async def _moved(db: AsyncSession, old: str) -> str | None:
+    return (await _move_of(db, old))[1]
+
+
+async def _move_of(db: AsyncSession, old: str) -> tuple[bool, str | None]:
+    """Whether an address was left, and where it is now: None when what left it
+    can't be shown any more."""
     row = (
         await db.execute(
             select(Release, Move.track_id)
@@ -645,14 +662,15 @@ async def _moved(db: AsyncSession, old: str) -> str | None:
         )
     ).first()
     if row is None:
-        return None
+        return False, None
     release, track_id = row
     if track_id is None:
-        return release_path(release) if release_path(release) != f"{PREFIX}{old}" else None
+        path = release_path(release)
+        return True, (path if path != f"{PREFIX}{old}" else None)
     track = await db.get(Track, track_id)
     if track is None or not plays_from(track):
-        return None
-    return track_path(release, track)
+        return True, None
+    return True, track_path(release, track)
 
 
 def _line(release: Release, track: Track, number: int, *, label: bool) -> dict[str, Any]:
@@ -709,10 +727,12 @@ async def live_track(
     )
     if release is None:
         # The track's own old address first: it names the track, wherever both
-        # slugs have gone since (Codex on #145). Else the release's, then the
-        # track's slug looked up there, so no answer is a move to another move.
-        direct = await _moved(db, f"{slug}/{track_slug}")
-        if direct is not None:
+        # slugs have gone since (Codex on #145), and a track that can't play
+        # any more is gone, never another track with its old slug (CodeRabbit
+        # on #145). Else the release's, then the track's slug looked up there,
+        # so no answer is a move to another move.
+        left, direct = await _move_of(db, f"{slug}/{track_slug}")
+        if left:
             return direct
         moved = await _moved(db, slug)
         if moved is None or moved.count("/") != 2:
@@ -1122,6 +1142,20 @@ async def _next_position(db: AsyncSession, release_id: uuid.UUID) -> int:
     return 0 if top is None else top + 1
 
 
+async def _room_for_one(db: AsyncSession, release_id: uuid.UUID) -> None:
+    """409 when the release holds MAX_TRACKS already: a save sends every track's
+    id, and takes no more than that (CodeRabbit on #145)."""
+    count = await db.scalar(
+        select(func.count()).select_from(Track).where(Track.release_id == release_id)
+    )
+    if (count or 0) >= MAX_TRACKS:
+        raise Problem(
+            "discography.too_many_tracks",
+            409,
+            f"A release holds {MAX_TRACKS} tracks at most. Make another release for the rest.",
+        )
+
+
 async def create_track(
     db: AsyncSession,
     release_id: uuid.UUID,
@@ -1132,6 +1166,7 @@ async def create_track(
 ) -> Track:
     """A track at the end of the release: with a SoundCloud link, or no audio yet."""
     release = await get_release(db, release_id, lock=True)
+    await _room_for_one(db, release.id)
     link, kind = soundcloud_link(soundcloud_url) if soundcloud_url else (None, None)
     now = clock.now()
     track = Track(
@@ -1225,6 +1260,7 @@ async def upload_track(
     probed = probe(source, size)
     name = _clean_name(filename)
     release = await get_release(db, release_id, lock=True)
+    await _room_for_one(db, release.id)
     title = _title_from(name, probed)
     now = clock.now()
     track = Track(
@@ -1320,8 +1356,8 @@ async def change_track(
         if name not in fields:
             continue
         value = fields[name]
-        if name == "title" and value is None:
-            continue
+        if name in ("title", "explicit") and value is None:
+            continue  # neither clears: null leaves it as it is
         if name == "lyrics":
             value = value if value and value.strip() else None
         if name == "duration_ms" and track.stream_key:
@@ -1353,8 +1389,18 @@ async def change_track(
 async def remove_track(db: AsyncSession, track_id: uuid.UUID, *, by: uuid.UUID | None) -> None:
     from discography.events import TrackDeleted
 
-    track = await get_track(db, track_id, lock=True)
-    release = await get_release(db, track.release_id, lock=True)
+    # The release first, then the track, as a reorder holds them: the other way
+    # round, a delete and a reorder can deadlock (CodeRabbit on #145).
+    release_id = (await get_track(db, track_id)).release_id
+    release = await get_release(db, release_id, lock=True)
+    track = await db.scalar(
+        select(Track)
+        .where(Track.id == track_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if track is None:
+        raise _not_found("track")
     files = _files_of(track)
     await db.delete(track)
     await db.flush()
@@ -1390,7 +1436,7 @@ async def every_track(
         statement = statement.where(~sa.exists().where(Credit.track_id == Track.id))
     offset = 0
     if cursor is not None:
-        if not cursor.isdigit() or len(cursor) > 6:
+        if not (cursor.isascii() and cursor.isdigit()) or len(cursor) > 6:
             raise _invalid("cursor", "kernel.invalid_request", "Not a page of these tracks.")
         offset = int(cursor)
     rows = list(
@@ -1419,16 +1465,17 @@ async def every_track(
 async def every_person(db: AsyncSession) -> dict[str, Any]:
     people = list(await db.scalars(select(Person).order_by(func.lower(Person.name))))
     rows = await db.execute(
-        select(Credit.person_id, Role.name, Release.title, Credit.track_id)
+        select(Credit.person_id, Role.name, Release.id, Release.title)
         .join(Role, Role.id == Credit.role_id)
         .outerjoin(Track, Track.id == Credit.track_id)
         .join(Release, Release.id == sa.func.coalesce(Credit.release_id, Track.release_id))
-        .order_by(Release.title, Role.position)
+        .order_by(Release.title, Release.id, Role.position)
     )
-    seen: dict[uuid.UUID, dict[str, list[str]]] = {}
+    # By release, not by title: two releases may share one (CodeRabbit on #145).
+    seen: dict[uuid.UUID, dict[uuid.UUID, tuple[str, list[str]]]] = {}
     counts: dict[uuid.UUID, int] = {}
-    for person_id, role, title, _ in rows:
-        roles = seen.setdefault(person_id, {}).setdefault(title, [])
+    for person_id, role, release_id, title in rows:
+        _, roles = seen.setdefault(person_id, {}).setdefault(release_id, (title, []))
         if role not in roles:
             roles.append(role)
         counts[person_id] = counts.get(person_id, 0) + 1
@@ -1436,7 +1483,7 @@ async def every_person(db: AsyncSession) -> dict[str, Any]:
     for person in people:
         by_release = seen.get(person.id, {})
         credited = "; ".join(
-            f"{' and '.join(roles)}, {title}" for title, roles in by_release.items()
+            f"{' and '.join(roles)}, {title}" for title, roles in by_release.values()
         )
         items.append(
             {
@@ -1510,6 +1557,8 @@ async def put_roles(db: AsyncSession, items: list[dict[str, Any]], *, by: uuid.U
             role_id = _uuid(each["id"], "items")
             if role_id not in current:
                 raise _invalid("items", "discography.role_not_found", "That role is gone.")
+            if role_id in kept:  # the same role twice, by its id (CodeRabbit on #145)
+                raise _invalid("items", "discography.role_twice", "Each role once.")
             kept.add(role_id)
     gone = [role_id for role_id in current if role_id not in kept]
     if gone:

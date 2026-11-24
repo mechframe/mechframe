@@ -255,7 +255,7 @@ Albums, EPs and singles with tracks, credits and streaming links; tracks play fr
 
 No host variables of its own.
 
-**From the kernel:** Uploads need storage with its public pair: masters go in `STORAGE_BUCKET`, stream files in `STORAGE_PUBLIC_BUCKET` at `STORAGE_PUBLIC_URL`. Until they're set, an upload answers 503 `discography.storage_off` and tracks play from SoundCloud links. Its job runs where the jobs worker does (`JOBS_IN_WEB`).
+**From the kernel:** Uploads need the site's storage (`STORAGE_ENDPOINT_URL`, `STORAGE_ACCESS_KEY_ID`, `STORAGE_SECRET_ACCESS_KEY` and `STORAGE_BUCKET`, where masters go): until it's set, an upload answers 503 `discography.storage_off` and tracks play from SoundCloud links. Stream files go in `STORAGE_PUBLIC_BUCKET` at `STORAGE_PUBLIC_URL`: without that pair, a stream file can't be made and the track fails once its tries are used. Its job runs where the jobs worker does (`JOBS_IN_WEB`).
 
 Set in the site's admin (Admin → Settings), not on the host:
 

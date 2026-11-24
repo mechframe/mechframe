@@ -33,7 +33,7 @@ MechFrame: website modules on a FastAPI + Postgres kernel (`CLAUDE.md`, `SPEC.md
   - `878bbcc`: the backend;
   - the next commit: decision 0070 and the backend tests.
 - **The backend is done to the contract:** models, `audio` (soundfile), service, router, job, events, `public.py`, server copy, search, seed, dashboard and the migration. ruff, black and mypy are clean.
-- **The backend tests pass:** `modules/discography/tests/backend`, 43 tests (audio, service, job, server copy, seed and dashboard). `tests/test_migrations.py`: all 60 pass, the round trip with a row in each of discography's six tables included (the full suite hasn't run; CI's will).
+- **The backend tests pass:** `modules/discography/tests/backend`, 43 tests (audio, service, job, server copy, seed and dashboard). `tests/test_migrations.py`: all 60 pass, the round trip with a row in each of discography's seven tables included: release, track, person, credit, link and move written by the test, and role's five from the migration (the full suite hasn't run; CI's will).
 - **The web is still the scaffold's stubs:** `modules/discography/web/`.
 - **Main lane:** #142 (its handoff) landed, with main at `c923962`; blog 0.1.3 was about to push. Merge `main` into this branch before the suites. Check `gh pr list` and `git log -1 origin/main`.
 
@@ -62,7 +62,7 @@ MechFrame: website modules on a FastAPI + Postgres kernel (`CLAUDE.md`, `SPEC.md
    - `python -m tools.event_schemas`;
    - `python -m tools.host_variables`;
    - `docs/progress.json` (Step 2), then `python -m tools.progress`.
-5. **Check it:** the `module-contract-lint` skill, then `mechframe add discography` and `mechframe check` on a fresh site.
+5. **Check it:** the `module-contract-lint` skill, then `mechframe add media`, `mechframe add embeds` and `mechframe add discography` (`add` refuses a module whose requirements aren't in yet), and `mechframe check`, on a fresh site.
 6. **Land it** (as the M8 prompt says, §3, step 4): merge `main` and make the generated files again from main's copies; read the next PR number from GitHub just before the one push; then fast-forward on a green "CI result" with the bots clear.
 
 ## 5. Ask the owner, don't decide

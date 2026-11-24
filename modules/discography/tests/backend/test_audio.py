@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import io
 
+import numpy as np
 import pytest
 import soundfile as sf
 from discography import audio
@@ -84,3 +85,35 @@ def test_a_master_over_an_hour_is_refused(monkeypatch: pytest.MonkeyPatch) -> No
 @pytest.mark.parametrize(("kbps", "level"), [(320, 0.0), (256, 0.2222), (128, 0.6667), (999, 0.0)])
 def test_the_compression_level_for_a_bitrate(kbps: int, level: float) -> None:
     assert audio.level_for(kbps) == level
+
+
+@pytest.mark.parametrize(
+    ("rate", "kbps", "lowest", "highest"), [(22050, 128, 118, 140), (22050, 320, 145, 170)]
+)
+def test_a_low_rate_master_streams_at_the_bitrate_it_can_hold(
+    rate: int, kbps: int, lowest: int, highest: int
+) -> None:
+    """CodeRabbit on #145: below 32 kHz an MP3 is MPEG-2, from 160 kbps down."""
+    into = io.BytesIO()
+    audio.make_stream(io.BytesIO(master(4.0, rate)), into, kbps=kbps)
+    into.seek(0)
+    found = into.getbuffer().nbytes * 8 / sf.info(into).duration / 1000
+    assert lowest <= found <= highest
+
+
+@pytest.mark.parametrize(
+    ("kbps", "rate", "level"),
+    [(128, 44100, 0.6667), (128, 22050, 0.2105), (320, 22050, 0.0), (128, 11025, 0.0)],
+)
+def test_the_compression_level_follows_the_streams_rate(kbps: int, rate: int, level: float) -> None:
+    assert audio.level_for(kbps, rate) == level
+
+
+def test_a_master_with_samples_that_arent_numbers_is_refused() -> None:
+    """CodeRabbit on #145: a NaN in a float WAV fails the track with words, not the job."""
+    wave = np.zeros((44100, 2), dtype="float32")
+    wave[100, 0] = np.nan
+    out = io.BytesIO()
+    sf.write(out, wave, 44100, format="WAV", subtype="FLOAT")
+    with pytest.raises(audio.NotAudio):
+        audio.make_stream(io.BytesIO(out.getvalue()), io.BytesIO(), kbps=128)

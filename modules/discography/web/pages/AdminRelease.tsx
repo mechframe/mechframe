@@ -6,7 +6,7 @@
 // asks field by field (the kit's SaveConflict), and leaving with changes asks
 // first. Tracks being made into stream files are read again until they're done.
 import { useQueryClient } from "@tanstack/react-query";
-import { useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 
 import {
@@ -68,6 +68,7 @@ import {
   conflictOf,
   merged,
   mineOf,
+  movedTrack,
   rebased,
   releaseBody,
   releaseFormOf,
@@ -91,7 +92,7 @@ export default function AdminRelease() {
     { params: { path: { release_id: id } } },
     { refetchInterval: (query) => (query.state.data?.tracks.some((track) => track.audio.state === "processing") ? WHILE_PROCESSING : false) },
   );
-  if (read.error) {
+  if (read.error && !read.data) {
     const gone = read.error instanceof ApiProblem && read.error.status === 404;
     return (
       <AdminPage page="Release" title="Edit release">
@@ -100,7 +101,9 @@ export default function AdminRelease() {
     );
   }
   if (!read.data) return null;
-  return <Editor key={read.data.id} server={read.data} />;
+  // A read again that failed keeps the editor and what's typed in it, and says so (CodeRabbit on #145).
+  const stale = read.error ? <LoadError what="The release" error={read.error} onRetry={() => void read.refetch()} inline /> : null;
+  return <Editor key={read.data.id} server={read.data} notice={stale} />;
 }
 
 /** A field's errors from a refused save: the server's, by its name or as `body.<name>`. */
@@ -121,7 +124,7 @@ function coverOf(image: { id: string; url: string; srcset: string; width: number
   return { id: image.id, url: image.url, srcset: image.srcset, width: image.width, height: image.height, alt: image.decorative ? "" : (image.alt ?? null), decorative: image.decorative };
 }
 
-function Editor({ server }: { server: FullRelease }) {
+function Editor({ server, notice }: { server: FullRelease; notice: ReactNode }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const toast = useToast();
@@ -159,9 +162,16 @@ function Editor({ server }: { server: FullRelease }) {
     }
   }
 
+  // While a save waits, the form is held against what it sent: a field typed back
+  // to what's saved since then is still a change (CodeRabbit on #145).
+  const [sending, setSending] = useState<ReleaseForm | null>(null);
   const edits = changed(form, base);
-  const dirty = edits.length > 0;
+  const dirty = edits.length > 0 || (sending !== null && changed(form, sending).length > 0);
   const live = saved.status === "published";
+  const titles = useMemo(
+    () => new Map([...(conflict?.theirs.tracks ?? []), ...saved.tracks, ...server.tracks].map((track) => [track.id, track.title])),
+    [conflict, saved.tracks, server.tracks],
+  );
   const roleNames = useMemo(() => new Map((roles.data?.items ?? []).map((each) => [each.id, each.name])), [roles.data]);
   const tracks = useMemo(() => {
     const byId = new Map(server.tracks.map((track) => [track.id, track]));
@@ -195,10 +205,16 @@ function Editor({ server }: { server: FullRelease }) {
     const sent = changed(from, releaseFormOf(onto));
     if (sent.length === 0) return onto;
     try {
-      const { data } = await api.PATCH(RELEASE, {
-        params: { path: { release_id: onto.id } },
-        body: { version: onto.version, ...releaseBody(from, sent) },
-      });
+      setSending(from);
+      const answered = await api
+        .PATCH(RELEASE, {
+          params: { path: { release_id: onto.id } },
+          body: { version: onto.version, ...releaseBody(from, sent) },
+        })
+        .finally(() => {
+          setSending(null);
+        });
+      const { data } = answered;
       if (!data) throw new Error("The site answered without the release.");
       remember(data);
       setSaved(data);
@@ -315,12 +331,17 @@ function Editor({ server }: { server: FullRelease }) {
     }
   }
 
-  function move(index: number, by: -1 | 1) {
-    const ids = [...form.track_ids];
-    const [one] = ids.splice(index, 1);
-    if (one === undefined) return;
-    ids.splice(index + by, 0, one);
-    set("track_ids", ids);
+  /** By id: the form's order may hold a track the server no longer shows (CodeRabbit on #145). */
+  function move(id: string, by: -1 | 1) {
+    set(
+      "track_ids",
+      movedTrack(
+        form.track_ids,
+        tracks.map((track) => track.id),
+        id,
+        by,
+      ),
+    );
   }
 
   const guard = useUnsavedGuard(dirty, async () => {
@@ -363,13 +384,17 @@ function Editor({ server }: { server: FullRelease }) {
         </>
       }
     >
+      {notice}
       {conflict ? (
         <SaveConflict
           conflict={conflict.said}
           labels={RELEASE_LABELS}
           saving={busy}
           returnTo={saveButton}
-          format={(_field, value) => said(value, roleNames)}
+          format={(field, value) =>
+            // An order by its tracks' titles, as the list names them (CodeRabbit on #145).
+            field === "track_ids" && Array.isArray(value) ? (value as string[]).map((each) => titles.get(each) ?? each).join(", ") || "None" : said(value, roleNames)
+          }
           onResolve={(choices) => {
             const keep = new Set(Object.entries(choices).filter(([, choice]) => choice === "theirs").map(([field]) => field));
             const next = withTracks(merged(conflict.mine, releaseFormOf(conflict.theirs), keep, conflict.fields), conflict.theirs);
@@ -584,7 +609,7 @@ function Editor({ server }: { server: FullRelease }) {
                             aria-label={`Move ${track.title} up`}
                             disabled={index === 0}
                             onClick={() => {
-                              move(index, -1);
+                              move(track.id, -1);
                             }}
                           />
                           <Button
@@ -593,7 +618,7 @@ function Editor({ server }: { server: FullRelease }) {
                             aria-label={`Move ${track.title} down`}
                             disabled={index === tracks.length - 1}
                             onClick={() => {
-                              move(index, 1);
+                              move(track.id, 1);
                             }}
                           />
                         </span>

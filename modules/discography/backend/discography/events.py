@@ -15,7 +15,7 @@ import uuid
 from sqlalchemy import select
 
 from discography.models import Release
-from kernel import clock, events, jobs, lifecycle
+from kernel import clock, events, jobs, lifecycle, search
 
 CONTENT_TYPE = "discography.release"
 
@@ -89,3 +89,21 @@ async def _announce(ctx: jobs.Context, event: events.Event) -> None:
 
 
 ANNOUNCE = events.on("kernel.content.published", "discography.announce_published")(_announce)
+
+
+async def _settings_changed(ctx: jobs.Context, event: events.Event) -> None:
+    """discography's settings saved: each live release indexed again, so search
+    holds lyrics only while the site shows them (CodeRabbit on #145)."""
+    heard = event.parse(events.SettingsChanged)
+    if heard.module != "discography":
+        return
+    from discography.search import SEARCH  # search reads the service, which reads this
+
+    async with ctx.sessions() as db:
+        for source in SEARCH:
+            async for document in source.documents(db):
+                await search.index(db, document)
+        await db.commit()
+
+
+REINDEX = events.on("kernel.settings.changed", "discography.reindex_on_settings")(_settings_changed)

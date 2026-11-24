@@ -120,12 +120,20 @@ def probe(source: BinaryIO) -> Probe:
     return found
 
 
-def level_for(kbps: int) -> float:
-    """libsndfile's compression level for a constant `kbps`: 0 is 320 kbps,
-    each step of 0.1 about 29 kbps less, taken by LAME to the nearest
-    standard rate."""
-    kbps = max(MIN_KBPS, min(MAX_KBPS, kbps))
-    return round((MAX_KBPS - kbps) / 288, 4)
+def level_for(kbps: int, samplerate: int = 44100) -> float:
+    """libsndfile's compression level for a constant `kbps` at `samplerate`,
+    taken by LAME to the nearest standard rate. The level runs from the top
+    bitrate to the bottom of the MPEG version the rate makes: 320 to 32 kbps
+    from 32 kHz up, 160 to 8 below that, and 64 to 8 below 16 kHz. A bitrate
+    over the top is the top (CodeRabbit on #145)."""
+    if samplerate >= 32000:
+        top, bottom = 320, 32
+    elif samplerate >= 16000:
+        top, bottom = 160, 8
+    else:
+        top, bottom = 64, 8
+    kbps = min(top, max(MIN_KBPS, min(MAX_KBPS, kbps)))
+    return round((top - kbps) / (top - bottom), 4)
 
 
 def _lowpass(step: int) -> np.ndarray[Any, np.dtype[np.float32]]:
@@ -193,11 +201,14 @@ def make_stream(
                 channels=channels,
                 format="MP3",
                 subtype="MPEG_LAYER_III",
-                compression_level=level_for(kbps),
+                compression_level=level_for(kbps, rate),
                 bitrate_mode="CONSTANT",
             ) as stream,
         ):
             for block in master.blocks(blocksize=BLOCK, dtype="float32", always_2d=True):
+                if not np.isfinite(block).all():
+                    # A float master's NaN or infinity: no sound to stream, and no peak.
+                    raise NotAudio("The file holds samples that aren't sound.")
                 if block.shape[1] > 2:
                     mixed = block.mean(axis=1, keepdims=True)
                     block = np.repeat(mixed, 2, axis=1)

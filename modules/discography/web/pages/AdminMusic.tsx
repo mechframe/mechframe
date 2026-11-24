@@ -119,8 +119,10 @@ function NewRelease({ onClose }: { onClose: () => void }) {
   }
   const titleError = refused instanceof ApiProblem ? [...(refused.errors.title ?? []), ...(refused.errors["body.title"] ?? [])].join(" ") || undefined : undefined;
   const other = refused && !titleError ? (refused instanceof Error ? failureWords(refused) : "That didn't go through. Try again.") : null;
+  // Kept open while the draft is made: its answer opens the draft (CodeRabbit on #145).
+  const close = busy ? () => undefined : onClose;
   return (
-    <Dialog title="New release" onClose={onClose}>
+    <Dialog title="New release" onClose={close}>
       <form
         className="mf-music-stack"
         onSubmit={(event) => {
@@ -155,7 +157,7 @@ function NewRelease({ onClose }: { onClose: () => void }) {
         <p className="mf-music-hint">It starts as a draft: nothing is on the site until you publish it.</p>
         {other ? <p className="mf-music-error">{other}</p> : null}
         <div className="mf-dialog-actions">
-          <Button type="button" onClick={onClose}>
+          <Button type="button" disabled={busy} onClick={close}>
             Cancel
           </Button>
           <Button type="submit" variant="primary" disabled={busy || !title.trim()}>
