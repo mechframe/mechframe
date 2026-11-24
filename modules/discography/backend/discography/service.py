@@ -247,8 +247,11 @@ async def tracks_of(
 
 
 def plays_from(track: Track) -> str | None:
-    """The stream file once it's made, else the link, else nothing."""
-    if track.audio_state == "ready" and track.stream_key:
+    """The stream file once one is made, else the link, else nothing. A
+    replaced master leaves its track's stream in place while the new one is
+    made, and if that fails, so a replace never takes a track off the site
+    (Codex on #145): `stream_key` is set only by a finished job."""
+    if track.stream_key:
         return "upload"
     if track.soundcloud_url:
         return "soundcloud"
@@ -256,10 +259,8 @@ def plays_from(track: Track) -> str | None:
 
 
 def playable_clause() -> Any:
-    return or_(
-        sa.and_(Track.audio_state == "ready", Track.stream_key.is_not(None)),
-        Track.soundcloud_url.is_not(None),
-    )
+    """`plays_from` as SQL."""
+    return or_(Track.stream_key.is_not(None), Track.soundcloud_url.is_not(None))
 
 
 def stream_url(track: Track) -> str | None:
@@ -654,13 +655,14 @@ async def _moved(db: AsyncSession, old: str) -> str | None:
     return track_path(release, track)
 
 
-def _line(release: Release, track: Track, number: int) -> dict[str, Any]:
+def _line(release: Release, track: Track, number: int, *, label: bool) -> dict[str, Any]:
+    """A track as a tracklist shows it; `label` is the site's `show_explicit_badge`."""
     return {
         "title": track.title,
         "slug": track.slug,
         "number": number,
         "duration_ms": track.duration_ms,
-        "explicit": track.explicit,
+        "explicit": label and track.explicit,
         "plays_from": plays_from(track),
         "stream_url": stream_url(track) if plays_from(track) == "upload" else None,
         "soundcloud_url": track.soundcloud_url,
@@ -682,12 +684,13 @@ async def shown(db: AsyncSession, release: Release) -> dict[str, Any]:
     tracks = _shown_tracks((await tracks_of(db, [release.id]))[release.id])
     credited = await credits_of(db, release_ids=[release.id])
     links = await links_of(db, [release.id])
+    label = (await settings_of(db)).show_explicit_badge
     return {
         **card,
         "back_cover": _cover(
             pictures.get(release.back_cover_id) if release.back_cover_id else None
         ),
-        "tracks": [_line(release, track, number) for number, track in tracks],
+        "tracks": [_line(release, track, number, label=label) for number, track in tracks],
         "credits": public_credits(credited[release.id]),
         "links": links[release.id],
         "updated_at": release.updated_at.isoformat(),
@@ -705,8 +708,17 @@ async def live_track(
         select(Release).where(Release.slug == slug, lifecycle.visible(Release))
     )
     if release is None:
+        # The track's own old address first: it names the track, wherever both
+        # slugs have gone since (Codex on #145). Else the release's, then the
+        # track's slug looked up there, so no answer is a move to another move.
+        direct = await _moved(db, f"{slug}/{track_slug}")
+        if direct is not None:
+            return direct
         moved = await _moved(db, slug)
-        return f"{moved}/{track_slug}" if moved and moved.count("/") == 2 else None
+        if moved is None or moved.count("/") != 2:
+            return None
+        now = await live_track(db, moved.rsplit("/", 1)[1], track_slug)
+        return track_path(now[0], now[1]) if isinstance(now, tuple) else now
     tracks = _shown_tracks((await tracks_of(db, [release.id]))[release.id])
     for number, track in tracks:
         if track.slug == track_slug:
@@ -722,8 +734,7 @@ async def track_shown(
     pictures = await pictures_of(db, [release])
     credited = await credits_of(db, track_ids=[track.id])
     return {
-        **_line(release, track, number),
-        "explicit": settings.show_explicit_badge and track.explicit,
+        **_line(release, track, number, label=settings.show_explicit_badge),
         "release": {
             "title": release.title,
             "slug": release.slug,

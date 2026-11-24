@@ -16,6 +16,7 @@ import pytest
 from discography import dashboard, jobs, public, service
 from discography import events as discography_events
 from discography.models import Person, Release, Track
+from discography.schemas import Settings
 from discography.seed import _NAMESPACE, RELEASES
 from discography.server_copy import PAGES, iso_duration
 from sqlalchemy import func, select, text
@@ -178,6 +179,76 @@ async def test_an_upload_is_processed_into_a_stream_that_plays_first(
     assert ("discography.track.processed", track.id) in [
         (name, getattr(payload, "track_id", None)) for name, payload in said
     ]
+
+
+async def test_a_replaced_upload_plays_its_old_stream_until_the_new_one_is_ready(
+    db: AsyncSession, database: Database, store: Store
+) -> None:
+    """Codex on #145: a replace or a failed one never takes a stream off the site."""
+    release = await _live(db)
+    track = await _uploaded(db, release, master(2.0))
+    await _process(database, track)
+    await db.refresh(track)
+    first = track.stream_key
+    assert first is not None
+    body = master(3.0)
+    await service.replace_audio(db, track.id, io.BytesIO(body), len(body), "v2.wav", by=None)
+    await db.commit()
+    assert track.audio_state == "processing"
+
+    def heard() -> list[str | None]:
+        return [line["stream_url"] for line in shown["tracks"]]
+
+    shown = await service.shown(db, release)
+    assert [url and url.endswith(first) for url in heard()] == [True]
+    assert list(await public.track_cards(db, [track.id])) == [track.id]
+    assert isinstance(await service.live_track(db, release.slug, track.slug), tuple)
+
+    assert track.master_key is not None
+    store.files[(track.master_key, False)] = b"not audio any more"
+    await _process(database, track)
+    await db.refresh(track)
+    assert track.audio_state == "failed"
+    shown = await service.shown(db, release)
+    assert [url and url.endswith(first) for url in heard()] == [True]
+
+
+async def test_a_track_renamed_then_its_release_moved_goes_straight_to_where_it_is(
+    db: AsyncSession,
+) -> None:
+    """Codex on #145: /music/a/x, renamed to y and then moved to b, answers b/y."""
+    release = await _live(db)
+    track = await _linked(db, release, "Night Drive")
+    a, x = release.slug, track.slug
+    await service.change_track(db, track.id, track.version, {"slug": "night-ride"}, by=None)
+    await db.commit()
+    await service.change_release(db, release.id, release.version, {"slug": slug()}, by=None)
+    await db.commit()
+    await db.refresh(release)
+    await db.refresh(track)
+    now = service.track_path(release, track)
+    assert await service.live_track(db, a, x) == now
+    assert await service.live_track(db, a, "night-ride") == now
+    added = await _linked(db, release, "Added Later")
+    assert await service.live_track(db, a, added.slug) == service.track_path(release, added)
+
+
+async def test_the_label_setting_covers_a_releases_tracklist_too(
+    db: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Codex on #145: with the label off, no track in a tracklist says explicit."""
+    release = await _live(db)
+    track = await _linked(db, release)
+    await service.change_track(db, track.id, track.version, {"explicit": True}, by=None)
+    await db.commit()
+    assert [line["explicit"] for line in (await service.shown(db, release))["tracks"]] == [True]
+
+    async def label_off(db: AsyncSession) -> Settings:
+        return Settings(show_explicit_badge=False)
+
+    monkeypatch.setattr(service, "settings_of", label_off)
+    shown = await service.shown(db, release)
+    assert (shown["explicit"], [line["explicit"] for line in shown["tracks"]]) == (False, [False])
 
 
 async def test_a_master_replaced_while_its_job_runs_throws_the_result_away(

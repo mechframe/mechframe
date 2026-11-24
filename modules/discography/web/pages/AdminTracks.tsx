@@ -5,7 +5,7 @@
 // SoundCloud link, lyrics and credits are saved. `?track=` picks one and `?show=`
 // a filter, so the album editor and the dashboard can send someone straight there.
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
-import { useDeferredValue, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { Link, useSearchParams } from "react-router";
 
 import {
@@ -25,10 +25,13 @@ import {
   Switch,
   Table,
   TextArea,
+  UnsavedDialog,
   failureWords,
   useToast,
+  useUnsavedGuard,
   type Column,
   type SettingsConflict,
+  type UnsavedGuard,
 } from "@/kernel";
 
 import {
@@ -95,12 +98,22 @@ export default function AdminTracks() {
   const first = listed.data?.pages[0];
   const tracks = listed.data?.pages.flatMap((page) => page.items) ?? [];
   const silent = tracks.find((track) => !track.audio.plays_from && track.audio.state !== "processing");
+  // Whether the open panel holds changes, and the track picked while it did:
+  // another pick asks first, as a move to another page does (Codex on #145).
+  const dirty = useRef(false);
+  const [pending, setPending] = useState<string | null>(null);
 
-  function pick(id: string) {
+  function go(id: string) {
+    setPending(null);
     const next = new URLSearchParams(search);
     if (id) next.set("track", id);
     else next.delete("track");
     setSearch(next, { replace: true });
+  }
+
+  function pick(id: string) {
+    if (dirty.current && id !== picked) setPending(id);
+    else go(id);
   }
 
   function filter(value: Show) {
@@ -209,8 +222,16 @@ export default function AdminTracks() {
             <TrackPanel
               key={picked}
               id={picked}
+              dirty={dirty}
+              asked={pending !== null}
+              onGo={() => {
+                go(pending ?? "");
+              }}
+              onStay={() => {
+                setPending(null);
+              }}
               onGone={() => {
-                pick("");
+                go("");
               }}
             />
           ) : (
@@ -224,7 +245,16 @@ export default function AdminTracks() {
   );
 }
 
-function TrackPanel({ id, onGone }: { id: string; onGone: () => void }) {
+type Switching = {
+  /** Set to whether the panel holds changes, for the board's next pick. */
+  dirty: RefObject<boolean>;
+  /** Another track was picked while it did: the panel asks. */
+  asked: boolean;
+  onGo: () => void;
+  onStay: () => void;
+};
+
+function TrackPanel({ id, onGone, ...switching }: { id: string; onGone: () => void } & Switching) {
   const read = useApiQuery(
     "get",
     TRACK,
@@ -240,10 +270,10 @@ function TrackPanel({ id, onGone }: { id: string; onGone: () => void }) {
     );
   }
   if (!read.data) return null;
-  return <TrackEditor server={read.data} onGone={onGone} />;
+  return <TrackEditor server={read.data} onGone={onGone} {...switching} />;
 }
 
-function TrackEditor({ server, onGone }: { server: FullTrack; onGone: () => void }) {
+function TrackEditor({ server, onGone, dirty: held, asked, onGo, onStay }: { server: FullTrack; onGone: () => void } & Switching) {
   const queryClient = useQueryClient();
   const toast = useToast();
   const roles = useApiQuery("get", ROLES);
@@ -269,6 +299,17 @@ function TrackEditor({ server, onGone }: { server: FullTrack; onGone: () => void
   const edits = changed(form, base);
   const dirty = edits.length > 0;
   const audio = (server.version === saved.version ? server : saved).audio;
+  const [switchSaving, setSwitchSaving] = useState(false);
+  const [switchError, setSwitchError] = useState("");
+  useLayoutEffect(() => {
+    held.current = dirty;
+  });
+  useEffect(
+    () => () => {
+      held.current = false;
+    },
+    [held],
+  );
   const errorOf = (field: FormField, ...also: string[]) => checked[field] ?? fieldErrors(refused, field, ...also);
 
   function set<Name extends FormField>(field: Name, value: TrackForm[Name]) {
@@ -369,6 +410,38 @@ function TrackEditor({ server, onGone }: { server: FullTrack; onGone: () => void
     toast({ tone: "success", text: `${saved.title} is deleted.` });
     onGone();
   }
+
+  /** Saves for a leave: null once saved, or why it isn't. */
+  async function saveToLeave(): Promise<string | null> {
+    try {
+      await save();
+      return null;
+    } catch (error) {
+      return error instanceof Error ? failureWords(error) : "";
+    }
+  }
+
+  const guard = useUnsavedGuard(dirty, saveToLeave);
+  const switching: UnsavedGuard = {
+    asking: asked,
+    saving: switchSaving,
+    error: switchError,
+    saveAndLeave: () => {
+      setSwitchSaving(true);
+      setSwitchError("");
+      void saveToLeave().then((why) => {
+        setSwitchSaving(false);
+        if (why === null) onGo();
+        else setSwitchError(why);
+      });
+    },
+    leave: onGo,
+    stay: () => {
+      setSwitchError("");
+      onStay();
+    },
+    release: () => undefined,
+  };
 
   const hasUpload = Boolean(audio.master_name);
   return (
@@ -530,6 +603,8 @@ function TrackEditor({ server, onGone }: { server: FullTrack; onGone: () => void
           </Button>
         </div>
       </div>
+      <UnsavedDialog guard={guard} what={saved.title} />
+      <UnsavedDialog guard={switching} what={saved.title} />
       {deleting ? (
         <Dialog
           title={`Delete ${saved.title}?`}

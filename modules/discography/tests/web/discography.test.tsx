@@ -487,6 +487,29 @@ describe("the Tracks board", () => {
     });
   });
 
+  it("asks before another track's pick drops what's typed, and saves it on the way (Codex on #145)", async () => {
+    const T1_ONE = `/api/discography/admin/tracks/${T1}`;
+    const sent = routed({
+      [LIST]: { status: 200, body: { items: [track(), silent], next_cursor: null, total: 2, releases: 1 } },
+      [`GET ${TRACK}`]: { status: 200, body: silent },
+      [`GET ${T1_ONE}`]: { status: 200, body: fullTrack() },
+      [`PATCH ${TRACK}`]: { status: 200, body: { ...silent, version: 2, lyrics: "Pray for you", has_lyrics: true } },
+    });
+    renderApp({ path: `/admin/music/tracks?track=${T2}`, modules: [discography], session: editor });
+
+    await userEvent.type(await screen.findByRole("textbox", { name: "Lyrics" }), "Pray for you");
+    await userEvent.click(screen.getByRole("button", { name: "Gather Around" }));
+    const asking = within(await screen.findByRole("dialog", { name: "You have changes that aren't saved" }));
+    await userEvent.click(asking.getByRole("button", { name: "Stay" }));
+    expect(screen.getByRole("textbox", { name: "Lyrics" })).toHaveValue("Pray for you");
+    expect(screen.getByRole("button", { name: "Pray For You", pressed: true })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Gather Around" }));
+    await userEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Save and leave" }));
+    expect(await screen.findByRole("button", { name: "Gather Around", pressed: true })).toBeInTheDocument();
+    expect(await json(sent.find((each) => each.method === "PATCH") as Request)).toEqual({ version: 1, lyrics: "Pray for you" });
+  });
+
   it("refuses a replacement over 60 MB before it's sent", async () => {
     const sent = routed({
       [LIST]: { status: 200, body: { items: [silent], next_cursor: null, total: 1, releases: 1 } },
