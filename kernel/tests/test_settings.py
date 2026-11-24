@@ -420,3 +420,36 @@ async def test_a_save_that_changes_something_is_heard_with_its_version(
     with pytest.raises(Problem):
         await found.save(db, module_id, {"posts_per_page": 0}, version=1)
     assert await heard.drain() == [("kernel.settings.changed", {"module": module_id, "version": 1})]
+
+
+class Picked(BaseModel):
+    shown: str = ""
+    picked: str | None = None
+
+
+@pytest.mark.db
+async def test_a_field_with_its_own_route_is_refused_by_the_form(db: AsyncSession) -> None:
+    """Decision 0064: a field another route checks first (the AI's model) can't be
+    changed through the settings form; the route that checks it can."""
+    found = SettingsRegistry()
+    module_id = unique_id("picked")
+    found.register(module_id, Picked, own_route={"picked": "Pick it from the list."})
+    with pytest.raises(Problem) as refused:
+        await found.save(db, module_id, {"shown": "x", "picked": "a"}, version=0)
+    await db.rollback()
+    assert (refused.value.status, refused.value.errors) == (
+        422,
+        {"picked": ["Pick it from the list."]},
+    )
+    # The form's other fields save, and so does the field sent as it already is.
+    saved = await found.save(db, module_id, {"shown": "x", "picked": None}, version=0)
+    assert saved.changed == ["shown"]
+    # The positive control: its own route saves it.
+    routed = await found.save(db, module_id, {"picked": "a"}, version=saved.version, via="ai.model")
+    assert routed.changed == ["picked"]
+    assert (await found.for_module(db, module_id)).model_dump() == {"shown": "x", "picked": "a"}
+
+
+def test_only_a_field_of_the_model_has_its_own_route() -> None:
+    with pytest.raises(ValueError, match="nothing"):
+        SettingsRegistry().register(unique_id("picked"), Picked, own_route={"nothing": "No."})

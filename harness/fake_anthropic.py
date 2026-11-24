@@ -6,7 +6,9 @@ It records every request (`asked`) and answers the queued answers in order
 (`queue`). With none queued, a message answers "Words for the test.", or,
 when the request asks for structured output, an object its JSON Schema
 describes: each string "Words for the test.", each list of strings one of
-them. A models list answers one model, as a key's check expects.
+them. A models list answers what a real key sees (`MODELS`, newest first),
+two to a page, honouring `limit` and `after_id`: a key's check (`limit=1`)
+gets one, and the AI's model list (decision 0064) reads every page.
 """
 
 from __future__ import annotations
@@ -19,6 +21,18 @@ import httpx2
 
 MODEL = "claude-opus-5-5"
 WORDS = "Words for the test."
+
+#: The models list, newest first, as Anthropic answers it: an older Opus and a
+#: kind the dropdown doesn't offer among them.
+MODELS = (
+    ("claude-opus-5-5", "Claude Opus 5.5", "2026-09-01T00:00:00Z"),
+    ("claude-sonnet-5-5", "Claude Sonnet 5.5", "2026-09-01T00:00:00Z"),
+    ("claude-haiku-5-5", "Claude Haiku 5.5", "2026-08-15T00:00:00Z"),
+    ("claude-fable-5-1", "Claude Fable 5.1", "2026-06-01T00:00:00Z"),
+    ("claude-opus-5", "Claude Opus 5", "2026-03-01T00:00:00Z"),
+)
+#: The most a page holds, so a list of five takes three.
+PAGE = 2
 
 
 def message(words: str, *, stop_reason: str = "end_turn") -> dict[str, Any]:
@@ -54,6 +68,25 @@ def _key_of(request: httpx2.Request) -> str:
     return request.headers.get("x-api-key", "")
 
 
+def _page(params: Any) -> dict[str, Any]:
+    """One page of `MODELS`, after `after_id`, at most `limit` and `PAGE`."""
+    ids = [model_id for model_id, _, _ in MODELS]
+    after = params.get("after_id")
+    start = ids.index(after) + 1 if after in ids else 0
+    size = min(int(params.get("limit") or 20), PAGE)
+    shown = MODELS[start : start + size]
+    data = [
+        {"id": model_id, "type": "model", "display_name": name, "created_at": created}
+        for model_id, name, created in shown
+    ]
+    return {
+        "data": data,
+        "has_more": start + size < len(MODELS),
+        "first_id": data[0]["id"] if data else None,
+        "last_id": data[-1]["id"] if data else None,
+    }
+
+
 @dataclass
 class Asked:
     """One request the fake was sent."""
@@ -64,6 +97,8 @@ class Asked:
     key: str
     beta: str
     body: dict[str, Any]
+    #: The query string's values: a models list's `limit` and `after_id`.
+    query: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -109,21 +144,14 @@ class FakeAnthropic:
                 key=_key_of(request),
                 beta=request.headers.get("anthropic-beta", ""),
                 body=body,
+                query=dict(request.url.params),
             )
         )
         if self.queued:
             status, payload = self.queued.pop(0)
             return httpx2.Response(status, json=payload)
         if request.url.path.endswith("/models"):
-            model = {
-                "id": MODEL,
-                "type": "model",
-                "display_name": "Claude",
-                "created_at": "2026-01-01T00:00:00Z",
-            }
-            return httpx2.Response(
-                200, json={"data": [model], "has_more": False, "first_id": MODEL, "last_id": MODEL}
-            )
+            return httpx2.Response(200, json=_page(request.url.params))
         shape = ((body.get("output_config") or {}).get("format") or {}).get("schema")
         words = json.dumps(_filled(shape)) if shape else WORDS
         return httpx2.Response(200, json=message(words))
@@ -133,4 +161,4 @@ class FakeAnthropic:
         return httpx2.MockTransport(self.handle)
 
 
-__all__ = ["MODEL", "WORDS", "Asked", "FakeAnthropic", "message"]
+__all__ = ["MODEL", "MODELS", "WORDS", "Asked", "FakeAnthropic", "message"]

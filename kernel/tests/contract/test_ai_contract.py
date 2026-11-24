@@ -88,7 +88,12 @@ async def test_a_saved_key_is_used_and_never_answered(api: Api, keyed: Api) -> N
     form = await keyed.http.get(f"{SETTINGS}/kernel.ai")
     assert form.json()["values"]["api_key"]["kept"] is True
     state = await keyed.http.get("/api/kernel/admin/ai")
-    assert state.json() == {"source": "settings", "model": "claude-opus-5-5", "unreadable": False}
+    assert state.json() == {
+        "source": "settings",
+        "model": "claude-opus-5-5",
+        "model_source": "environment",
+        "unreadable": False,
+    }
     checked = await keyed.http.post("/api/kernel/admin/ai/check")
     assert checked.json() == {"works": True, "source": "settings"}
     for answer in (form, state, checked):
@@ -260,3 +265,123 @@ async def test_the_writing_rules_are_offered_to_admins(admin: Api) -> None:
         },
     )
     assert refused.status_code == 422
+
+
+# --- the model (decision 0064, `dev plans/contracts/ai-model.md`) ------------------------
+
+MODELS = "/api/kernel/admin/ai/models"
+MODEL = "/api/kernel/admin/ai/model"
+OFFERED = [
+    {"id": "claude-opus-5-5", "name": "Claude Opus 5.5"},
+    {"id": "claude-sonnet-5-5", "name": "Claude Sonnet 5.5"},
+    {"id": "claude-haiku-5-5", "name": "Claude Haiku 5.5"},
+]
+NOT_OFFERED = "Anthropic doesn't offer that model to this key now. Choose one from the list."
+
+
+async def _pick(admin: Api, model: str | None, version: int | None = None) -> Any:
+    if version is None:
+        version = (await admin.http.get(f"{SETTINGS}/kernel.ai")).json()["version"]
+    return await admin.http.put(MODEL, json={"version": version, "model": model})
+
+
+async def test_get_admin_ai_models(api: Api, admin: Api) -> None:
+    off = await admin.http.get(MODELS)
+    assert (off.status_code, off.json()["code"]) == (503, "kernel.ai_off")
+    editor = await _staff(api, "editor")
+    assert (await editor.http.get(MODELS)).status_code == 403
+    assert await _asked(api) == []
+    await _save(admin, "kernel.ai", {"api_key": KEY})
+    try:
+        listed = await admin.http.get(MODELS)
+        assert listed.status_code == 200, listed.text
+        assert listed.json() == {
+            "models": OFFERED,
+            "in_use": {
+                "id": "claude-opus-5-5",
+                "name": "Claude Opus 5.5",
+                "source": "environment",
+                "listed": True,
+            },
+        }
+        assert KEY not in listed.text
+        # Every page, with the key in use, each time it's asked: no cache.
+        await admin.http.get(MODELS)
+        assert [(call["path"].endswith("/models"), call["key"]) for call in await _asked(api)] == [
+            (True, KEY)
+        ] * 6
+        queued = await api.http.post("/api/_test/ai", json={"answers": [{"status": 401}]})
+        assert queued.status_code == 204
+        refused = await admin.http.get(MODELS)
+        assert (refused.status_code, refused.json()["code"]) == (502, "kernel.ai_failed")
+        assert "didn't accept the key" in refused.json()["detail"]
+    finally:
+        await _save(admin, "kernel.ai", {"api_key": ""})
+
+
+async def test_the_model_list_has_its_own_budget(api: Api, keyed: Api) -> None:
+    for _ in range(60):
+        assert (await keyed.http.get(MODELS)).status_code == 200
+    spent = await keyed.http.get(MODELS)
+    assert (spent.status_code, spent.json()["code"]) == (429, "kernel.rate_limited")
+    # The writing help's budget is untouched.
+    editor_state = await keyed.http.get(AI)
+    assert editor_state.status_code == 200
+
+
+async def test_put_admin_ai_model(api: Api, keyed: Api) -> None:
+    try:
+        saved = await _pick(keyed, "claude-sonnet-5-5")
+        assert saved.status_code == 200, saved.text
+        assert saved.json()["changed"] == ["model"]
+        state = (await keyed.http.get("/api/kernel/admin/ai")).json()
+        assert (state["model"], state["model_source"]) == ("claude-sonnet-5-5", "settings")
+        history = (await keyed.http.get(f"{SETTINGS}/kernel.ai/history")).json()["items"][0]
+        assert (history["changed"], history["via"]) == (["model"], "ai.model")
+
+        # A task asks for it, with the fallbacks the host's would get.
+        editor = await _staff(api, "editor")
+        drafted = await editor.http.post(f"{AI}/draft", json={**TASK, "topic": "Spring"})
+        assert drafted.status_code == 200, drafted.text
+        sent = (await _asked(api))[-1]
+        assert sent["body"]["model"] == "claude-sonnet-5-5"
+        assert sent["body"]["fallbacks"] == "default"
+
+        # Only what the dropdown offers: an older Opus, another kind, or none at all.
+        for offered_not in ("claude-opus-5", "claude-fable-5-1", "claude-opus-9-9"):
+            refused = await _pick(keyed, offered_not)
+            assert (refused.status_code, refused.json()["errors"]) == (
+                422,
+                {"model": [NOT_OFFERED]},
+            )
+        # The settings form can't change it, only this route.
+        form = (await keyed.http.get(f"{SETTINGS}/kernel.ai")).json()
+        generic = await keyed.http.put(
+            f"{SETTINGS}/kernel.ai",
+            json={"version": form["version"], "changes": {"model": "claude-haiku-5-5"}},
+        )
+        assert (generic.status_code, generic.json()["errors"]) == (
+            422,
+            {"model": ["Choose the model from Anthropic's list, in Settings → AI."]},
+        )
+
+        # A crossed save that changed the model too is a conflict.
+        assert (await _pick(keyed, "claude-haiku-5-5")).status_code == 200
+        crossed = await _pick(keyed, "claude-opus-5-5", version=form["version"])
+        assert (crossed.status_code, crossed.json()["code"]) == (409, "kernel.settings_conflict")
+
+        # A list that can't be read saves nothing.
+        await api.http.post("/api/_test/ai", json={"answers": [{"status": 500}]})
+        failed = await _pick(keyed, "claude-opus-5-5")
+        assert (failed.status_code, failed.json()["code"]) == (502, "kernel.ai_failed")
+        assert (await keyed.http.get("/api/kernel/admin/ai")).json()["model"] == "claude-haiku-5-5"
+
+        # Use the host's model: cleared, without asking Anthropic.
+        before = len(await _asked(api))
+        cleared = await _pick(keyed, None)
+        assert cleared.status_code == 200, cleared.text
+        assert len(await _asked(api)) == before
+        state = (await keyed.http.get("/api/kernel/admin/ai")).json()
+        assert (state["model"], state["model_source"]) == ("claude-opus-5-5", "environment")
+    finally:
+        await _pick(keyed, None)

@@ -7,6 +7,7 @@ from __future__ import annotations
 import logging
 import uuid
 from collections.abc import Iterator
+from datetime import datetime
 from typing import Any
 
 import httpx2
@@ -176,7 +177,7 @@ async def test_a_task_sends_the_rules_then_the_style_each_cached(fake: FakeAnthr
     asked = fake.asked[0]
     assert asked.key == KEY
     body = asked.body
-    assert body["model"] == ai.model()
+    assert body["model"] == ai.host_model()
     assert next(block["text"] for block in body["system"]) == "The site's rules."
     assert "<name>Warm</name>" in body["system"][1]["text"]
     assert "- delve" in body["system"][1]["text"]
@@ -282,6 +283,140 @@ async def test_the_check_lists_one_model(fake: FakeAnthropic) -> None:
     with pytest.raises(Problem) as refused:
         await _writer().check()
     assert refused.value.status == 502
+
+
+# --- the model (decision 0064, `dev plans/contracts/ai-model.md`) ------------------------
+
+
+async def _pick(db: AsyncSession, section: str, model: str | None) -> None:
+    form = await settings.form(db, section)
+    await settings.save(
+        db, section, {"model": model}, version=form["version"], by=None, via="ai.model"
+    )
+    await db.commit()
+
+
+@pytest.mark.db
+async def test_the_model_in_use_is_the_saved_one_then_the_hosts(
+    db: AsyncSession, section: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(ai._installed, "model", "claude-opus-5")
+    assert ai.host_model() == "claude-opus-5"
+    assert await ai.model_in_use(db) == ("claude-opus-5", "environment")
+    await _pick(db, section, "claude-sonnet-5-5")
+    assert await ai.model_in_use(db) == ("claude-sonnet-5-5", "settings")
+    await _pick(db, section, None)  # Use the host's model
+    assert await ai.model_in_use(db) == ("claude-opus-5", "environment")
+
+
+async def test_the_list_is_the_newest_of_each_kind_from_every_page(fake: FakeAnthropic) -> None:
+    listed = await _writer().models()
+    # The fake's five, two to a page: every page is read.
+    assert [call.path.endswith("/models") for call in fake.asked] == [True, True, True]
+    assert {each.id for each in listed} == {
+        "claude-opus-5-5",
+        "claude-opus-5",
+        "claude-sonnet-5-5",
+        "claude-haiku-5-5",
+        "claude-fable-5-1",
+    }
+    # Opus 5 is older and Fable isn't a kind the dropdown offers.
+    assert [(each.id, each.name) for each in ai.newest_of_each_kind(listed)] == [
+        ("claude-opus-5-5", "Claude Opus 5.5"),
+        ("claude-sonnet-5-5", "Claude Sonnet 5.5"),
+        ("claude-haiku-5-5", "Claude Haiku 5.5"),
+    ]
+
+
+async def test_a_list_that_cant_be_read_is_a_plain_failure(fake: FakeAnthropic) -> None:
+    fake.queue(status=401)
+    with pytest.raises(Problem) as refused:
+        await _writer().models()
+    assert (refused.value.code, refused.value.status) == ("kernel.ai_failed", 502)
+    assert "didn't accept the key" in refused.value.detail
+    assert KEY not in refused.value.detail
+
+
+@pytest.mark.parametrize(
+    ("failure", "said"),
+    [
+        (httpx2.ReadTimeout, "Anthropic didn't answer in time. Try again in a minute."),
+        (httpx2.ConnectError, "Could not reach Anthropic from the server."),
+    ],
+)
+async def test_a_list_that_is_slow_or_unreachable_is_a_plain_failure(
+    failure: type[httpx2.TransportError], said: str
+) -> None:
+    def broken(request: httpx2.Request) -> httpx2.Response:
+        raise failure("broken", request=request)
+
+    before = ai.use_transport(httpx2.MockTransport(broken))
+    try:
+        with pytest.raises(Problem) as failed:
+            await _writer().models()
+    finally:
+        ai.use_transport(before)
+    assert (failed.value.status, failed.value.detail) == (502, said)
+
+
+async def test_a_saved_model_gets_the_fallbacks_as_the_hosts_would(
+    fake: FakeAnthropic, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`client(db)` hands the writer the model in use (the contract suite
+    holds that); the writer treats it as it would the host's."""
+    monkeypatch.setattr(ai._installed, "model", "claude-haiku-5-5")
+    writer = ai.Writer(KEY, constitution="The rules.", site_name=SITE, model="claude-opus-5-5")
+    await writer.write("Do it.", max_tokens=100, effort="low")
+    assert fake.asked[-1].body["model"] == "claude-opus-5-5"
+    assert ai.FALLBACK_BETA in fake.asked[-1].beta
+
+
+def _listed(model_id: str, name: str, day: str) -> ai.Listed:
+    return ai.Listed(id=model_id, name=name, created_at=datetime.fromisoformat(day))
+
+
+LISTED = [
+    _listed("claude-opus-5-5", "Claude Opus 5.5", "2026-09-01T00:00:00+00:00"),
+    _listed("claude-opus-5", "Claude Opus 5", "2026-03-01T00:00:00+00:00"),
+    _listed("claude-haiku-5-5", "Claude Haiku 5.5", "2026-08-15T00:00:00+00:00"),
+]
+
+
+def test_the_offer_is_the_newest_of_each_kind_and_the_model_in_use() -> None:
+    offer = ai.offer(LISTED, "claude-opus-5", "settings")
+    assert offer == {
+        "models": [
+            {"id": "claude-opus-5-5", "name": "Claude Opus 5.5"},
+            {"id": "claude-haiku-5-5", "name": "Claude Haiku 5.5"},
+        ],
+        # Not the newest of its kind, but in use: named, and listed.
+        "in_use": {
+            "id": "claude-opus-5",
+            "name": "Claude Opus 5",
+            "source": "settings",
+            "listed": True,
+        },
+    }
+
+
+def test_a_model_in_use_that_anthropic_no_longer_lists_is_unnamed() -> None:
+    offer = ai.offer(LISTED, "claude-opus-4-typo", "environment")
+    assert offer["in_use"] == {
+        "id": "claude-opus-4-typo",
+        "name": None,
+        "source": "environment",
+        "listed": False,
+    }
+
+
+@pytest.mark.parametrize(
+    "value",
+    ["gpt-5", "claude-", "claude-Opus-5", "claude-opus 5", "claude-opus-5\n", "claude-" + "x" * 94],
+)
+def test_a_model_that_is_not_an_id_is_refused(value: str) -> None:
+    with pytest.raises(ValueError, match="model"):
+        ai.KeySettings(model=value)
+    assert ai.KeySettings(model="claude-opus-5-5").model == "claude-opus-5-5"
 
 
 # --- the tasks -------------------------------------------------------------------------

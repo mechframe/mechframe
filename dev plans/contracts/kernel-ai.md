@@ -134,3 +134,4 @@ SPEC 6, 7, 14.12 and 15; decisions 0042 (answers), 0046 (settings, secrets, a sa
 - **A site keeps at most 50 writing styles** (409 `kernel.writing_styles_full`), so their list and the Style picker stay one short read (module-contract-lint: lists are bounded).
 - **A validator's own words reach its field** (VM Website Dev 12's finding, folded in): `errors.field_message` drops pydantic's "Value error, " for a route's 422 and a settings save alike.
 - **The kit gains the icon `sparkle`,** for Write with AI and Draft the rules from the samples.
+- **The Model row is a dropdown** (2026-11-24, decision 0064): Anthropic's newest Opus, Sonnet and Haiku, read each time the page opens, and saved only through its own route (`dev plans/contracts/ai-model.md`).
