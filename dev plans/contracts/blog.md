@@ -69,9 +69,7 @@ Answered 2026-11-22:
 5. **Who writes** (answered 2026-11-22, as recommended): "Anyone with blog writing permissions should be able to write and publish." `blog.post.write` and `blog.post.publish` both go to owner, admin and editor, the Author field naming any of them; a site that wants authors who can't publish adds a custom role with only `blog.post.write`.
 6. **The Anthropic key** (answered 2026-11-22, not as recommended: "Host variable or Settings"): `ANTHROPIC_API_KEY` in the host's variables, typed by the owner, or one an admin saves in Settings → AI, encrypted, as VybeSite does; nothing AI shows without one. The AI PR's contract (`dev plans/contracts/kernel-ai.md`) says which wins when both are there.
 
-Still to ask, each with its recommendation:
-
-7. **Social posting's home and key** (before its PR): VybeSite posts through Buffer, its key saved in Settings → Company channels. Recommended: a `social` module any module can share through (blog first, then releases and products), its Buffer token in the host's variables; the other way is inside blog. Creating the Buffer account is the owner's.
+7. **Social posting's home and key** (answered 2026-11-24): a `social` module any module can share through (blog first, then releases and products), as recommended. Its Buffer token, not as recommended: "Host or Settings", as the AI's key is: a token saved in Settings, sealed, wins over the host's variable, with a Check. VybeSite posts through Buffer, its key saved in Settings → Company channels. Creating the Buffer account is the owner's. Its own contract comes first, after the footer's shift (the owner, 2026-11-24: the shift goes next, after covers).
 
 ## 9. Changes as it was built (#123)
 
