@@ -56,17 +56,23 @@ AI DevKit Development 40 WT, 2026-11-23, branch `feat/pages-0-1-1`, **#138**.
 - **Built:** pages 0.1.1, written first as `dev plans/contracts/pages.md` §10.
   - `web/public.ts` (`@/modules/pages/public`) gives `usePage(address)`, with or without the slash, plus `isMoved`, `LivePage` and `PageMoved`. `PublicPage` reads through it (`web/reads.ts`). The server copy is unchanged.
   - The editor's crossed saves: the two gaps asked for, plus blog's third from #123 (a publish landing while a field is asked about now shows in the panel).
-  - A fourth, from CodeRabbit on #138: a conflict-free retry carries the person's fields into the next conflict check.
+  - From CodeRabbit on #138, three more:
+    - a conflict-free retry carries the person's fields into the next conflict check;
+    - so does the save after a conflict's choice;
+    - and both read the form they send at once, not after React's commit.
   - VM Website Dev 13's ask, with the owner's OK, folded into #138: a live page's "Updated" line under its `h1`, in the server copy (ISO date in a `time`) and on `PublicPage` (the reader's format, `day`, also exported). The e2e spec compares the line without its date.
   - No migration, decision or route. The IDs 0065+ and `pages_0002` weren't used.
 - **Tests:**
   - `pages/tests/web/public.test.tsx`;
-  - four in `pages.test.tsx`, each seen failing first;
-  - pages' web (28) and Python suites, and the generated-file tests, green; lint, types, ruff, black, mypy and the schemas clean.
+  - six in `pages.test.tsx`, each seen failing first;
+  - pages' web (30) and Python suites, and the generated-file tests, green; lint, types, ruff, black, mypy and the schemas clean.
   - `pages.spec.ts` passed in both themes at `4f0791c`. It ran from the worktree on port 8781 (a throwaway config, since deleted), after the main lane's runs were done.
 - **The owner's choices:** none were asked. VM Website's ask came with the owner's OK.
 - **For the main lane's handoff:**
   - pages 0.1.1 landed (#138), with its page read in `public.ts`.
   - VM Website Dev 12 and Dev 13 have the PR number, and each gets a message when it lands.
-  - **Blog has the CodeRabbit gap:** its `save` recursion in `modules/blog/web/pages/AdminPost.tsx` doesn't carry its fields into a retry. That's a small blog 0.1.3 fix (see pages' `save(…, carried)`).
+  - **Blog has the same three gaps** in `modules/blog/web/pages/AdminPost.tsx`:
+    - its retry and its conflict's choice don't carry the person's fields;
+    - neither sets `formNow` before saving again.
+    - That's a small blog 0.1.3 fix: copy pages' `save(…, carried)` and the `formNow.current = next` lines, and its four tests.
 - **Cleanup:** take the worktree's `node_modules` junction off (`cmd /c rmdir node_modules`) before `git worktree remove`.

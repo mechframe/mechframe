@@ -427,6 +427,75 @@ describe("the editor", () => {
     expect(patches).toBe(2);
   });
 
+  it("still asks about a field typed back to its saved value after a choice, when the save meets another (CodeRabbit on #138)", async () => {
+    let answer: (value: Answer) => void = () => undefined;
+    let patches = 0;
+    routed({
+      [`GET ${ONE}`]: { status: 200, body: full() },
+      [`PATCH ${ONE}`]: () => {
+        patches += 1;
+        if (patches === 1) {
+          return new Promise<Answer>((resolve) => {
+            answer = resolve;
+          });
+        }
+        // The save with the choice meets a third save, which changed the body.
+        if (patches === 2) return problem(409, "pages.changed", { page: full({ title: "Their title", body: "Their words.", version: 3 }) });
+        return { status: 200, body: full({ title: "My title", body: "Their words.", version: 4 }) };
+      },
+    });
+    renderApp({ path: `/admin/pages/${ID}`, modules: [pages], session: editor });
+
+    const title = await screen.findByRole("textbox", { name: "Title" });
+    const body = screen.getByRole("textbox", { name: "Page body" });
+    await userEvent.clear(title);
+    await userEvent.type(title, "My title");
+    await userEvent.type(body, " More.");
+    await userEvent.click(screen.getAllByRole("button", { name: "Save draft" })[0] as HTMLElement);
+    await waitFor(() => {
+      expect(patches).toBe(1);
+    });
+    await userEvent.clear(body);
+    await userEvent.type(body, "We make music.");
+    answer(problem(409, "pages.changed", { page: full({ title: "Their title", version: 2 }) }));
+
+    await userEvent.click(await screen.findByRole("radio", { name: "Keep mine" }));
+    await userEvent.click(screen.getByRole("button", { name: /Save with these choices/ }));
+
+    // Your body, typed back, is still yours when their body changes: asked, not taken.
+    const asked = await screen.findByRole("group", { name: "Page body" });
+    expect(within(asked).getByText("Their words.")).toBeInTheDocument();
+    expect(patches).toBe(2);
+    expect(body).toHaveValue("We make music.");
+  });
+
+  it("sends only your fields when a retry meets another save at once (CodeRabbit on #138)", async () => {
+    let patches = 0;
+    const sent = routed({
+      [`GET ${ONE}`]: { status: 200, body: full() },
+      [`PATCH ${ONE}`]: () => {
+        patches += 1;
+        // Someone put the page in the header; then someone else changed its body.
+        if (patches === 1) return problem(409, "pages.changed", { page: full({ in_header: true, version: 2 }) });
+        if (patches === 2) return problem(409, "pages.changed", { page: full({ in_header: true, body: "Their words.", version: 3 }) });
+        return { status: 200, body: full({ title: "My title", in_header: true, body: "Their words.", version: 4 }) };
+      },
+    });
+    renderApp({ path: `/admin/pages/${ID}`, modules: [pages], session: editor });
+
+    const title = await screen.findByRole("textbox", { name: "Title" });
+    await userEvent.clear(title);
+    await userEvent.type(title, "My title");
+    await userEvent.click(screen.getAllByRole("button", { name: "Save draft" })[0] as HTMLElement);
+
+    await waitFor(() => {
+      expect(patches).toBe(3);
+    });
+    const third = sent.filter((each) => each.method === "PATCH")[2] as Request;
+    // Their menu and their body stay theirs: only the title, at the newest version.
+    expect(await json(third)).toEqual({ version: 3, title: "My title" });
+  });
+
   it("keeps what's typed while the save waits through the conflict's choice (pages 0.1.1)", async () => {
     let answer: (value: Answer) => void = () => undefined;
     let patches = 0;

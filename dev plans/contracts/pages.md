@@ -108,4 +108,8 @@ Asked by VM Website (Dev 12, `C:\DEV\VM Website\dev plans\contracts\written-page
   - what was typed while the save waited survives the conflict's choice;
   - and a third blog closed then, found while porting: a publish or unpublish that lands while a field is asked about shows in the Publish panel, its fields' merge base unchanged.
   - From the review on #138 (CodeRabbit): a retry with nothing to ask carries the fields already known to be the person's. A field typed back to its saved value is still asked about when the retry meets another save. Blog's editor has the same gap, for blog's next version.
+  - CodeRabbit's second round on #138:
+    - the save after a conflict's choice carries the person's fields too, less those they gave the other person;
+    - a retry or that save reads the form it sends at once, not after React draws it, so a fast second 409 never takes a change of theirs for the person's.
+
 - **No migration, decision or new route.** `module.json` 0.1.1, the changelog and `MODULE.md`'s "Extension points".

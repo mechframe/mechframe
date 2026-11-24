@@ -190,6 +190,9 @@ function Editor({ saved: first, start }: { saved: Full | null; start: Form }) {
           const next = merged(formOf(onto), latest, theirs, new Set(), fields);
           setSaved(theirs);
           setForm(next);
+          // The fields read as `next` at once, before React draws it, so a retry
+          // answered first never takes their change for yours (CodeRabbit on #138).
+          formNow.current = next;
           return save(next, theirs, fields);
         }
         setConflict({ said, theirs, mine: latest, fields });
@@ -322,11 +325,14 @@ function Editor({ saved: first, start }: { saved: Full | null; start: Form }) {
           onResolve={(choices) => {
             const keep = new Set(Object.entries(choices).filter(([, choice]) => choice === "theirs").map(([field]) => field));
             const next = merged(formOf(saved ?? conflict.theirs), conflict.mine, conflict.theirs, keep, conflict.fields);
+            // Your fields stay yours for the save that follows, but those you gave them (CodeRabbit on #138).
+            const carried = conflict.fields.filter((field) => !keep.has(field));
             setSaved(conflict.theirs);
             setForm(next);
+            formNow.current = next;
             // A resolution may send nothing (every field kept as theirs): it's done all the same (CodeRabbit on #121).
             void act(async () => {
-              await save(next, conflict.theirs);
+              await save(next, conflict.theirs, carried);
               setConflict(null);
             }, "Saved.");
           }}
