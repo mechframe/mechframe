@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mechframe.local/schema/events/discography.release.deleted.v1.schema.json",
+  "additionalProperties": false,
+  "properties": {
+    "release_id": {
+      "format": "uuid",
+      "title": "Release Id",
+      "type": "string"
+    },
+    "track_ids": {
+      "items": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "title": "Track Ids",
+      "type": "array"
+    }
+  },
+  "required": [
+    "release_id",
+    "track_ids"
+  ],
+  "title": "discography.release.deleted (v1)",
+  "type": "object"
+}

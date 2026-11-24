@@ -1,0 +1,43 @@
+// discography's public reads as hooks (`dev plans/contracts/discography.md` §2):
+// the live releases a page at a time, one live release or one of its tracks (or
+// where it moved), and the artist's own links. discography's own Music, Release
+// and Track pages read through these, and so does a site's own page that
+// replaces them (`public.ts`, decision 0057).
+import { useInfiniteQuery } from "@tanstack/react-query";
+
+import { PUBLIC_RELEASES, api, useApiQuery, type Kind, type LiveRelease, type LiveTrack, type MusicMoved } from "./api";
+
+/** The live releases, newest first, 12 a page, of one kind when it's named: `fetchNextPage()` for older ones. */
+export function useReleases({ kind }: { kind?: Kind } = {}) {
+  const query = kind ? { kind } : {};
+  return useInfiniteQuery({
+    queryKey: ["get", PUBLIC_RELEASES, { params: { query } }, "pages"],
+    initialPageParam: null as string | null,
+    queryFn: async ({ pageParam }) => {
+      const { data } = await api.GET(PUBLIC_RELEASES, { params: { query: { ...query, ...(pageParam ? { cursor: pageParam } : {}) } } });
+      if (!data) throw new Error("The site answered without the releases.");
+      return data;
+    },
+    getNextPageParam: (last) => last.next_cursor,
+  });
+}
+
+/** The live release at `slug`, or where it is now (`isMoved`); any other is an ApiProblem, 404 `discography.release_not_found`. */
+export function useRelease(slug: string) {
+  return useApiQuery("get", "/api/discography/releases/{slug}", { params: { path: { slug } } });
+}
+
+/** A live track that plays, or where it is now; any other is 404 `discography.track_not_found`. */
+export function useTrack(release: string, track: string) {
+  return useApiQuery("get", "/api/discography/releases/{slug}/tracks/{track}", { params: { path: { slug: release, track } } });
+}
+
+/** The artist's own links: the Music page's "Listen everywhere". */
+export function useArtistLinks() {
+  return useApiQuery("get", "/api/discography/links");
+}
+
+/** Whether `found` is an address a live release or track left, to go on to `found.moved`. */
+export function isMoved(found: LiveRelease | LiveTrack | MusicMoved): found is MusicMoved {
+  return "moved" in found;
+}

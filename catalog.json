@@ -7,10 +7,10 @@
     {
       "id": "blog",
       "name": "Blog",
-      "version": "0.1.3",
+      "version": "0.1.4",
       "status": "experimental",
       "category": "content",
-      "summary": "Dated posts in Markdown, with categories, a cover from the media library, scheduling and related posts.",
+      "summary": "Dated posts in Markdown, with categories, scheduling, related posts and a cover from media or the AI.",
       "use_when": [
         "The site publishes news, stories, poems or write-ups, each with a date, an author and a category",
         "Posts are drafted and scheduled ahead, and a post's address may change while old links keep working",
@@ -24,7 +24,7 @@
       "requires": {
         "kernel": "^0.1",
         "modules": {
-          "media": "^0.1"
+          "media": "^0.1.4"
         }
       },
       "conflicts": []
@@ -77,6 +77,31 @@
       "conflicts": []
     },
     {
+      "id": "discography",
+      "name": "Discography",
+      "version": "0.1.0",
+      "status": "experimental",
+      "category": "media",
+      "summary": "Albums, EPs and singles with tracks, credits and streaming links; tracks play from an upload or a SoundCloud link.",
+      "use_when": [
+        "The site belongs to an artist, band, label or collective that releases music",
+        "Releases and tracks need their own pages, credits, streaming links or an on-site player",
+        "Music is uploaded as masters, or already on SoundCloud, and should play on the site"
+      ],
+      "avoid_when": [
+        "Music is only linked out and never played on the site: that's embeds",
+        "The audio is a beat or sample for sale: that's licensing"
+      ],
+      "requires": {
+        "kernel": "^0.1",
+        "modules": {
+          "media": "^0.1",
+          "embeds": "^0.1"
+        }
+      },
+      "conflicts": []
+    },
+    {
       "id": "embeds",
       "name": "Embeds",
       "version": "0.1.0",
@@ -102,7 +127,7 @@
     {
       "id": "media",
       "name": "Media library",
-      "version": "0.1.3",
+      "version": "0.1.4",
       "status": "experimental",
       "category": "media",
       "summary": "Images uploaded once with alt text, cleaned of metadata, and placed by any module.",

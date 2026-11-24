@@ -4,10 +4,14 @@ A module that places an image keeps its id, reads it back with `picture` to
 draw it, and records the place with `use`, in its own transaction, so the
 library shows where each image is and keeps it from being deleted while it's
 placed. `release` takes every image off one thing, such as a post deleted.
+`store` takes another module's own image, such as blog's generated cover, as
+an upload is taken, with its alt text, and `storage_on` says whether it can
+now (media 0.1.4, decision 0065).
 """
 
 from __future__ import annotations
 
+import unicodedata
 import uuid
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -17,7 +21,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from media import service
-from media.models import MAX_LABEL, MAX_LINK, MAX_OWNER, MediaImage, MediaUse
+from media.models import MAX_ALT, MAX_LABEL, MAX_LINK, MAX_OWNER, MediaImage, MediaUse
 
 
 @dataclass(frozen=True)
@@ -59,6 +63,40 @@ async def pictures(db: AsyncSession, ids: Iterable[uuid.UUID]) -> dict[uuid.UUID
         return {}
     rows = await db.scalars(select(MediaImage).where(MediaImage.id.in_(wanted)))
     return {row.id: _picture(row) for row in rows}
+
+
+#: What the alt text's column refuses besides control characters: NEL and the
+#: line and paragraph separators (`alt_one_line`).
+_BREAKS = frozenset({chr(0x85), chr(0x2028), chr(0x2029)})
+
+
+def _one_line(words: str) -> str:
+    """Alt text on one line, as the column keeps it: each control character or
+    line break a space, then each run of spaces one (CodeRabbit on #147)."""
+    spaced = "".join(
+        " " if unicodedata.category(each) == "Cc" or each in _BREAKS else each for each in words
+    )
+    return " ".join(spaced.split())
+
+
+def storage_on() -> bool:
+    """Whether images can be stored now: the public bucket is set. While it
+    isn't, `store` and an upload answer 503 `media.storage_off`."""
+    return service.storage_on()
+
+
+async def store(
+    db: AsyncSession, data: bytes, *, filename: str, alt: str, by: uuid.UUID | None
+) -> Picture:
+    """Another module's image, through an upload's checks and stored with
+    `alt`, kept on one line. The same bytes again answer the image already
+    kept, its alt as it was, not `alt`: read the answer's. 503
+    `media.storage_off` while storage is off, as an upload."""
+    image, made = await service.upload(db, data, filename=filename, by=by)
+    if made:
+        image.alt = _one_line(alt)[:MAX_ALT] or None
+        await db.flush()
+    return _picture(image)
 
 
 async def use(db: AsyncSession, image_id: uuid.UUID, *, owner: str, label: str, link: str) -> None:

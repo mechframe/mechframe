@@ -40,12 +40,13 @@ from typing import Any, Literal, cast
 
 import anthropic
 from anthropic import AsyncAnthropic, DefaultAsyncHttpxClient
+from fastapi import Request
 from pydantic import BaseModel, ConfigDict, SecretStr, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from kernel import crypto, markdown, server_copy, writing
 from kernel.errors import Problem
-from kernel.ratelimit import parse_rule
+from kernel.ratelimit import parse_rule, rate_limit
 from kernel.settings import settings
 
 #: The settings section that holds a saved key.
@@ -149,6 +150,13 @@ def install(*, api_key: SecretStr, model: str, rate_rule: str) -> None:
 def rate_rule() -> str:
     """AI_RATE_LIMIT, the budget every AI call shares."""
     return _installed.rate_rule
+
+
+async def budget(request: Request) -> None:
+    """A route's dependency: one call against AI_RATE_LIMIT, the budget a
+    person's AI tasks share, the kernel's and a module's alike (a generated
+    cover). Put it after the permission check and before the key is read."""
+    await rate_limit(_installed.rate_rule, key="account", scope="kernel.ai")(request)
 
 
 def host_model() -> str:
@@ -712,11 +720,13 @@ async def style_rules(writer: Writer, samples: list[str]) -> tuple[str, str]:
 
 
 __all__ = [
+    "BODY_READ",
     "SECTION",
     "KeySettings",
     "Readiness",
     "Source",
     "Writer",
+    "budget",
     "client",
     "key_in_use",
     "readiness",

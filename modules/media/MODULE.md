@@ -40,7 +40,7 @@ None of its own. Uploads need the kernel's public bucket: `STORAGE_PUBLIC_BUCKET
 
 ## Extension points
 
-- **Backend:** `media.public` gives `picture(db, id)` and `pictures(db, ids)` to draw an image, and `use(db, image_id, owner=, label=, link=)` and `release(db, owner=, keep=)` to record where one is placed. `owner` is `<module>.<type>:<id>`, in the caller's transaction.
+- **Backend:** `media.public` gives `picture(db, id)` and `pictures(db, ids)` to draw an image, and `use(db, image_id, owner=, label=, link=)` and `release(db, owner=, keep=)` to record where one is placed. `owner` is `<module>.<type>:<id>`, in the caller's transaction. `store(db, data, *, filename=, alt=, by=)` takes another module's own image, such as blog's generated cover, through an upload's checks, with its alt text on one line. The same bytes again answer the image already kept, with the alt it already has, not the one sent: read it from the answer. `storage_on()` says whether it can store now (0.1.4).
 - **Web:** `public.ts` gives `<ImagePicker title onPick onClose />`, which asks for alt text before placing an image that has none, and `<Picture image sizes />`.
 
 ## Known limits

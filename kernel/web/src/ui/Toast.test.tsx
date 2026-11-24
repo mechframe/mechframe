@@ -110,6 +110,28 @@ describe("toasts", () => {
     expect(screen.queryByText("Saved")).toBeNull();
   });
 
+  it("gives focus back to where the note's action began when it's closed", () => {
+    const opener = { current: null as HTMLButtonElement | null };
+    render(
+      <ToastProvider>
+        <button
+          type="button"
+          ref={(node) => {
+            opener.current = node;
+          }}
+        >
+          Draw a cover
+        </button>
+        <Sender note={{ text: "The cover is in place.", returnTo: opener }} />
+      </ToastProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    const close = screen.getByRole("button", { name: "Close: The cover is in place." });
+    close.focus();
+    fireEvent.click(close);
+    expect(screen.getByRole("button", { name: "Draw a cover" })).toHaveFocus();
+  });
+
   it("does nothing outside a provider", () => {
     const { result } = renderHook(() => useToast());
     expect(() => {

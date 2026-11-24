@@ -3,7 +3,7 @@ feature: The site frame holds its footer back until the page is in `<main>`, so 
 status: approved
 approved: 2026-11-24, as recommended ("Approve as recommended"): §8, 1, the CSS rule
 plan: `dev plans/2026-11-24-next-session-m4i-covers-build.md` §4, 2 (the owner, 2026-11-24: next, after covers)
-pr: — (read from GitHub just before the push)
+pr: #148
 ---
 
 # Contract: the footer's first-load shift

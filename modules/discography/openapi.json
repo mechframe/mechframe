@@ -1,0 +1,3590 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Discography",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/discography/releases": {
+      "get": {
+        "summary": "List Releases",
+        "description": "The live releases, newest first, 12 a page.",
+        "operationId": "list_releases_api_discography_releases_get",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "album",
+                    "ep",
+                    "single"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 120
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 12,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReleaseCards"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/discography/releases/{slug}": {
+      "get": {
+        "summary": "Read Release",
+        "description": "The live release at /music/<slug>, or `{moved}` for an address it left.",
+        "operationId": "read_release_api_discography_releases__slug__get",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/LiveRelease"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MusicMoved"
+                    }
+                  ],
+                  "title": "Response Read Release Api Discography Releases  Slug  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/discography/releases/{slug}/tracks/{track}": {
+      "get": {
+        "summary": "Read Track",
+        "description": "A live, playable track's page, or `{moved}` for an address it left.",
+        "operationId": "read_track_api_discography_releases__slug__tracks__track__get",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          },
+          {
+            "name": "track",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Track"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/LiveTrack"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MusicMoved"
+                    }
+                  ],
+                  "title": "Response Read Track Api Discography Releases  Slug  Tracks  Track  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/discography/links": {
+      "get": {
+        "summary": "List Artist Links",
+        "description": "The artist's own links: the Music page's \"Listen everywhere\".",
+        "operationId": "list_artist_links_api_discography_links_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArtistLinks"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/discography/admin/releases": {
+      "get": {
+        "summary": "List Admin Releases",
+        "description": "Every release, newest edit first, with what needs doing.",
+        "operationId": "list_admin_releases_api_discography_admin_releases_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminReleaseList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "New Release",
+        "description": "A draft; 409 `discography.slug_taken` for a slug another release has.",
+        "operationId": "new_release_api_discography_admin_releases_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewRelease"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FullRelease"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/discography/admin/releases/{release_id}": {
+      "get": {
+        "summary": "Read Admin Release",
+        "operationId": "read_admin_release_api_discography_admin_releases__release_id__get",
+        "parameters": [
+          {
+            "name": "release_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Release Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FullRelease"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Save Release",
+        "description": "Saves it, credits, links and the tracks' order with it; a live release\nchanges on the site at once. 409 `discography.changed` on a stale `version`.",
+        "operationId": "save_release_api_discography_admin_releases__release_id__patch",
+        "parameters": [
+          {
+            "name": "release_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Release Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReleaseChange"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FullRelease"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete Release",
+        "description": "Gone, with its tracks, credits, links and moves; their files after the commit.",
+        "operationId": "delete_release_api_discography_admin_releases__release_id__delete",
+        "parameters": [
+          {
+            "name": "release_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Release Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/discography/admin/releases/{release_id}/publish": {
+      "post": {
+        "summary": "Publish Release",
+        "description": "Live now, or on release day at `at`.",
+        "operationId": "publish_release_api_discography_admin_releases__release_id__publish_post",
+        "parameters": [
+          {
+            "name": "release_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Release Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/PublishRelease"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FullRelease"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/discography/admin/releases/{release_id}/unpublish": {
+      "post": {
+        "summary": "Unpublish Release",
+        "description": "Back to a draft: its pages answer 404.",
+        "operationId": "unpublish_release_api_discography_admin_releases__release_id__unpublish_post",
+        "parameters": [
+          {
+            "name": "release_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Release Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FullRelease"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/discography/admin/releases/{release_id}/tracks": {
+      "post": {
+        "summary": "New Track",
+        "description": "A track at the end of the release, with a SoundCloud link or no audio yet.",
+        "operationId": "new_track_api_discography_admin_releases__release_id__tracks_post",
+        "parameters": [
+          {
+            "name": "release_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Release Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewTrack"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FullTrack"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/discography/admin/releases/{release_id}/tracks/upload": {
+      "post": {
+        "summary": "Upload Track",
+        "description": "A track from an uploaded master, titled from its tags or its name, its\nstream made by a job. 413, 415 or 422 when the file can't be taken.",
+        "operationId": "upload_track_api_discography_admin_releases__release_id__tracks_upload_post",
+        "parameters": [
+          {
+            "name": "release_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Release Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_track_api_discography_admin_releases__release_id__tracks_upload_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FullTrack"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/discography/admin/tracks": {
+      "get": {
+        "summary": "List Tracks",
+        "description": "Every track on every release: the Tracks board.",
+        "operationId": "list_tracks_api_discography_admin_tracks_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "name": "show",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "cant_play",
+                "no_lyrics",
+                "no_credits"
+              ],
+              "type": "string",
+              "default": "all",
+              "title": "Show"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 10
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminTrackList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/discography/admin/tracks/{track_id}": {
+      "get": {
+        "summary": "Read Track Admin",
+        "operationId": "read_track_admin_api_discography_admin_tracks__track_id__get",
+        "parameters": [
+          {
+            "name": "track_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Track Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FullTrack"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Save Track",
+        "operationId": "save_track_api_discography_admin_tracks__track_id__patch",
+        "parameters": [
+          {
+            "name": "track_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Track Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TrackChange"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FullTrack"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete Track",
+        "operationId": "delete_track_api_discography_admin_tracks__track_id__delete",
+        "parameters": [
+          {
+            "name": "track_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Track Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/discography/admin/tracks/{track_id}/audio": {
+      "put": {
+        "summary": "Replace Audio",
+        "description": "A new master: the old stream plays until the new one is ready.",
+        "operationId": "replace_audio_api_discography_admin_tracks__track_id__audio_put",
+        "parameters": [
+          {
+            "name": "track_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Track Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_replace_audio_api_discography_admin_tracks__track_id__audio_put"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FullTrack"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Remove Audio",
+        "description": "The upload gone: the track plays from its link, if it has one.",
+        "operationId": "remove_audio_api_discography_admin_tracks__track_id__audio_delete",
+        "parameters": [
+          {
+            "name": "track_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Track Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FullTrack"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/discography/admin/tracks/{track_id}/audio/retry": {
+      "post": {
+        "summary": "Retry Audio",
+        "operationId": "retry_audio_api_discography_admin_tracks__track_id__audio_retry_post",
+        "parameters": [
+          {
+            "name": "track_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Track Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FullTrack"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/discography/admin/people": {
+      "get": {
+        "summary": "List People",
+        "description": "Everyone credited, with what they're credited for: the Credits board.",
+        "operationId": "list_people_api_discography_admin_people_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminPersonList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/discography/admin/people/{person_id}": {
+      "patch": {
+        "summary": "Save Person",
+        "operationId": "save_person_api_discography_admin_people__person_id__patch",
+        "parameters": [
+          {
+            "name": "person_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Person Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonChange"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminPersonList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/discography/admin/roles": {
+      "get": {
+        "summary": "List Roles",
+        "operationId": "list_roles_api_discography_admin_roles_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminRoleList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Put Roles",
+        "description": "The whole list, in order; 409 `discography.role_in_use` for one a credit names.",
+        "operationId": "put_roles_api_discography_admin_roles_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RolesPut"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminRoleList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/discography/admin/links": {
+      "get": {
+        "summary": "List Admin Links",
+        "operationId": "list_admin_links_api_discography_admin_links_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminArtistLinks"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Put Links",
+        "description": "The artist's own links, in order: one a platform.",
+        "operationId": "put_links_api_discography_admin_links_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LinksPut"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminArtistLinks"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AdminArtistLinks": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AdminLink"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "AdminArtistLinks"
+      },
+      "AdminCredit": {
+        "properties": {
+          "role_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Role Id"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "person_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Person Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "profile": {
+            "type": "string",
+            "enum": [
+              "unlinked",
+              "collective",
+              "member",
+              "not_member"
+            ],
+            "title": "Profile"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "role_id",
+          "role",
+          "person_id",
+          "name",
+          "profile"
+        ],
+        "title": "AdminCredit"
+      },
+      "AdminLink": {
+        "properties": {
+          "platform": {
+            "type": "string",
+            "enum": [
+              "spotify",
+              "apple-music",
+              "youtube",
+              "youtube-music",
+              "amazon-music",
+              "soundcloud",
+              "bandcamp",
+              "tidal",
+              "deezer"
+            ],
+            "title": "Platform"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "platform",
+          "label",
+          "url"
+        ],
+        "title": "AdminLink"
+      },
+      "AdminPerson": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "profile": {
+            "type": "string",
+            "enum": [
+              "unlinked",
+              "collective",
+              "member",
+              "not_member"
+            ],
+            "title": "Profile"
+          },
+          "roster_profile_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Roster Profile Id"
+          },
+          "credited_for": {
+            "type": "string",
+            "title": "Credited For"
+          },
+          "credits": {
+            "type": "integer",
+            "title": "Credits"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "version",
+          "name",
+          "profile",
+          "roster_profile_id",
+          "credited_for",
+          "credits"
+        ],
+        "title": "AdminPerson"
+      },
+      "AdminPersonList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AdminPerson"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "unlinked": {
+            "type": "integer",
+            "title": "Unlinked"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items",
+          "unlinked"
+        ],
+        "title": "AdminPersonList"
+      },
+      "AdminRelease": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "album",
+              "ep",
+              "single"
+            ],
+            "title": "Kind"
+          },
+          "year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year"
+          },
+          "artist_line": {
+            "type": "string",
+            "title": "Artist Line"
+          },
+          "cover": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MusicCover"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "scheduled",
+              "published"
+            ],
+            "title": "Status"
+          },
+          "publish_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publish At"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "track_count": {
+            "type": "integer",
+            "title": "Track Count"
+          },
+          "unplayable": {
+            "type": "integer",
+            "title": "Unplayable"
+          },
+          "tracklist_to_come": {
+            "type": "boolean",
+            "title": "Tracklist To Come"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "version",
+          "title",
+          "slug",
+          "kind",
+          "year",
+          "artist_line",
+          "cover",
+          "status",
+          "publish_at",
+          "published_at",
+          "track_count",
+          "unplayable",
+          "tracklist_to_come",
+          "updated_at"
+        ],
+        "title": "AdminRelease",
+        "description": "A release in the admin's list, with what needs doing."
+      },
+      "AdminReleaseList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AdminRelease"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "AdminReleaseList"
+      },
+      "AdminRole": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "credits": {
+            "type": "integer",
+            "title": "Credits"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "credits"
+        ],
+        "title": "AdminRole"
+      },
+      "AdminRoleList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AdminRole"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "AdminRoleList"
+      },
+      "AdminTrack": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "release_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Release Id"
+          },
+          "release_title": {
+            "type": "string",
+            "title": "Release Title"
+          },
+          "number": {
+            "type": "integer",
+            "title": "Number"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "explicit": {
+            "type": "boolean",
+            "title": "Explicit"
+          },
+          "audio": {
+            "$ref": "#/components/schemas/TrackAudio"
+          },
+          "has_lyrics": {
+            "type": "boolean",
+            "title": "Has Lyrics"
+          },
+          "credit_count": {
+            "type": "integer",
+            "title": "Credit Count"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "version",
+          "release_id",
+          "release_title",
+          "number",
+          "title",
+          "slug",
+          "explicit",
+          "audio",
+          "has_lyrics",
+          "credit_count"
+        ],
+        "title": "AdminTrack"
+      },
+      "AdminTrackList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AdminTrack"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "releases": {
+            "type": "integer",
+            "title": "Releases"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items",
+          "next_cursor",
+          "total",
+          "releases"
+        ],
+        "title": "AdminTrackList"
+      },
+      "ArtistLinks": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/MusicLink"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "ArtistLinks",
+        "description": "The artist's own links: \"Listen everywhere\"."
+      },
+      "Body_replace_audio_api_discography_admin_tracks__track_id__audio_put": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_replace_audio_api_discography_admin_tracks__track_id__audio_put"
+      },
+      "Body_upload_track_api_discography_admin_releases__release_id__tracks_upload_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_track_api_discography_admin_releases__release_id__tracks_upload_post"
+      },
+      "CreditIn": {
+        "properties": {
+          "role_id": {
+            "type": "string",
+            "maxLength": 36,
+            "title": "Role Id"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "role_id",
+          "name"
+        ],
+        "title": "CreditIn"
+      },
+      "FullRelease": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "album",
+              "ep",
+              "single"
+            ],
+            "title": "Kind"
+          },
+          "year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year"
+          },
+          "artist_line": {
+            "type": "string",
+            "title": "Artist Line"
+          },
+          "cover": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MusicCover"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "scheduled",
+              "published"
+            ],
+            "title": "Status"
+          },
+          "publish_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publish At"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "track_count": {
+            "type": "integer",
+            "title": "Track Count"
+          },
+          "unplayable": {
+            "type": "integer",
+            "title": "Unplayable"
+          },
+          "tracklist_to_come": {
+            "type": "boolean",
+            "title": "Tracklist To Come"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "credit_line": {
+            "type": "string",
+            "title": "Credit Line"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "back_cover": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MusicCover"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tracks": {
+            "items": {
+              "$ref": "#/components/schemas/AdminTrack"
+            },
+            "type": "array",
+            "title": "Tracks"
+          },
+          "credits": {
+            "items": {
+              "$ref": "#/components/schemas/AdminCredit"
+            },
+            "type": "array",
+            "title": "Credits"
+          },
+          "links": {
+            "items": {
+              "$ref": "#/components/schemas/AdminLink"
+            },
+            "type": "array",
+            "title": "Links"
+          },
+          "moves": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Moves"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "version",
+          "title",
+          "slug",
+          "kind",
+          "year",
+          "artist_line",
+          "cover",
+          "status",
+          "publish_at",
+          "published_at",
+          "track_count",
+          "unplayable",
+          "tracklist_to_come",
+          "updated_at",
+          "credit_line",
+          "summary",
+          "back_cover",
+          "tracks",
+          "credits",
+          "links",
+          "moves",
+          "path"
+        ],
+        "title": "FullRelease"
+      },
+      "FullTrack": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "release_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Release Id"
+          },
+          "release_title": {
+            "type": "string",
+            "title": "Release Title"
+          },
+          "number": {
+            "type": "integer",
+            "title": "Number"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "explicit": {
+            "type": "boolean",
+            "title": "Explicit"
+          },
+          "audio": {
+            "$ref": "#/components/schemas/TrackAudio"
+          },
+          "has_lyrics": {
+            "type": "boolean",
+            "title": "Has Lyrics"
+          },
+          "credit_count": {
+            "type": "integer",
+            "title": "Credit Count"
+          },
+          "lyrics": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lyrics"
+          },
+          "credits": {
+            "items": {
+              "$ref": "#/components/schemas/AdminCredit"
+            },
+            "type": "array",
+            "title": "Credits"
+          },
+          "peaks": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Peaks"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "version",
+          "release_id",
+          "release_title",
+          "number",
+          "title",
+          "slug",
+          "explicit",
+          "audio",
+          "has_lyrics",
+          "credit_count",
+          "lyrics",
+          "credits",
+          "peaks",
+          "path"
+        ],
+        "title": "FullTrack"
+      },
+      "LinksPut": {
+        "properties": {
+          "links": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 12,
+            "title": "Links"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "links"
+        ],
+        "title": "LinksPut"
+      },
+      "LiveRelease": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "album",
+              "ep",
+              "single"
+            ],
+            "title": "Kind"
+          },
+          "year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year"
+          },
+          "artist_line": {
+            "type": "string",
+            "title": "Artist Line"
+          },
+          "credit_line": {
+            "type": "string",
+            "title": "Credit Line"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "cover": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MusicCover"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "explicit": {
+            "type": "boolean",
+            "title": "Explicit"
+          },
+          "track_count": {
+            "type": "integer",
+            "title": "Track Count"
+          },
+          "tracklist_to_come": {
+            "type": "boolean",
+            "title": "Tracklist To Come"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "published_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Published At"
+          },
+          "back_cover": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MusicCover"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tracks": {
+            "items": {
+              "$ref": "#/components/schemas/TrackLine"
+            },
+            "type": "array",
+            "title": "Tracks"
+          },
+          "credits": {
+            "items": {
+              "$ref": "#/components/schemas/MusicCredit"
+            },
+            "type": "array",
+            "title": "Credits"
+          },
+          "links": {
+            "items": {
+              "$ref": "#/components/schemas/MusicLink"
+            },
+            "type": "array",
+            "title": "Links"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title",
+          "slug",
+          "kind",
+          "year",
+          "artist_line",
+          "credit_line",
+          "summary",
+          "cover",
+          "explicit",
+          "track_count",
+          "tracklist_to_come",
+          "path",
+          "published_at",
+          "back_cover",
+          "tracks",
+          "credits",
+          "links",
+          "updated_at"
+        ],
+        "title": "LiveRelease",
+        "description": "A live release as its page draws it."
+      },
+      "LiveTrack": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "number": {
+            "type": "integer",
+            "title": "Number"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "explicit": {
+            "type": "boolean",
+            "title": "Explicit"
+          },
+          "plays_from": {
+            "type": "string",
+            "enum": [
+              "upload",
+              "soundcloud"
+            ],
+            "title": "Plays From"
+          },
+          "stream_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stream Url"
+          },
+          "soundcloud_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Soundcloud Url"
+          },
+          "soundcloud_kind": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "track",
+                  "set"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Soundcloud Kind"
+          },
+          "has_lyrics": {
+            "type": "boolean",
+            "title": "Has Lyrics"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "release": {
+            "$ref": "#/components/schemas/ReleaseOfTrack"
+          },
+          "artist_line": {
+            "type": "string",
+            "title": "Artist Line"
+          },
+          "cover": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MusicCover"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "peaks": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Peaks"
+          },
+          "lyrics": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lyrics"
+          },
+          "credits": {
+            "items": {
+              "$ref": "#/components/schemas/MusicCredit"
+            },
+            "type": "array",
+            "title": "Credits"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title",
+          "slug",
+          "number",
+          "duration_ms",
+          "explicit",
+          "plays_from",
+          "stream_url",
+          "soundcloud_url",
+          "soundcloud_kind",
+          "has_lyrics",
+          "path",
+          "release",
+          "artist_line",
+          "cover",
+          "peaks",
+          "lyrics",
+          "credits"
+        ],
+        "title": "LiveTrack",
+        "description": "A track as its own page draws it."
+      },
+      "MusicCover": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "srcset": {
+            "type": "string",
+            "title": "Srcset"
+          },
+          "width": {
+            "type": "integer",
+            "title": "Width"
+          },
+          "height": {
+            "type": "integer",
+            "title": "Height"
+          },
+          "alt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alt"
+          },
+          "decorative": {
+            "type": "boolean",
+            "title": "Decorative"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "url",
+          "srcset",
+          "width",
+          "height",
+          "alt",
+          "decorative"
+        ],
+        "title": "MusicCover",
+        "description": "A cover as a page draws it: the media library's image."
+      },
+      "MusicCredit": {
+        "properties": {
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "role",
+          "name"
+        ],
+        "title": "MusicCredit"
+      },
+      "MusicLink": {
+        "properties": {
+          "platform": {
+            "type": "string",
+            "enum": [
+              "spotify",
+              "apple-music",
+              "youtube",
+              "youtube-music",
+              "amazon-music",
+              "soundcloud",
+              "bandcamp",
+              "tidal",
+              "deezer"
+            ],
+            "title": "Platform"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "platform",
+          "label",
+          "url"
+        ],
+        "title": "MusicLink"
+      },
+      "MusicMoved": {
+        "properties": {
+          "moved": {
+            "type": "string",
+            "title": "Moved"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "moved"
+        ],
+        "title": "MusicMoved",
+        "description": "An address a live release or track left: where it is now."
+      },
+      "NewRelease": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Title"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "album",
+              "ep",
+              "single"
+            ],
+            "title": "Kind",
+            "default": "album"
+          },
+          "slug": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80,
+                "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slug"
+          },
+          "year": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 2100.0,
+                "minimum": 1900.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year"
+          },
+          "artist_line": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Artist Line",
+            "default": ""
+          },
+          "credit_line": {
+            "type": "string",
+            "maxLength": 300,
+            "title": "Credit Line",
+            "default": ""
+          },
+          "summary": {
+            "type": "string",
+            "maxLength": 300,
+            "title": "Summary",
+            "default": ""
+          },
+          "cover_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 36
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Id"
+          },
+          "back_cover_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 36
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Back Cover Id"
+          },
+          "tracklist_to_come": {
+            "type": "boolean",
+            "title": "Tracklist To Come",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title"
+        ],
+        "title": "NewRelease"
+      },
+      "NewTrack": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "soundcloud_url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Soundcloud Url"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title"
+        ],
+        "title": "NewTrack"
+      },
+      "PersonChange": {
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Version"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "profile": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "unlinked",
+                  "collective",
+                  "not_member"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "version"
+        ],
+        "title": "PersonChange"
+      },
+      "Problem": {
+        "title": "Problem",
+        "description": "RFC 9457 problem details (SPEC 7): `type` is `urn:mechframe:problem:<code>`, `code` is stable, and field errors are in `errors` by dotted path. Some problems carry more members, such as `retry_after`.",
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "errors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "required": [
+          "type",
+          "title",
+          "status",
+          "detail",
+          "code"
+        ],
+        "additionalProperties": true
+      },
+      "PublishRelease": {
+        "properties": {
+          "at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 40
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "PublishRelease",
+        "description": "Live now, or at `at`, a time with its zone still to come."
+      },
+      "ReleaseCard": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "album",
+              "ep",
+              "single"
+            ],
+            "title": "Kind"
+          },
+          "year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year"
+          },
+          "artist_line": {
+            "type": "string",
+            "title": "Artist Line"
+          },
+          "credit_line": {
+            "type": "string",
+            "title": "Credit Line"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "cover": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MusicCover"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "explicit": {
+            "type": "boolean",
+            "title": "Explicit"
+          },
+          "track_count": {
+            "type": "integer",
+            "title": "Track Count"
+          },
+          "tracklist_to_come": {
+            "type": "boolean",
+            "title": "Tracklist To Come"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "published_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Published At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title",
+          "slug",
+          "kind",
+          "year",
+          "artist_line",
+          "credit_line",
+          "summary",
+          "cover",
+          "explicit",
+          "track_count",
+          "tracklist_to_come",
+          "path",
+          "published_at"
+        ],
+        "title": "ReleaseCard",
+        "description": "A live release as a list shows it."
+      },
+      "ReleaseCards": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ReleaseCard"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "ReleaseCards"
+      },
+      "ReleaseChange": {
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Version"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "album",
+                  "ep",
+                  "single"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "slug": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80,
+                "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slug"
+          },
+          "year": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 2100.0,
+                "minimum": 1900.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year"
+          },
+          "artist_line": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artist Line"
+          },
+          "credit_line": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credit Line"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "cover_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 36
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Id"
+          },
+          "back_cover_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 36
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Back Cover Id"
+          },
+          "tracklist_to_come": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tracklist To Come"
+          },
+          "credits": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/CreditIn"
+                },
+                "type": "array",
+                "maxItems": 60
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credits"
+          },
+          "links": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "maxItems": 12
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Links"
+          },
+          "track_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "maxItems": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Track Ids"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "version"
+        ],
+        "title": "ReleaseChange",
+        "description": "What a save changes: only the fields it sends, with the `version` it read.\n`year`, `cover_id` and `back_cover_id` sent as null clear them. `credits`,\n`links` and `track_ids` replace the whole list."
+      },
+      "ReleaseOfTrack": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "album",
+              "ep",
+              "single"
+            ],
+            "title": "Kind"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title",
+          "slug",
+          "kind",
+          "path"
+        ],
+        "title": "ReleaseOfTrack"
+      },
+      "RoleIn": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 36
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Name"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "RoleIn"
+      },
+      "RolesPut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RoleIn"
+            },
+            "type": "array",
+            "maxItems": 40,
+            "minItems": 1,
+            "title": "Items"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "RolesPut",
+        "description": "The whole list, in order: a role left out goes, unless a credit names it."
+      },
+      "TrackAudio": {
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "none",
+              "processing",
+              "ready",
+              "failed"
+            ],
+            "title": "State"
+          },
+          "plays_from": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "upload",
+                  "soundcloud"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plays From"
+          },
+          "percent": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percent"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "error_words": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Words"
+          },
+          "master_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Master Name"
+          },
+          "master_bytes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Master Bytes"
+          },
+          "soundcloud_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Soundcloud Url"
+          },
+          "soundcloud_kind": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "track",
+                  "set"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Soundcloud Kind"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "stream_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stream Url"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "state",
+          "plays_from",
+          "percent",
+          "error",
+          "error_words",
+          "master_name",
+          "master_bytes",
+          "soundcloud_url",
+          "soundcloud_kind",
+          "duration_ms",
+          "stream_url"
+        ],
+        "title": "TrackAudio",
+        "description": "Where a track's sound is, and what it can do now."
+      },
+      "TrackChange": {
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Version"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "slug": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80,
+                "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slug"
+          },
+          "explicit": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explicit"
+          },
+          "lyrics": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lyrics"
+          },
+          "soundcloud_url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Soundcloud Url"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 21600000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "credits": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/CreditIn"
+                },
+                "type": "array",
+                "maxItems": 60
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credits"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "version"
+        ],
+        "title": "TrackChange",
+        "description": "What a save changes, with the `version` it read. `soundcloud_url`,\n`lyrics` and `duration_ms` sent as null clear them; `duration_ms` is for a\ntrack that plays from its link alone."
+      },
+      "TrackLine": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "number": {
+            "type": "integer",
+            "title": "Number"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "explicit": {
+            "type": "boolean",
+            "title": "Explicit"
+          },
+          "plays_from": {
+            "type": "string",
+            "enum": [
+              "upload",
+              "soundcloud"
+            ],
+            "title": "Plays From"
+          },
+          "stream_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stream Url"
+          },
+          "soundcloud_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Soundcloud Url"
+          },
+          "soundcloud_kind": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "track",
+                  "set"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Soundcloud Kind"
+          },
+          "has_lyrics": {
+            "type": "boolean",
+            "title": "Has Lyrics"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title",
+          "slug",
+          "number",
+          "duration_ms",
+          "explicit",
+          "plays_from",
+          "stream_url",
+          "soundcloud_url",
+          "soundcloud_kind",
+          "has_lyrics",
+          "path"
+        ],
+        "title": "TrackLine",
+        "description": "A track as a release's tracklist shows it: only tracks that play."
+      }
+    }
+  }
+}

@@ -13,6 +13,7 @@ from kernel.security import (
     SecurityHeaders,
     WwwRedirect,
     origin_of,
+    public_origin,
 )
 
 SITE = "https://mechframe.test"
@@ -182,3 +183,16 @@ def test_origin_of() -> None:
     assert origin_of("HTTPS://Mechframe.Test:443/path") == "https://mechframe.test"
     assert origin_of("http://localhost:5173") == "http://localhost:5173"
     assert origin_of("http://[::1]:8000") == "http://[::1]:8000"
+
+
+def test_the_public_buckets_origin_for_media_src() -> None:
+    """A stream file plays from STORAGE_PUBLIC_URL's origin (decision 0070):
+    https alone, with no path, user or port it doesn't name."""
+    assert public_origin("https://Files.Site.Test/bucket/") == "https://files.site.test"
+    assert public_origin("https://files.site.test:8443") == "https://files.site.test:8443"
+    assert public_origin("") is None
+    assert public_origin("http://files.site.test") is None
+    assert public_origin("https://user@files.site.test") is None
+    policy = ContentSecurityPolicy()
+    policy.allow("media-src", "https://files.site.test")
+    assert "media-src 'self' https://files.site.test;" in policy.render()

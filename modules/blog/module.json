@@ -1,10 +1,10 @@
 {
   "id": "blog",
   "name": "Blog",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "status": "experimental",
   "category": "content",
-  "summary": "Dated posts in Markdown, with categories, a cover from the media library, scheduling and related posts.",
+  "summary": "Dated posts in Markdown, with categories, scheduling, related posts and a cover from media or the AI.",
   "use_when": [
     "The site publishes news, stories, poems or write-ups, each with a date, an author and a category",
     "Posts are drafted and scheduled ahead, and a post's address may change while old links keep working",
@@ -18,7 +18,7 @@
   "requires": {
     "kernel": "^0.1",
     "modules": {
-      "media": "^0.1"
+      "media": "^0.1.4"
     }
   },
   "conflicts": [],
@@ -100,7 +100,7 @@
   "source": {
     "from": "VybeSite",
     "commit": "f659d7c",
-    "path": "backend/app/models/blog.py, backend/app/services/blog_service.py, backend/app/services/related_posts.py, backend/app/routers/blog_admin.py, backend/app/routers/blog_public.py",
+    "path": "backend/app/models/blog.py, backend/app/services/blog_service.py, backend/app/services/related_posts.py, backend/app/routers/blog_admin.py, backend/app/routers/blog_public.py, backend/app/services/anthropic_service.py (the cover task, at 8be91df)",
     "license": "proprietary"
   }
 }

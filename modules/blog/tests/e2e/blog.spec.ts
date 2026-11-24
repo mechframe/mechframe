@@ -3,7 +3,9 @@
 // publishes it; a visitor finds it on the blog and reads it, the same headings
 // and body the server's copy says; the board, the editor, the blog and the post
 // have nothing serious for axe, in both themes. The e2e server runs with storage
-// off (harness.e2e), so the post has no cover.
+// off (harness.e2e), so the post has no cover. An editor draws a cover with the
+// AI (decision 0065) against the server's fake Anthropic; with storage off, the
+// cover it keeps is stood in at the browser, and the contract suite keeps a real one.
 import { randomBytes } from "node:crypto";
 
 import { expect, test, type Page } from "@playwright/test";
@@ -88,3 +90,61 @@ for (const [name, canvas] of Object.entries(THEMES)) {
     await drawn.close();
   });
 }
+
+const KEY = `sk-ant-e2e-${"e".repeat(40)}`;
+/** A 1 × 1 PNG: the kept cover's file, stood in while the e2e server's storage is off. */
+const PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYGD4DwABBAEAwS2OUAAAAABJRU5ErkJggg==";
+
+/** The site's one key, saved in Settings → AI unless one is already (ai.spec.ts saves the same). */
+async function keyed(page: Page): Promise<void> {
+  await page.goto("/admin/settings/ai");
+  const field = page.getByLabel(/^(Save a key|Replace the saved key)$/);
+  await expect(field).toBeVisible();
+  if ((await page.getByLabel("Replace the saved key").count()) > 0) return;
+  await field.fill(KEY);
+  await page.getByRole("button", { name: "Save the key" }).click();
+  await expect(page.getByText("Key saved.")).toBeVisible();
+}
+
+test("an editor draws a cover with the AI, and the post's Cover field shows it", async ({ page }) => {
+  const admin = await makeUser(page.request, "covers", { totp: true, roles: ["member", "admin"] });
+  await signInTo(page, admin, "/admin/blog");
+  await keyed(page);
+  await page.route("**/api/blog/admin/covers", async (route) => {
+    if (route.request().method() === "GET") {
+      await route.fulfill({ json: { storage: true } });
+      return;
+    }
+    const sent = route.request().postDataJSON() as { svg: string; alt: string };
+    expect(sent.svg).toContain('id="cover-wordmark"');
+    const cover = { id: "61111111-1111-4111-8111-111111111111", url: PNG, srcset: `${PNG} 2400w`, width: 2400, height: 1260, alt: sent.alt, decorative: false };
+    await route.fulfill({ status: 201, json: { cover } });
+  });
+
+  await page.goto("/admin/blog/new");
+  await page.getByRole("textbox", { name: "Title", exact: true }).fill(`Ten years ${randomBytes(4).toString("hex")}`);
+  const opener = page.getByRole("button", { name: "Draw a cover" });
+  await opener.click();
+  const dialog = page.getByRole("dialog", { name: "Draw a cover" });
+  await expect(dialog.getByRole("heading", { name: "Draw a cover" })).toBeFocused();
+  for (const [name, canvas] of Object.entries(THEMES)) {
+    await theme(page, name, canvas);
+    expect(await axe(page), `Draw a cover's ask in ${name}`).toEqual([]);
+  }
+
+  await dialog.getByRole("button", { name: "Draw", exact: true }).click();
+  const drawn = dialog.getByRole("img", { name: "Words for the test." });
+  await expect(drawn).toBeVisible();
+  expect(await drawn.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
+  for (const [name, canvas] of Object.entries(THEMES)) {
+    await theme(page, name, canvas);
+    expect(await axe(page), `the cover drawn in ${name}`).toEqual([]);
+  }
+
+  await dialog.getByRole("textbox", { name: "Alt text" }).fill("A ring of fire on a dark ground");
+  await dialog.getByRole("button", { name: "Use this cover" }).click();
+  await expect(page.getByText("The cover is in place. Save the post to keep it.")).toBeVisible();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByRole("img", { name: "A ring of fire on a dark ground" })).toBeVisible();
+  await expect(opener).toBeFocused();
+});

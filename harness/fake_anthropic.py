@@ -5,8 +5,9 @@ kernel's unit tests, the contract suite and the end-to-end server all send
 It records every request (`asked`) and answers the queued answers in order
 (`queue`). With none queued, a message answers "Words for the test.", or,
 when the request asks for structured output, an object its JSON Schema
-describes: each string "Words for the test.", each list of strings one of
-them. A models list answers what a real key sees (`MODELS`, newest first),
+describes: each string "Words for the test.", but a string named `svg`, which
+is `COVER`, a small drawing the kernel's SVG cleaner keeps (blog's generated
+covers, decision 0065); each list of strings one of them. A models list answers what a real key sees (`MODELS`, newest first),
 two to a page, honouring `limit` and `after_id`: a key's check (`limit=1`)
 gets one, and the AI's model list (decision 0064) reads every page.
 """
@@ -21,6 +22,16 @@ import httpx2
 
 MODEL = "claude-opus-5-5"
 WORDS = "Words for the test."
+#: A structured answer's `svg`: a small drawing at the blog card's shape that
+#: `kernel.svg.clean` keeps, so a cover is drawn end to end in every suite.
+COVER = (
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">'
+    "<title>A test cover</title>"
+    '<rect width="1200" height="630" fill="#101828"/>'
+    '<circle cx="840" cy="315" r="160" fill="#c93a0c"/>'
+    '<text x="80" y="420" font-size="96" font-weight="700" fill="#f9fafb">Test</text>'
+    "</svg>"
+)
 
 #: The models list, newest first, as Anthropic answers it: an older Opus and a
 #: kind the dropdown doesn't offer among them.
@@ -49,14 +60,17 @@ def message(words: str, *, stop_reason: str = "end_turn") -> dict[str, Any]:
     }
 
 
-def _filled(schema: dict[str, Any]) -> Any:
-    """The smallest answer a JSON Schema allows, with words in it."""
+def _filled(schema: dict[str, Any], name: str = "") -> Any:
+    """The smallest answer a JSON Schema allows, with words in it, and a
+    drawing in a string named `svg`."""
     kind = schema.get("type")
     if kind == "object":
-        return {name: _filled(part) for name, part in (schema.get("properties") or {}).items()}
+        return {
+            each: _filled(part, each) for each, part in (schema.get("properties") or {}).items()
+        }
     if kind == "array":
         return [_filled(schema.get("items") or {"type": "string"})]
-    return WORDS
+    return COVER if name == "svg" else WORDS
 
 
 def _key_of(request: httpx2.Request) -> str:
@@ -161,4 +175,4 @@ class FakeAnthropic:
         return httpx2.MockTransport(self.handle)
 
 
-__all__ = ["MODEL", "MODELS", "WORDS", "Asked", "FakeAnthropic", "message"]
+__all__ = ["COVER", "MODEL", "MODELS", "WORDS", "Asked", "FakeAnthropic", "message"]

@@ -312,8 +312,11 @@ async def live_categories(db: AsyncSession) -> list[dict[str, Any]]:
 
 
 def _cover(picture: media.Picture | None) -> dict[str, Any] | None:
-    if picture is None:
-        return None
+    return None if picture is None else cover_of(picture)
+
+
+def cover_of(picture: media.Picture) -> dict[str, Any]:
+    """An image as a post's Cover field holds it: a generated cover just kept."""
     return {
         "id": str(picture.id),
         "url": picture.url,

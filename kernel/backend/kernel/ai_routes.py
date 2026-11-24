@@ -44,9 +44,8 @@ MODELS_RATE = "60/1h"
 NOT_OFFERED = "Anthropic doesn't offer that model to this key now. Choose one from the list."
 
 
-async def budget(request: Request) -> None:
-    """One budget a person for every AI task, AI_RATE_LIMIT."""
-    await rate_limit(ai.rate_rule(), key="account", scope="kernel.ai")(request)
+#: One budget a person for every AI task, AI_RATE_LIMIT; a module's own task uses it too.
+budget = ai.budget
 
 
 def _invalid(name: str, message: str) -> Problem:

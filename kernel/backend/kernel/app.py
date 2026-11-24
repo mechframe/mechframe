@@ -136,7 +136,13 @@ from kernel.mail_adapters import mailer_from_config
 from kernel.modules import InstalledModule, ModuleRegistry, require_module
 from kernel.ratelimit import RateLimiter
 from kernel.routes import router as kernel_router
-from kernel.security import ContentSecurityPolicy, SameOriginWrites, SecurityHeaders, WwwRedirect
+from kernel.security import (
+    ContentSecurityPolicy,
+    SameOriginWrites,
+    SecurityHeaders,
+    WwwRedirect,
+    public_origin,
+)
 from kernel.settings import settings
 from kernel.version import __version__
 from kernel.worker import Worker
@@ -429,6 +435,11 @@ def create_app(
         # The category is the web app's to hold (kernel.consent): the policy doesn't change.
         for directive, source, _category in consent.entries(module):
             policy.allow(directive, source, module=module.id)
+    # The public bucket's files play in <audio> and <video>, such as a track's
+    # stream file (decision 0070); its photos are img-src's already.
+    public_files = public_origin(config.storage_public_url)
+    if public_files is not None:
+        policy.allow("media-src", public_files)
 
     owns_database = database is None
     db = database or built.database()

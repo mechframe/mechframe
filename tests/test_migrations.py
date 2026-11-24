@@ -230,6 +230,28 @@ _SEED = [
     "(gen_random_uuid(), '00000000-0000-0000-0000-00000000000b', "
     "'00000000-0000-0000-0000-00000000000a', 'rae@example.com', now())",
     "INSERT INTO campaigns_webhook_seen (id, seen_at) VALUES ('resend:msg_1', now())",
+    "INSERT INTO discography_release (id, version, kind, title, slug, year, artist_line, "
+    "cover_id, created_at, updated_at, status, published_at) VALUES "
+    "('00000000-0000-0000-0000-00000000000c', 1, 'album', 'Catalyst', 'catalyst', 2026, "
+    "'petro and J Tone', '00000000-0000-0000-0000-000000000006', now(), now(), 'published', now())",
+    "INSERT INTO discography_track (id, version, release_id, position, title, slug, "
+    "soundcloud_url, soundcloud_kind, duration_ms, peaks, audio_state, created_at, updated_at) "
+    "VALUES ('00000000-0000-0000-0000-00000000000d', 1, '00000000-0000-0000-0000-00000000000c', "
+    "0, 'Catalyst (full album)', 'catalyst-full-album', "
+    "'https://soundcloud.com/petrodestroys/sets/catalyst', 'set', 2400000, '[0, 255]', 'none', "
+    "now(), now())",
+    "INSERT INTO discography_person (id, version, name, profile, created_at, updated_at) VALUES "
+    "('00000000-0000-0000-0000-00000000000e', 1, 'Rob Beaton', 'not_member', now(), now())",
+    "INSERT INTO discography_credit (id, person_id, role_id, release_id, track_id, position) "
+    "SELECT gen_random_uuid(), '00000000-0000-0000-0000-00000000000e', id, "
+    "'00000000-0000-0000-0000-00000000000c', NULL, 0 FROM discography_role "
+    "WHERE name = 'Mastered by'",
+    "INSERT INTO discography_link (id, release_id, platform, url, position) VALUES "
+    "(gen_random_uuid(), '00000000-0000-0000-0000-00000000000c', 'soundcloud', "
+    "'https://soundcloud.com/petrodestroys/sets/catalyst', 0), "
+    "(gen_random_uuid(), NULL, 'spotify', 'https://open.spotify.com/artist/1', 0)",
+    "INSERT INTO discography_move (old_path, release_id, track_id, created_at) VALUES "
+    "('catalyst-ep', '00000000-0000-0000-0000-00000000000c', NULL, now())",
 ]
 
 
