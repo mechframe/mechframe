@@ -50,9 +50,9 @@ function item(entry: Placed<"nav.admin">): SidebarItem {
   return entry.icon === undefined ? { label: entry.label, to: entry.to } : { label: entry.label, to: entry.to, icon: entry.icon };
 }
 
-/** `items` with those `pages` names first, in its order; the rest after, as they come. */
+/** `items` with those `pages` names first, in its order, each once; the rest after, as they come. */
 function inOrder(items: SidebarItem[], pages: readonly string[]): SidebarItem[] {
-  const listed = pages.flatMap((to) => items.filter((each) => each.to === to));
+  const listed = [...new Set(pages)].flatMap((to) => items.filter((each) => each.to === to));
   return [...listed, ...items.filter((each) => !pages.includes(each.to))];
 }
 

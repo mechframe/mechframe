@@ -236,6 +236,15 @@ describe("the admin sidebar's order", () => {
     expect(groups[1]?.items.map((item) => item.label)).toEqual(["pages", "posts", "media", "odd"]);
   });
 
+  it("draws a page once, however often its section lists it (CodeRabbit on #140)", () => {
+    const groups = adminSidebar(
+      [entry("posts", "Content"), entry("pages", "Content")],
+      [{ label: "Content", icon: "document", pages: ["/admin/pages", "/admin/posts", "/admin/pages"] }],
+      () => false,
+    );
+    expect(groups[1]?.items.map((item) => item.label)).toEqual(["pages", "posts"]);
+  });
+
   it("has the boards' order in Content: Pages, Blog, Newsletter, Inbox, Media (VM Website's admin boards)", () => {
     const placed = (label: string, to: string): Placed<"nav.admin"> => ({ label, to, section: "Content", module: "m", key: to });
     const groups = adminSidebar(
