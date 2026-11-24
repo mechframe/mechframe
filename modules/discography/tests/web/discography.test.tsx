@@ -858,6 +858,39 @@ describe("CodeRabbit on #145", () => {
     expect(await screen.findByRole("radio", { name: "Keep mine" })).toBeInTheDocument();
   });
 
+  it.each(["the form's Save", "Back to the form, then Save"])("asks again about a crossed SoundCloud link passed by with %s", async (how) => {
+    const THEIRS = "https://soundcloud.com/vibrantmindz/their-take";
+    const MINE = "https://soundcloud.com/vibrantmindz/my-take";
+    const theirs = { ...silent, version: 2, audio: audio({ state: "processing", plays_from: "soundcloud", percent: 0, stream_url: null, soundcloud_url: THEIRS, soundcloud_kind: "track" }) };
+    let uploaded = false;
+    const sent = routed({
+      [LIST]: { status: 200, body: { items: [silent], next_cursor: null, total: 1, releases: 1 } },
+      // Read again while its stream file is made, the track is as the server has it now.
+      [`GET ${TRACK}`]: () => ({ status: 200, body: uploaded ? theirs : silent }),
+      [`PUT ${TRACK}/audio`]: () => {
+        uploaded = true;
+        return { status: 200, body: theirs };
+      },
+      [`PATCH ${TRACK}`]: async (request) => ((await json(request)).version === 2 ? { status: 200, body: { ...theirs, version: 3 } } : problem(409, "discography.changed", { track: theirs })),
+    });
+    renderApp({ path: `/admin/music/tracks?track=${T2}`, modules: [discography], session: editor });
+
+    await userEvent.type(await screen.findByRole("textbox", { name: /SoundCloud link/ }), MINE);
+    await userEvent.upload(screen.getByLabelText("Upload a file", { selector: "input" }), new File(["RIFF"], "v2.wav", { type: "audio/wav" }));
+    expect(await screen.findByRole("radio", { name: "Keep mine" })).toBeInTheDocument();
+    if (how !== "the form's Save") await userEvent.click(screen.getByRole("button", { name: "Back to the form" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => {
+      expect(sent.some((each) => each.method === "PATCH")).toBe(true);
+    });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 300)); // a retry, had there been one, is sent by now
+    });
+    const patches = await Promise.all(sent.filter((each) => each.method === "PATCH").map((each) => json(each)));
+    expect(patches.map((each) => each.version)).toEqual([1]); // refused, and never sent again over theirs
+    expect(screen.getByRole("radio", { name: "Keep mine" })).toBeInTheDocument();
+  });
+
   it("names the tracks, not their ids, when two orders cross", async () => {
     const three = full({ tracks: [...full().tracks, track({ id: T3, number: 3, title: "Third One", slug: "third-one" })] });
     routed({

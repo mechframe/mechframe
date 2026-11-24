@@ -306,10 +306,15 @@ function TrackEditor({ server, notice, onGone, settle: settleRef, asked, onGo, o
 
   // The track read again while its stream file is made: the same version, its
   // audio moved on. A field the person left follows it, the length a link's
-  // track shows among them (CodeRabbit on #145).
-  if (server !== saved && server.version === saved.version && server.audio !== saved.audio) {
-    setSaved(server);
-    setForm((now) => rebased(now, trackFormOf(saved), trackFormOf(server)));
+  // track shows among them (CodeRabbit on #145). Only a new read counts: a draw
+  // with the read from before an answer the panel took in never undoes it.
+  const [seen, setSeen] = useState(server);
+  if (seen !== server) {
+    setSeen(server);
+    if (server.version === saved.version && server.audio !== saved.audio) {
+      setSaved(server);
+      setForm((now) => rebased(now, trackFormOf(saved), trackFormOf(server)));
+    }
   }
   // Its stream file made: the Tracks table reads it again, as it says "Making" until then.
   const state = server.audio.state;
@@ -391,9 +396,11 @@ function TrackEditor({ server, notice, onGone, settle: settleRef, asked, onGo, o
       return;
     }
     // Only the new audio is taken in: the fields stay at the version they were
-    // read at, so a save that passes the choice by, from the form or after Back
-    // to the form, is refused and asks again (CodeRabbit on #145).
-    keep({ ...held, audio: track.audio, peaks: track.peaks });
+    // read at, the SoundCloud link among them though it rides in `audio`, so a
+    // save that passes the choice by, from the form or after Back to the form,
+    // is refused and asks again (CodeRabbit on #145).
+    const link = { soundcloud_url: held.audio.soundcloud_url, soundcloud_kind: held.audio.soundcloud_kind };
+    keep({ ...held, audio: { ...track.audio, ...link }, peaks: track.peaks });
     setConflict({ said: crossed, theirs: track, mine: latest, fields });
   }
 
