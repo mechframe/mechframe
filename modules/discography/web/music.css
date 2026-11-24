@@ -1,0 +1,367 @@
+/* discography's screens (`dev plans/contracts/discography.md`; the canvas's Music,
+   Release and Admin Music boards), on the theme's tokens only. Every control is at
+   least 24px each way (WCAG 2.2's target size). */
+
+/* --- the admin: shared ---------------------------------------------------- */
+
+.mf-music-board,
+.mf-music-editor {
+  display: grid;
+  gap: var(--mf-space-6);
+  align-items: start;
+}
+
+@media (min-width: 64rem) {
+  .mf-music-editor,
+  .mf-music-board--panel {
+    grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem);
+  }
+}
+
+.mf-music-main,
+.mf-music-side,
+.mf-music-stack {
+  display: grid;
+  gap: var(--mf-space-5);
+  min-width: 0;
+}
+
+.mf-music-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mf-space-2);
+}
+
+.mf-music-row--end {
+  justify-content: flex-end;
+}
+
+.mf-music-hint {
+  margin: 0;
+  font: var(--mf-type-small);
+  color: var(--mf-color-text-muted);
+}
+
+.mf-music-error {
+  margin: 0;
+  font: var(--mf-type-small);
+  color: var(--mf-color-danger);
+}
+
+.mf-music-fields {
+  display: grid;
+  gap: var(--mf-space-4);
+}
+
+@media (min-width: 40rem) {
+  .mf-music-fields--two {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.mf-music-file {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* --- the admin: releases -------------------------------------------------- */
+
+.mf-music-release {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr);
+  gap: var(--mf-space-4);
+  align-items: center;
+}
+
+@media (min-width: 40rem) {
+  .mf-music-release {
+    grid-template-columns: 5.5rem minmax(0, 1fr) auto;
+  }
+}
+
+.mf-music-thumb,
+.mf-music-thumb-plain {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: var(--mf-radius-md);
+}
+
+.mf-music-thumb-plain {
+  display: grid;
+  place-items: center;
+  background: var(--mf-color-well);
+  border: 1px solid var(--mf-color-border);
+  color: var(--mf-color-text-muted);
+}
+
+.mf-music-release-words {
+  display: grid;
+  gap: var(--mf-space-1);
+  min-width: 0;
+}
+
+.mf-music-release-title {
+  font: var(--mf-type-section-title);
+  letter-spacing: var(--mf-type-section-title-tracking);
+  color: var(--mf-color-text-strong);
+}
+
+.mf-music-release-line {
+  font: var(--mf-type-small);
+  color: var(--mf-color-text-muted);
+}
+
+.mf-music-release-actions {
+  grid-column: 1 / -1;
+}
+
+@media (min-width: 40rem) {
+  .mf-music-release-actions {
+    grid-column: auto;
+  }
+}
+
+/* --- the admin: the album editor ----------------------------------------- */
+
+.mf-music-covers {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--mf-space-4);
+}
+
+.mf-music-cover {
+  display: grid;
+  gap: var(--mf-space-2);
+  align-content: start;
+}
+
+.mf-music-cover-label {
+  font: var(--mf-type-meta);
+  letter-spacing: var(--mf-type-meta-tracking);
+  color: var(--mf-color-text-muted);
+}
+
+.mf-music-order {
+  display: inline-flex;
+  gap: var(--mf-space-1);
+}
+
+.mf-music-number {
+  font-variant-numeric: tabular-nums;
+  color: var(--mf-color-text-muted);
+}
+
+.mf-music-credit {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr) auto;
+  gap: var(--mf-space-2);
+  align-items: end;
+}
+
+.mf-music-list {
+  display: grid;
+  gap: var(--mf-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* --- the admin: tracks and credits ---------------------------------------- */
+
+.mf-music-pick {
+  min-height: 1.5rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--mf-color-link);
+  font: inherit;
+  text-align: start;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+  cursor: pointer;
+}
+
+.mf-music-pick:hover {
+  color: var(--mf-color-link-hover);
+}
+
+.mf-music-pick:focus-visible {
+  outline: none;
+  box-shadow: var(--mf-shadow-focus-ring);
+  border-radius: var(--mf-radius-md);
+}
+
+.mf-music-pick[aria-pressed="true"] {
+  color: var(--mf-color-text-strong);
+  font-weight: 600;
+}
+
+.mf-music-sub {
+  display: block;
+  font: var(--mf-type-small);
+  color: var(--mf-color-text-muted);
+}
+
+.mf-music-roles {
+  display: grid;
+  gap: var(--mf-space-2);
+  margin: 0;
+}
+
+.mf-music-roles div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--mf-space-3);
+}
+
+.mf-music-roles dt {
+  color: var(--mf-color-text);
+}
+
+.mf-music-roles dd {
+  margin: 0;
+  color: var(--mf-color-text-muted);
+}
+
+/* --- the site: the library, a release and a track ------------------------- */
+
+.mf-music {
+  display: grid;
+  gap: var(--mf-space-8);
+}
+
+.mf-music h1,
+.mf-music h2 {
+  margin: 0;
+}
+
+.mf-music-lead {
+  margin: 0;
+  color: var(--mf-color-text-muted);
+}
+
+.mf-music-grid {
+  display: grid;
+  gap: var(--mf-space-8);
+}
+
+@media (min-width: 48rem) {
+  .mf-music-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.mf-music-card,
+.mf-music-hero {
+  display: grid;
+  align-content: start;
+  gap: var(--mf-space-3);
+  min-width: 0;
+}
+
+@media (min-width: 48rem) {
+  .mf-music-hero {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    align-items: start;
+    gap: var(--mf-space-8);
+  }
+}
+
+.mf-music-art,
+.mf-music-art-plain {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: var(--mf-radius-card);
+}
+
+.mf-music-art-plain {
+  background: var(--mf-color-well);
+  border: 1px solid var(--mf-color-border);
+}
+
+.mf-music-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-2);
+  font: var(--mf-type-meta);
+  letter-spacing: var(--mf-type-meta-tracking);
+  color: var(--mf-color-text-muted);
+}
+
+.mf-music-advisory {
+  padding: 0 var(--mf-space-1);
+  border: 1px solid var(--mf-color-border);
+  border-radius: var(--mf-radius-md);
+  color: var(--mf-color-text);
+}
+
+.mf-music-words {
+  display: grid;
+  gap: var(--mf-space-3);
+}
+
+.mf-music-words p {
+  margin: 0;
+}
+
+.mf-music-crumbs {
+  font: var(--mf-type-small);
+  color: var(--mf-color-text-muted);
+}
+
+.mf-music-tracklist {
+  display: grid;
+  gap: var(--mf-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mf-music-track {
+  display: grid;
+  gap: var(--mf-space-2);
+  padding: var(--mf-space-3) 0;
+  border-bottom: 1px solid var(--mf-color-border);
+}
+
+.mf-music-track-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--mf-space-3);
+}
+
+.mf-music-track audio {
+  width: 100%;
+  max-width: 32rem;
+  min-height: 2.5rem;
+}
+
+.mf-music-lyrics {
+  margin: 0;
+  white-space: pre-wrap;
+  font: inherit;
+}
+
+.mf-music-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The kit has a chevron down only: up is it turned over. */
+.mf-music-up svg {
+  transform: rotate(180deg);
+}

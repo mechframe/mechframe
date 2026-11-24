@@ -132,8 +132,8 @@ An S3-compatible store, Cloudflare R2 on a live site. All blank: storage is off,
 | `STORAGE_ACCESS_KEY_ID` | For storage | blank | You type it | The access key's ID (R2: an API token's S3 access key ID). |
 | `STORAGE_SECRET_ACCESS_KEY` | For storage · Secret | blank | You type it | The access key's secret. |
 | `STORAGE_BUCKET` | For storage | blank | You type it | The private bucket: its files are reached only through signed links. |
-| `STORAGE_PUBLIC_BUCKET` | For storage | blank | You type it | The public bucket, served to anyone at `STORAGE_PUBLIC_URL`: media's images live here. Never the same bucket as `STORAGE_BUCKET`. Set with `STORAGE_PUBLIC_URL` or neither. |
-| `STORAGE_PUBLIC_URL` | For storage | blank | You type it | The public bucket's address (R2: its custom domain), https outside `DEBUG`. |
+| `STORAGE_PUBLIC_BUCKET` | For storage | blank | You type it | The public bucket, served to anyone at `STORAGE_PUBLIC_URL`: media's images and discography's stream files live here. Never the same bucket as `STORAGE_BUCKET`. Set with `STORAGE_PUBLIC_URL` or neither. |
+| `STORAGE_PUBLIC_URL` | For storage | blank | You type it | The public bucket's address (R2: its custom domain), https outside `DEBUG`. While it's set, the pages' `media-src` allows it, so a stream file plays (decision 0070). |
 | `STORAGE_REGION` | Tuning | `auto` | Only if you change it | The store's region; R2 takes `auto`. |
 | `STORAGE_MAX_BYTES` | Tuning | `2147483648` | Only if you change it | The largest file the kernel stores, in bytes. At least 1. |
 
@@ -249,6 +249,22 @@ Set in the site's admin (Admin → Settings), not on the host:
 | `intro` | string | `Send a message and we'll reply by email.` | The line under the Contact page's heading |
 | `topics` | json | a list (see the module's MODULE.md) | What a message can be about, in the form's order; a first topic's new messages come first in the Inbox |
 
+### `discography` 0.1.0 (experimental)
+
+Albums, EPs and singles with tracks, credits and streaming links; tracks play from an upload or a SoundCloud link.
+
+No host variables of its own.
+
+**From the kernel:** Uploads need the site's storage (`STORAGE_ENDPOINT_URL`, `STORAGE_ACCESS_KEY_ID`, `STORAGE_SECRET_ACCESS_KEY` and `STORAGE_BUCKET`, where masters go): until it's set, an upload answers 503 `discography.storage_off` and tracks play from SoundCloud links. Stream files go in `STORAGE_PUBLIC_BUCKET` at `STORAGE_PUBLIC_URL`: without that pair, a stream file can't be made and the track fails once its tries are used. Its job runs where the jobs worker does (`JOBS_IN_WEB`).
+
+Set in the site's admin (Admin → Settings), not on the host:
+
+| Setting | Type | Default | What it's for |
+| --- | --- | --- | --- |
+| `stream_bitrate_kbps` | int | `256` | The stream file's constant bitrate, from 128 to 320 |
+| `show_explicit_badge` | bool | `true` | The Parental Advisory label on explicit releases and tracks |
+| `show_lyrics` | bool | `true` | Lyrics on a track's page, for tracks that have them |
+
 ### `embeds` 0.1.0 (experimental)
 
 YouTube, SoundCloud, Spotify and Bandcamp players from a pasted link, loaded only once a visitor plays.
@@ -297,20 +313,6 @@ Set in the site's admin (Admin → Settings), not on the host:
 | `guest_comments` | bool | `true` | Guests may comment; every guest comment waits for approval (owner answer Q4) |
 | `edit_window_minutes` | int | `15` | Minutes a comment stays editable |
 | `max_links` | int | `2` | Links allowed in one comment |
-
-### `discography` 0.1.0 (planned, not built yet)
-
-Albums, tracks, credits and streaming links, with an upload or a SoundCloud link as each track's audio.
-
-No host variables of its own.
-
-Set in the site's admin (Admin → Settings), not on the host:
-
-| Setting | Type | Default | What it's for |
-| --- | --- | --- | --- |
-| `default_audio_source` | string | `upload` | upload or soundcloud, the default for new tracks |
-| `stream_bitrate_kbps` | int | `256` | Bitrate of the public stream file made from an uploaded master |
-| `show_explicit_badge` | bool | `true` | Mark explicit tracks in lists and players |
 
 ### `featured` 0.1.0 (planned, not built yet)
 

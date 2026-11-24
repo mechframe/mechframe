@@ -806,11 +806,11 @@
    "gate": "not passed",
    "step_order": 3,
    "step": "Step 2: discography, audio player, featured",
-   "status": "todo",
-   "status_label": "To do",
-   "prs": "",
-   "decisions": "",
-   "note": ""
+   "status": "next",
+   "status_label": "Next",
+   "prs": "#145",
+   "decisions": "0070",
+   "note": "discography, the music library: releases, tracks, credits and streaming links with covers from media, a track playing from an upload made into an MP3 stream by a job (soundfile) or from a SoundCloud link, its four admin boards and three pages, and its public.py and public.ts for audio-player, featured and a site's own pages (#145, decision 0070); audio-player and featured to come"
   },
   {
    "milestone": "MechFrame v1.0",
