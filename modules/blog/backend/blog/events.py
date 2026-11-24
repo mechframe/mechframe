@@ -8,6 +8,10 @@ the post's After publishing choices, for `community` to post it and
 and published again, or a delivery tried twice, says nothing more. The two
 choices can't change once a post has gone live (`service.change`), so a
 delivery late or tried again sends what the writer chose.
+
+Version 2 (blog 0.1.3) adds the post's `summary`, for campaigns' email. A
+payload refuses fields it doesn't declare, so a field more is a new version
+(SPEC.md sections 11 and 13), not a change to version 1.
 """
 
 from __future__ import annotations
@@ -22,13 +26,15 @@ from kernel import clock, events, jobs, lifecycle
 CONTENT_TYPE = "blog.post"
 
 
-@events.payload("blog.post.published", v=1)
+@events.payload("blog.post.published", v=2)
 class PostPublished(events.Payload):
     """A post went live for the first time, with its writer's choices for it."""
 
     post_id: uuid.UUID
     slug: str
     title: str
+    #: Its card's one line, as it stood when it went live; "" when it has none (v2).
+    summary: str
     #: Its page: /blog/<slug>.
     path: str
     #: As they stood when it first went live: a live post's save can't change them.
@@ -52,6 +58,7 @@ async def _announce(ctx: jobs.Context, event: events.Event) -> None:
                 post_id=post.id,
                 slug=post.slug,
                 title=post.title,
+                summary=post.summary,
                 path=f"/blog/{post.slug}",
                 post_to_community=post.post_to_community,
                 email_subscribers=post.email_subscribers,

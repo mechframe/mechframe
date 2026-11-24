@@ -633,6 +633,116 @@ describe("the review on #123 (CodeRabbit)", () => {
   });
 });
 
+// Pages closed these in 0.1.1 (CodeRabbit on #138); blog's editor had them too.
+describe("the crossed saves pages closed (blog 0.1.3)", () => {
+  it("still asks about a field typed back to its saved value when a retry meets another save", async () => {
+    let answer: (value: Answer) => void = () => undefined;
+    let patches = 0;
+    routed({
+      [`GET ${ONE}`]: { status: 200, body: full({ title: "A" }) },
+      [`PATCH ${ONE}`]: () => {
+        patches += 1;
+        if (patches === 1) {
+          return new Promise<Answer>((resolve) => {
+            answer = resolve;
+          });
+        }
+        // The retry meets a third save, which changed the title.
+        if (patches === 2) return problem(409, "blog.changed", { post: full({ title: "C", allow_comments: false, version: 3 }) });
+        return { status: 200, body: full({ title: "C", allow_comments: false, summary: "A decade of shows. More.", version: 4 }) };
+      },
+    });
+    renderApp({ path: `/admin/blog/${ID}`, modules: [blog], session: editor });
+
+    const title = await screen.findByRole("textbox", { name: "Title" });
+    await userEvent.clear(title);
+    await userEvent.type(title, "B");
+    await userEvent.type(screen.getByRole("textbox", { name: "Summary" }), " More.");
+    await userEvent.click(screen.getAllByRole("button", { name: "Save draft" })[0] as HTMLElement);
+    await waitFor(() => {
+      expect(patches).toBe(1);
+    });
+    await userEvent.clear(title);
+    await userEvent.type(title, "A");
+    // Someone else changed only Allow comments: no question, so the save goes again with the summary.
+    answer(problem(409, "blog.changed", { post: full({ title: "A", allow_comments: false, version: 2 }) }));
+
+    // Your A is still yours when the retry meets their C: a choice, not theirs by default.
+    expect(await screen.findByRole("radio", { name: "Keep mine" })).toBeInTheDocument();
+    expect(title).toHaveValue("A");
+    expect(patches).toBe(2);
+  });
+
+  it("still asks about a field typed back to its saved value after a choice, when the save meets another", async () => {
+    let answer: (value: Answer) => void = () => undefined;
+    let patches = 0;
+    routed({
+      [`GET ${ONE}`]: { status: 200, body: full() },
+      [`PATCH ${ONE}`]: () => {
+        patches += 1;
+        if (patches === 1) {
+          return new Promise<Answer>((resolve) => {
+            answer = resolve;
+          });
+        }
+        // The save with the choice meets a third save, which changed the summary.
+        if (patches === 2) return problem(409, "blog.changed", { post: full({ title: "Their title", summary: "Their line.", version: 3 }) });
+        return { status: 200, body: full({ title: "My title", summary: "Their line.", version: 4 }) };
+      },
+    });
+    renderApp({ path: `/admin/blog/${ID}`, modules: [blog], session: editor });
+
+    const title = await screen.findByRole("textbox", { name: "Title" });
+    const summary = screen.getByRole("textbox", { name: "Summary" });
+    await userEvent.clear(title);
+    await userEvent.type(title, "My title");
+    await userEvent.type(summary, " More.");
+    await userEvent.click(screen.getAllByRole("button", { name: "Save draft" })[0] as HTMLElement);
+    await waitFor(() => {
+      expect(patches).toBe(1);
+    });
+    await userEvent.clear(summary);
+    await userEvent.type(summary, "A decade of shows.");
+    answer(problem(409, "blog.changed", { post: full({ title: "Their title", version: 2 }) }));
+
+    await userEvent.click(await screen.findByRole("radio", { name: "Keep mine" }));
+    await userEvent.click(screen.getByRole("button", { name: /Save with these choices/ }));
+
+    // Your summary, typed back, is still yours when theirs changes: asked, not taken.
+    const asked = await screen.findByRole("group", { name: "Summary" });
+    expect(within(asked).getByText("Their line.")).toBeInTheDocument();
+    expect(patches).toBe(2);
+    expect(summary).toHaveValue("A decade of shows.");
+  });
+
+  it("sends only your fields when a retry meets another save at once", async () => {
+    let patches = 0;
+    const sent = routed({
+      [`GET ${ONE}`]: { status: 200, body: full() },
+      [`PATCH ${ONE}`]: () => {
+        patches += 1;
+        // Someone turned comments off; then someone else changed the summary.
+        if (patches === 1) return problem(409, "blog.changed", { post: full({ allow_comments: false, version: 2 }) });
+        if (patches === 2) return problem(409, "blog.changed", { post: full({ allow_comments: false, summary: "Their line.", version: 3 }) });
+        return { status: 200, body: full({ title: "My title", allow_comments: false, summary: "Their line.", version: 4 }) };
+      },
+    });
+    renderApp({ path: `/admin/blog/${ID}`, modules: [blog], session: editor });
+
+    const title = await screen.findByRole("textbox", { name: "Title" });
+    await userEvent.clear(title);
+    await userEvent.type(title, "My title");
+    await userEvent.click(screen.getAllByRole("button", { name: "Save draft" })[0] as HTMLElement);
+
+    await waitFor(() => {
+      expect(patches).toBe(3);
+    });
+    const third = sent.filter((each) => each.method === "PATCH")[2] as Request;
+    // Their Allow comments and their summary stay theirs: only the title, at the newest version.
+    expect(await json(third)).toEqual({ version: 3, title: "My title" });
+  });
+});
+
 describe("a slug from a title", () => {
   it.each([
     ["Don't stop the music!", "dont-stop-the-music"],
