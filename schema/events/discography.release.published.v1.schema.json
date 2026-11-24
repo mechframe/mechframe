@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mechframe.local/schema/events/discography.release.published.v1.schema.json",
+  "additionalProperties": false,
+  "description": "A release went live for the first time.",
+  "properties": {
+    "release_id": {
+      "format": "uuid",
+      "title": "Release Id",
+      "type": "string"
+    },
+    "slug": {
+      "title": "Slug",
+      "type": "string"
+    },
+    "title": {
+      "title": "Title",
+      "type": "string"
+    },
+    "kind": {
+      "title": "Kind",
+      "type": "string"
+    },
+    "path": {
+      "title": "Path",
+      "type": "string"
+    }
+  },
+  "required": [
+    "release_id",
+    "slug",
+    "title",
+    "kind",
+    "path"
+  ],
+  "title": "discography.release.published (v1)",
+  "type": "object"
+}

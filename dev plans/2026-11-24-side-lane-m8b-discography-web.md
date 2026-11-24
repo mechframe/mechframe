@@ -93,4 +93,17 @@ Nothing is open. The contract's "Changes as built" lists what the backend did di
 
 ## 9. Result
 
-(The side lane writes what shipped here, for the main lane's handoff.)
+AI DevKit Development 44 WT, 2026-11-24, about 9:30 to 12:00 Eastern.
+
+- **PR #145, discography 0.1.0:**
+  - the backend (as M8 built it);
+  - the contract suite over HTTP (41);
+  - the web: Albums with the Music settings, the album editor, Tracks and Credits; `/music`, `/music/:release` and `/music/:release/:track`, playing an upload in a native `<audio preload="none">` and offering a SoundCloud track as a link;
+  - web tests (26) and an e2e spec (2 passed, axe clean in both themes at 1440 and 390);
+  - MODULE.md, CHANGELOG.md, SPEC 6 and 15 with the change log's line, the host variables guide, and the generated files.
+- **For the main lane's handoff:**
+  - Step 2's row in `docs/progress.json` says discography landed, with audio-player and featured to come. Take it from main after #145 lands.
+  - The Music settings panel saves through the kernel's settings routes, which ask for `kernel.settings.manage`. No route checks `discography.settings.manage`, which is a kernel question for every module's settings (the contract's "Changes as built").
+- **The contract-lint fix:** `dashboard.py` read `kernel.config` directly. It now asks `kernel.storage` for each bucket, with a test.
+- **IDs:** no decision past 0070 was needed. 0071 and up stay free for the side lane.
+- **For VM Website:** the site's own Music and Release pages take `useReleases`, `useRelease`, `useTrack`, `useArtistLinks`, `isMoved`, `pathOf`, `releaseLine` and `clock` from `@/modules/discography/public`.

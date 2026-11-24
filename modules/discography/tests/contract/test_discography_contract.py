@@ -116,6 +116,16 @@ async def test_signed_out_is_401_and_a_member_is_403(
     assert member.json()["code"] == "kernel.forbidden"
 
 
+async def test_every_route_declares_who_may_call_it(browser: Browser) -> None:
+    audit = await browser.http.get("/api/_test/routes")
+    assert audit.status_code == 200, audit.text
+    said = audit.json()
+    assert [each for each in said["undeclared"] if "/api/discography" in each] == []
+    mine = [each for each in said["admin"] if "/api/discography/" in each]
+    assert mine
+    assert all(each.split(" ", 1)[1].startswith(f"{API}/admin/") for each in mine)
+
+
 async def test_the_live_library_and_the_artists_links_are_open_to_anyone(
     browser: Browser,
 ) -> None:

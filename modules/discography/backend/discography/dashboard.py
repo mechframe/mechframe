@@ -10,8 +10,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from discography import service
-from kernel import attention, setup
-from kernel.config import get_config
+from kernel import attention, setup, storage
 
 MANAGE = "discography.release.manage"
 
@@ -55,10 +54,14 @@ async def _attention(db: AsyncSession, user: Any) -> list[attention.Item]:
 
 
 async def _storage_on(db: AsyncSession) -> bool:
-    config = get_config()
-    return bool(
-        config.storage_bucket and config.storage_public_bucket and config.storage_public_url
-    )
+    """Both buckets can be used: a master's private one and the stream's public
+    one. Signing a link and spelling an address are local, so this reads nothing."""
+    try:
+        storage.public_url("discography/stream/x.mp3")
+        await storage.signed_url("discography/masters/x.wav")
+    except storage.StorageNotConfigured:
+        return False
+    return True
 
 
 ATTENTION = _attention

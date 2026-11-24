@@ -3,7 +3,7 @@ feature: The discography module, the site's music library: releases, tracks, cre
 status: approved
 approved: 2026-11-24 (the owner: "Approve as recommended", the five answers in §8 as recommended)
 plan: `docs/plans/vibrant-mindz-backend/backend-plan.md` (§2, 3) and `players-admin.md`; `dev plans/2026-11-23-side-lane-m8-discography.md`; the canvas's Music boards (VM Website `design/site/AdminMusic`, `AdminAlbum`, `AdminTracks`, `AdminCredits`, `Music` and `Release.dc.html`; the Album editor at https://claude.ai/artifact/W7EZQumtcK36K3xczG8mNH)
-pr: one, to predict at push time; decision 0070; migration `discography_0001`
+pr: #145; decision 0070; migration `discography_0001`
 ---
 
 # Contract: `discography`

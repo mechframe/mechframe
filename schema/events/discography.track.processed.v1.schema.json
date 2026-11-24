@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mechframe.local/schema/events/discography.track.processed.v1.schema.json",
+  "additionalProperties": false,
+  "description": "A track's stream file, duration and peaks are ready.",
+  "properties": {
+    "track_id": {
+      "format": "uuid",
+      "title": "Track Id",
+      "type": "string"
+    },
+    "release_id": {
+      "format": "uuid",
+      "title": "Release Id",
+      "type": "string"
+    },
+    "duration_ms": {
+      "title": "Duration Ms",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "track_id",
+    "release_id",
+    "duration_ms"
+  ],
+  "title": "discography.track.processed (v1)",
+  "type": "object"
+}

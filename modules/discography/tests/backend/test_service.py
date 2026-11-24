@@ -6,6 +6,7 @@ the server copy, search, the announcement, the seed and the dashboard."""
 from __future__ import annotations
 
 import io
+import os
 import uuid
 from pathlib import Path
 from types import SimpleNamespace
@@ -23,6 +24,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from kernel import Database, Problem, clock, lifecycle, load_module, server_copy
 from kernel import events as kernel_events
 from kernel import seed as seeding
+from kernel import storage as kernel_storage
+from kernel.config import reset_config
 from kernel.models import SearchDocument
 
 from ..conftest import make_image, master, slug
@@ -31,6 +34,8 @@ from .conftest import Store
 pytestmark = pytest.mark.db
 MODULE = Path(__file__).resolve().parents[2]
 LINK = "https://soundcloud.com/petrodestroys/catalyst"
+#: Taken as the module is read, before any fixture puts a stand-in in its place.
+_REAL_PUBLIC_URL = kernel_storage.public_url
 
 
 async def _release(db: AsyncSession, **fields: Any) -> Release:
@@ -455,6 +460,48 @@ async def test_the_dashboard_says_a_live_track_cant_play(db: AsyncSession) -> No
     await db.commit()
     items = await dashboard.ATTENTION(db, None)
     assert any(item.key == "discography.cant_play" for item in items)
+
+
+_STORAGE = {
+    "STORAGE_ENDPOINT_URL": "https://r2.mechframe.test",
+    "STORAGE_ACCESS_KEY_ID": "music-key-id-AKIA0000",
+    "STORAGE_SECRET_ACCESS_KEY": "music-secret-do-not-print",
+    "STORAGE_BUCKET": "music-private",
+    "STORAGE_PUBLIC_BUCKET": "music-public",
+    "STORAGE_PUBLIC_URL": "https://files.mechframe.test",
+}
+
+
+async def test_the_setup_step_is_done_once_both_buckets_can_be_used(
+    db: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # The real address, not the one the autouse fixture gives every other test.
+    monkeypatch.setattr(kernel_storage, "public_url", _REAL_PUBLIC_URL)
+    before = {name: os.environ.get(name) for name in _STORAGE}
+    [step] = dashboard.SETUP
+
+    async def done(values: dict[str, str]) -> bool:
+        for name in _STORAGE:
+            monkeypatch.delenv(name, raising=False)
+        for name, value in values.items():
+            monkeypatch.setenv(name, value)
+        reset_config()
+        kernel_storage._client.cache_clear()
+        return bool(await step.done(db))
+
+    try:
+        assert await done({}) is False
+        assert await done({k: v for k, v in _STORAGE.items() if "PUBLIC" not in k}) is False
+        assert await done({k: v for k, v in _STORAGE.items() if k != "STORAGE_BUCKET"}) is False
+        assert await done(_STORAGE) is True
+    finally:
+        for name, value in before.items():
+            if value is None:
+                monkeypatch.delenv(name, raising=False)
+            else:
+                monkeypatch.setenv(name, value)
+        reset_config()
+        kernel_storage._client.cache_clear()
 
 
 async def test_the_seed_twice_gives_the_same(db: AsyncSession, store: Store) -> None:
