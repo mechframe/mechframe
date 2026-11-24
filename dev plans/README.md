@@ -2,7 +2,7 @@
 
 Session prompts and working plans, the owner's convention across `C:\DEV`. Each session ends with two starting prompts saved here (`CLAUDE.md`, "Two lanes", since 2026-11-22): `<date>-next-session-<topic>.md` for the main lane and `<date>-side-lane-<topic>.md` for the side lane, in a worktree. When a prompt's session is done, it moves to `done/`, so the ones left here are the jobs. Durable decisions go in `docs/decisions/`, not here.
 
-Blog's AI writing help (#135, decision 0058) and campaigns (#134, decision 0062) are done: their prompts are in `done/`, with the side lane's older embeds and campaigns prompt. The jobs now are `2026-11-23-next-session-m4g-name-shell-session.md` (the main lane: the account's name, then VM Website's shell and signed-out session asks) and `2026-11-23-side-lane-m7-pages-public.md` (the side lane: pages 0.1.1, its page read in `public.ts` and the editor's crossed saves).
+The account's name (#139), the admin shell's five differences (#140), the signed-out session read (#141) and pages 0.1.1 (#138) are done: their prompts are in `done/`. The jobs now are `2026-11-23-next-session-m4h-blog-covers.md` (the main lane: blog 0.1.3, then generated covers, then social posting) and `2026-11-23-side-lane-m8-discography.md` (the side lane: `discography` 0.1.0, step 2's first module, contract first).
 
 `progress-ledger/` is the source of the visual progress ledger, https://claude.ai/artifact/48auLkb7Ajmyn2SNAni9rm: its page (`index.html`) and the rows `python -m tools.progress` makes from `docs/progress.json` (`rows.json`); its README says how to republish it.
 
