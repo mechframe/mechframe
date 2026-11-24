@@ -1,0 +1,154 @@
+"""The kernel's SVG helper (decision 0065; `dev plans/contracts/blog-covers.md` §2):
+a model's SVG cleaned to an allowlist and written out by the kernel, then made a
+PNG with resvg. No test calls Anthropic: these are the SVGs a model might send."""
+
+from __future__ import annotations
+
+import asyncio
+import struct
+from xml.etree import ElementTree as ET
+
+import pytest
+import resvg_py
+
+from kernel import svg
+
+NS = "http://www.w3.org/2000/svg"
+DRAWN = '<rect x="0" y="0" width="10" height="10" fill="#c33"/>'
+
+
+def _svg(inner: str, attrs: str = "") -> str:
+    return f'<svg xmlns="{NS}" viewBox="0 0 100 50"{attrs}>{inner}</svg>'
+
+
+def _clean(text: str) -> str:
+    return svg.clean(text, width=1200, height=630)
+
+
+@pytest.mark.parametrize(
+    ("given", "gone"),
+    [
+        (f"<script>alert(1)</script>{DRAWN}", "alert"),
+        (f'<g onload="alert(1)">{DRAWN}</g>', "onload"),
+        (f'<rect width="5" height="5" style="fill:url(https://x.test/a)"/>{DRAWN}', "x.test"),
+        (f"<style>@import url(https://x.test/a.css);</style>{DRAWN}", "x.test"),
+        (f'<image href="https://x.test/a.png" width="5" height="5"/>{DRAWN}', "x.test"),
+        (f"<foreignObject><div>hi</div></foreignObject>{DRAWN}", "div"),
+        (f'<a href="javascript:alert(1)"><circle r="2"/></a>{DRAWN}', "javascript"),
+        (f'<use href="data:image/svg+xml,AAAA"/>{DRAWN}', "data:"),
+        (f'<rect width="5" height="5" fill="url(https://x.test/#g)"/>{DRAWN}', "x.test"),
+        (f'<text><textPath href="#p">along</textPath></text>{DRAWN}', "along"),
+        (f'<animate attributeName="x" to="9"/>{DRAWN}', "animate"),
+        (f'<rect width="5" height="5" class="danger"/>{DRAWN}', "danger"),
+        (f'<other:thing xmlns:other="urn:x">sneaky</other:thing>{DRAWN}', "sneaky"),
+    ],
+)
+def test_only_the_allowlist_survives(given: str, gone: str) -> None:
+    cleaned = _clean(_svg(given))
+    assert gone not in cleaned
+    assert "#c33" in cleaned  # what's allowed is kept
+
+
+def test_what_the_allowlist_keeps_is_kept() -> None:
+    given = _svg(
+        '<defs><linearGradient id="g"><stop offset="0" stop-color="#123"/></linearGradient>'
+        '<filter id="f"><feGaussianBlur stdDeviation="2"/></filter></defs>'
+        '<rect width="10" height="10" fill="url(#g)" filter="url(#f)"/>'
+        '<use href="#g"/><text x="5" y="5" font-weight="700">Ten years</text>'
+    )
+    cleaned = _clean(given)
+    for kept in ('fill="url(#g)"', 'filter="url(#f)"', 'href="#g"', "Ten years", "stdDeviation"):
+        assert kept in cleaned
+
+
+@pytest.mark.parametrize(
+    "given",
+    [
+        '<!DOCTYPE svg [<!ENTITY a "aaaa">]>' + _svg(DRAWN),
+        _svg(DRAWN).replace("<rect", '<!ENTITY b "b"><rect'),
+    ],
+)
+def test_a_doctype_or_an_entity_is_refused(given: str) -> None:
+    with pytest.raises(svg.Refused):
+        _clean(given)
+
+
+@pytest.mark.parametrize(
+    "given",
+    [
+        _svg(DRAWN + "<desc>" + "x" * svg.MAX_BYTES + "</desc>"),
+        _svg("<g/>" * (svg.MAX_ELEMENTS + 1) + DRAWN),
+        _svg("<g>" * (svg.MAX_DEPTH + 1) + DRAWN + "</g>" * (svg.MAX_DEPTH + 1)),
+    ],
+)
+def test_too_big_too_many_or_too_deep_is_refused(given: str) -> None:
+    with pytest.raises(svg.Refused):
+        _clean(given)
+
+
+@pytest.mark.parametrize(
+    "given",
+    [
+        "No picture here, sorry.",
+        _svg("<defs>" + DRAWN + "</defs>"),
+        _svg("<script>only this</script>"),
+        "<svg><rect width='1'",
+    ],
+)
+def test_nothing_drawable_is_refused(given: str) -> None:
+    with pytest.raises(svg.Refused):
+        _clean(given)
+
+
+def test_what_is_written_out_is_the_kernels_own() -> None:
+    answer = (
+        "Here is your cover:\n```svg\n"
+        f"<svg viewBox='0 0 9 9' width='9'><!-- a note --><?pi here?>{DRAWN}</svg>\n```"
+    )
+    cleaned = _clean(answer)
+    for gone in ("note", "<?pi", "```"):
+        assert gone not in cleaned
+    root = ET.fromstring(cleaned)  # noqa: S314 (the kernel's own output)
+    assert root.tag == f"{{{NS}}}svg"
+    assert (root.get("viewBox"), root.get("width"), root.get("height")) == (
+        "0 0 1200 630",
+        "1200",
+        "630",
+    )
+    # Cleaned again, it's the same: the kernel's own form is a fixed point.
+    assert _clean(cleaned) == cleaned
+
+
+def test_every_font_is_the_kernels() -> None:
+    cleaned = _clean(
+        _svg(f'<text font-family="Comic Sans MS" x="1" y="9">Hi</text>{DRAWN}', ' font-family="x"')
+    )
+    root = ET.fromstring(cleaned)  # noqa: S314 (the kernel's own output)
+    families = {element.get("font-family") for element in root.iter() if element.get("font-family")}
+    assert families == {svg.FONT_FAMILY}
+
+
+def _png_size(png: bytes) -> tuple[int, int]:
+    assert png[:8] == b"\x89PNG\r\n\x1a\n"
+    width, height = struct.unpack(">II", png[16:24])  # IHDR follows the signature
+    return width, height
+
+
+def test_a_cleaned_svg_renders_to_a_png_of_its_size() -> None:
+    cleaned = _clean(_svg(DRAWN))
+    png = asyncio.run(svg.png(cleaned, width=2400, height=1260))
+    assert _png_size(png) == (2400, 1260)
+
+
+def test_a_render_that_takes_too_long_is_refused(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(svg, "RENDER_SECONDS", 0.01)
+
+    def slow(**_: object) -> bytes:
+        import time
+
+        time.sleep(0.5)
+        return b""
+
+    monkeypatch.setattr(resvg_py, "svg_to_bytes", slow)
+    with pytest.raises(svg.Refused, match="too long"):
+        asyncio.run(svg.png(_clean(_svg(DRAWN)), width=24, height=12))
