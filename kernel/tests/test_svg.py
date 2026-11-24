@@ -211,3 +211,17 @@ def test_what_is_written_out_is_never_over_the_limit() -> None:
     assert len(_svg(many).encode("utf-8")) < svg.MAX_BYTES
     with pytest.raises(svg.Refused, match="over 100 KB"):
         _clean(_svg(many))
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        _svg("<!-- </svg> -->" + DRAWN),
+        _svg("<title><![CDATA[</svg> a title]]></title>" + DRAWN),
+        "<!-- <svg> --> Here: " + _svg(DRAWN),
+        f'<svg xmlns="{NS}" aria-label="a/>b" viewBox="0 0 100 50">{DRAWN}</svg>',
+    ],
+)
+def test_a_tag_in_a_comment_cdata_or_quoted_value_doesnt_end_the_drawing(answer: str) -> None:
+    """CodeRabbit on #147, again: only real <svg> tags count, not words that look like one."""
+    assert "<rect" in _clean(answer)

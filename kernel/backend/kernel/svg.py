@@ -88,8 +88,14 @@ ATTRIBUTES = frozenset(
     }
 )  # fmt: skip
 
-#: An <svg> tag: opening, closing (group 1) or self-closed (group 2).
-_SVG_TAG = re.compile(r"<(/?)svg\b[^>]*?(/?)>", re.IGNORECASE)
+#: What the scan for the outer <svg> reads: a comment or a CDATA section,
+#: skipped whole, or an <svg> tag, opening, closing (group 1) or self-closed
+#: (group 2), its quoted values read whole, so a `>` or `/>` in one ends
+#: nothing (CodeRabbit on #147).
+_SVG_TAG = re.compile(
+    r"<!--.*?-->|<!\[CDATA\[.*?\]\]>" r"|<(/?)svg\b(?:[^>\"']|\"[^\"]*\"|'[^']*')*?(/?)>",
+    re.IGNORECASE | re.DOTALL,
+)
 #: A declaration other than a comment or CDATA: a DOCTYPE or an entity.
 _DECLARED = re.compile(r"<!(?!--|\[CDATA\[)")
 _URL = re.compile(r"url\(\s*(['\"]?)(.*?)\1\s*\)", re.IGNORECASE)
@@ -103,10 +109,13 @@ class Refused(ValueError):
 
 def _outer(text: str) -> str | None:
     """The first <svg> in `text` through the tag that closes it, a drawing
-    nested inside it included (CodeRabbit on #147); None when it never closes."""
+    nested inside it included, and nothing in a comment, a CDATA section or
+    a quoted value counted (CodeRabbit on #147); None when it never closes."""
     depth = 0
     start = -1
     for tag in _SVG_TAG.finditer(text):
+        if tag.group(0).startswith("<!"):
+            continue  # a comment or CDATA: what it holds is words, not tags
         closing, self_closed = bool(tag.group(1)), bool(tag.group(2))
         if start < 0:
             if closing:
