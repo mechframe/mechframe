@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import asyncio
 import struct
+from pathlib import Path
 from xml.etree import ElementTree as ET
 
 import pytest
@@ -138,6 +139,27 @@ def test_a_cleaned_svg_renders_to_a_png_of_its_size() -> None:
     cleaned = _clean(_svg(DRAWN))
     png = asyncio.run(svg.png(cleaned, width=2400, height=1260))
     assert _png_size(png) == (2400, 1260)
+
+
+def test_words_are_drawn_in_the_kernels_font(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    ground = '<rect width="1200" height="630" fill="#fff"/>'
+    words = _clean(_svg(ground + '<text x="100" y="300" font-size="120">Ten years</text>'))
+    blank = _clean(_svg(ground))
+
+    def drawn(drawing: str) -> bytes:
+        return asyncio.run(svg.png(drawing, width=600, height=315))
+
+    assert sorted(path.name for path in svg.FONTS.glob("*.ttf")) == [
+        "Inter-Bold.ttf",
+        "Inter-Regular.ttf",
+        "Inter-SemiBold.ttf",
+    ]
+    assert drawn(words) != drawn(blank)
+    # The positive control: with no font of the kernel's, the words draw nothing.
+    monkeypatch.setattr(svg, "FONTS", tmp_path)
+    assert drawn(words) == drawn(blank)
 
 
 def test_a_render_that_takes_too_long_is_refused(monkeypatch: pytest.MonkeyPatch) -> None:
