@@ -2,6 +2,7 @@
 feature: The AI's model, chosen in Settings › AI from Anthropic's own list (decision 0064; VM Website Dev 14's ask, sent with the owner's OK, 2026-11-24)
 status: approved
 approved: 2026-11-24, as recommended ("Approve as recommended"): §8's three answers
+pr: #144
 plan: after blog 0.1.3 (the owner, 2026-11-24); `dev plans/2026-11-23-next-session-m4h-blog-covers.md` §4
 ask: `C:\DEV\VM Website\dev plans\2026-11-24-ai-model-dropdown-ask.md`; the board "Admin: Settings, AI" (`AdminAI.dc.html`, canvas version 101), its words in VM Website's `design/generators/test_ai_boards.py`, `DRAWN_AHEAD`
 ---
@@ -115,7 +116,7 @@ None. The owner's answers, 2026-11-24, as recommended:
 
 ## Changes after approval
 
-- 2026-11-24, as built:
+- 2026-11-24, as built (#144):
   - **The answer is built by `ai.offer(listed, model, source)`,** from `ai.newest_of_each_kind` and `Writer.models()`, which answers every model as an `ai.Listed`. So a model in use that Anthropic doesn't list is held by a unit test, `test_a_model_in_use_that_anthropic_no_longer_lists_is_unnamed`. Over HTTP the harness's model is always listed, and the route refuses an unlisted one.
   - **A slow or unreachable list** is held by `test_a_list_that_is_slow_or_unreachable_is_a_plain_failure`, not over HTTP. The contract suite holds a refusing Anthropic (401) for the read, and a failing one (500) for the save.
   - **The budget** has a test of its own, `test_the_model_list_has_its_own_budget`: the 61st read is 429, and the writing help still answers.
