@@ -1,52 +1,45 @@
 # Handoff
 
-Overwritten every session. This one: 2026-11-23, about 17:05, to 2026-11-24, about 08:00 Eastern (Claude Code, the owner's machine), session M4g of `dev plans/2026-11-21-vibrant-mindz-push-plan.md`, the main lane.
-
-- **Landed:** #139 (the account's name), #140 (the admin shell's five differences) and #141 (the signed-out session read). #136, M4f's handoff, had landed before it began.
-- **The side lane** landed pages 0.1.1 (#138).
-- **`main`** is `c5debc7`, #141's head, landed at 07:41 Eastern (12:41 UTC) on 2026-11-24. This handoff is its own docs PR.
+Overwritten every session. This one: 2026-11-24, about 07:45 to 12:00 Eastern (Claude Code, the owner's machine, the owner on Remote Control at times), session M4h of `dev plans/2026-11-21-vibrant-mindz-push-plan.md`, the main lane. Landed: #142 (M4g's handoff), #143 (blog 0.1.3) and #144 (the AI's model). Started: generated covers, on a local branch. This handoff is its own docs PR.
 
 ## State
 
-- **#139, the account's name** (decision 0061; contract `dev plans/contracts/account-name.md`, approved as recommended), landed at `3f29622`:
-  - a Name field on a new Profile page, and in People for staff;
-  - `auth_user.display_name` is cleaned and capped at 120 characters, with no migration;
-  - its audit action, and the session's `name`.
-- **#140, the shell's five differences** (decision 0044, amended again), landed at `de439e8`:
-  - four CSS fixes in `admin.css`;
-  - `AdminSection.pages` sets a section's page order, with Content in the boards' order. A page listed twice is drawn once (CodeRabbit).
-  - `admin.spec.ts` checks it at 1440 and 390 in both themes.
-  - ESLint now ignores `.claude/**`: it ran out of memory walking the worktrees.
-- **#141, the signed-out session read** (decision 0063; contract `dev plans/contracts/signed-out-session.md`, approved as recommended), landed at `c5debc7`:
-  - **The read:** `GET /api/auth/session` is public. To anyone without a live session it answers 200 `{"user": null}`, and both answers carry `Cache-Control: no-store`. A dead cookie is left alone. The answer model is `SessionRead` (`user: UserView | None`).
-  - **The web** reads `user: null` as signed out, and still reads a 401 that way, for a server not yet upgraded.
-  - **The template's smoke** allows no console error now.
-  - **The tests** read "this session ended" through `Api.who()`.
-  - **The test runs:**
-    - full Python suite: 3,508 passed, 97.87% coverage;
-    - web: 955 passed, 91.1% of lines;
-    - e2e: 115 of 115;
-    - `tools.site_smoke`: green.
-  - **VM Website:** after upgrading the kernel, its copy of the smoke can drop its 401 allowance. Dev 12 has been told.
-- **#138, pages 0.1.1** (the side lane, AI DevKit Development 40 WT), landed at `e4f211b`. Its result is §5 of `dev plans/done/2026-11-23-side-lane-m7-pages-public.md`.
-  - `@/modules/pages/public` gives `usePage`, `isMoved`, `day`, `LivePage` and `PageMoved`.
-  - A live page shows an "Updated" line under its title.
-  - Six crossed-save fixes in the editor.
-  - VM Website Dev 12 and Dev 13 have the landing message.
-- **The progress ledger:** `steps` points at `/_blob/6c0facbe467733921b7f2f3d765230d2`, the rows from `c5debc7`. v1.0 is 80% (49 of 61). Its `data/users/me` `check` isn't written yet: the page writes it only once it draws in a browser.
+- **#143, blog 0.1.3,** landed at `7b01b9f`:
+  - `blog.post.published` is version 2 and carries the post's `summary`, so campaigns' email holds it. A payload refuses fields it doesn't declare, so the field had to be a new version (SPEC 11 and 13).
+  - The editor's three crossed-save gaps are closed as pages' were (#138), each with a test seen failing first.
+- **#144, the AI's model from Anthropic's list** (decision 0064; `dev plans/contracts/ai-model.md`, approved as recommended), landed at LANDED_SHA:
+  - Settings → AI's Model row is a dropdown of the newest Opus, Sonnet and Haiku. It's read from Anthropic each time the page opens, with a budget of its own (60 an hour a person).
+  - A saved model wins over `ANTHROPIC_MODEL`, and it's saved only through `PUT /admin/ai/model`, which checks it against the list. That's settings' new `own_route` (SPEC 7).
+  - The six states are VM Website's boards (AdminAI, canvas versions 101 and 102).
+- **Generated covers** (decision 0065; `dev plans/contracts/blog-covers.md`, approved as recommended, its board at canvas version 104) are on **`feat/blog-covers`, local and never pushed:**
+  - `kernel.svg`, the cleaner and the PNG step, with 28 tests and two mutants seen caught;
+  - resvg-py 0.5.0, pinned with hashes;
+  - Inter 4.1's Regular, SemiBold and Bold, downloaded with the owner's OK, its OFL licence beside them, in NOTICE;
+  - the contract, with what's left and the board's words, in its "Changes after approval".
+- **The tests:**
+  - #144's branch, merged with #143: full Python suite 3,526 passed, 97.86%; web 973 passed, 93.45% of lines; `ai.spec.ts` 4 passed;
+  - #143: 3,507 passed, and `blog.spec.ts` in both themes.
+- **The ledger:** LEDGER.
+- **The side lane** (AI DevKit Development 44 WT) opened **`discography` 0.1.0 as #145** (`feat/discography`, from `.claude/worktrees/discography-0-1-0`). It will merge `main` again after #144, before landing.
+  - Its result is §9 of its own prompt, `dev plans/2026-11-24-side-lane-m8b-discography-web.md`, in that PR.
+  - Besides the module, #145 touches SPEC 6 and 15, `docs/progress.json` (Step 2), `catalog.json`, `docs/HOST-VARIABLES.md` and `package.json`'s `api:*` scripts.
+  - Its one kernel change: `security.public_origin`, and `STORAGE_PUBLIC_URL`'s origin in `media-src` (decision 0070). It merges beside #144's line in `app.py`.
+  - It takes decisions 0071 and up.
+- **VM Website:**
+  - Dev 12 has had every landing.
+  - Dev 14 drew the AI boards.
+  - Dev 15 drew Draw a cover (canvas version 104) and sent the footer's layout shift (Next, 2).
 
 ## Next
 
-1. **Blog 0.1.3:**
-   - the post's `summary` in `blog.post.published`, for campaigns;
-   - the three crossed-save gaps in `modules/blog/web/pages/AdminPost.tsx` that pages 0.1.1 closed. A retry and a conflict's choice don't carry the person's fields, and neither sets `formNow` before saving again. Copy pages' `save(…, carried)` and its four tests.
-2. **Generated covers** (`blog.md` §8, 3). Contract first.
+1. **Finish generated covers** on `feat/blog-covers`, after merging `main`: media 0.1.4's `store`, blog's task, routes and dialog, the fake's `COVER`, and the docs.
+2. **The site frame's footer shifts** on every page's first load (CLS 0.40; VM Website Dev 15, with the owner's OK). `SiteFrame` paints the footer before the lazy page fills `<main>`. Contract first. Its record, to read only, is `C:\DEV\VM Website\dev plans\2026-11-24-lighthouse-after-141.md`.
 3. **Social posting:** ask `blog.md` §8, 7 first.
-- **The side lane, next:** `discography` 0.1.0, contract first (`dev plans/2026-11-23-side-lane-m8-discography.md`).
 
 ## Open questions for the owner
 
-- `blog.md` §8, 7: social posting's home and its Buffer key.
+- Whether the footer's shift (Next, 2) goes before covers or after them.
+- `blog.md` §8, 7: social posting's home, and its Buffer key.
 - Earlier ones:
   - the flaky axe test at `kernel/tests/e2e/sign-in.spec.ts:389`;
   - hooks 6 to 8's changes after approval;
@@ -56,24 +49,24 @@ Overwritten every session. This one: 2026-11-23, about 17:05, to 2026-11-24, abo
 ## Notes
 
 - **IDs:**
-  - The main lane has 0064 to 0069, `kernel_0017`, `kernel_0018` and `blog_0002`.
-  - The side lane has 0070 and up, and `discography_0001`.
-  - PR numbers come from GitHub just before each push.
-- **Traps met this session:**
-  - ESLint runs out of memory when it walks `.claude/worktrees/`. `eslint.config.js` now ignores `.claude/**`.
-  - `--cov=<module>` breaks SQLAlchemy's imports (`'InternalTraversal' object is not callable`). Use plain `--cov`.
-  - A test that checks layout against a board should measure the page's own brand box: the harness's logo isn't the board's 26px.
-  - A merge of `main` across lanes conflicts only in the progress files. Take main's, carry your own Step entry back in, and run `python -m tools.progress`.
+  - the main lane used 0064 and 0065, and has 0066 to 0069, `kernel_0017`, `kernel_0018` and `blog_0002`;
+  - the side lane has 0070 (written) and up.
+- **Still stale:** `modules/campaigns/MODULE.md` (lines 42 and 73) and `dev plans/contracts/campaigns.md` still say blog's payload is v1, with no summary. Both are campaigns' files, so the fix waits for campaigns' next version.
+- **Flaky on this PC:** `test_worker.py`'s `test_a_killed_worker_s_job_is_finished_by_the_next` and `test_the_web_process_runs_none_when_not_asked` failed under the full suite's load twice, and passed alone both times. CI is green on them.
+- **Traps met:**
+  - A Bash heredoc collapses `\\` to `\`, and `\2026` once became a control character. Build backslashes with `chr(92)`.
+  - Another session switched this checkout's branch 37 seconds after I made one (the reflog shows it). Check `git branch --show-current` before committing.
+  - CodeRabbit's free reviews run out after a few pushes an hour. It answers "Review limit reached".
+  - ruff's S314 flags `xml.etree`. `kernel.svg` refuses a DOCTYPE or an entity in the whole input first, with a `noqa` that says why.
+- **Remove `.claude/worktrees/ai-model`** once #144 is on `main`, its `node_modules` junction first.
 - **Still true:**
-  - Run the full suite with `$env:PYTHONUTF8 = "1"`.
-  - Commit with `git commit -F <file>`, after `git diff --cached --stat` as a step of its own.
-  - A module's OpenAPI spec carries its version: run `python -m tools.openapi` after a bump.
-  - `npx.cmd` mangles arguments with `|` or spaces.
-  - **Worktrees:** `campaigns-module-contract-065954` is removed. These are clean, each on a commit in `main`, and can go once no open session is working in them: `pages-0-1-1-public-5387b6`, `multi-agent-worktree-plan-adc83e`, `strange-cray-b32ad4` and `concurrent-session-standby-fbaf9e`. Remove a junctioned `node_modules` with `cmd /c rmdir` first; the last two still have one. The two `remote-control-standby-*` worktrees are clean on `b30dea3`; whether a session still uses them wasn't checked.
-- **The ledger's older assets:** 28 of them, every asset but `6c0facbe467733921b7f2f3d765230d2`, are to be deleted once a page `check` passes. Nothing points at them; `Artifact` `list` with `scope: "assets"` names them.
-- **`CLAUDE.md` is 179 lines,** past the ~150 the workspace asks for. Lean it when the owner says.
+  - Run the full suite with `$env:PYTHONUTF8 = "1"`. It takes about 85 minutes here.
+  - Commit with `git commit -F <file>`.
+  - A module's OpenAPI spec carries its version.
+  - The root lint and black sweep `.claude/worktrees/`, and `npx.cmd` mangles arguments.
+- **`CLAUDE.md` is about 170 lines.** Lean it when the owner says.
 
 ## Warnings
 
-- Nothing from VybeSite's `dev plans\` or `snapshots\`; run its brand check on lifted code.
+- Nothing from VybeSite's `dev plans\` or `snapshots\`. Run its brand check on lifted code: covers lift VybeSite's styles and wordmark.
 - Editing CI's security gates is the owner's call. Never apply a site's `railway.ts` for the owner, never type a key for them, and never edit `C:\DEV\VM Website`.
