@@ -293,3 +293,27 @@ def test_the_permissions_list_is_the_kernels_then_each_modules() -> None:
         {"key": "blog.post.edit", "description": "Edit posts", "owner": "blog"},
         {"key": "blog.post.publish", "description": "", "owner": "blog"},
     )
+
+
+async def test_people_search_finds_names_as_typed(site: Site) -> None:
+    """`q` finds names as well as addresses, case ignored, and `%` and `_`
+    are themselves, never a pattern (decision 0061)."""
+    tag = uuid.uuid4().hex[:8]
+    owner, named, wild = await _person(site, "owner"), await _person(site), await _person(site)
+    async with site.db() as db:
+        for person, name in ((named, f"Ana {tag} Example"), (wild, f"Bo 100% {tag}_x")):
+            row = await db.get(User, person.id)
+            assert row is not None
+            row.display_name = name
+        await db.commit()
+    browser = await _signed_in(site, owner)
+
+    async def found(q: str) -> list[str]:
+        answer = await browser.get(USERS, params={"q": q})
+        assert answer.status_code == 200, answer.text
+        return [item["id"] for item in answer.json()["items"]]
+
+    assert await found(f"ANA {tag.upper()}") == [str(named.id)]
+    assert await found(f"% {tag}_") == [str(wild.id)]
+    assert await found(f"{tag}%") == []
+    assert await found(f"a{tag}") == []

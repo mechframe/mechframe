@@ -115,6 +115,7 @@ from kernel.auth.exports import PRUNE as PRUNE_EXPORTS
 from kernel.auth.exports import router as exports_router
 from kernel.auth.factor_undo import router as factor_undo_router
 from kernel.auth.mails import TEMPLATES as KERNEL_MAILS
+from kernel.auth.names import router as names_router
 from kernel.auth.passkeys import router as passkeys_router
 from kernel.auth.password_change import router as password_change_router
 from kernel.auth.passwords import Passwords, RangeLookup, ask_range
@@ -498,6 +499,7 @@ def create_app(
     app.include_router(password_change_router, prefix="/api/auth")
     app.include_router(totp_router, prefix="/api/auth")
     app.include_router(passkeys_router, prefix="/api/auth")
+    app.include_router(names_router, prefix="/api/auth")
     app.include_router(devices_router, prefix="/api/auth")
     app.include_router(summary_router, prefix="/api/auth")
     app.include_router(factor_undo_router, prefix="/api/auth")

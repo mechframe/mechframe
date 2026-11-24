@@ -58,8 +58,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from kernel import audit, clock, email, events, jobs, notifications
 from kernel.auth.dependencies import current_user
 from kernel.auth.mails import when
-from kernel.auth.models import RolePermission, User
-from kernel.auth.permissions import OWNER, can, roles_of
+from kernel.auth.models import User
+from kernel.auth.permissions import can, outranks, roles_of
 from kernel.errors import Problem
 from kernel.models import AuditEvent, ModerationCase, ModerationReport
 from kernel.modules import OFF
@@ -471,30 +471,6 @@ async def screen(db: AsyncSession, text: str) -> Screen:
 # --- who may act on whom --------------------------------------------------------------
 
 
-async def _held(db: AsyncSession, roles: set[str]) -> set[str]:
-    if not roles:
-        return set()
-    found = await db.scalars(
-        select(RolePermission.permission).where(RolePermission.role_id.in_(roles))
-    )
-    return set(found)
-
-
-async def _outranked(db: AsyncSession, actor: uuid.UUID, person: uuid.UUID) -> bool:
-    """Whether `actor` may act on `person`'s account or content: an owner only
-    by an owner, anyone else by someone holding every permission they hold
-    (decision 0013's rule)."""
-    actor_roles = await roles_of(db, actor)
-    # What every member holds is no rank: a module's permission for members
-    # mustn't stop an admin suspending one.
-    their_roles = await roles_of(db, person) - {"member"}
-    if OWNER in actor_roles:
-        return True
-    if OWNER in their_roles:
-        return False
-    return await _held(db, their_roles) <= await _held(db, actor_roles)
-
-
 async def _is_staff(db: AsyncSession, person: uuid.UUID) -> bool:
     return bool(await roles_of(db, person) - {"member"})
 
@@ -640,7 +616,7 @@ async def _may_change(db: AsyncSession, actor: User, user_id: uuid.UUID) -> User
     acting = found.get(actor.id)
     if acting is None or acting.status != "active":
         raise Problem("auth.account_not_active", 409, "Your account is no longer active.")
-    if not await _outranked(db, actor.id, user_id):
+    if not await outranks(db, actor.id, user_id):
         raise Problem(
             "auth.role_not_yours",
             403,
@@ -772,7 +748,7 @@ async def act(
         action in CONTENT_ACTIONS
         and author is not None
         and await _is_staff(db, author)
-        and not await _outranked(db, actor.id, author)
+        and not await outranks(db, actor.id, author)
     ):
         raise _refused("This was written by staff holding a permission you don't.")
 

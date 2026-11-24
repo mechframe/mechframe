@@ -23,6 +23,7 @@ export const SCREENS: Readonly<Record<string, Lazy>> = {
   "/auth/second-factor/undo": landing("UndoSecondFactor"),
   "/notifications/unsubscribe": landing("Unsubscribe"),
   "/account": () => import("../account/Account"),
+  "/account/profile": () => import("../account/Profile"),
   "/account/notifications": () => import("../account/Notifications"),
   "/account/activity": () => import("../account/Activity"),
   "/admin": () => import("../admin/Dashboard"),

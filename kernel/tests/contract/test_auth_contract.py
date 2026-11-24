@@ -2046,3 +2046,30 @@ async def test_the_security_summary_counts_only_a_confirmed_totp(api: Api) -> No
 
 async def test_the_security_summary_needs_a_session(api: Api) -> None:
     assert _code(await api.http.get(SECURITY)) == (401, "kernel.not_signed_in")
+
+
+# The account's name (14.1; decision 0061)
+
+
+async def test_put_account_name(api: Api) -> None:
+    signed_out = await api.http.put("/api/auth/account/name", json={"name": "Ana"})
+    assert (signed_out.status_code, signed_out.json()["code"]) == (401, "kernel.not_signed_in")
+    user = await api.make_user()
+    await api.signed_in_as(user)
+    named = await api.http.put("/api/auth/account/name", json={"name": "  Big \n Haas "})
+    assert named.status_code == 200, named.text
+    session = (await api.session()).json()
+    assert named.json() == session
+    assert session["user"]["name"] == "Big Haas"
+    for refused in ({"name": "x" * 121}, {"name": "Big\x00Haas"}, {"name": None}):
+        answer = await api.http.put("/api/auth/account/name", json=refused)
+        assert (answer.status_code, answer.json()["code"]) == (422, "kernel.invalid_request")
+    cleared = await api.http.put("/api/auth/account/name", json={"name": ""})
+    assert (cleared.status_code, cleared.json()["user"]["name"]) == (200, None)
+    # Ten changes an hour, then 429 (the contract's limit); a new account, a new budget.
+    await api.signed_in_as(await api.make_user())
+    for each in range(10):
+        answer = await api.http.put("/api/auth/account/name", json={"name": f"Ana {each}"})
+        assert answer.status_code == 200, answer.text
+    limited = await api.http.put("/api/auth/account/name", json={"name": "Ana 10"})
+    assert (limited.status_code, limited.json()["code"]) == (429, "kernel.rate_limited")

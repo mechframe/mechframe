@@ -194,7 +194,7 @@ test("an admin makes a role, gives it to someone, and Roles counts them", async 
   await expect(card.getByText("0", { exact: true })).toBeVisible();
 
   await page.goto("/admin/people");
-  await page.getByRole("searchbox", { name: "Search by email" }).fill(member.email);
+  await page.getByRole("searchbox", { name: "Search by name or email" }).fill(member.email);
   await page.getByRole("button", { name: `Open ${member.email}` }).click();
   const dialog = page.getByRole("dialog", { name: member.email });
   await dialog.getByRole("switch", { name: new RegExp(`^${name}`) }).click();
@@ -209,4 +209,43 @@ test("an admin makes a role, gives it to someone, and Roles counts them", async 
   await card.getByRole("button", { name: `Edit ${name}` }).click();
   await expect(page.getByText("One person holds this role.", { exact: false })).toBeVisible();
   await expect(page.getByRole("button", { name: "Delete role" })).toHaveCount(0);
+});
+
+test("A name set on Profile names you on the person card and in People", async ({ page, request }) => {
+  test.slow(); // two sign-ins' worth of password hashing beside the other tests
+  const stamp = String(Date.now()).slice(-6);
+  const name = `Ada ${stamp}`;
+  // On a phone first: the page, its pills and the dialog fit (decision 0061).
+  await page.setViewportSize({ width: 390, height: 844 });
+  const email = await signedInAdmin(page, "/account/profile");
+  await expect(page.getByRole("heading", { level: 1, name: "Profile" })).toBeVisible();
+  const card = page.getByRole("region", { name: "Name" });
+  await expect(card.getByText("No name yet")).toBeVisible();
+  await card.getByRole("button", { name: "Add a name" }).click();
+  const dialog = page.getByRole("dialog", { name: "Your name" });
+  await dialog.getByRole("textbox", { name: "Name" }).fill(`  Ada   ${stamp} `);
+  await dialog.getByRole("button", { name: "Save" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(card.getByText(name, { exact: true })).toBeVisible();
+  await expect(page.getByText(`Signed in as ${name}`)).toBeVisible();
+  expect(await axe(page)).toEqual([]);
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/admin/people");
+  await expect(page.locator(".mf-admin-person-name")).toHaveText(name);
+  const search = page.getByRole("searchbox", { name: "Search by name or email" });
+  await search.fill(name.toUpperCase());
+  const row = page.getByRole("row").filter({ hasText: email });
+  await expect(row.getByText(name, { exact: true })).toBeVisible();
+
+  // Staff name someone else from People, and the dialog stays open under it.
+  const member = await makeUser(request, "member");
+  await search.fill(member.email);
+  await page.getByRole("button", { name: `Open ${member.email}` }).click();
+  const person = page.getByRole("dialog", { name: member.email });
+  await person.getByRole("textbox", { name: "Name" }).fill(`Bo ${stamp}`);
+  await person.getByRole("button", { name: "Save name" }).click();
+  await expect(page.getByRole("dialog", { name: `Bo ${stamp}` })).toBeVisible();
+  await page.getByRole("dialog", { name: `Bo ${stamp}` }).getByRole("button", { name: "Cancel" }).click();
+  await expect(page.getByRole("row").filter({ hasText: member.email }).getByText(`Bo ${stamp}`, { exact: true })).toBeVisible();
 });

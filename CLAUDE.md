@@ -70,6 +70,7 @@ From the repo root, in PowerShell. Python commands use the `python -m` form.
 | Progress document and ledger rows, after editing `docs/progress.json` | `python -m tools.progress` (`--check` only reports) |
 | Each theme's `tokens.css` and `tailwind.css`, after editing a `tokens.json` | `python -m tools.themes` (`--check` only reports) |
 | Event payloads as JSON Schema, after declaring or changing one | `python -m tools.event_schemas` (`--check` only reports) |
+| Every variable a site's host may set, `docs/HOST-VARIABLES.md`, after changing a kernel setting in `config.py`, a `module.json`'s env, settings or version, or `railway.ts` | `python -m tools.host_variables` (`--check` only reports; `tests/test_host_variables.py` fails while it's stale) |
 | The committed OpenAPI specs and the web's API types, after changing a route or its answer | `python -m tools.openapi`, then `npm run api:types` (`--check` and `npm run api:check` only report; decision 0042) |
 | The CLI: a new site, its modules, its edits, versions and advisories; the catalog (decisions 0047 and 0050) | After the pinned requirements, `python -m pip install --no-deps --no-build-isolation -e .` once, then `mechframe new <dir> [--recipe <id>]`, `mechframe add <id> --site <dir>`, `mechframe remove <id> --site <dir>`, `mechframe check --site <dir>` and `mechframe catalog` (`--check` only reports); or `python -m mechframe` with `$env:PYTHONPATH = "cli"` |
 | A new site, kernel only (decision 0048) | `python -m mechframe new <dir> --name "<site name>" [--theme <name>]` with `cli` on the path; the folder must be empty or not there yet |
@@ -162,7 +163,7 @@ MechFrame runs two agents at once, the owner's parallel work under `C:\DEV\CLAUD
   - Offer both as fenced blocks: the owner starts each as a top-level session.
 - **Keeping out of each other's way:**
   - **PR numbers** come from GitHub just before each push, never predicted across lanes.
-  - **Generated files** are taken from `main` and made again after merging it, never merged by hand: `docs/progress.json` then `python -m tools.progress`, `catalog.json`, the committed OpenAPI specs and `schema.ts` files, `package.json`'s `api:*` scripts, and SPEC's change log.
+  - **Generated files** are taken from `main` and made again after merging it, never merged by hand: `docs/progress.json` then `python -m tools.progress`, `catalog.json`, the committed OpenAPI specs and `schema.ts` files, `package.json`'s `api:*` scripts, `docs/HOST-VARIABLES.md` then `python -m tools.host_variables`, and SPEC's change log.
   - **The worktree** uses the main checkout's `.venv` python and a junction to its `node_modules`. Remove the junction (`cmd /c rmdir`) before `git worktree remove`. Playwright finds no tests there: run end-to-end specs from the main checkout.
   - **One full suite at a time on this PC.** The main lane runs the full suite before it pushes. The side lane runs its own module's suites, lint and types, then lets CI's full suite gate its PR (the owner, 2026-11-22).
   - **One end-to-end run at a time:** `harness.e2e` drops and makes again the one database `mechframe_e2e`. Tell the other lane before a run, and after it.

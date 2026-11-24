@@ -168,6 +168,11 @@
       "access": "member"
     },
     {
+      "path": "/account/profile",
+      "title": "Profile",
+      "access": "member"
+    },
+    {
       "path": "/account/notifications",
       "title": "Notifications",
       "access": "member"

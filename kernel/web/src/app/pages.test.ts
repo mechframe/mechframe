@@ -17,7 +17,7 @@ describe("the kernel's pages", () => {
 describe("a route that takes a kernel page", () => {
   it.each([
     ["/sign-in", "/sign-in"],
-    ["/account/:tab", "/account/notifications"],
+    ["/account/:tab", "/account/profile"], // the first of the account pages it meets
     ["/auth/:step", "/auth/verify"],
     ["/auth/email/:what", "/auth/email/undo"],
     ["/admin/people", "/admin/people"],

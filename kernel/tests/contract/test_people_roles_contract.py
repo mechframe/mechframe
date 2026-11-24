@@ -386,6 +386,46 @@ async def test_editing_roles_demands_a_recent_sign_in(api: Api, method: str) -> 
     assert _code(response) == (403, "auth.step_up_required")
 
 
+# --- a person's name: PUT /api/auth/admin/users/{id}/name (decision 0061) -----------
+
+
+async def test_put_admin_user_name(api: Api) -> None:
+    owner = await _as_owner(api)
+    member = await api.make_user()
+    tag = uuid.uuid4().hex[:8]
+    renamed = await api.http.put(f"{USERS}/{member.id}/name", json={"name": f"  Ana {tag} "})
+    assert renamed.status_code == 200, renamed.text
+    assert renamed.json() == await _listed(api, member)
+    assert renamed.json()["name"] == f"Ana {tag}"
+    found = await api.http.get(USERS, params={"q": f"ana {tag}"})
+    assert [item["id"] for item in found.json()["items"]] == [member.id]
+    logged = await _logged(api, "auth.user", member.id)
+    assert [(e["action"], e["actor_id"], e["details"]) for e in logged] == [
+        ("auth.name_changed", owner.id, {})
+    ]
+    refused = await api.http.put(f"{USERS}/{member.id}/name", json={"name": "x" * 121})
+    assert _code(refused) == (422, "kernel.invalid_request")
+    missing = await api.http.put(
+        f"{USERS}/{ZERO_ID}/name", json={"name": "Mo"}, extensions=UNCHECKED
+    )
+    assert _code(missing) == (404, "kernel.not_found")
+
+    # Only an owner renames an owner (decision 0013), and only with People's permission.
+    manager = await _staff_holding(api, "auth.user.manage")
+    outranked = await manager.http.put(f"{USERS}/{owner.id}/name", json={"name": "Not you"})
+    assert _code(outranked) == (403, "auth.role_not_yours")
+    assert (
+        await manager.http.put(f"{USERS}/{member.id}/name", json={"name": "Mo"})
+    ).status_code == 200
+    reader = await _staff_holding(api, "auth.audit.read")
+    forbidden = await reader.http.put(f"{USERS}/{member.id}/name", json={"name": "Mo"})
+    assert _code(forbidden) == (403, "kernel.forbidden")
+
+    await api.advance(11 * MINUTE)
+    stale = await api.http.put(f"{USERS}/{member.id}/name", json={"name": "Later"})
+    assert _code(stale) == (403, "auth.step_up_required")
+
+
 async def test_a_role_written_from_another_origin_is_refused(api: Api) -> None:
     """A forged page can't make a role or grant one with an owner's cookie
     (SPEC 14.5's Origin check, on the routes that hand out permissions)."""

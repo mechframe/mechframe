@@ -149,6 +149,7 @@ KERNEL_PAGES: tuple[KernelPage, ...] = (
     KernelPage("/auth/second-factor/undo", "Remove the new sign-in step", "public"),
     KernelPage("/notifications/unsubscribe", "Unsubscribe", "public"),
     KernelPage("/account", "Your account", "member"),
+    KernelPage("/account/profile", "Profile", "member"),
     KernelPage("/account/notifications", "Notifications", "member"),
     KernelPage("/account/activity", "Your activity", "member"),
     KernelPage("/admin", "Dashboard", "admin"),

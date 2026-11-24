@@ -99,6 +99,8 @@ KERNEL_ACTIONS = frozenset(
         "auth.passkey_renamed",
         "auth.passkey_removed",
         "auth.second_factor_undone",
+        # The account's name, changed by the person or by staff (decision 0061).
+        "auth.name_changed",
         # What the kernel does on its own (K3).
         "auth.user.removed_unverified",
         "kernel.settings_saved",

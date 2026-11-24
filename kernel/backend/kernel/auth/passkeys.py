@@ -228,7 +228,8 @@ async def start_registration(
         rp_name=party.name,
         user_id=user.id.bytes,
         user_name=user.email,
-        user_display_name=user.email,
+        # What the authenticator's account picker shows (decision 0061).
+        user_display_name=user.display_name or user.email,
         challenge=challenge,
         timeout=ceremonies.TIMEOUT_MS,
         attestation=AttestationConveyancePreference.NONE,

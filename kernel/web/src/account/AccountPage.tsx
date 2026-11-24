@@ -21,6 +21,7 @@ import { useSession } from "../session/session";
 import { useToast } from "../ui/Toast";
 
 const PAGES = [
+  { to: "/account/profile", label: "Profile" },
   { to: "/account", label: "Sign-in and security" },
   { to: "/account/notifications", label: "Notifications" },
   { to: "/account/activity", label: "Activity" },
@@ -33,7 +34,7 @@ export function AccountPage({ page, title, lead, children }: { page: string; tit
     <div className="mf-account">
       <Seo title={heading} noindex />
       <div className="mf-account-head">
-        {session.status === "signed-in" ? <p className="mf-account-who">Signed in as {session.user.email}</p> : null}
+        {session.status === "signed-in" ? <p className="mf-account-who">Signed in as {session.user.name ?? session.user.email}</p> : null}
         <nav aria-label="Your account" className="mf-account-nav">
           <ul>
             {PAGES.map((each) => (

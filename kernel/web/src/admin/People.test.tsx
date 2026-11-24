@@ -1,5 +1,6 @@
-// The admin's People (K4.7): everyone with an account, found by address,
-// fifty at a time, and a person's roles changed within what you may grant.
+// The admin's People (K4.7): everyone with an account, found by name or
+// address, fifty at a time, and a person's name (decision 0061) and roles
+// changed within what you may change.
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeAll, describe, expect, it } from "vitest";
@@ -7,7 +8,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { renderApp, testUser } from "../../testing";
 import type { components } from "../api/schema";
 import { problem, routedFetch, type Answer } from "../test-fetch";
-import { roleName, roleWords, whyNotGrant } from "./roleAccess";
+import { roleName, roleWords, whyNotGrant, whyNotRename } from "./roleAccess";
 
 type Person = components["schemas"]["Person"];
 type RoleView = components["schemas"]["RoleView"];
@@ -97,8 +98,8 @@ describe("the people list", () => {
     const table = await opened();
     await userEvent.click(screen.getByRole("button", { name: "Show more" }));
     await table.findByText("c3@site.test");
-    await userEvent.type(screen.getByRole("searchbox", { name: "Search by email" }), "bo");
-    const found = within(await screen.findByRole("table", { name: 'People whose email holds "bo", newest first' }));
+    await userEvent.type(screen.getByRole("searchbox", { name: "Search by name or email" }), "bo");
+    const found = within(await screen.findByRole("table", { name: 'People whose name or email holds "bo", newest first' }));
     expect(found.getByText("b2@site.test")).toBeInTheDocument();
     const asked = sent.filter((request) => request.url.includes("/api/auth/admin/users")).map((r) => new URL(r.url).search);
     expect(asked).toEqual(["", "?cursor=next", "?q=bo"]);
@@ -118,12 +119,79 @@ describe("the people list", () => {
     expect(screen.getByText(/The roles/)).toBeInTheDocument();
   });
 
-  it("offers no Open without auth.role.assign", async () => {
-    routedFetch({ ...BASE, "GET /api/auth/admin/users": page([ANN]) });
+  it("opens for anyone on People, with the name and no roles without auth.role.assign", async () => {
+    routedFetch({ ...BASE, "GET /api/auth/admin/users": page([BO]) });
     const reader = testUser({ roles: ["member", "helper"], second_factor: true, permissions: ["auth.user.manage"] });
     const table = await opened(reader);
-    await table.findByText("Admin");
-    expect(table.queryByRole("button", { name: /^Open / })).toBeNull();
+    await userEvent.click(await table.findByRole("button", { name: "Open b2@site.test" }));
+    const dialog = within(await screen.findByRole("dialog", { name: "b2@site.test" }));
+    expect(dialog.getByRole("textbox", { name: "Name" })).toHaveValue("");
+    expect(dialog.queryByRole("switch")).toBeNull();
+    expect(dialog.queryByRole("button", { name: "Save roles" })).toBeNull();
+    expect(dialog.getByRole("button", { name: "Close" })).toBeEnabled();
+  });
+});
+
+describe("a person's name", () => {
+  it("is saved on its own, the dialog left open under the new name", async () => {
+    const { sent } = routedFetch({
+      ...BASE,
+      "GET /api/auth/admin/users": page([BO]),
+      "PUT /api/auth/admin/users/00000000-0000-4000-8000-0000000000b2/name": { status: 200, body: { ...BO, name: "Bo Example" } },
+    });
+    const table = await opened();
+    await userEvent.click(await table.findByRole("button", { name: "Open b2@site.test" }));
+    const dialog = within(await screen.findByRole("dialog", { name: "b2@site.test" }));
+    expect(dialog.getByRole("button", { name: "Save name" })).toBeDisabled();
+    await userEvent.type(dialog.getByRole("textbox", { name: "Name" }), "  Bo   Example ");
+    await userEvent.click(dialog.getByRole("button", { name: "Save name" }));
+    expect(await screen.findByRole("dialog", { name: "Bo Example" })).toBeInTheDocument();
+    expect(dialog.getByRole("textbox", { name: "Name" })).toHaveValue("Bo Example");
+    expect(dialog.getByRole("button", { name: "Save name" })).toBeDisabled();
+    const put = sent.find((request) => request.method === "PUT");
+    expect(await put?.json()).toEqual({ name: "  Bo   Example " });
+    expect(await screen.findByText("Saved the name Bo Example.")).toBeInTheDocument();
+  });
+
+  it("is removed when emptied", async () => {
+    routedFetch({
+      ...BASE,
+      "GET /api/auth/admin/users": page([ANN]),
+      "PUT /api/auth/admin/users/00000000-0000-4000-8000-0000000000a1/name": { status: 200, body: { ...ANN, name: null } },
+    });
+    const table = await opened();
+    await userEvent.click(await table.findByRole("button", { name: "Open Ann Example" }));
+    const dialog = within(await screen.findByRole("dialog", { name: "Ann Example" }));
+    await userEvent.clear(dialog.getByRole("textbox", { name: "Name" }));
+    await userEvent.click(dialog.getByRole("button", { name: "Save name" }));
+    expect(await screen.findByRole("dialog", { name: "a1@site.test" })).toBeInTheDocument();
+    expect(await screen.findByText("Removed the name.")).toBeInTheDocument();
+  });
+
+  it("is read-only, with the reason, for an owner when you aren't one", async () => {
+    const owner = person("e5", { name: "Big Haas", roles: ["owner", "member"], second_factor: true });
+    routedFetch({ ...BASE, "GET /api/auth/admin/users": page([owner]) });
+    const table = await opened();
+    await userEvent.click(await table.findByRole("button", { name: "Open Big Haas" }));
+    const dialog = within(await screen.findByRole("dialog", { name: "Big Haas" }));
+    expect(dialog.getByRole("textbox", { name: "Name" })).toHaveAttribute("readonly");
+    expect(dialog.getByText("Only an owner changes an owner's name.")).toBeInTheDocument();
+    expect(dialog.queryByRole("button", { name: "Save name" })).toBeNull();
+  });
+
+  it("says why the server refused, and stays open", async () => {
+    routedFetch({
+      ...BASE,
+      "GET /api/auth/admin/users": page([BO]),
+      "PUT /api/auth/admin/users/00000000-0000-4000-8000-0000000000b2/name": problem(422, "kernel.invalid_request"),
+    });
+    const table = await opened();
+    await userEvent.click(await table.findByRole("button", { name: "Open b2@site.test" }));
+    const dialog = within(await screen.findByRole("dialog", { name: "b2@site.test" }));
+    await userEvent.type(dialog.getByRole("textbox", { name: "Name" }), "Bo");
+    await userEvent.click(dialog.getByRole("button", { name: "Save name" }));
+    expect(await dialog.findByText("A name is up to 120 characters, on one line.")).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "b2@site.test" })).toBeInTheDocument();
   });
 });
 
@@ -196,7 +264,7 @@ describe("a person's roles", () => {
       });
     });
     const table = await opened();
-    await userEvent.type(screen.getByRole("searchbox", { name: "Search by email" }), "c3");
+    await userEvent.type(screen.getByRole("searchbox", { name: "Search by name or email" }), "c3");
     await userEvent.click(table.getByRole("button", { name: "Open c3@site.test" }));
     const dialog = within(await screen.findByRole("dialog", { name: "c3@site.test" }));
     await waitFor(() => {
@@ -211,7 +279,7 @@ describe("a person's roles", () => {
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).toBeNull();
     });
-    const found = within(await screen.findByRole("table", { name: 'People whose email holds "c3", newest first' }));
+    const found = within(await screen.findByRole("table", { name: 'People whose name or email holds "c3", newest first' }));
     expect(await found.findByText("Editor")).toBeInTheDocument();
     expect(found.getByText("Not set up")).toBeInTheDocument();
   });
@@ -270,6 +338,15 @@ describe("role words", () => {
     expect(roleName("beat-makers")).toBe("Beat makers");
     expect(roleWords(["member", "jobs-crew"], ROLES)).toBe("Jobs crew");
     expect(roleWords(["member"])).toBe("Member");
+  });
+
+  it("says ahead whose name the server will refuse to change", () => {
+    const held = new Set(ADMIN_HOLDS);
+    expect(whyNotRename(["owner", "member"], ROLES, held, true)).toBeNull();
+    expect(whyNotRename(["owner", "member"], ROLES, held, false)).toBe("Only an owner changes an owner's name.");
+    expect(whyNotRename(["admin", "member"], ROLES, held, false)).toBeNull();
+    expect(whyNotRename(["member"], ROLES, new Set(), false)).toBeNull();
+    expect(whyNotRename(["jobs-crew"], ROLES, held, false)).toMatch(/^They hold permissions you don't/);
   });
 
   it("says ahead what the server will refuse to grant", () => {
