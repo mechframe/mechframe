@@ -101,8 +101,7 @@
   },
   "slots": [
     "nav.public",
-    "nav.admin",
-    "admin.dashboard.widget"
+    "nav.admin"
   ],
   "bindings": [
     "web"

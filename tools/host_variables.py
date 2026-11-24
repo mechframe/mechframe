@@ -353,15 +353,16 @@ KERNEL = [
         "STORAGE_PUBLIC_BUCKET",
         "storage",
         "storage",
-        "The public bucket, served to anyone at `STORAGE_PUBLIC_URL`: media's images live "
-        "here. Never the same bucket as `STORAGE_BUCKET`. Set with `STORAGE_PUBLIC_URL` or "
-        "neither.",
+        "The public bucket, served to anyone at `STORAGE_PUBLIC_URL`: media's images and "
+        "discography's stream files live here. Never the same bucket as `STORAGE_BUCKET`. Set "
+        "with `STORAGE_PUBLIC_URL` or neither.",
     ),
     Var(
         "STORAGE_PUBLIC_URL",
         "storage",
         "storage",
-        "The public bucket's address (R2: its custom domain), https outside `DEBUG`.",
+        "The public bucket's address (R2: its custom domain), https outside `DEBUG`. While "
+        "it's set, the pages' `media-src` allows it, so a stream file plays (decision 0070).",
     ),
     Var(
         "STORAGE_REGION",
@@ -558,6 +559,10 @@ LEANS_ON = {
     "with `SMTP_HOST` or `RESEND_API_KEY`). Nothing sends until its postal address is set "
     "in Settings → Newsletter.",
     "pages": "Write with AI needs `ANTHROPIC_API_KEY` or a key saved in Settings → AI.",
+    "discography": "Uploads need storage with its public pair: masters go in "
+    "`STORAGE_BUCKET`, stream files in `STORAGE_PUBLIC_BUCKET` at `STORAGE_PUBLIC_URL`. "
+    "Until they're set, an upload answers 503 `discography.storage_off` and tracks play "
+    "from SoundCloud links. Its job runs where the jobs worker does (`JOBS_IN_WEB`).",
 }
 
 _SECRET_WORDS = ("PASSWORD", "SECRET", "TOKEN", "API_KEY", "PRIVATE_KEY")

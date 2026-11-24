@@ -172,3 +172,13 @@ Files: masters in the private bucket at `discography/masters/<track_id>/<n>.<ext
 - **Search indexes releases only,** each document holding its playable tracks' titles, every credit and, under `show_lyrics`, the lyrics. A track is found by its name or a credit and lands on its release.
 - **The five roles are the migration's,** so a site without the seed has them; the seed adds releases only.
 - **`public.py`'s `Card`** is a frozen dataclass. A release's card carries its playable tracks as cards of their own (`tracks`), for the Releases deck.
+
+## Changes as built (the web and the contract suite, `feat/discography`)
+
+- **The sidebar says Albums, Tracks and Credits** under Music, as the boards draw it; Albums is `/admin/music`, which lists every kind of release.
+- **Tracks move with Move up and Move down,** not by dragging: the keyboard and a screen reader can use them, and the order saves with the release.
+- **The Music settings panel shows the three settings** (lyrics, the Parental Advisory label, the stream's quality). The board's "Where tracks play from" row is a fixed line now that `default_audio_source` is gone (§8, 5b), and its "Streaming links on release pages" row is each release's own links.
+- **The panel saves through the kernel's settings routes,** which ask for `kernel.settings.manage`, so an admin saves it and an editor sees a note. `discography.settings.manage` is granted, but no route checks it yet: a kernel change for every module's settings, not this module's.
+- **The Credits board has no Add a credit:** a credit is a role on a release or a track, so it's added in the album editor and on the Tracks board. Its note for a name not linked has no Link it until roster (step 3).
+- **Not drawn, being other modules':** the Release board's Buy the CD (shop) and More music, and the Albums board's "On the Releases deck" and "Preview on the deck" (featured).
+- **The contract suite** sends real masters over HTTP (moto for both buckets): an 8-second WAV past the site's 1 MB body limit, run through the job; a 61-minute FLAC of silence (a few kilobytes); 60 MB and 64 MB bodies for the two limits.
