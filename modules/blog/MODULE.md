@@ -32,7 +32,7 @@ Use it for dated writing with an author, a category and a cover, drafted and sch
 - **Permissions:**
   - `blog.post.write` (list, write, save, preview) and `blog.post.publish` (publish, schedule, unpublish, delete);
   - both go to admin and editor, granted in the migration; an owner holds every permission. A site that wants writers who can't publish gives a role of its own `blog.post.write` alone.
-- **Events:** emits `blog.post.published` (`{post_id, slug, title, path, post_to_community, email_subscribers}`), heard from the kernel's `kernel.content.published`.
+- **Events:** emits `blog.post.published` v2 (`{post_id, slug, title, summary, path, post_to_community, email_subscribers}`; v2, blog 0.1.3, added `summary`), heard from the kernel's `kernel.content.published`.
 - **Hooks:**
   - lifecycle: `blog.post`, drafted, scheduled and published;
   - taxonomy: `blog_category`, flat, one term a post;

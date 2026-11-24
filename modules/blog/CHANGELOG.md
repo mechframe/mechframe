@@ -1,5 +1,10 @@
 # Changelog: blog
 
+## 0.1.3
+
+- `blog.post.published` is version 2: it carries the post's `summary` ("" when it has none), so campaigns' email holds it. A payload refuses fields it doesn't declare, so the field is a new version (SPEC 11 and 13), and `schema/events/` holds `blog.post.published.v2.schema.json` in v1's place.
+- The editor's crossed saves, closed as pages' were in 0.1.1 (#138): a retry, and the save after a conflict's choice, carry the fields known to be the person's, so a field typed back to its saved value is still asked about if that save meets another; and both read the form they send at once, so a second conflict never takes someone else's change for the person's and sends it back.
+
 ## 0.1.2
 
 - The editor hands its Title, Summary (300) and search fields to the kernel's Write with AI (decision 0058), so its Titles, Summary and Search words fill them; Draft and Rewrite work in the body. `blog.public`'s dates are ISO text, as `kernel.answers.When` says (MODULE.md, "Extension points").

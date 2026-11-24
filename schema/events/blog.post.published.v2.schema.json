@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://mechframe.local/schema/events/blog.post.published.v1.schema.json",
+  "$id": "https://mechframe.local/schema/events/blog.post.published.v2.schema.json",
   "additionalProperties": false,
   "description": "A post went live for the first time, with its writer's choices for it.",
   "properties": {
@@ -15,6 +15,10 @@
     },
     "title": {
       "title": "Title",
+      "type": "string"
+    },
+    "summary": {
+      "title": "Summary",
       "type": "string"
     },
     "path": {
@@ -34,10 +38,11 @@
     "post_id",
     "slug",
     "title",
+    "summary",
     "path",
     "post_to_community",
     "email_subscribers"
   ],
-  "title": "blog.post.published (v1)",
+  "title": "blog.post.published (v2)",
   "type": "object"
 }
