@@ -33,7 +33,7 @@ MechFrame: website modules on a FastAPI + Postgres kernel (`CLAUDE.md`, `SPEC.md
 
 **State, checked 2026-11-24, morning Eastern:** `main` is #141 (the signed-out session read) plus the main lane's handoff PR. Check with `git log -1 origin/main` and `gh pr list`.
 
-1. **Write the contract first**, `dev plans/contracts/discography.md` from `_templates/feature-CONTRACT.md`, for the owner's approval. Its inputs:
+1. **Write the contract first**, `dev plans/contracts/discography.md` from the workspace's template, `C:\DEV\_templates\feature-CONTRACT.md` (outside the repo; a worktree reads it there too), for the owner's approval. Its inputs:
    - the scaffold's `MODULE.md` and `module.json`;
    - `docs/plans/vibrant-mindz-backend/backend-plan.md` (decision 3: an upload or a SoundCloud link per track) and `players-admin.md`;
    - the "Admin: Album editor" board (the link is in `MODULE.md`).
