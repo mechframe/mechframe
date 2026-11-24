@@ -71,6 +71,19 @@ OPENABLE = frozenset(
 _HOST_SOURCE = re.compile(r"^https://(\*\.)?[a-z0-9-]+(\.[a-z0-9-]+)+(:\d{1,5})?$")
 
 
+def public_origin(url: str) -> str | None:
+    """The https origin of `url` as a CSP source, such as the public bucket's
+    STORAGE_PUBLIC_URL; None for an empty one, or one that isn't https."""
+    try:
+        parts = urlsplit(url.strip())
+    except ValueError:
+        return None
+    if parts.scheme != "https" or not parts.hostname:
+        return None
+    origin = f"https://{parts.netloc.lower()}"
+    return origin if _HOST_SOURCE.fullmatch(origin) else None
+
+
 @dataclass
 class ContentSecurityPolicy:
     """The site's policy, plus the hosts modules add while they're on."""

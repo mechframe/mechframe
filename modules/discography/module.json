@@ -1,0 +1,130 @@
+{
+  "id": "discography",
+  "name": "Discography",
+  "version": "0.1.0",
+  "status": "experimental",
+  "category": "media",
+  "summary": "Albums, EPs and singles with tracks, credits and streaming links; tracks play from an upload or a SoundCloud link.",
+  "use_when": [
+    "The site belongs to an artist, band, label or collective that releases music",
+    "Releases and tracks need their own pages, credits, streaming links or an on-site player",
+    "Music is uploaded as masters, or already on SoundCloud, and should play on the site"
+  ],
+  "avoid_when": [
+    "Music is only linked out and never played on the site: that's embeds",
+    "The audio is a beat or sample for sale: that's licensing"
+  ],
+  "requires": {
+    "kernel": "^0.1",
+    "modules": {
+      "media": "^0.1",
+      "embeds": "^0.1"
+    }
+  },
+  "conflicts": [],
+  "permissions": [
+    {
+      "key": "discography.release.manage",
+      "description": "Releases, tracks, uploads, credits, roles and streaming links",
+      "default_roles": [
+        "admin",
+        "editor"
+      ]
+    },
+    {
+      "key": "discography.settings.manage",
+      "description": "The stream's bitrate, the Parental Advisory label and lyrics",
+      "default_roles": [
+        "admin"
+      ]
+    }
+  ],
+  "settings": [
+    {
+      "key": "stream_bitrate_kbps",
+      "type": "int",
+      "default": 256,
+      "secret": false,
+      "description": "The stream file's constant bitrate, from 128 to 320"
+    },
+    {
+      "key": "show_explicit_badge",
+      "type": "bool",
+      "default": true,
+      "secret": false,
+      "description": "The Parental Advisory label on explicit releases and tracks"
+    },
+    {
+      "key": "show_lyrics",
+      "type": "bool",
+      "default": true,
+      "secret": false,
+      "description": "Lyrics on a track's page, for tracks that have them"
+    }
+  ],
+  "env": [],
+  "routes": {
+    "api": "/api/discography",
+    "public": [
+      "/music",
+      "/music/:release",
+      "/music/:release/:track"
+    ],
+    "member": [],
+    "admin": [
+      "/admin/music",
+      "/admin/music/tracks",
+      "/admin/music/credits",
+      "/admin/music/:id"
+    ]
+  },
+  "tables": [
+    "discography_release",
+    "discography_track",
+    "discography_person",
+    "discography_role",
+    "discography_credit",
+    "discography_link",
+    "discography_move"
+  ],
+  "events": {
+    "emits": [
+      "discography.release.published",
+      "discography.release.changed",
+      "discography.release.deleted",
+      "discography.track.processed",
+      "discography.track.deleted"
+    ],
+    "listens": [
+      "kernel.content.published"
+    ]
+  },
+  "slots": [
+    "nav.public",
+    "nav.admin",
+    "admin.dashboard.widget"
+  ],
+  "bindings": [
+    "web"
+  ],
+  "jobs": [],
+  "notifications": [],
+  "content_types": [
+    {
+      "key": "discography.release",
+      "label": "Release",
+      "lifecycle": true,
+      "search": true,
+      "taxonomy": []
+    }
+  ],
+  "data_hooks": {
+    "export": false,
+    "delete": false
+  },
+  "source": {
+    "from": "new (Vibrant Mindz backend scaffold, 2026-11-15)",
+    "commit": "n/a",
+    "license": "proprietary"
+  }
+}
