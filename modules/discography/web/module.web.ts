@@ -1,15 +1,33 @@
-// discography's web binding (SPEC.md section 8). Generated scaffold; no business logic here.
+// discography's web binding (SPEC.md section 8; dev plans/contracts/discography.md):
+// the library at /music, each live release at /music/:release and each track that
+// plays at /music/:release/:track; Albums, Tracks and Credits under Music in the
+// sidebar, in the boards' order, with the album editor; and Music in the header.
 import { defineModule } from "@/kernel";
+
+import { MANAGE } from "./api";
 
 export default defineModule({
   id: "discography",
   routes: {
-    public: [{ path: "/music", lazy: () => import("./pages/Public") }, { path: "/music/:album", lazy: () => import("./pages/Public") }, { path: "/music/:album/:track", lazy: () => import("./pages/Public") }],
+    public: [
+      { path: "/music", lazy: () => import("./pages/Music") },
+      { path: "/music/:release", lazy: () => import("./pages/Release") },
+      { path: "/music/:release/:track", lazy: () => import("./pages/Track") },
+    ],
     member: [],
-    admin: [{ path: "/admin/discography", lazy: () => import("./pages/DiscographyAdmin"), permission: "discography.release.manage" }],
+    admin: [
+      { path: "/admin/music", lazy: () => import("./pages/AdminMusic"), permission: MANAGE },
+      { path: "/admin/music/tracks", lazy: () => import("./pages/AdminTracks"), permission: MANAGE },
+      { path: "/admin/music/credits", lazy: () => import("./pages/AdminCredits"), permission: MANAGE },
+      { path: "/admin/music/:id", lazy: () => import("./pages/AdminRelease"), permission: MANAGE },
+    ],
   },
   slots: {
-    "nav.admin": [{ label: "Music", to: "/admin/discography" }],
-    "nav.public": [{ label: "Music", to: "/music" }]
+    "nav.public": [{ label: "Music", to: "/music" }],
+    "nav.admin": [
+      { label: "Albums", to: "/admin/music", section: "Music", icon: "music", permission: MANAGE },
+      { label: "Tracks", to: "/admin/music/tracks", section: "Music", icon: "music", permission: MANAGE },
+      { label: "Credits", to: "/admin/music/credits", section: "Music", icon: "music", permission: MANAGE },
+    ],
   },
 });
