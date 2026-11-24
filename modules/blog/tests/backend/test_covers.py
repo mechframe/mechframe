@@ -206,3 +206,35 @@ def test_blog_needs_the_media_whose_store_it_calls() -> None:
     needed = manifest["requires"]["modules"]["media"]
     assert not satisfies("0.1.3", needed)
     assert satisfies("0.1.4", needed)
+
+
+# --- CodeRabbit on #147 ----------------------------------------------------------------------
+
+
+async def test_a_drawing_that_is_all_wordmark_is_refused_and_repaired(fake: FakeAnthropic) -> None:
+    """Everything inside a group with the wordmark's id goes with it: nothing drawn is left."""
+    hidden = f'<svg xmlns="http://www.w3.org/2000/svg"><g id="{covers.WORDMARK_ID}"><rect width="9" height="9"/></g></svg>'
+    fake.queue(answer={"svg": hidden, "alt": "x"})
+    drawn = await _draw()
+    assert len(fake.asked) == 2
+    assert "Your previous attempt was refused: Nothing is drawn" in _asked(fake)
+    assert "<circle" in drawn.svg
+
+
+async def test_a_cover_over_the_limit_once_its_name_is_set_is_refused(fake: FakeAnthropic) -> None:
+    """The site's name is added after cleaning: what's answered must still be kept whole by `POST /covers`."""
+
+    def drawing(words: int) -> str:
+        return (
+            f'<svg xmlns="http://www.w3.org/2000/svg"><title>{"a" * words}</title>'
+            '<rect width="1200" height="630" fill="#000"/></svg>'
+        )
+
+    room = svg.MAX_BYTES - len(covers.clean(drawing(0)).encode("utf-8"))
+    near = drawing(room - 100)
+    assert len(covers.clean(near).encode("utf-8")) <= svg.MAX_BYTES
+    fake.queue(answer={"svg": near, "alt": "x"})
+    drawn = await _draw(wordmark=True)
+    assert len(fake.asked) == 2
+    assert "over 100 KB" in _asked(fake)
+    assert len(drawn.svg.encode("utf-8")) <= svg.MAX_BYTES

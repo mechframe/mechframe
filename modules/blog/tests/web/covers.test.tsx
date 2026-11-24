@@ -309,6 +309,35 @@ describe("Codex on #147", () => {
   });
 });
 
+describe("CodeRabbit on #147", () => {
+  it("keeps what's typed in What to change while the change is drawn", async () => {
+    let answer: (value: Answer) => void = () => undefined;
+    let draws = 0;
+    routed({
+      "POST /api/blog/admin/covers/draw": () => {
+        draws += 1;
+        return draws === 1
+          ? { status: 200, body: { svg: SVG, alt: "First", preview: PREVIEW } }
+          : new Promise<Answer>((resolve) => {
+              answer = resolve;
+            });
+      },
+    });
+    renderApp({ path: `/admin/blog/${ID}`, modules: [blog], session: writer });
+
+    await userEvent.click(await screen.findByRole("button", { name: "Draw a cover" }));
+    const dialog = within(await screen.findByRole("dialog", { name: "Draw a cover" }));
+    await userEvent.click(dialog.getByRole("button", { name: "Draw" }));
+    const box = await dialog.findByRole("textbox", { name: "What to change" });
+    await userEvent.type(box, "Warmer.");
+    await userEvent.click(dialog.getByRole("button", { name: "Change it" }));
+    await userEvent.type(box, " Then bluer.");
+    answer({ status: 200, body: { svg: SVG, alt: "Warmer", preview: PREVIEW } });
+    expect(await dialog.findByRole("img", { name: "Warmer" })).toBeInTheDocument();
+    expect(box).toHaveValue("Warmer. Then bluer.");
+  });
+});
+
 describe("the theme's colours", () => {
   it("are read from the tokens as #rrggbb, or not at all", () => {
     const element = document.createElement("div");

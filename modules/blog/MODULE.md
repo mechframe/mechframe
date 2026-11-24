@@ -65,7 +65,7 @@ None of its own. Draw a cover (0.1.4) shows while the AI has a key, the host's `
 - No comments, reactions, community posts or newsletter sends here: the switches wait for those modules.
 - No embeds in a body (`embeds`, M5): an image in the body is Markdown's `![alt](address)`.
 - A generated cover is a vector drawing in Inter, made a PNG: no photograph, no image model, and no logo file inside it (the site's name is set in Inter). It's drawn when asked, never on publishing, and only for posts. The AI reads the theme's colours where the editor is drawn, so a token that isn't `#rrggbb` leaves the default theme's.
-- No social posting yet: its home is the owner's to decide (`dev plans/contracts/blog.md` §8, 7).
+- No social posting yet: it comes as a `social` module any module can share through, blog first, its Buffer token on the host or in Settings (the owner, 2026-11-24; `dev plans/contracts/blog.md` §8, 7).
 - No revision history, and no redirect from a deleted post.
 
 ## Source and license

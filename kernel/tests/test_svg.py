@@ -190,3 +190,24 @@ def test_a_render_that_fails_is_refused_in_plain_words(monkeypatch: pytest.Monke
     monkeypatch.setattr(svg, "_CHILD", "raise SystemExit(3)")
     with pytest.raises(svg.Refused, match="couldn't be rendered"):
         asyncio.run(svg.png(_clean(_svg(DRAWN)), width=24, height=12))
+
+
+# --- CodeRabbit on #147 ----------------------------------------------------------------------
+
+
+def test_a_drawing_inside_a_drawing_is_taken_whole() -> None:
+    """The outer <svg> ends where it closes, not at its first inner </svg>."""
+    nested = f'<svg x="0" y="0" width="50" height="50">{DRAWN}</svg>'
+    answer = "Here it is: " + _svg(nested + '<circle cx="5" cy="5" r="4"/>') + " Hope it helps."
+    cleaned = _clean(answer)
+    assert "<circle" in cleaned
+    assert cleaned.count("<svg") == 2
+
+
+def test_what_is_written_out_is_never_over_the_limit() -> None:
+    """The kernel's own form adds Inter to every text, so a drawing under 100 KB as sent
+    can be over it once written out; it's refused, as cleaning it again would be."""
+    many = "".join('<text x="1" y="1">a</text>' for _ in range(3500))
+    assert len(_svg(many).encode("utf-8")) < svg.MAX_BYTES
+    with pytest.raises(svg.Refused, match="over 100 KB"):
+        _clean(_svg(many))

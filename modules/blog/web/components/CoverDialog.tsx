@@ -108,6 +108,7 @@ export function CoverDialog({ post, opener, onClose, onUse }: CoverDialogProps) 
   const draw = (revise: boolean) => {
     // The ask's options as they stand, or, for a drawn cover, the ones it was drawn with.
     const asked: Asked = drawn ? drawn.asked : { style, description, inColours, wordmark };
+    const sent = changes;
     const keep = asked.style === "custom";
     return run(revise ? "change" : "draw", async () => {
       const colours = !keep || asked.inColours ? themeColours(opener.current ?? document.documentElement) : null;
@@ -124,7 +125,8 @@ export function CoverDialog({ post, opener, onClose, onUse }: CoverDialogProps) 
       if (!open.current || !data) return;
       setDrawn({ ...data, asked });
       setAlt(data.alt);
-      setChanges("");
+      // What was typed while it drew stays (CodeRabbit on #147).
+      setChanges((now) => (now === sent ? "" : now));
       setDraws((n) => n + 1);
     });
   };

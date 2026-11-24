@@ -88,7 +88,8 @@ ATTRIBUTES = frozenset(
     }
 )  # fmt: skip
 
-_FOUND = re.compile(r"<svg\b.*?</svg\s*>", re.IGNORECASE | re.DOTALL)
+#: An <svg> tag: opening, closing (group 1) or self-closed (group 2).
+_SVG_TAG = re.compile(r"<(/?)svg\b[^>]*?(/?)>", re.IGNORECASE)
 #: A declaration other than a comment or CDATA: a DOCTYPE or an entity.
 _DECLARED = re.compile(r"<!(?!--|\[CDATA\[)")
 _URL = re.compile(r"url\(\s*(['\"]?)(.*?)\1\s*\)", re.IGNORECASE)
@@ -98,6 +99,29 @@ _NEVER = ("javascript:", "data:", "expression(", "@import", "<")
 
 class Refused(ValueError):
     """Why a drawing can't be cleaned, in words for the model's repair try."""
+
+
+def _outer(text: str) -> str | None:
+    """The first <svg> in `text` through the tag that closes it, a drawing
+    nested inside it included (CodeRabbit on #147); None when it never closes."""
+    depth = 0
+    start = -1
+    for tag in _SVG_TAG.finditer(text):
+        closing, self_closed = bool(tag.group(1)), bool(tag.group(2))
+        if start < 0:
+            if closing:
+                continue
+            start = tag.start()
+            if self_closed:
+                return text[start : tag.end()]
+            depth = 1
+            continue
+        if self_closed:
+            continue
+        depth += -1 if closing else 1
+        if depth == 0:
+            return text[start : tag.end()]
+    return None
 
 
 def _local(tag: str) -> str | None:
@@ -167,10 +191,9 @@ def clean(text: str, *, width: int, height: int) -> str:
     Raises Refused when there's none, or nothing drawable is left."""
     if _DECLARED.search(text):
         raise Refused("The answer declares a DOCTYPE or an entity. Leave them out.")
-    found = _FOUND.search(text)
-    if found is None:
+    drawing = _outer(text)
+    if drawing is None:
         raise Refused("There's no complete <svg>…</svg> in the answer. Answer one SVG.")
-    drawing = found.group(0)
     if len(drawing.encode("utf-8")) > MAX_BYTES:
         raise Refused(f"The SVG is over {MAX_BYTES // 1000} KB. Draw it more simply.")
     try:
@@ -195,7 +218,12 @@ def clean(text: str, *, width: int, height: int) -> str:
     )
     root.attrib.clear()
     root.attrib.update(dict(sorted(attributes.items())))
-    return ET.tostring(root, encoding="unicode")
+    written = ET.tostring(root, encoding="unicode")
+    # The kernel's form adds Inter to each text and escapes what it holds, so it
+    # can outgrow what was sent: held to the same limit (CodeRabbit on #147).
+    if len(written.encode("utf-8")) > MAX_BYTES:
+        raise Refused(f"The SVG is over {MAX_BYTES // 1000} KB once cleaned. Draw it more simply.")
+    return written
 
 
 def _fonts() -> list[str]:

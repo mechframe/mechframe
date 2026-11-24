@@ -566,3 +566,17 @@ async def test_another_module_can_ask_whether_images_can_be_stored(
         public.store(db, unique_image(), filename="cover.png", alt="x", by=None)
     )
     assert (refused.code, refused.status) == ("media.storage_off", 503)
+
+
+async def test_store_keeps_its_alt_text_on_one_line(db: AsyncSession, bucket: Bucket) -> None:
+    """CodeRabbit on #147: a line break or a control character in the alt text would break the
+    column's rule at the flush; the words are kept on one line instead."""
+    kept = await public.store(
+        db,
+        unique_image(),
+        filename="cover.png",
+        alt=" Gold\nring\x07 in\u2028the  dark ",
+        by=None,
+    )
+    await db.commit()
+    assert kept.alt == "Gold ring in the dark"
