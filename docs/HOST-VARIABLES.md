@@ -155,7 +155,7 @@ Write with AI in every editor. A key an admin saves in Settings → AI wins over
 | Variable | Needed | Default | On Railway | What it's for |
 | --- | --- | --- | --- | --- |
 | `ANTHROPIC_API_KEY` | For the AI · Secret | blank | You type it | The Anthropic API key Write with AI uses, from the Anthropic console. Blank keeps the AI off until an admin saves a key in Settings → AI, which wins over this one. |
-| `ANTHROPIC_MODEL` | Optional | `claude-opus-5-5` | Only if you change it | The model every writing task asks for. |
+| `ANTHROPIC_MODEL` | Optional | `claude-opus-5-5` | Only if you change it | The model every writing task asks for, until an admin saves one in Settings → AI. |
 | `AI_RATE_LIMIT` | Optional | `20/1h` | Only if you change it | The AI calls one person may make, every button sharing it: a count, then a period (`s`, `m`, `h` or `d`). |
 
 ### Search, consent and the audit log

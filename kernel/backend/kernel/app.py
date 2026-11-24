@@ -321,7 +321,7 @@ def assemble(
     settings.register(server_copy.SECTION, server_copy.SiteSettings)
     settings.register(bot.SECTION, bot.Choice)
     settings.register(sign_up.SECTION, sign_up.settings_model(config.sign_up_mode))
-    settings.register(ai.SECTION, ai.KeySettings)
+    settings.register(ai.SECTION, ai.KeySettings, own_route={"model": ai.MODEL_ROUTE})
     settings.register(writing.SECTION, writing.Constitution)
     for module in installed:
         if module.settings is not None:

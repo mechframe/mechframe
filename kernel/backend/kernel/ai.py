@@ -21,6 +21,12 @@ by Anthropic for a run of tasks, then the task. Failures are plain sentences
 (`kernel.ai_failed`, 502), never Anthropic's own words or the key.
 
 A module's own AI task (a generated cover) calls `client(db)` and `write`.
+
+**The model** (decision 0064, `dev plans/contracts/ai-model.md`). One saved in
+Settings → AI wins; the host's `ANTHROPIC_MODEL` is used until then. It's
+saved only through `PUT /admin/ai/model`, which checks it against Anthropic's
+list first (the section's `own_route`): the dropdown offers the newest Opus,
+Sonnet and Haiku the key can use, read from Anthropic each time.
 """
 
 from __future__ import annotations
@@ -29,6 +35,7 @@ import html
 import json
 import re
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any, Literal, cast
 
 import anthropic
@@ -45,6 +52,7 @@ from kernel.settings import settings
 SECTION = "kernel.ai"
 
 Source = Literal["settings", "environment", "none"]
+ModelSource = Literal["settings", "environment"]
 Effort = Literal["low", "medium", "high"]
 
 #: Anthropic's keys are about 108 characters. These bounds only catch a paste
@@ -74,17 +82,40 @@ UNREADABLE_KEY = (
     "The saved Anthropic API key can't be read, which happens when the server's ENCRYPTION_KEYS "
     "change. An admin can save it again in Settings → AI."
 )
+#: A model's id, as Anthropic spells them: claude-opus-5-5.
+MODEL_ID = re.compile(r"claude-[a-z0-9][a-z0-9.-]*")
+MAX_MODEL_LENGTH = 100
+#: The kinds the dropdown offers, in its order (the owner, 2026-11-24).
+KINDS = ("opus", "sonnet", "haiku")
+#: What the form is told when it sends a model (`own_route`, decision 0064).
+MODEL_ROUTE = "Choose the model from Anthropic's list, in Settings → AI."
+
 CUT_OFF = "The AI ran out of room before it finished. Try a shorter length."
 WRONG_SHAPE = "The AI's answer wasn't in the form asked for. Try again."
 
 
 class KeySettings(BaseModel):
-    """The settings section `kernel.ai`: a key saved in Settings → AI. A
-    value that couldn't be a key is refused, in words that never repeat it."""
+    """The settings section `kernel.ai`: a key saved in Settings → AI, and the
+    model picked there. A value that couldn't be a key is refused, in words
+    that never repeat it, and so is one that couldn't be a model's id."""
 
     model_config = ConfigDict(strict=True, extra="forbid")
 
     api_key: SecretStr | None = None
+    #: None is the host's, ANTHROPIC_MODEL.
+    model: str | None = None
+
+    @field_validator("model")
+    @classmethod
+    def _could_be_a_model(cls, model: str | None) -> str | None:
+        if model is not None and (
+            len(model) > MAX_MODEL_LENGTH or MODEL_ID.fullmatch(model) is None
+        ):
+            raise ValueError(
+                "A model's id is claude- then lowercase letters, digits, dots and hyphens, "
+                f"at most {MAX_MODEL_LENGTH} characters."
+            )
+        return model
 
     @field_validator("api_key")
     @classmethod
@@ -120,8 +151,19 @@ def rate_rule() -> str:
     return _installed.rate_rule
 
 
-def model() -> str:
+def host_model() -> str:
+    """The host's model, ANTHROPIC_MODEL: the one used while none is saved."""
     return _installed.model
+
+
+async def model_in_use(db: AsyncSession) -> tuple[str, ModelSource]:
+    """The model every task asks for, and where it came from: the one saved
+    in Settings → AI, else the host's. Read without opening the key."""
+    form = await settings.form(db, SECTION)
+    saved = form["values"].get("model")
+    if isinstance(saved, str) and saved:
+        return saved, "settings"
+    return _installed.model, "environment"
 
 
 def use_transport(transport: Any) -> Any:
@@ -251,13 +293,59 @@ def _failed(sentence: str) -> Problem:
     return Problem("kernel.ai_failed", 502, sentence)
 
 
+@dataclass(frozen=True)
+class Listed:
+    """A model Anthropic lists for the key."""
+
+    id: str
+    #: Anthropic's display name: Claude Opus 5.5.
+    name: str
+    created_at: datetime
+
+
+def kind_of(model_id: str) -> str | None:
+    """opus, sonnet or haiku from an id (claude-opus-5-5); None for another kind."""
+    parts = model_id.split("-")
+    return parts[1] if len(parts) > 2 and parts[0] == "claude" and parts[1] in KINDS else None
+
+
+def newest_of_each_kind(listed: list[Listed]) -> list[Listed]:
+    """The newest Opus, Sonnet and Haiku, in that order: what the dropdown offers."""
+    newest: dict[str, Listed] = {}
+    for each in listed:
+        kind = kind_of(each.id)
+        if kind is None:
+            continue
+        held = newest.get(kind)
+        if held is None or (each.created_at, each.id) > (held.created_at, held.id):
+            newest[kind] = each
+    return [newest[kind] for kind in KINDS if kind in newest]
+
+
+def offer(listed: list[Listed], model: str, source: ModelSource) -> dict[str, Any]:
+    """What Settings → AI's dropdown shows: the newest of each kind, and the
+    model in use, named when Anthropic lists it for the key at all."""
+    named = {each.id: each.name for each in listed}
+    return {
+        "models": [{"id": each.id, "name": each.name} for each in newest_of_each_kind(listed)],
+        "in_use": {
+            "id": model,
+            "name": named.get(model),
+            "source": source,
+            "listed": model in named,
+        },
+    }
+
+
 class Writer:
     """Calls Anthropic with one key, for the site, by its writing constitution.
     Made per request by `client`."""
 
-    def __init__(self, key: str, *, constitution: str, site_name: str) -> None:
+    def __init__(
+        self, key: str, *, constitution: str, site_name: str, model: str | None = None
+    ) -> None:
         self._key = key
-        self.model = _installed.model
+        self.model = model or _installed.model
         self.site_name = site_name
         self.constitution = constitution
 
@@ -289,6 +377,24 @@ class Writer:
             raise _failed("Could not reach Anthropic from the server.") from None
         except anthropic.APIStatusError as error:
             raise _failed(_refusal(error.status_code)) from None
+
+    async def models(self) -> list[Listed]:
+        """Every model Anthropic lists for the key, every page read; never
+        cached (decision 0064). Failures are the check's plain sentences."""
+        found: list[Listed] = []
+        try:
+            async with self._client(timeout=15.0, retries=0) as client:
+                async for each in client.models.list(limit=100):
+                    found.append(
+                        Listed(id=each.id, name=each.display_name, created_at=each.created_at)
+                    )
+        except anthropic.APITimeoutError:
+            raise _failed("Anthropic didn't answer in time. Try again in a minute.") from None
+        except anthropic.APIConnectionError:
+            raise _failed("Could not reach Anthropic from the server.") from None
+        except anthropic.APIStatusError as error:
+            raise _failed(_refusal(error.status_code)) from None
+        return found
 
     async def write(
         self,
@@ -349,9 +455,12 @@ async def client(db: AsyncSession) -> Writer:
     """A writer with the key in use, for the site, by its writing constitution:
     503 `kernel.ai_off` or `kernel.ai_key_unreadable` without one."""
     key, _ = await key_in_use(db)
+    model, _ = await model_in_use(db)
     site = await server_copy.identity(db)
     saved = cast(writing.Constitution, await settings.for_module(db, writing.SECTION))
-    return Writer(key, constitution=writing.block(saved, site.name), site_name=site.name)
+    return Writer(
+        key, constitution=writing.block(saved, site.name), site_name=site.name, model=model
+    )
 
 
 # --- the editor's tasks ------------------------------------------------------------

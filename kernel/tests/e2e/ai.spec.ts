@@ -1,7 +1,9 @@
 // The AI's writing help, as Chromium draws it (decision 0058; `dev plans/contracts/kernel-ai.md` §7):
 // an admin saves a key in Settings → AI and checks it, keeps the writing rules and a style in
 // Settings → Writing, and a writer drafts a post with Write with AI; axe finds nothing serious on
-// either tab or in the dialog, in either theme. Every AI call goes to the harness's fake Anthropic.
+// either tab or in the dialog, in either theme. The Model row lists Anthropic's newest of each kind,
+// and a model saved there is used until Use the host's model clears it (decision 0064). Every AI
+// call goes to the harness's fake Anthropic.
 import { expect, test, type Page } from "@playwright/test";
 
 import { THEMES, axe, makeUser, signInTo, theme } from "./support";
@@ -37,6 +39,27 @@ test("an admin saves a key, checks it, and never sees it again", async ({ page }
     await theme(page, name, canvas);
     expect(await axe(page), `Settings → AI in ${name}`).toEqual([]);
   }
+});
+
+test("a model saved in Settings → AI is used, and Use the host's model clears it", async ({ page }) => {
+  await signedInAdmin(page, "/admin/settings/ai");
+  await keyed(page);
+  const model = page.getByRole("combobox", { name: "Model" });
+  await expect(model).toBeEnabled();
+  await expect(model.getByRole("option")).toHaveText(["Claude Opus 5.5", "Claude Sonnet 5.5", "Claude Haiku 5.5"]);
+  await expect(page.getByText("The AI's writing help uses the host's model, ANTHROPIC_MODEL, until one is saved here.")).toBeVisible();
+  await model.selectOption("claude-sonnet-5-5");
+  await page.getByRole("button", { name: "Save the model" }).click();
+  await expect(page.getByText("Saved the model.")).toBeVisible();
+  await expect(page.getByText("The AI's writing help uses the model saved here.")).toBeVisible();
+  for (const [name, canvas] of Object.entries(THEMES)) {
+    await theme(page, name, canvas);
+    expect(await axe(page), `Settings → AI's model in ${name}`).toEqual([]);
+  }
+  await page.getByRole("button", { name: "Use the host's model" }).click();
+  await expect(page.getByText("Using the host's model.")).toBeVisible();
+  await expect(model).toHaveValue("claude-opus-5-5");
+  await expect(page.getByRole("button", { name: "Use the host's model" })).toHaveCount(0);
 });
 
 test("the writing rules and a style are kept in Settings → Writing", async ({ page }) => {

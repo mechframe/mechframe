@@ -10,20 +10,20 @@ The binding directives are in `C:\DEV\CLAUDE.md` and `C:\DEV\DIRECTIVES.md`, whi
 - **Path:** `C:\DEV\AI-DevKit`. **Remote:** `https://github.com/mechframe/mechframe` (decision 0034), **public** (decision 0011). Never commit secrets, client material or private notes; private notes go in `docs/private/` (gitignored).
 - **The contract:** `SPEC.md`. Every module, the kernel and the CLI follow it. Read the sections you touch before every change.
 
-## Current state (2026-11-23; the kernel closed, #96; hooks 1 to 8, #97 to #110; media, #116; the kernel's Markdown, #118; pages, #121 and #138; blog, #123; contact, #125; embeds, #127; a site's mypy, #132; the AI's writing help, #135; campaigns, #134; the account's name, #139; the shell, #140; the signed-out session read, #141)
+## Current state (2026-11-24; the kernel closed, #96; hooks 1 to 8, #97 to #110; media, #116; the kernel's Markdown, #118; pages, #121 and #138; blog, #123; contact, #125; embeds, #127; a site's mypy, #132; the AI's writing help, #135; campaigns, #134; the account's name, #139; the shell, #140; the signed-out session read, #141; blog 0.1.3, #143; the AI's model, #144)
 
 - **The kernel is done**, K0 to K5 (#1 to #96), with K2's steps 9 to 11 waiting until the site needs them (decision 0029). **Hooks 1 to 8** of the ten are in (#97 to #110, decision 0052); entitlements and profile tabs wait until just before Vibrant Mindz's step 5 and wave 2b. `mechframe upgrade kernel` is in (#111, #114; decision 0053).
-- **Modules:** `media` (#116; drawn to its board, #119, #126 and #131, now 0.1.3), `pages` (#121: Markdown pages, moves that never chain, the header's and footer's menus through link slots and `nav.footer`, decision 0056; 0.1.1, #138, its page read in `public.ts` and an Updated line), `blog` (#123: posts with categories, covers from media, related posts; 0.1.1, #128, its public surface; 0.1.2, #135, its fields handed to Write with AI), `contact` (#125: the form, the Inbox, decision 0059's `notify_holders`; 0.1.1, #129, its reads and send in `public.ts`) and `embeds` (#127: players behind a consent facade, the kit's text slots `editor.tools` and `prose.embed`, decision 0060) and `campaigns` (#134: the newsletter, double opt-in sign-ups, sends at a pace and bounces read back, decision 0062). A module's web reaches another's `public.ts` as `@/modules/<id>/public` (decision 0057), and a site's own code a module's `public.py`, which the site's mypy follows (#132).
-- **The AI's writing help** (#135, decision 0058): `await ai.client(db)`. The key is `ANTHROPIC_API_KEY` or one saved in Settings → AI, and a saved key wins. Settings → Writing holds the site's rules and its styles (`kernel_0016`). Every editor has Write with AI through `editor.tools`. No suite calls Anthropic: the harness has a fake.
+- **Modules:** `media` (#116; drawn to its board, #119, #126 and #131, now 0.1.3), `pages` (#121: Markdown pages, moves that never chain, the header's and footer's menus through link slots and `nav.footer`, decision 0056; 0.1.1, #138, its page read in `public.ts` and an Updated line), `blog` (#123: posts with categories, covers from media, related posts; 0.1.1, #128, its public surface; 0.1.2, #135, its fields handed to Write with AI; 0.1.3, #143, the summary in `blog.post.published` v2 and the editor's crossed saves), `contact` (#125: the form, the Inbox, decision 0059's `notify_holders`; 0.1.1, #129, its reads and send in `public.ts`) and `embeds` (#127: players behind a consent facade, the kit's text slots `editor.tools` and `prose.embed`, decision 0060) and `campaigns` (#134: the newsletter, double opt-in sign-ups, sends at a pace and bounces read back, decision 0062). A module's web reaches another's `public.ts` as `@/modules/<id>/public` (decision 0057), and a site's own code a module's `public.py`, which the site's mypy follows (#132).
+- **The AI's writing help** (#135, decision 0058): `await ai.client(db)`. The key is `ANTHROPIC_API_KEY` or one saved in Settings → AI, and a saved key wins. Settings → Writing holds the site's rules and its styles (`kernel_0016`). Every editor has Write with AI through `editor.tools`. The model is picked in Settings → AI from Anthropic's newest Opus, Sonnet and Haiku, read each time, and saved only through its own route (#144, decision 0064, settings' `own_route`). No suite calls Anthropic: the harness has a fake.
 - **The account and the session:**
   - a Name on Profile, and in People for staff (#139, decision 0061);
   - `GET /api/auth/session` answers a signed-out visitor 200 `{"user": null}`, never cached (#141, decision 0063);
   - the admin sidebar takes a section's page order from `AdminSection.pages` (#140, decision 0044 amended).
-- **Next, main lane** (`dev plans/2026-11-23-next-session-m4h-blog-covers.md`):
-  - blog 0.1.3: the post's `summary` in `blog.post.published`, and the editor's three crossed-save gaps that pages closed;
-  - then generated covers;
+- **Next, main lane** (`dev plans/2026-11-24-next-session-m4i-covers-build.md`):
+  - finish generated covers on `feat/blog-covers` (decision 0065, approved; `kernel.svg` and Inter are built there, not pushed);
+  - then the site frame's footer shift (VM Website Dev 15), its order the owner's call;
   - then social posting, after asking `blog.md` §8, 7.
-- **Side lane:** `discography` 0.1.0, step 2's first module, contract first (`dev plans/2026-11-23-side-lane-m8-discography.md`). Two lanes run at once ("Two lanes", below).
+- **Side lane:** `discography` 0.1.0's web, in its worktree on `feat/discography` (its own prompt there, `dev plans/2026-11-24-side-lane-m8b-discography-web.md`). Two lanes run at once ("Two lanes", below).
 - **The kernel's Markdown** (#118, decision 0055): `kernel.markdown` (`render`, `plain`, `excerpt`) and the kit's `MarkdownEditor`, `Prose` and `SearchFields`. #119 added the kit's `SearchBox`, an action's icon before its words, the required token `opacity.55`, the session's `name` on the person card and the boards' admin sections by default (decisions 0042 and 0044, amended).
 - **Progress** is one record, `docs/progress.json`, made into `docs/PROGRESS.md` and the owner's visual ledger (#61). v1.0: 80% (49 of 61 steps).
 - **The first real site** is the new Vibrant Mindz site (`docs/plans/vibrant-mindz-module-plan.md`). It's built in its own session (`C:\DEV\VM Website`) from MechFrame's `main`. Its checks against the boards send items here, with the owner's calls relayed.
@@ -34,12 +34,12 @@ The binding directives are in `C:\DEV\CLAUDE.md` and `C:\DEV\DIRECTIVES.md`, whi
 
 ## Last Completed Task
 
-2026-11-23, about 17:05, to 2026-11-24, about 08:00 Eastern (Claude Code, the owner's machine): session M4g, the main lane.
+2026-11-24, about 07:45 to 12:00 Eastern (Claude Code, the owner's machine, the owner on Remote Control at times): session M4h, the main lane.
 
-- **#139, the account's name** (decision 0061), landed, its contract approved as recommended.
-- **#140, the admin shell's five differences** from the boards (decision 0044, amended), landed.
-- **#141, the signed-out session read** (decision 0063), landed, its contract approved as recommended.
-- **Pages 0.1.1** (#138, the side lane) landed before #141. The ledger was republished from `c5debc7`.
+- **#142**, M4g's handoff, landed, with CodeRabbit's one fix.
+- **#143, blog 0.1.3,** landed: `blog.post.published` v2 with the summary, and the editor's crossed saves closed.
+- **#144, the AI's model from Anthropic's list** (decision 0064, VM Website's ask), landed, its contract approved as recommended.
+- **Generated covers** (decision 0065): the contract approved as recommended; `kernel.svg`, resvg-py and Inter built on `feat/blog-covers`, not pushed.
 
 ## Read order
 
