@@ -323,9 +323,12 @@ class SettingsRegistry:
             # A field its own route saves, changed through the form (decision 0064).
             # Sent as the form read it, it's no change: a crossed save keeps the
             # route's newer value (CodeRabbit on #144).
+            # A secret typed, to replace or to clear it, is a change too.
             routed = self.own_routes.get(module_id, {})
             barred = sorted(
-                name for name in routed if name in yours and yours[name] != base.get(name)
+                name
+                for name in routed
+                if name in typed or (name in yours and yours[name] != base.get(name))
             )
             if barred:
                 raise Problem(

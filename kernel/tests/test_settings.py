@@ -470,6 +470,29 @@ async def test_a_stale_form_sending_its_routed_field_unchanged_merges(db: AsyncS
     assert refused.value.errors == {"picked": ["Pick it from the list."]}
 
 
+class Guarded(BaseModel):
+    shown: str = ""
+    token: SecretStr | None = None
+
+
+@pytest.mark.db
+async def test_a_secret_with_its_own_route_is_refused_by_the_form(db: AsyncSession) -> None:
+    """CodeRabbit on #144: a typed secret is a change too, replaced or cleared."""
+    found = SettingsRegistry()
+    module_id = unique_id("guarded")
+    found.register(module_id, Guarded, own_route={"token": "Check it on its own page."})
+    for typed in ("a-new-token", ""):
+        with pytest.raises(Problem) as refused:
+            await found.save(db, module_id, {"token": typed}, version=0)
+        await db.rollback()
+        assert refused.value.errors == {"token": ["Check it on its own page."]}
+    # None keeps a secret, so the form's other fields still save; and its own route saves it.
+    saved = await found.save(db, module_id, {"shown": "x", "token": None}, version=0)
+    assert saved.changed == ["shown"]
+    routed = await found.save(db, module_id, {"token": "a-new-token"}, version=1, via="checked")
+    assert routed.changed == ["token"]
+
+
 def test_only_a_field_of_the_model_has_its_own_route() -> None:
     with pytest.raises(ValueError, match="nothing"):
         SettingsRegistry().register(unique_id("picked"), Picked, own_route={"nothing": "No."})

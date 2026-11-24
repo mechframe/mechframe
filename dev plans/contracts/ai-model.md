@@ -129,4 +129,5 @@ None. The owner's answers, 2026-11-24, as recommended:
     - The settings form's check compares a routed field with the form's own version, not the stored value. So a stale form sending the model as it read it merges and keeps the route's newer one, while changing it is still refused.
     - A read of the list that fails after one that worked shows the model in use alone, not the list kept from before.
     - The budget test spends the writing budget with a draft, which `GET /ai` never did.
+    - A routed secret, replaced or cleared through the form, is refused too, since a typed secret is a change (its second look).
     - Each has a test seen failing first.
