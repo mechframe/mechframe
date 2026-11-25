@@ -17,9 +17,11 @@ from discography import service
 from discography.models import Release, Track
 from discography.seed import _NAMESPACE, RELEASES
 from fastapi import Request
+from sqlalchemy import text
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from kernel import clock, load_module
+from kernel import Database, clock, load_module
 from kernel import seed as seeding
 
 from ..conftest import slug
@@ -88,6 +90,37 @@ async def test_a_live_track_that_plays_counts_once_a_listener_a_day(db: AsyncSes
     assert await service.count_play(db, visit(address="198.51.100.4"), track.id) is True
     await db.commit()
     assert await _today(db, track.id) == {track.id: 2}
+
+
+async def test_a_play_holds_its_track_until_it_is_written(
+    db: AsyncSession, database: Database, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A delete that took the track between the check and the count would forget
+    # its plays first, and the play would land after (CodeRabbit on #151). While
+    # the count runs, another session can't take the row for a delete.
+    track_id = (await _track(db, await _release(db))).id
+    real = audio_player.count
+    probed: list[str] = []
+
+    async def counting(session: AsyncSession, request: Request, **kw: Any) -> bool:
+        async with database.sessions() as other:
+            try:
+                await other.execute(
+                    text("SELECT id FROM discography_track WHERE id = :id FOR UPDATE NOWAIT"),
+                    {"id": track_id},
+                )
+                probed.append("free")
+            except DBAPIError:
+                probed.append("held")
+            finally:
+                await other.rollback()
+        return await real(session, request, **kw)
+
+    monkeypatch.setattr(audio_player, "count", counting)
+    assert await service.count_play(db, visit(), track_id) is True
+    await db.commit()
+    assert probed == ["held"]
+    assert await _today(db, track_id) == {track_id: 1}
 
 
 async def test_a_draft_a_track_that_cant_play_and_no_track_count_nothing(

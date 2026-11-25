@@ -1646,12 +1646,18 @@ async def failed_upload(db: AsyncSession) -> tuple[Release, Track] | None:
 async def count_play(db: AsyncSession, request: Request, track_id: uuid.UUID) -> bool:
     """One play of a live track that plays, counted once a listener a day by
     audio-player; False for anything else, which counts nothing. Written in the
-    caller's transaction."""
+    caller's transaction.
+
+    The track's row is held (FOR KEY SHARE) until that transaction ends, so a
+    delete waits for the play and its `forget` takes it too, rather than the
+    play landing after the delete (CodeRabbit on #151). A save of the track or
+    the job's stream file doesn't wait: only a delete or a FOR UPDATE does."""
     row = (
         await db.execute(
             select(Track)
             .join(Release, Release.id == Track.release_id)
             .where(Track.id == track_id, lifecycle.visible(Release))
+            .with_for_update(read=True, key_share=True, of=Track)
         )
     ).first()
     if row is None or not plays_from(row[0]):
