@@ -14,7 +14,7 @@ from alembic import op
 
 revision: str = "audio_player_0001"
 down_revision: str | Sequence[str] | None = None
-branch_labels: str | Sequence[str] | None = ("audio_player",)
+branch_labels: str | Sequence[str] | None = ("audio-player",)
 depends_on: str | Sequence[str] | None = "kernel_0002"
 
 # True when this migration drops or rewrites data: the CLI asks before running it

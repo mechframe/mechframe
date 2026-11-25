@@ -117,7 +117,7 @@ The boards don't draw them, so they go on Settings › Site as an `admin.setting
 
 ## 3. Data
 
-Branch `audio_player`, `audio_player_0001`, `depends_on` `kernel_0002` as contact's and campaigns' do; no foreign keys.
+Branch `audio-player` (the module's id, as every branch is labelled), `audio_player_0001`, `depends_on` `kernel_0002` as contact's and campaigns' do; no foreign keys.
 
 | Table | Columns |
 |---|---|
