@@ -15,7 +15,8 @@ The contract hooks (decision 0052): `lifecycle`, `taxonomy`, `search`, `seed`,
 Dashboard's `attention` and `setup`. `ai` (decision 0058) and `svg`, a
 model's drawing cleaned to an allowlist and made a PNG (decision 0065). For
 audio-player (decision 0071): `client_address`, who a request comes from as
-the rate limits read it.
+the rate limits read it. Hook 11 (decision 0072): `refs`, what another
+module may point at.
 """
 
 from kernel import (
@@ -32,6 +33,7 @@ from kernel import (
     moderation,
     notifications,
     privacy,
+    refs,
     search,
     seed,
     server_copy,
@@ -95,6 +97,7 @@ __all__ = [
     "privacy",
     "public",
     "rate_limit",
+    "refs",
     "require_module",
     "require_owner_or",
     "require_permission",

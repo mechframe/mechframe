@@ -96,6 +96,7 @@ from kernel import (
     notifications,
     openapi,
     privacy,
+    refs,
     search,
     server_copy,
     setup,
@@ -265,6 +266,7 @@ def assemble(
         publishable = lifecycle.build(installed)
         vocabularies = taxonomy.build(installed)
         sources = search.build(installed)
+        referable = refs.build(installed)
         providers = bot.build(installed)
         asked = consent.build(installed)
         data_hooks = privacy.build(installed)
@@ -310,6 +312,7 @@ def assemble(
     lifecycle.install(publishable)
     taxonomy.install(vocabularies)
     search.install(sources, language=config.search_language)
+    refs.install(referable, registry)
     bot.install(providers)
     consent.install(asked)
     privacy.install(data_hooks)

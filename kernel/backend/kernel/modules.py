@@ -55,6 +55,7 @@ from kernel.models import ModuleState
 
 if TYPE_CHECKING:  # kernel.moderation reads OFF from here; server_copy builds from these
     from kernel.moderation import Kind
+    from kernel.refs import Source as RefSource
     from kernel.search import Source
     from kernel.server_copy import Pages
 
@@ -131,6 +132,9 @@ class InstalledModule:
     #: `search.py`'s `SEARCH`, a `search.Source` for each content type it
     #: lets site search find.
     searchable: tuple[Source, ...] = ()
+    #: What another module may point at (kernel.refs, decision 0072): its
+    #: `refs.py`'s `REFS`, a `refs.Source` for each type of thing.
+    referable: tuple[RefSource, ...] = ()
     #: The module's seed data (kernel.seed, decision 0052): its `seed.py`'s
     #: `async def seed(db, ctx: kernel.seed.Context) -> None`, or None.
     seed: Callable[[Any, Any], Awaitable[None]] | None = None
@@ -237,6 +241,7 @@ def load_module(manifest: Path) -> InstalledModule:
     - `<id_>/lifecycle.py`'s `PUBLISHABLE`, its publishable models
       (kernel.lifecycle);
     - `<id_>/search.py`'s `SEARCH`, its search sources (kernel.search);
+    - `<id_>/refs.py`'s `REFS`, what another module may point at (kernel.refs);
     - `<id_>/seed.py`'s `seed`, its seed data (kernel.seed);
     - `<id_>/__init__.py`'s `BOT_PROVIDER`, a bot check for public forms
       (kernel.bot);
@@ -266,6 +271,7 @@ def load_module(manifest: Path) -> InstalledModule:
         pages=_attribute(f"{package}.server_copy", "PAGES"),
         publishable=tuple(_attribute(f"{package}.lifecycle", "PUBLISHABLE") or ()),
         searchable=tuple(_attribute(f"{package}.search", "SEARCH") or ()),
+        referable=tuple(_attribute(f"{package}.refs", "REFS") or ()),
         seed=_attribute(f"{package}.seed", "seed"),
         bot_provider=_attribute(package, "BOT_PROVIDER"),
         export_user_data=_attribute(f"{package}.privacy", "export_user_data"),

@@ -29,6 +29,8 @@ Account copies are saved by the owner from the review cards Claude proposes; `sk
 
 **To carry into the account copy at the next batch (2026-11-13):** `mechframe-module-extractor` no longer names the retired Spec doc (decision 0017); `skills/` already has the change. When the roadmap hooks land, `module-contract-lint` and `mechframe-module-extractor` gain a row or step for each (`mechframe-hook-designer` step 4), and their account copies need the same edits. Landed so far: content lifecycle (#97), taxonomy (#98), search index (#99), seed data (#102), bot check (#103), consent categories (#107), export and erase (#109) and dashboard cards (#110): `module-contract-lint`'s section 8 rows, the extractor's step 7 bullet, and `mechframe-hook-designer`'s batch table.
 
+**Item references (hook 11, #153, decision 0072):** only `module-contract-lint`'s hooks section has it so far (CubicDev on #153). `mechframe-module-extractor`'s step for filling `refs.py` and `mechframe-hook-designer`'s batch table wait for the next skill batch, with the account copies of all three.
+
 ## Waiting to be built
 
 | Skill | What it would do | Raised | Blocks anything? |
