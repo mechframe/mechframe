@@ -7,13 +7,17 @@ import "../../../themes/machined-light/tokens.css";
 import "../../../themes/vibrant-mindz/tokens.css";
 import "./frame.css";
 
-import { defineSite, mountApp } from "@/kernel";
+import { ApiProblem, LoadError, defineSite, mountApp } from "@/kernel";
 import { useFeatured } from "@/modules/featured/public";
 
 function Featured() {
   const key = new URLSearchParams(window.location.search).get("slot") ?? "spotlight";
   const found = useFeatured(key);
-  if (found.error) return <p role="alert">There's no player “{key}”.</p>;
+  if (found.error) {
+    // Only a 404 means there's no such player; anything else can be tried again (cubic on #157).
+    if (found.error instanceof ApiProblem && found.error.code === "featured.slot_not_found") return <p role="alert">There's no player “{key}”.</p>;
+    return <LoadError what="The player" error={found.error} onRetry={() => void found.refetch()} />;
+  }
   if (!found.data) return <p role="status">Reading the player…</p>;
   return (
     <section className="frame-long">

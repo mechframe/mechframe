@@ -16,7 +16,7 @@ import pytest
 from featured import dashboard, public, service
 from featured.models import Placement, Slot
 from featured.schemas import KindIn, PlacementIn
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from kernel import Database, Problem, clock
@@ -360,6 +360,34 @@ async def test_two_saves_of_one_slot_at_once_make_one_version(
             await tidy.commit()
 
 
+async def test_a_new_slot_waits_for_one_being_made(database: Database, sources: Sources) -> None:
+    """Two made at once would read the same last place, and both be the first
+    (cubic on #157): with the lock held elsewhere, a new slot waits for it."""
+    async with database.sessions() as holder:
+        await holder.execute(
+            text("SELECT pg_advisory_xact_lock(:class, :id)"), service.NEW_SLOT_LOCK
+        )
+        async with database.sessions() as actor:
+            pid = await actor.scalar(text("SELECT pg_backend_pid()"))
+            task = asyncio.ensure_future(_slot(actor))
+            async with database.sessions() as probe:
+                for _ in range(100):
+                    waiting = await probe.scalar(
+                        text("SELECT wait_event_type FROM pg_stat_activity WHERE pid = :pid"),
+                        {"pid": pid},
+                    )
+                    await probe.rollback()
+                    if waiting == "Lock":
+                        break
+                    await asyncio.sleep(0.05)
+                else:
+                    raise AssertionError("A new slot never waited for the one being made.")
+            assert not task.done()
+            await holder.rollback()
+            await task
+            await actor.rollback()
+
+
 # --- slots -----------------------------------------------------------------------------------
 
 
@@ -494,6 +522,21 @@ async def test_the_picker_reads_only_what_the_slot_takes(
     page = await service.choices(db, slot.key, "music.track", "hook", None)
     assert [(each["title"], each["live"]) for each in page["items"]] == [("Hook It Up", False)]
     assert sources.tracks.asked[-1] == ("pick", "hook", None, 20)
+    # A page at a time, newest first, to the last.
+    for n in range(23):
+        sources.tracks.add(f"Track {n:02d}")
+    first = await service.choices(db, slot.key, "music.track", None, None)
+    assert len(first["items"]) == 20
+    assert first["items"][0]["title"] == "Track 22"
+    rest = await service.choices(db, slot.key, "music.track", None, first["next_cursor"])
+    assert [each["title"] for each in rest["items"]] == [
+        "Track 02",
+        "Track 01",
+        "Track 00",
+        "Hook It Up",
+        "Gather Around",
+    ]
+    assert rest["next_cursor"] is None
     for kind in ("music.album", "youtube"):
         await _refused("featured.not_accepted", service.choices(db, slot.key, kind, None, None))
     sources.switches.off.add("music")

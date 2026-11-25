@@ -57,9 +57,16 @@ class Things(refs.Source):
     async def pick(
         self, db: AsyncSession, q: str | None, *, cursor: str | None, limit: int
     ) -> refs.RefPage:
+        """A page from `cursor`, the place of the next thing, newest added first."""
         self.asked.append(("pick", q, cursor, limit))
-        found = [each for each in self.items.values() if not q or q.lower() in each.title.lower()]
-        return {"items": found[:limit], "next_cursor": "more" if len(found) > limit else None}
+        found = [
+            each
+            for each in reversed(self.items.values())
+            if not q or q.lower() in each.title.lower()
+        ]
+        start = int(cursor) if cursor and cursor.isdecimal() else 0
+        end = start + limit
+        return {"items": found[start:end], "next_cursor": str(end) if end < len(found) else None}
 
 
 class Switches:

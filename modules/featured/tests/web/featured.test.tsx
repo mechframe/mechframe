@@ -14,7 +14,7 @@ import { renderApp, testUser } from "@/kernel/testing";
 
 import type { AdminPlacement, AdminSlot, FullSlot, Row } from "../../web/api";
 import { changesOf, datesWords, day, dayTime, intro, liveLine, oneOf, rowOf, singular, statesOf, stripOf } from "../../web/api";
-import { isoOf, localOf } from "../../web/components/DatesDialog";
+import { exists, isoOf, localOf } from "../../web/components/DatesDialog";
 import { keyOf } from "../../web/components/SlotSettings";
 import featured from "../../web/module.web";
 import { useFeatured } from "../../web/public";
@@ -146,8 +146,10 @@ describe("featured's words", () => {
       { ...rowOf(SPOTLIGHT.items[0] as AdminPlacement), ref: ref(ids.hook, "A draft", false) },
       { ...rowOf(SPOTLIGHT.items[0] as AdminPlacement), ref: null, removed: true },
       { ...rowOf(SPOTLIGHT.items[0] as AdminPlacement), ref: null, removed: false },
+      // Its module off and its end passed: over, as the server says (cubic on #157).
+      { ...rowOf(SPOTLIGHT.items[0] as AdminPlacement), ref: null, removed: false, ends_at: new Date(now - 1).toISOString() },
     ];
-    expect(statesOf(rows, now)).toEqual(["live", "ended", "scheduled", "next", "hidden", "removed", "hidden"]);
+    expect(statesOf(rows, now)).toEqual(["live", "ended", "scheduled", "next", "hidden", "removed", "hidden", "ended"]);
   });
 
   it("says what changed, what's added first", () => {
@@ -177,6 +179,19 @@ describe("featured's words", () => {
     const local = localOf("2026-11-17T05:00:00.000Z");
     expect(isoOf(local)).toBe("2026-11-17T05:00:00.000Z");
     expect(isoOf("")).toBeNull();
+  });
+
+  it("knows a time the spring's change skips (cubic on #157)", () => {
+    const zone = process.env.TZ;
+    process.env.TZ = "America/New_York";
+    try {
+      expect(exists("2026-03-08T02:30")).toBe(false);
+      expect(exists("2026-03-08T03:30")).toBe(true);
+      expect(exists("2026-11-01T01:30")).toBe(true);
+      expect(exists("")).toBe(false);
+    } finally {
+      process.env.TZ = zone;
+    }
   });
 });
 
@@ -390,7 +405,25 @@ describe("Players", () => {
       expect(sent.some((request) => request.method === "POST")).toBe(true);
     });
     const body = (await sent.find((request) => request.method === "POST")?.json()) as Record<string, unknown>;
-    expect(body).toEqual({ key: "releases", label: "Releases", accepts: [TRACK], kinds: [], on_dashboard: false });
+    // The first player is marked for the Dashboard, as the server would mark it (cubic on #157).
+    expect(body).toEqual({ key: "releases", label: "Releases", accepts: [TRACK], kinds: [], on_dashboard: true });
+  });
+
+  it("removes a player, and the address names none once it's gone (cubic on #157)", async () => {
+    const sent = routed({ "DELETE /api/featured/admin/slots/videos": { status: 204 } });
+    const { router } = renderApp({ path: "/admin/featured?slot=videos", modules: [featured], session: admin });
+    await screen.findByRole("list", { name: "The Videos, in order" });
+    await userEvent.click(screen.getByRole("button", { name: "Videos settings" }));
+    const dialog = await screen.findByRole("dialog", { name: "Videos settings" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "Remove the player" }));
+    const sure = await screen.findByRole("dialog", { name: "Remove the Videos player?" });
+    await userEvent.click(within(sure).getByRole("button", { name: "Remove the player" }));
+    await waitFor(() => {
+      expect(sent.some((request) => request.method === "DELETE")).toBe(true);
+    });
+    await waitFor(() => {
+      expect(router.state.location.search).not.toContain("slot=");
+    });
   });
 
   it("puts Players under the sidebar's Homepage for those who place things", async () => {

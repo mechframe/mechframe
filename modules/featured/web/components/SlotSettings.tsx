@@ -13,6 +13,8 @@ export type SlotSettingsProps = {
   /** The player to change, or none for a new one. */
   slot: AdminSlot | null;
   types: readonly TypeLabel[];
+  /** A new one is the site's first player: shown on the Dashboard unless unticked, as the server would. */
+  first?: boolean;
   onDone: (key: string | null) => void;
   onClose: () => void;
 };
@@ -36,7 +38,7 @@ function problemOf(error: unknown): string {
   return error instanceof Error ? failureWords(error) : "That didn't go through. Try again.";
 }
 
-export function SlotSettings({ slot, types, onDone, onClose }: SlotSettingsProps) {
+export function SlotSettings({ slot, types, first = false, onDone, onClose }: SlotSettingsProps) {
   const queryClient = useQueryClient();
   const toast = useToast();
   const [label, setLabel] = useState(slot?.label ?? "");
@@ -44,7 +46,8 @@ export function SlotSettings({ slot, types, onDone, onClose }: SlotSettingsProps
   const [keyTyped, setKeyTyped] = useState(Boolean(slot));
   const [accepts, setAccepts] = useState<string[]>(slot?.accepts ?? []);
   const [kinds, setKinds] = useState<KindRow[]>((slot?.kinds ?? []).map((each) => ({ ...each, typed: true })));
-  const [dashboard, setDashboard] = useState(slot?.on_dashboard ?? false);
+  // The first player made is marked, as the server marks it (cubic on #157).
+  const [dashboard, setDashboard] = useState(slot?.on_dashboard ?? first);
   const [refused, setRefused] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
   const [removing, setRemoving] = useState(false);

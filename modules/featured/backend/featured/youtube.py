@@ -14,6 +14,7 @@ lookup that fails or takes too long leaves the title None, for staff to type.
 from __future__ import annotations
 
 import asyncio
+import json
 import re
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -67,15 +68,28 @@ def watch(ident: str) -> str:
     return WATCH + ident
 
 
+async def _answer(client: httpx.AsyncClient, ident: str) -> bytes | None:
+    """oEmbed's body for the video, read a piece at a time and given up past
+    MAX_ANSWER_BYTES, so a huge answer is never held whole (cubic on #157)."""
+    params = {"url": watch(ident), "format": "json"}
+    async with client.stream("GET", OEMBED, params=params) as response:
+        if response.status_code != 200:
+            return None
+        body = bytearray()
+        async for piece in response.aiter_bytes():
+            body += piece
+            if len(body) > MAX_ANSWER_BYTES:
+                return None
+        return bytes(body)
+
+
 async def _title(client: httpx.AsyncClient, ident: str) -> str | None:
     try:
         # A second in all, not each of connect, write and read (httpx's timeout is per step).
-        response = await asyncio.wait_for(
-            client.get(OEMBED, params={"url": watch(ident), "format": "json"}), TIMEOUT_SECONDS
-        )
-        if response.status_code != 200 or len(response.content) > MAX_ANSWER_BYTES:
+        answer = await asyncio.wait_for(_answer(client, ident), TIMEOUT_SECONDS)
+        if answer is None:
             return None
-        body = response.json()
+        body = json.loads(answer)
     except (httpx.HTTPError, TimeoutError, ValueError):
         return None
     title = body.get("title") if isinstance(body, dict) else None

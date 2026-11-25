@@ -7,7 +7,7 @@ are looked up at once, so a paste answers within about a second."""
 from __future__ import annotations
 
 import time
-from collections.abc import Iterator
+from collections.abc import AsyncIterator, Iterator
 from urllib.parse import parse_qs, urlsplit
 
 import httpx
@@ -90,11 +90,40 @@ async def test_a_failed_lookup_leaves_the_title_none(fake: FakeYouTube) -> None:
     ],
 )
 async def test_an_answer_with_no_title_in_it_leaves_none(answer: httpx.Response) -> None:
-    before = youtube.use_transport(httpx.MockTransport(lambda request: answer))
+    """Nothing but oEmbed's address is asked, whatever it answers: a redirect isn't followed
+    (cubic on #157)."""
+    asked: list[str] = []
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        asked.append(str(request.url.copy_with(query=None)))
+        return answer
+
+    before = youtube.use_transport(httpx.MockTransport(handle))
     try:
         assert await youtube.titles(["dQw4w9WgXcQ"]) == {"dQw4w9WgXcQ": None}
     finally:
         youtube.use_transport(before)
+    assert asked == [youtube.OEMBED]
+
+
+async def test_a_huge_answer_is_given_up_while_it_comes() -> None:
+    """Read a piece at a time and given up past the limit, never held whole (cubic on #157)."""
+    read: list[int] = []
+
+    async def pieces() -> AsyncIterator[bytes]:
+        for _ in range(100):
+            read.append(1)
+            yield b"x" * 8192
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=pieces())
+
+    before = youtube.use_transport(httpx.MockTransport(handle))
+    try:
+        assert await youtube.titles(["dQw4w9WgXcQ"]) == {"dQw4w9WgXcQ": None}
+    finally:
+        youtube.use_transport(before)
+    assert len(read) <= youtube.MAX_ANSWER_BYTES // 8192 + 2
 
 
 async def test_a_long_title_is_cut_to_200() -> None:

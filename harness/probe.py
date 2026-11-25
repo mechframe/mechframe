@@ -37,7 +37,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
-from sqlalchemy import MetaData, String, Text, delete, select
+from sqlalchemy import DateTime, MetaData, String, Text, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -45,6 +45,7 @@ from kernel import (
     BotProof,
     attention,
     bot,
+    clock,
     jobs,
     lifecycle,
     privacy,
@@ -127,6 +128,10 @@ class ProbeNote(lifecycle.Publishable, _Tables):
     body: Mapped[str] = mapped_column(Text, default="")
     #: Who wrote it: only the seed says (hook 4).
     author_id: Mapped[uuid.UUID | None] = mapped_column(default=None)
+    #: When it was made or last changed: what featured's picker lists first (hook 11).
+    edited_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=clock.now, onupdate=clock.now
+    )
 
 
 class NewNote(BaseModel):
@@ -350,7 +355,7 @@ def _ref(note: ProbeNote) -> refs.Ref:
 
 class ProbeRefs(refs.Source):
     """The probe's notes as `featured` points at them: drafts too, each `live`
-    once published, found by title, a page at a time by its place."""
+    once published, found by title, newest edit first, a page at a time by its place."""
 
     type = "probe.note"
     label = "Notes"
@@ -363,7 +368,8 @@ class ProbeRefs(refs.Source):
         self, db: AsyncSession, q: str | None, *, cursor: str | None, limit: int
     ) -> refs.RefPage:
         skip = int(cursor) if cursor and cursor.isascii() and cursor.isdecimal() else 0
-        statement = select(ProbeNote).order_by(ProbeNote.title, ProbeNote.id)
+        # Newest edit first, as the hook says (cubic on #157).
+        statement = select(ProbeNote).order_by(ProbeNote.edited_at.desc(), ProbeNote.id)
         if q:
             statement = statement.where(ProbeNote.title.ilike(f"%{q}%"))
         notes = list(await db.scalars(statement.offset(skip).limit(limit + 1)))

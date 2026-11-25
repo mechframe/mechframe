@@ -148,9 +148,10 @@ export function titleOf(row: Row): string {
 /** Each row's state now, as the server works it out: gone, over, not on the site, live, or to come (the soonest `next`). */
 export function statesOf(rows: readonly Row[], now: number = Date.now()): State[] {
   const states: (State | "upcoming")[] = rows.map((row) => {
-    if (row.item && !row.ref) return row.removed ? "removed" : "hidden";
+    // The server's order: gone, then over, then not on the site (cubic on #157).
+    if (row.item && !row.ref && row.removed) return "removed";
     if (row.ends_at && Date.parse(row.ends_at) <= now) return "ended";
-    if (row.ref && !row.ref.live) return "hidden";
+    if (row.item && (!row.ref || !row.ref.live)) return "hidden";
     if (row.starts_at && Date.parse(row.starts_at) > now) return "upcoming";
     return "live";
   });

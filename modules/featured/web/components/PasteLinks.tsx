@@ -60,7 +60,7 @@ export function PasteLinks({ kinds, room, onAdd, onClose }: PasteLinksProps) {
             if (urls.length) void read();
           }}
         >
-          <Field label="YouTube links" hint={`One a line, or with spaces between: up to ${String(MAX_PASTE)} at once.`}>
+          <Field label="YouTube links" hint={`One per line, or with spaces between: up to ${String(MAX_PASTE)} at once.`}>
             <TextArea
               rows={6}
               value={text}
@@ -70,7 +70,11 @@ export function PasteLinks({ kinds, room, onAdd, onClose }: PasteLinksProps) {
             />
           </Field>
           {urls.length > MAX_PASTE ? <p className="mf-featured-hint">The first {String(MAX_PASTE)} are read; paste the rest after.</p> : null}
-          {problem ? <p className="mf-featured-error">{problem}</p> : null}
+          {problem ? (
+            <p className="mf-featured-error" role="alert">
+              {problem}
+            </p>
+          ) : null}
           <div className="mf-dialog-actions">
             <Button type="button" onClick={onClose}>
               Cancel

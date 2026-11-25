@@ -28,7 +28,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any, cast
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -52,6 +52,8 @@ SLOT = "featured.slot"
 WARN_AHEAD = timedelta(days=2)
 #: Audit details stay under the kernel's 4 KiB with the slot's key around them.
 _AUDIT_ROOM = 3600
+#: The advisory lock a new slot takes: featured's class, and its one id.
+NEW_SLOT_LOCK = {"class": 84712073, "id": 1}
 
 
 # --- small parts -----------------------------------------------------------------------------
@@ -409,6 +411,9 @@ async def create_slot(
     name = _label(label)
     taken = await _check_accepts(db, accepts)
     made_kinds = _check_kinds(kinds, "kinds")
+    # One new slot at a time, to the commit: two at once would take one place,
+    # and both be "the first" (cubic on #157).
+    await db.execute(text("SELECT pg_advisory_xact_lock(:class, :id)"), NEW_SLOT_LOCK)
     if await db.scalar(select(Slot.key).where(Slot.key == key)) is not None:
         raise _taken()
     last = await db.scalar(select(func.max(Slot.position)))

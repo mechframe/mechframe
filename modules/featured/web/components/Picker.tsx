@@ -35,8 +35,8 @@ export function Picker({ slotKey, types, first, taken, onAdd, onClose }: PickerP
       if (!data) throw new Error("The site answered without the list.");
       return data;
     },
+    // The app's own retry rule: a network failure or a 5xx is tried again, a refusal isn't (cubic on #157).
     getNextPageParam: (last) => last.next_cursor,
-    retry: false,
   });
   const found = pages.data?.pages.flatMap((page) => page.items) ?? [];
   return (

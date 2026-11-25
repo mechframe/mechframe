@@ -307,19 +307,26 @@ export default function Players() {
   const what = changed.map((each) => (changed.length > 1 ? `${each.slot.label}: ${each.words.join(", ")}` : each.words.join(", "))).join("; ");
   const selected = params.get("slot") ?? slots[0]?.key ?? "";
 
-  const setRows = (key: string, rows: Row[]) => {
-    const version = drafts[key]?.version ?? fullOf(key)?.version ?? 1;
-    setDrafts((now) => ({ ...now, [key]: { version, rows } }));
-    setRefused(null);
-  };
   const drop = (key: string) => {
     setDrafts((now) => Object.fromEntries(Object.entries(now).filter(([each]) => each !== key)));
   };
-  const select = (key: string) => {
+  const setRows = (key: string, rows: Row[]) => {
+    setRefused(null);
+    // A list back as it's saved is no draft: a later read of the slot shows through again (cubic on #157).
+    if (changesOf(savedRows(key), rows).length === 0) {
+      drop(key);
+      return;
+    }
+    const version = drafts[key]?.version ?? fullOf(key)?.version ?? 1;
+    setDrafts((now) => ({ ...now, [key]: { version, rows } }));
+  };
+  /** The tab in the address; none (the first) once its player is removed. */
+  const select = (key: string | null) => {
     setParams(
       (now) => {
         const next = new URLSearchParams(now);
-        next.set("slot", key);
+        if (key) next.set("slot", key);
+        else next.delete("slot");
         return next;
       },
       { replace: true },
@@ -500,9 +507,12 @@ export default function Players() {
         <SlotSettings
           slot={settings === "new" ? null : settings}
           types={types}
+          first={slots.length === 0}
           onDone={(key) => {
+            // No key back is a player removed: its draft goes, and the address names none (cubic on #157).
+            if (!key && settings !== "new") drop(settings.key);
             setSettings(null);
-            if (key) select(key);
+            select(key);
           }}
           onClose={() => {
             setSettings(null);

@@ -234,9 +234,14 @@ async def test_the_refusals_and_the_conflict(browser: Browser) -> None:
         ({"ref": {"type": "blog.post", "id": note}}, "featured.not_accepted"),
         ({"link": {"url": "https://vimeo.com/1", "title": "A video"}}, "featured.not_youtube"),
         (_link(title=" "), "featured.no_title"),
+        (_link(title="x" * 201), "featured.no_title"),
         (_link(kind="rap-battle"), "featured.unknown_kind"),
         (
             _note(note, starts_at="2026-12-02T00:00:00Z", ends_at="2026-12-01T00:00:00Z"),
+            "featured.bad_dates",
+        ),
+        (
+            _note(note, starts_at="2026-12-01T00:00:00Z", ends_at="2026-12-01T00:00:00Z"),
             "featured.bad_dates",
         ),
     ]
@@ -299,21 +304,22 @@ async def test_slots_their_settings_and_whats_in_use(browser: Browser) -> None:
 # --- the picker and the links --------------------------------------------------------------------
 
 
-async def test_the_picker_finds_drafts_too(browser: Browser) -> None:
+async def test_the_picker_finds_drafts_too_newest_edit_first(browser: Browser) -> None:
     await browser.as_new("editor")
     admin = Browser(browser.transport)
     await admin.as_new("admin")
     slot = await _slot(admin)
     word = uuid.uuid4().hex[:8]
     await browser.note(f"Draft {word}", published=False)
+    await browser.advance(5)
     await browser.note(f"Live {word}")
     page = await browser.http.get(
         f"{SLOTS}/{slot['key']}/pick", params={"type": "probe.note", "q": word}
     )
     assert page.status_code == 200, page.text
     assert [(each["title"], each["live"]) for each in page.json()["items"]] == [
-        (f"Draft {word}", False),
         (f"Live {word}", True),
+        (f"Draft {word}", False),
     ]
     wrong = await browser.http.get(f"{SLOTS}/{slot['key']}/pick", params={"type": "youtube"})
     assert (wrong.status_code, wrong.json()["code"]) == (422, "featured.not_accepted")

@@ -30,13 +30,24 @@ export function isoOf(local: string): string | null {
   return Number.isNaN(at.getTime()) ? null : at.toISOString();
 }
 
+/** Whether a `datetime-local` value is a time the viewer's clocks show: one the spring's change skips isn't. */
+export function exists(local: string): boolean {
+  const at = isoOf(local);
+  return at !== null && localOf(at) === local;
+}
+
 export function DatesDialog({ title, starts, ends, onSave, onClose }: DatesDialogProps) {
   const [start, setStart] = useState(localOf(starts));
   const [end, setEnd] = useState(localOf(ends));
   // A date left as it was keeps its own time to the second: the input holds only minutes.
   const startAt = start === localOf(starts) ? starts : isoOf(start);
   const endAt = end === localOf(ends) ? ends : isoOf(end);
-  const wrong = startAt && endAt && Date.parse(endAt) <= Date.parse(startAt) ? "The end has to be after the start." : "";
+  // A time the clocks skip (02:30 on the spring's change) would be saved an hour on: say so instead (cubic on #157).
+  const skipped = (local: string, at: string | null) => (local && at && !exists(local) ? "That time doesn't exist on that day: the clocks change then." : "");
+  const startWrong = start === localOf(starts) ? "" : skipped(start, startAt);
+  const endWrong = end === localOf(ends) ? "" : skipped(end, endAt);
+  const order = startAt && endAt && Date.parse(endAt) <= Date.parse(startAt) ? "The end has to be after the start." : "";
+  const wrong = startWrong || endWrong || order;
   return (
     <Dialog title={`Dates of ${title}`} onClose={onClose}>
       <form
@@ -48,7 +59,7 @@ export function DatesDialog({ title, starts, ends, onSave, onClose }: DatesDialo
         }}
       >
         <p className="mf-featured-hint">Leave a date blank for none: with neither, it plays always. Times are your own, {Intl.DateTimeFormat().resolvedOptions().timeZone}.</p>
-        <Field label="Starts" hint="It goes live then.">
+        <Field label="Starts" hint="It goes live then." error={startWrong || undefined}>
           <Input
             type="datetime-local"
             value={start}
@@ -57,7 +68,7 @@ export function DatesDialog({ title, starts, ends, onSave, onClose }: DatesDialo
             }}
           />
         </Field>
-        <Field label="Ends" hint="It comes off then." error={wrong || undefined}>
+        <Field label="Ends" hint="It comes off then." error={endWrong || order || undefined}>
           <Input
             type="datetime-local"
             value={end}
