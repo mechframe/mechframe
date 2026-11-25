@@ -36,8 +36,8 @@ export type TableProps<Row> = {
   /**
    * The key of the column that names each row (a person, a post, a track): its
    * cell is the row's header, so a screen reader names the row by it, drawn at
-   * 600 as the boards draw a row's name (K6). The table's to say, so a row has
-   * one name at most (cubic on #158).
+   * 600 as the boards draw a row's name (K6). The table says which column, so a
+   * row has one name at most (cubic on #158).
    */
   rowHeader?: string;
 };
