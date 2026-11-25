@@ -216,9 +216,9 @@ Set in the site's admin (Admin → Settings), not on the host:
 | `autoplay_next` | bool | `true` | Play the next track in the queue when one ends |
 | `count_after_seconds` | int | `30` | Seconds really heard before a play counts, from 5 to 120 (or the whole of a shorter track) |
 
-### `blog` 0.1.3 (experimental)
+### `blog` 0.1.4 (experimental)
 
-Dated posts in Markdown, with categories, a cover from the media library, scheduling and related posts.
+Dated posts in Markdown, with categories, scheduling, related posts and a cover from media or the AI.
 
 No host variables of its own.
 
@@ -284,7 +284,7 @@ YouTube, SoundCloud, Spotify and Bandcamp players from a pasted link, loaded onl
 
 No host variables of its own.
 
-### `media` 0.1.3 (experimental)
+### `media` 0.1.4 (experimental)
 
 Images uploaded once with alt text, cleaned of metadata, and placed by any module.
 

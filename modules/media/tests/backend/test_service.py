@@ -529,3 +529,54 @@ async def test_the_seed_gives_three_described_images_once(db: AsyncSession, buck
     assert sorted(row.filename for row in rows) == sorted(name for name, *_ in IMAGES)
     assert all(row.alt for row in rows)
     assert bucket.files == stored  # the second run stored nothing new
+
+
+# --- another module's image (media 0.1.4, decision 0065) ---------------------------------
+
+
+@pytest.mark.db
+async def test_store_takes_another_modules_image_with_its_alt(
+    db: AsyncSession, bucket: Bucket
+) -> None:
+    """blog's generated cover: stored as an upload is, with the alt it was drawn with."""
+    person = await make_person(db, "Pat Writer")
+    data = unique_image(size=(2400, 1260))
+    first = await public.store(
+        db, data, filename="cover.png", alt="  Ten years, in gold.  ", by=person
+    )
+    await db.commit()
+    assert (first.width, first.height, first.alt) == (2400, 1260, "Ten years, in gold.")
+    stored = await db.get(MediaImage, first.id)
+    assert stored is not None
+    assert stored.uploaded_by == person
+    assert bucket.under(f"media/{first.id}/")  # its files, smaller copies too
+    # The same bytes again answer the image kept, its alt as it was.
+    again = await public.store(db, data, filename="cover.png", alt="Something else", by=person)
+    assert (again.id, again.alt) == (first.id, "Ten years, in gold.")
+
+
+async def test_another_module_can_ask_whether_images_can_be_stored(
+    db: AsyncSession, bucket: Bucket
+) -> None:
+    """blog's Draw a cover shows only while the cover could be kept."""
+    assert public.storage_on()
+    bucket.on = False
+    assert not public.storage_on()
+    refused = await _problem(
+        public.store(db, unique_image(), filename="cover.png", alt="x", by=None)
+    )
+    assert (refused.code, refused.status) == ("media.storage_off", 503)
+
+
+async def test_store_keeps_its_alt_text_on_one_line(db: AsyncSession, bucket: Bucket) -> None:
+    """CodeRabbit on #147: a line break or a control character in the alt text would break the
+    column's rule at the flush; the words are kept on one line instead."""
+    kept = await public.store(
+        db,
+        unique_image(),
+        filename="cover.png",
+        alt=" Gold\nring\x07 in\u2028the  dark ",
+        by=None,
+    )
+    await db.commit()
+    assert kept.alt == "Gold ring in the dark"

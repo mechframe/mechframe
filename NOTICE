@@ -33,4 +33,12 @@ kernel/backend/kernel/auth/data/common-passwords.txt.gz
      BSD 3-Clause License, Copyright (c) Django Software Foundation and
      individual contributors (licenses/Django-BSD-3-Clause.txt).
 
+kernel/backend/kernel/fonts/Inter-Regular.ttf, Inter-SemiBold.ttf, Inter-Bold.ttf
+  Inter 4.1, the font a generated cover's words are drawn in (kernel.svg,
+  decision 0065): the three static TrueType files from extras/ttf/ in
+  Inter-4.1.zip, the v4.1 release of https://github.com/rsms/inter
+  (2024-11-16), unchanged. SIL Open Font License 1.1, Copyright (c) 2016
+  The Inter Project Authors; its text travels with the fonts, in
+  kernel/backend/kernel/fonts/LICENSE.txt.
+
   The full license texts are in licenses/ beside this file.

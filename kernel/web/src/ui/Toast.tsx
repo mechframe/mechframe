@@ -5,19 +5,25 @@
  * failure (`aria-live` alone, so a page's own status lines keep their role).
  * A note goes after `TOAST_MS`, but stays while the pointer is over it or the
  * keyboard is in it (WCAG 2.2.1); a failure stays until it's closed. Each has
- * its own Close, named by its words.
+ * its own Close, named by its words, which gives focus to `returnTo` when the
+ * note has one (the control the note's action began from).
  *
  * `useToast()` gives `toast({tone, text})`; the provider is in every page's
  * tree (`KernelProviders`), and draws the notes at the end of the body. A note is for news only: anything the person must
  * act on belongs on the page.
  */
-import { createContext, use, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, use, useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { createPortal } from "react-dom";
 
 import { Icon } from "./Icon";
 
 export type ToastTone = "success" | "danger" | "neutral";
-export type ToastNote = { tone?: ToastTone; text: string };
+export type ToastNote = {
+  tone?: ToastTone;
+  text: string;
+  /** Where focus goes when its Close is pressed, rather than nowhere once the note has gone. */
+  returnTo?: RefObject<HTMLElement | null>;
+};
 type Shown = ToastNote & { id: number };
 
 /** How long a note shows, unless it's held. */
@@ -72,6 +78,7 @@ function Note({ note, onClose }: { note: Shown; onClose: (id: number) => void })
         aria-label={`Close: ${note.text}`}
         onClick={() => {
           onClose(note.id);
+          note.returnTo?.current?.focus();
         }}
       >
         <Icon name="close" />

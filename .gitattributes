@@ -4,3 +4,5 @@ modules/*/openapi.json text eol=lf
 kernel/web/src/api/schema.ts text eol=lf
 themes/*/tokens.css text eol=lf
 themes/*/tailwind.css text eol=lf
+# Fonts are binary: no line ending is ever changed in them.
+*.ttf binary

@@ -12,8 +12,10 @@ dependencies (`current_user`, `optional_user`, `require_permission`,
 From K4: `Answer`, `answer`, `Id` and `When`, for every route's answer model.
 The contract hooks (decision 0052): `lifecycle`, `taxonomy`, `search`, `seed`,
 `bot` with its `BotProof`, `consent`, `privacy` with its `Subject`, and the
-Dashboard's `attention` and `setup`. For audio-player (decision 0071):
-`client_address`, who a request comes from as the rate limits read it.
+Dashboard's `attention` and `setup`. `ai` (decision 0058) and `svg`, a
+model's drawing cleaned to an allowlist and made a PNG (decision 0065). For
+audio-player (decision 0071): `client_address`, who a request comes from as
+the rate limits read it.
 """
 
 from kernel import (
@@ -35,6 +37,7 @@ from kernel import (
     server_copy,
     setup,
     storage,
+    svg,
     taxonomy,
 )
 from kernel.access import public
@@ -102,5 +105,6 @@ __all__ = [
     "settings",
     "setup",
     "storage",
+    "svg",
     "taxonomy",
 ]

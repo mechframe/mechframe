@@ -93,6 +93,8 @@ class Browser:
     """One cookie jar, same-origin headers, and the test-support routes."""
 
     def __init__(self, transport: httpx.AsyncBaseTransport) -> None:
+        self._transport = transport
+        self._others: list[Browser] = []
         self.http = httpx.AsyncClient(
             transport=transport,
             base_url=SITE,
@@ -143,6 +145,17 @@ class Browser:
             "/api/media/admin/images", files={"file": (name, data, "image/png")}, **kwargs
         )
 
+    def stranger(self) -> Browser:
+        """Another visitor to the same site, signed out, with no cookies of this one's."""
+        other = Browser(self._transport)
+        self._others.append(other)
+        return other
+
+    async def close(self) -> None:
+        for other in self._others:
+            await other.http.aclose()
+        await self.http.aclose()
+
     def forget(self) -> None:
         """Signed out, as a stranger is: no cookies."""
         self.http.cookies.clear()
@@ -163,7 +176,7 @@ async def browser(blog_server: httpx.AsyncBaseTransport) -> AsyncIterator[Browse
         reset = await client.http.post("/api/_test/reset")
         assert reset.status_code == 204, reset.text
         yield client
-        await client.http.aclose()
+        await client.close()
 
 
 def unique_image(kind: str = "PNG", size: tuple[int, int] = (600, 360)) -> bytes:

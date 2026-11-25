@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Blog",
-    "version": "0.1.3"
+    "version": "0.1.4"
   },
   "paths": {
     "/api/blog/posts": {
@@ -712,6 +712,131 @@
           }
         }
       }
+    },
+    "/api/blog/admin/covers": {
+      "get": {
+        "summary": "Cover State",
+        "description": "Whether a drawn cover could be kept now: Draw a cover shows only while it could.",
+        "operationId": "cover_state_api_blog_admin_covers_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoverState"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Keep Cover",
+        "description": "The cover shown, cleaned again, made a PNG twice the card and kept in\nthe media library with its alt text. It spends no AI budget.",
+        "operationId": "keep_cover_api_blog_admin_covers_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoverUse"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoverStored"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/blog/admin/covers/draw": {
+      "post": {
+        "summary": "Draw Cover",
+        "description": "A cover drawn by the AI from the post as it stands, cleaned, with its\npreview rendered as the PNG kept will be: one call against the AI's budget,\nits repair try included. For a revision, `current` and `changes`.",
+        "operationId": "draw_cover_api_blog_admin_covers_draw_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoverAsk"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoverDrawn"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -866,6 +991,189 @@
           "name"
         ],
         "title": "BlogPerson"
+      },
+      "CoverAsk": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Title",
+            "default": ""
+          },
+          "summary": {
+            "type": "string",
+            "maxLength": 300,
+            "title": "Summary",
+            "default": ""
+          },
+          "body": {
+            "type": "string",
+            "maxLength": 100000,
+            "title": "Body",
+            "default": ""
+          },
+          "style": {
+            "type": "string",
+            "enum": [
+              "editorial",
+              "signal",
+              "minimal",
+              "custom"
+            ],
+            "title": "Style"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 600,
+            "title": "Description",
+            "default": ""
+          },
+          "colours": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CoverColours"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "wordmark": {
+            "type": "boolean",
+            "title": "Wordmark",
+            "default": false
+          },
+          "current": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current"
+          },
+          "changes": {
+            "type": "string",
+            "maxLength": 600,
+            "title": "Changes",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "style"
+        ],
+        "title": "CoverAsk",
+        "description": "What to draw: the editor's fields as they stand, so a post not yet\nsaved can have a cover; for a revision, the cover shown and the changes."
+      },
+      "CoverColours": {
+        "properties": {
+          "ground": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$",
+            "title": "Ground"
+          },
+          "ink": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$",
+            "title": "Ink"
+          },
+          "accent": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$",
+            "title": "Accent"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "ground",
+          "ink",
+          "accent"
+        ],
+        "title": "CoverColours",
+        "description": "The site's colours, from the theme's surface, text and accent tokens."
+      },
+      "CoverDrawn": {
+        "properties": {
+          "svg": {
+            "type": "string",
+            "title": "Svg"
+          },
+          "alt": {
+            "type": "string",
+            "title": "Alt"
+          },
+          "preview": {
+            "type": "string",
+            "title": "Preview"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "svg",
+          "alt",
+          "preview"
+        ],
+        "title": "CoverDrawn",
+        "description": "A cover drawn and cleaned: the SVG to keep or change, its alt text, and\nits preview, the kernel's own render of it as the PNG kept will be."
+      },
+      "CoverState": {
+        "properties": {
+          "storage": {
+            "type": "boolean",
+            "title": "Storage"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "storage"
+        ],
+        "title": "CoverState",
+        "description": "Whether a drawn cover could be kept now: media's storage is on."
+      },
+      "CoverStored": {
+        "properties": {
+          "cover": {
+            "$ref": "#/components/schemas/PostCover"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "cover"
+        ],
+        "title": "CoverStored",
+        "description": "The cover kept in the media library, as the post's Cover field holds it."
+      },
+      "CoverUse": {
+        "properties": {
+          "svg": {
+            "type": "string",
+            "maxLength": 100000,
+            "minLength": 1,
+            "title": "Svg"
+          },
+          "alt": {
+            "type": "string",
+            "maxLength": 250,
+            "title": "Alt",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "svg"
+        ],
+        "title": "CoverUse",
+        "description": "The cover shown, to keep with its alt text: cleaned again on the server."
       },
       "FullPost": {
         "properties": {

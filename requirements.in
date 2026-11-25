@@ -26,6 +26,7 @@ markdown>=3.8.1  # kernel.markdown: what people write in Markdown made HTML on t
 pillow>=12.3.0  # the media module judges and re-encodes uploaded images, without their metadata (modules/media, from VybeSite's floor)
 python-multipart>=0.0.18  # FastAPI's File and UploadFile, for the media module's uploads; 0.0.18 fixed CVE-2024-53981
 anthropic>=1.11.0  # kernel.ai: the editor's AI writing help, Anthropic's own SDK, called from the server only (decision 0058; VybeSite's floor)
+resvg-py>=0.5.0  # kernel.svg: a model's SVG, cleaned to an allowlist, made a PNG with resvg; wheels for every OS, no system library (decision 0065; MIT, resvg Apache-2.0)
 soundfile>=0.14.0  # discography: reads uploaded masters and writes the MP3 stream through libsndfile, LGPL-2.1, loaded as a library of its own (decision 0070)
 numpy>=2.5.0  # discography: the waveform peaks; soundfile reads into it
 
