@@ -65,6 +65,9 @@ class FakeBuffer:
     trouble: deque[str] = field(default_factory=deque)
     down: set[str] = field(default_factory=set)
     checked: list[str] = field(default_factory=list)
+    #: The posts made so far, deleted ones included: each new one's id is the next,
+    #: never one a deleted post freed (CodeRabbit on #152).
+    numbered: int = 0
 
     def forget(self) -> None:
         """As new: nothing asked or made, the usual channels, no trouble."""
@@ -74,6 +77,7 @@ class FakeBuffer:
         self.trouble.clear()
         self.down.clear()
         self.checked.clear()
+        self.numbered = 0
 
     def made(self) -> list[dict[str, Any]]:
         """The posts made, oldest first, each with the input Buffer was sent."""
@@ -134,8 +138,8 @@ class FakeBuffer:
                 return httpx.Response(429, headers={"Retry-After": "120"}, json={"errors": []})
             if kind == "fault":
                 return httpx.Response(500, text="Internal error")
-        number = len(self.posts) + 1
-        post_id = f"post-{number}"
+        self.numbered += 1
+        post_id = f"post-{self.numbered}"
         mode = given.get("mode")
         status = "draft" if given.get("saveToDraft") else "sent" if mode == "shareNow" else "buffer"
         post = {

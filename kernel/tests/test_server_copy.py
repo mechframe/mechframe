@@ -1050,6 +1050,37 @@ async def test_no_preview_for_what_isnt_a_public_page(
     assert await server_copy.preview(_DB, kind, note) is None
 
 
+@pytest.mark.parametrize(
+    ("on", "path"),
+    [
+        (frozenset({"pages"}), "/notes/a"),  # notes is off: pages' catch-all takes its path
+        (frozenset({"notes", "pages"}), "/elsewhere/a"),  # a path notes doesn't answer
+    ],
+)
+async def test_no_preview_from_another_modules_page(
+    monkeypatch: pytest.MonkeyPatch, on: frozenset[str], path: str
+) -> None:
+    """A thing's preview is its own module's page, never the page another
+    module answers at its path (CodeRabbit on #152)."""
+    note = uuid.uuid4()
+    other = FakePages(answers={path: Page("Someone else's", "Their words.", "", image="/x.png")})
+    routes = server_copy.build(
+        [
+            public_module("notes", public=["/notes/:slug"], pages=FakePages()),
+            public_module("pages", public=["/:section/:slug"], pages=other),
+        ]
+    )
+
+    async def switched_on(db: object) -> frozenset[str]:
+        return on
+
+    monkeypatch.setattr(server_copy, "_served", server_copy._Served())
+    server_copy.serve(routes, switched_on)
+    monkeypatch.setattr(search, "_sources", {"notes.note": _NoteSource({note: path})})
+    assert await server_copy.preview(_DB, "notes.note", note) is None
+    assert other.asked == []
+
+
 async def test_no_preview_before_the_app_serves_pages(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(server_copy, "_served", server_copy._Served())
     assert await server_copy.preview(_DB, "notes.note", uuid.uuid4()) is None

@@ -994,11 +994,17 @@ async def preview(db: AsyncSession, content_type: str, content_id: uuid.UUID) ->
 
     if _served.routes is None or _served.on is None:
         return None
+    # The thing's own module, `<id>` of `<id>.<entity>`, must be on and must
+    # answer its path: another module's page there is no preview of it (CodeRabbit on #152).
+    owner = content_type.split(".", 1)[0]
+    on = await _served.on(db)
+    if owner not in on:
+        return None
     doc = await search.public_document(db, content_type, content_id)
     if doc is None:
         return None
-    match = _served.routes.resolve(doc.path, await _served.on(db))
-    if match is None or match.member:
+    match = _served.routes.resolve(doc.path, on)
+    if match is None or match.member or match.module != owner:
         return None
     found = await _served.routes.pages_of(match.module).page(db, doc.path, match.params)
     if not isinstance(found, Page):

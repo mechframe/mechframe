@@ -196,3 +196,11 @@ A share is its item's history, not a log, so it's kept while social is installed
   - **The Share card draws no channel's picture:** the browser loads nothing from Buffer's hosts, so `CSP` stays empty. The avatar is kept in `social_channel`, unused.
   - **The setup step** Connect Buffer is for `kernel.settings.manage`, the token's own permission.
   - **Each channel list keeps the settings version it was checked at** (Codex on #152). Only a list checked at the current version is used, and the change's event deletes only older lists, so a late or second delivery never takes away a fresh check. The Share card also reads again when the post is published on its page, so it can be shared without a reload.
+  - **From CodeRabbit on #152:**
+    - `preview` answers only from the thing's own module, which must be on: another module's page at its path is never its preview.
+    - A token holds only printable ASCII.
+    - Buffer's `UNEXPECTED` on a post counts as unanswered.
+    - A share's address matches someone's export and erase only when it names no account.
+    - Channels are stamped with the settings version read before the token.
+    - A share stuck `sending` for five minutes shows on the Dashboard, whose words now say what an admin can do.
+    - The card counts in code points, drops Share again when the channels picked change, and keeps a token typed while another saves.

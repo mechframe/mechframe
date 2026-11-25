@@ -8,7 +8,7 @@ import asyncio
 import json
 import uuid
 from collections.abc import AsyncIterator, Iterator
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
@@ -215,7 +215,25 @@ async def test_export_lists_a_persons_shares_and_erase_keeps_them_the_sites(
         created_at=now,
         updated_at=now,
     )
-    db.add_all([share, by_address])
+    # Someone else, who chose the person's address as their name: theirs stays theirs (CodeRabbit on #152).
+    other, _ = await make_person(db)
+    named_so = Share(
+        content_type="blog.post",
+        content_id=uuid.uuid4(),
+        admin_path="/admin/blog/z",
+        channel_id=share.channel_id,
+        channel_name="@testsite",
+        service="twitter",
+        text="Soul",
+        link="https://site.test/blog/soul",
+        mode="queue",
+        state="sent",
+        sent_by_id=other,
+        sent_by_name=email,
+        created_at=now,
+        updated_at=now,
+    )
+    db.add_all([share, by_address, named_so])
     await db.commit()
     subject = privacy.Subject(user_id=person, email=email)
     exported = await social_privacy.export_user_data(db, subject)
@@ -227,6 +245,86 @@ async def test_export_lists_a_persons_shares_and_erase_keeps_them_the_sites(
     )
     assert kept is not None
     assert (kept.sent_by_id, kept.sent_by_name) == (None, "")
+    theirs = await db.scalar(
+        select(Share).where(Share.id == named_so.id).execution_options(populate_existing=True)
+    )
+    assert theirs is not None
+    assert (theirs.sent_by_id, theirs.sent_by_name) == (other, email)
     assert (await social_privacy.export_user_data(db, subject))["social_shares"] == []
-    await db.execute(delete(Share).where(Share.id.in_((share.id, by_address.id))))
+    await db.execute(delete(Share).where(Share.id.in_((share.id, by_address.id, named_so.id))))
+    await db.commit()
+
+
+async def test_a_token_saved_while_buffer_lists_leaves_that_list_unused(
+    db: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The version is read before the token: a list Buffer gave while a new
+    token was saved belongs to the old one (CodeRabbit on #152)."""
+
+    async def token(db_: object) -> str:
+        return TOKEN
+
+    form = await settings.form(db, "social")
+
+    async def listed(self: buffer.Client) -> list[buffer.Listed]:
+        # Another admin's save lands while Buffer answers.
+        await db.execute(
+            text(
+                "INSERT INTO kernel_setting (module_id, version, values, updated_at) "
+                "VALUES ('social', :version, '{}'::jsonb, now()) "
+                "ON CONFLICT (module_id) DO UPDATE SET version = :version"
+            ),
+            {"version": form["version"] + 1},
+        )
+        return [
+            buffer.Listed(id=f"meanwhile-{uuid.uuid4().hex[:8]}", name="@new", service="twitter")
+        ]
+
+    monkeypatch.setattr(service, "token_in_use", token)
+    monkeypatch.setattr(buffer.Client, "channels", listed)
+    try:
+        found = await service.list_channels(db)
+        await db.commit()
+        assert [channel["name"] for channel in found["channels"]] == ["@new"]
+        assert await service.channels(db) == []
+    finally:
+        await db.execute(text("DELETE FROM kernel_setting WHERE module_id = 'social'"))
+        await db.execute(delete(Channel).where(Channel.id.like("meanwhile-%")))
+        await db.commit()
+
+
+async def test_a_share_stuck_sending_is_on_the_dashboard_once_its_wait_is_up(
+    db: AsyncSession,
+) -> None:
+    """`send` commits `sending`, then the answers: a server that stopped in
+    between leaves the share there, which counts as not confirmed after five
+    minutes (CodeRabbit on #152)."""
+    await db.execute(delete(Share))
+    now = datetime.now(UTC)
+
+    def stuck(minutes: int) -> Share:
+        return Share(
+            content_type="blog.post",
+            content_id=uuid.uuid4(),
+            admin_path=f"/admin/blog/stuck-{minutes}",
+            channel_id="ch-x",
+            channel_name="@testsite (Profile)",
+            service="twitter",
+            text="Jazz",
+            link="https://site.test/blog/jazz",
+            mode="queue",
+            state="sending",
+            created_at=now - timedelta(minutes=minutes),
+            updated_at=now - timedelta(minutes=minutes),
+        )
+
+    db.add(stuck(1))
+    await db.commit()
+    assert await service.troubled_item(db) is None
+    db.add(stuck(10))
+    await db.commit()
+    item = await service.troubled_item(db)
+    assert item is not None
+    assert item.to == "/admin/blog/stuck-10"
+    await db.execute(delete(Share))
     await db.commit()

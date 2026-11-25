@@ -25,7 +25,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any, cast
 
-from sqlalchemy import delete, func, select, text
+from sqlalchemy import and_, delete, func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from kernel import Problem, attention, clock, crypto, server_copy, setup
@@ -43,6 +43,9 @@ DEFAULT_RATE = "30/1h"
 LEAD = timedelta(minutes=1)
 #: How far back the Dashboard looks for a share that failed or wasn't confirmed.
 RECENTLY = timedelta(days=14)
+#: A share still `sending` after this never heard back: its request went, or
+#: the server stopped mid-send. It counts as not confirmed (CodeRabbit on #152).
+STUCK = timedelta(minutes=5)
 #: The advisory lock class a thing's shares are checked under.
 LOCK_CLASS = zlib.crc32(b"social.share") - 2**31
 
@@ -198,14 +201,16 @@ async def listed_at(db: AsyncSession) -> datetime | None:
 async def list_channels(db: AsyncSession) -> dict[str, Any]:
     """Asks Buffer which channels the token in use reaches, and keeps them in
     Buffer's order in place of the last list. Settings' Check and the Share
-    card's Refresh both come here."""
+    card's Refresh both come here. The settings' version is read before the
+    token: a token saved while Buffer answers leaves this list at the older
+    version, unused and then forgotten (CodeRabbit on #152)."""
+    version = await _version(db)
     token = await token_in_use(db)
     try:
         found = await buffer.Client(token).channels()
     except buffer.BufferError as error:
         raise buffer_failed(error) from None
     now = clock.now()
-    version = await _version(db)
     await db.execute(delete(Channel))
     rows = [
         Channel(
@@ -580,11 +585,18 @@ async def take_back(db: AsyncSession, share_id: uuid.UUID) -> dict[str, Any]:
 
 
 async def troubled_item(db: AsyncSession) -> attention.Item | None:
-    """While a share failed in Buffer or wasn't confirmed in the last 14 days:
-    the newest one's admin page."""
+    """While a share failed in Buffer or wasn't confirmed in the last 14 days,
+    a stuck `sending` one included: the newest one's admin page."""
+    now = clock.now()
     statement = (
         select(Share)
-        .where(Share.state.in_(("failed", "unknown")), Share.created_at > clock.now() - RECENTLY)
+        .where(
+            Share.created_at > now - RECENTLY,
+            or_(
+                Share.state.in_(("failed", "unknown")),
+                and_(Share.state == "sending", Share.updated_at < now - STUCK),
+            ),
+        )
         .order_by(Share.created_at.desc())
     )
     found = list(await db.scalars(statement.limit(50)))
@@ -601,7 +613,11 @@ async def troubled_item(db: AsyncSession) -> attention.Item | None:
         key="social.troubled",
         tone="warning",
         what=what,
-        why="Buffer said it failed, or didn't answer, so it may not have gone. Check it in Buffer, then refresh the Share card.",
+        why=(
+            "Buffer said it failed, or didn't answer, so it may not have gone. Check the channel in "
+            "Buffer, and if it's not there, share it again from the Share card with Share again. "
+            "This notice goes 14 days after the share."
+        ),
         label="Open it",
         to=newest.admin_path,
         permission=SEND_PERMISSION,

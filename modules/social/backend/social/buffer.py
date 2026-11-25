@@ -273,6 +273,12 @@ def token_problem(token: str) -> str | None:
     """Why a pasted value can't be a Buffer token, or None. Never repeats it."""
     if any(character.isspace() for character in token):
         return "A Buffer token has no spaces or line breaks in it. Copy it again from Buffer's API settings."
+    if not all("!" <= character <= "~" for character in token):
+        # An HTTP header can't carry it, so it could only fail later, and not in words.
+        return (
+            "A Buffer token holds only plain letters, digits and punctuation. Copy it again from "
+            "Buffer's API settings."
+        )
     if len(token) < MIN_TOKEN_LENGTH:
         return "That's too short to be a Buffer token. Copy the whole token from Buffer's API settings."
     if len(token) > MAX_TOKEN_LENGTH:
@@ -337,6 +343,9 @@ class Client:
         errors = answer.get("errors") or []
         if errors:
             code = ((errors[0].get("extensions") or {}).get("code") or "").upper()
+            if posting and code == "UNEXPECTED":
+                # Buffer's own fault, after the post's request reached it: it may exist.
+                raise lost
             kind = {"UNAUTHORIZED": TokenRefused, "NOT_FOUND": NotFound}.get(code, BufferError)
             raise kind(self._safe(_said(errors[0])))
         if response.status_code != 200 or not isinstance(answer.get("data"), dict):
@@ -392,6 +401,8 @@ class Client:
                 attachment["thumbnail"] = {"url": card.thumbnail}
             sent["metadata"] = {"linkedin": {"linkAttachment": attachment}}
         answer = (await self._ask(CREATE, {"input": sent}, posting=True))["createPost"]
+        if answer.get("__typename") == "UnexpectedError":
+            raise Unanswered(MAYBE_SENT)
         if answer.get("__typename") != "PostActionSuccess":
             raise Refused(
                 self._safe(

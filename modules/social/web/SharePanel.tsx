@@ -219,6 +219,8 @@ export default function SharePanel({ type, id, live, adminPath }: SharePartProps
                     if (pressed) next.add(channel.id);
                     else next.delete(channel.id);
                     setPicked(next);
+                    // Share again was asked of the channels then: a new pick is checked afresh (CodeRabbit on #152).
+                    setSharedBefore("");
                   }}
                 >
                   {channel.name} ({channel.network})

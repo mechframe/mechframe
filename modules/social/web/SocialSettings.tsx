@@ -28,7 +28,8 @@ export default function SocialSettings() {
         params: { path: { id: "social" } },
         body: { version: form.version ?? 0, changes: { buffer_token: token } },
       });
-      setTyped("");
+      // A token typed while this one was saving stays for the next save (CodeRabbit on #152).
+      setTyped((now) => (now.trim() === token ? "" : now));
       form.retry();
       void state.refetch();
       toast({ tone: "success", text: done });

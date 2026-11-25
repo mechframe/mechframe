@@ -15,9 +15,14 @@ from social.models import Share
 
 
 def _theirs(subject: privacy.Subject) -> sa.ColumnElement[bool]:
+    # The address matches only a share that names no account: a name is any
+    # words someone chose, an address among them (CodeRabbit on #152).
     return sa.or_(
         Share.sent_by_id == subject.user_id,
-        func.lower(Share.sent_by_name) == subject.email.strip().lower(),
+        sa.and_(
+            Share.sent_by_id.is_(None),
+            func.lower(Share.sent_by_name) == subject.email.strip().lower(),
+        ),
     )
 
 

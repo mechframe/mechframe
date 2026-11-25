@@ -13,6 +13,8 @@ from social import buffer
 from harness.fake_buffer import REFUSED_TOKEN, FakeBuffer
 
 TOKEN = "buffer-token-for-the-client-tests-001"
+#: Between a post's text and its link.
+BREAK = chr(10) * 2
 CARD = buffer.LinkCard(
     url="https://site.test/blog/jazz", title="Jazz", description="Where.", thumbnail=None
 )
@@ -142,6 +144,7 @@ async def test_the_address_must_answer_as_the_page(fake: FakeBuffer) -> None:
         ("has a space in it here ok", "no spaces"),
         ("tiny0value", "too short"),
         ("x" * 401, "too long"),
+        ("token-with-an-ümlaut-in-it-0001", "plain letters"),
     ],
 )
 def test_a_paste_that_couldnt_be_a_token(value: str, words: str) -> None:
@@ -176,3 +179,52 @@ def test_a_network_without_link_posts_has_a_problem() -> None:
         buffer.problem(name="t", descriptor="", service="bluesky", disconnected=False, locked=False)
         == ""
     )
+
+
+async def test_buffers_own_fault_on_a_post_may_have_made_it() -> None:
+    """UNEXPECTED, in Buffer's errors with a 200, or as the mutation's typed
+    error: the post may exist, so it's unanswered, never refused (CodeRabbit on #152)."""
+
+    def unexpected(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200, json={"errors": [{"message": "Oops", "extensions": {"code": "UNEXPECTED"}}]}
+        )
+
+    for _ in _answering(unexpected):
+        with pytest.raises(buffer.Unanswered):
+            await buffer.Client(TOKEN).create_post(
+                channel_id="ch-x", service="twitter", text="Jazz", when="queue", card=CARD
+            )
+        with pytest.raises(buffer.BufferError) as listing:
+            await buffer.Client(TOKEN).channels()
+        assert not isinstance(listing.value, buffer.Unanswered)
+
+    def typed(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200, json={"data": {"createPost": {"__typename": "UnexpectedError", "message": "Oops"}}}
+        )
+
+    for _ in _answering(typed):
+        with pytest.raises(buffer.Unanswered):
+            await buffer.Client(TOKEN).create_post(
+                channel_id="ch-x", service="twitter", text="Jazz", when="queue", card=CARD
+            )
+
+
+async def test_the_fakes_post_ids_are_never_reused(fake: FakeBuffer) -> None:
+    client = buffer.Client(TOKEN)
+    first = await client.create_post(
+        channel_id="ch-x", service="twitter", text="A", when="queue", card=CARD
+    )
+    second = await client.create_post(
+        channel_id="ch-x", service="twitter", text="B", when="queue", card=CARD
+    )
+    await client.delete_post(first.id)
+    third = await client.create_post(
+        channel_id="ch-x", service="twitter", text="C", when="queue", card=CARD
+    )
+    assert len({first.id, second.id, third.id}) == 3
+    assert [post["input"]["text"] for post in fake.made()] == [
+        f"B{BREAK}https://site.test/blog/jazz",
+        f"C{BREAK}https://site.test/blog/jazz",
+    ]

@@ -61,8 +61,10 @@ export function dayAndTime(at: string): string {
 
 /** The text's length as the channel counts it: the link added at its end, unless the network shows it as a card or the text has it. */
 export function lengthFor(channel: Channel, text: string, link: string): number {
-  if (channel.service === "linkedin" || text.includes(link)) return text.length;
-  return text.length + 2 + link.length;
+  // In code points, as the server counts: an emoji is one, not two (CodeRabbit on #152).
+  const count = (words: string) => Array.from(words).length;
+  if (channel.service === "linkedin" || text.includes(link)) return count(text);
+  return count(text) + 2 + count(link);
 }
 
 /** Where the token in use comes from, as the Settings section says it. */

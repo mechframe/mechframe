@@ -13,7 +13,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { renderWithKernel, testUser } from "@/kernel/testing";
 
-import type { Channel, Share, ShareView, TokenState } from "../../web/api";
+import { lengthFor, type Channel, type Share, type ShareView, type TokenState } from "../../web/api";
 import social from "../../web/module.web";
 import SharePanel from "../../web/SharePanel";
 import SocialSettings from "../../web/SocialSettings";
@@ -244,6 +244,20 @@ describe("the Share card", () => {
     expect(await sentTo(sent, "POST", SHARES)[1]?.json()).toMatchObject({ again: true });
   });
 
+  it("drops Share again once the channels picked change (CodeRabbit on #152)", async () => {
+    routed({
+      [`GET ${SHARES}`]: { status: 200, body: view() },
+      [`POST ${SHARES}`]: problem(409, "social.shared_before", "This already went to @testsite on 24 November (sent)."),
+    });
+    const user = userEvent.setup();
+    card();
+    await user.click(await screen.findByRole("button", { name: /@testsite \(X\)/ }));
+    await user.click(screen.getByRole("button", { name: "Share" }));
+    expect(await screen.findByRole("button", { name: "Share again" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Test Site \(LinkedIn\)/ }));
+    expect(screen.queryByRole("button", { name: "Share again" })).toBeNull();
+  });
+
   it("says a refusal in the server's words", async () => {
     routed({
       [`GET ${SHARES}`]: { status: 200, body: view() },
@@ -312,6 +326,30 @@ describe("the Social settings", () => {
     expect(await put?.json()).toEqual({ version: 3, changes: { buffer_token: "buffer-token-for-the-web-tests-0001" } });
   });
 
+  it("keeps a token typed while another one saves (CodeRabbit on #152)", async () => {
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    routed({
+      "GET /api/kernel/admin/settings/social": form(false),
+      "GET /api/social/admin/state": state({ source: "none", channels: [], listed_at: null }),
+      "PUT /api/kernel/admin/settings/social": async () => {
+        await held;
+        return { status: 200, body: { version: 4, changed: ["buffer_token"], merged: [] } };
+      },
+    });
+    const user = userEvent.setup();
+    renderWithKernel(<SocialSettings />, { session: admin });
+    const field = await screen.findByLabelText("Save a Buffer token");
+    await user.type(field, "buffer-token-for-the-web-tests-0001");
+    await user.click(screen.getByRole("button", { name: "Save the token" }));
+    await user.type(field, "-more");
+    release();
+    expect(await screen.findByText("Token saved. Check it to list its channels.")).toBeInTheDocument();
+    expect(screen.getByLabelText("Save a Buffer token")).toHaveValue("buffer-token-for-the-web-tests-0001-more");
+  });
+
   it("shows a refused paste's reason under the field", async () => {
     routed({
       "GET /api/kernel/admin/settings/social": form(false),
@@ -350,6 +388,14 @@ describe("the Social settings", () => {
     renderWithKernel(<SocialSettings />, { session: admin });
     expect(await screen.findByText("The saved Buffer token can't be read")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Check the token" })).toBeDisabled();
+  });
+});
+
+describe("lengthFor", () => {
+  it("counts in code points, as the server does (CodeRabbit on #152)", () => {
+    const sax = String.fromCodePoint(0x1f3b7);
+    expect(lengthFor(channel({}), sax.repeat(10), "https://s.test/a")).toBe(10 + 2 + 16);
+    expect(lengthFor(channel({ service: "linkedin" }), sax.repeat(2), "https://s.test/a")).toBe(2);
   });
 });
 
