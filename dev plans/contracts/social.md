@@ -91,6 +91,7 @@ Branch `social`, migration `social_0001_shares.py` (`social_0001`), `depends_on`
 | | `disconnected`, `locked`, `queue_paused` | `Boolean` | no | `false` |
 | | `position` | `Integer` | no | Buffer's order |
 | | `listed_at` | `timestamptz` | no | the list is replaced whole on each check |
+| | `settings_version` | `Integer` | no | `0`: the section `social`'s version it was checked at |
 | `social_share` | `id` | `UUID` | no | PK |
 | | `content_type` | `String(64)` | no | index `(content_type, content_id, created_at)` |
 | | `content_id` | `UUID` | no | no FK: another module's row (SPEC 10) |
@@ -194,3 +195,4 @@ A share is its item's history, not a log, so it's kept while social is installed
   - **A refusal more than §2 names:** 409 `social.channels_unlisted`, while a token's channels aren't listed yet (a new token forgets the old one's). Also 422 `social.channel_unknown`, `social.text_needed` and `social.time_needed`, 503 `social.token_unreadable`, and 422 `social.buffer_refused` when Buffer won't take a request.
   - **The Share card draws no channel's picture:** the browser loads nothing from Buffer's hosts, so `CSP` stays empty. The avatar is kept in `social_channel`, unused.
   - **The setup step** Connect Buffer is for `kernel.settings.manage`, the token's own permission.
+  - **Each channel list keeps the settings version it was checked at** (Codex on #152). Only a list checked at the current version is used, and the change's event deletes only older lists, so a late or second delivery never takes away a fresh check. The Share card also reads again when the post is published on its page, so it can be shared without a reload.

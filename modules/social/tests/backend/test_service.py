@@ -55,6 +55,7 @@ def fake() -> Iterator[FakeBuffer]:
 async def channel(db: AsyncSession) -> AsyncIterator[str]:
     """A channel of this test's own, beside whatever another test listed."""
     channel_id = f"race-{uuid.uuid4().hex[:10]}"
+    version = (await settings.form(db, "social"))["version"]
     db.add(
         Channel(
             id=channel_id,
@@ -62,6 +63,7 @@ async def channel(db: AsyncSession) -> AsyncIterator[str]:
             service="twitter",
             position=99,
             listed_at=datetime.now(UTC),
+            settings_version=version,
         )
     )
     await db.commit()
@@ -116,6 +118,32 @@ async def test_two_sends_of_one_thing_at_once_share_once(
 
     assert sorted(await asyncio.gather(press(), press())) == [200, 409]
     assert len(fake.made()) == 1
+
+
+async def test_a_late_settings_event_keeps_a_list_checked_since(
+    db: AsyncSession, channel: str
+) -> None:
+    """The token's change at version n forgets the lists checked before n,
+    never one checked at n or after, however late it's delivered (Codex on #152)."""
+    now = (await settings.form(db, "social"))["version"]
+    older = f"old-{uuid.uuid4().hex[:10]}"
+    db.add(
+        Channel(
+            id=older,
+            name="@old",
+            service="twitter",
+            position=98,
+            listed_at=datetime.now(UTC),
+            settings_version=now - 1,
+        )
+    )
+    await db.commit()
+    assert channel in [row.id for row in await service.channels(db)]
+    assert older not in [row.id for row in await service.channels(db)]
+    await service.forget_channels(db, now)
+    await db.commit()
+    left = set(await db.scalars(select(Channel.id).where(Channel.id.in_((channel, older)))))
+    assert left == {channel}
 
 
 async def _keep(db: AsyncSession, values: dict[str, Any]) -> None:

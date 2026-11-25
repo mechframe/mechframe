@@ -2,7 +2,10 @@
 
 - `social_channel`: the channels the token in use reached when Buffer was last
   asked, in Buffer's order, replaced whole at each check, so opening a Share
-  card costs no call to Buffer. A change to the token clears it.
+  card costs no call to Buffer. Each row keeps the version of the settings
+  section `social` it was checked at: only a list checked at the current
+  version is used, and a change's event deletes only the lists older than it
+  (Codex on #152), however late it's delivered.
 - `social_share`: one post of one thing to one channel. It's stored, as
   `sending`, before its request leaves, so a send whose answer is lost still
   counts as shared, and a second post to the same channel waits until someone
@@ -73,6 +76,8 @@ class Channel(Base):
     #: Its place in Buffer's list.
     position: Mapped[int] = mapped_column(Integer)
     listed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    #: The settings section `social`'s version when it was checked: the token's.
+    settings_version: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
 
 
 class Share(Base):

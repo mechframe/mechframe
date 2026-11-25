@@ -3,7 +3,7 @@
 // opens from the database alone; Check the channels and Refresh ask Buffer. Each
 // refusal comes back in words before anything leaves, and a share that may have
 // gone says so.
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   ApiProblem,
@@ -72,6 +72,15 @@ function History({ shares, onTakeBack, busy }: { shares: Share[]; onTakeBack: (s
 export default function SharePanel({ type, id, live, adminPath }: SharePartProps) {
   const toast = useToast();
   const view = useApiQuery("get", SHARES, { params: { query: { type, id } } });
+  // Published (or unpublished) on this page: the view's live and its link are
+  // read again, so the post can be shared without leaving it (Codex on #152).
+  const { refetch } = view;
+  const liveBeforeRef = useRef(live);
+  useEffect(() => {
+    if (liveBeforeRef.current === live) return;
+    liveBeforeRef.current = live;
+    void refetch();
+  }, [live, refetch]);
   const [typed, setTyped] = useState<string | null>(null);
   const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
   const [when, setWhen] = useState<Mode>("queue");

@@ -8,6 +8,7 @@
  */
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { renderWithKernel, testUser } from "@/kernel/testing";
@@ -148,6 +149,34 @@ describe("the Share card", () => {
     card(false);
     expect(await screen.findByText("Share it once it's published.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Share" })).toBeNull();
+  });
+
+  it("reads the view again once the post is published on the page", async () => {
+    let published = false;
+    routed({ [`GET ${SHARES}`]: () => ({ status: 200, body: published ? view() : view({ live: false, card: null, text: "" }) }) });
+    function Editor() {
+      const [live, setLive] = useState(false);
+      return (
+        <>
+          <button
+            type="button"
+            onClick={() => {
+              published = true;
+              setLive(true);
+            }}
+          >
+            Publish
+          </button>
+          <SharePanel type="blog.post" id={ID} live={live} adminPath={`/admin/blog/${ID}`} />
+        </>
+      );
+    }
+    const user = userEvent.setup();
+    renderWithKernel(<Editor />, { session: sharer });
+    expect(await screen.findByText("Share it once it's published.")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Publish" }));
+    expect(await screen.findByRole("button", { name: "Share" })).toBeInTheDocument();
+    expect(screen.queryByText("Share it once it's published.")).toBeNull();
   });
 
   it("shares to the channels picked, with the text and when, from the page it's on", async () => {

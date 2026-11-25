@@ -171,12 +171,27 @@ def channel_out(channel: Channel) -> dict[str, Any]:
     }
 
 
+async def _version(db: AsyncSession) -> int:
+    """The settings section's version now: the token's."""
+    return int((await module_settings.form(db, MODULE))["version"])
+
+
 async def channels(db: AsyncSession) -> list[Channel]:
-    return list(await db.scalars(select(Channel).order_by(Channel.position)))
+    """The channels Buffer listed for the token in use: a list checked before
+    the token last changed is no one's (Codex on #152)."""
+    statement = (
+        select(Channel)
+        .where(Channel.settings_version == await _version(db))
+        .order_by(Channel.position)
+    )
+    return list(await db.scalars(statement))
 
 
 async def listed_at(db: AsyncSession) -> datetime | None:
-    found: datetime | None = await db.scalar(select(func.max(Channel.listed_at)))
+    statement = select(func.max(Channel.listed_at)).where(
+        Channel.settings_version == await _version(db)
+    )
+    found: datetime | None = await db.scalar(statement)
     return found
 
 
@@ -190,6 +205,7 @@ async def list_channels(db: AsyncSession) -> dict[str, Any]:
     except buffer.BufferError as error:
         raise buffer_failed(error) from None
     now = clock.now()
+    version = await _version(db)
     await db.execute(delete(Channel))
     rows = [
         Channel(
@@ -204,6 +220,7 @@ async def list_channels(db: AsyncSession) -> dict[str, Any]:
             queue_paused=listed.queue_paused,
             position=at,
             listed_at=now,
+            settings_version=version,
         )
         for at, listed in enumerate({one.id: one for one in found}.values())
     ]
@@ -212,9 +229,10 @@ async def list_channels(db: AsyncSession) -> dict[str, Any]:
     return {"channels": [channel_out(row) for row in rows], "listed_at": now.isoformat()}
 
 
-async def forget_channels(db: AsyncSession) -> None:
-    """The token changed: what the old one reached is no longer known."""
-    await db.execute(delete(Channel))
+async def forget_channels(db: AsyncSession, before: int) -> None:
+    """The token changed at version `before`: what an older one reached is no
+    longer known. A list checked since is kept, however late this runs."""
+    await db.execute(delete(Channel).where(Channel.settings_version < before))
 
 
 async def state(db: AsyncSession) -> dict[str, Any]:
@@ -593,8 +611,7 @@ async def troubled_item(db: AsyncSession) -> attention.Item | None:
 async def _connected(db: AsyncSession) -> bool:
     if not (await token_state(db)).usable:
         return False
-    listed = await db.scalar(select(func.count()).select_from(Channel))
-    return (listed or 0) > 0
+    return bool(await channels(db))
 
 
 CONNECT_BUFFER = setup.Step(

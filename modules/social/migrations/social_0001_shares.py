@@ -43,6 +43,7 @@ def upgrade() -> None:
         sa.Column("queue_paused", sa.Boolean(), server_default="false", nullable=False),
         sa.Column("position", sa.Integer(), nullable=False),
         sa.Column("listed_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("settings_version", sa.Integer(), server_default="0", nullable=False),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_social_channel")),
     )
     op.create_table(
