@@ -8,8 +8,12 @@ import type { PlayerItem } from "./types";
 import { loadSoundCloud, widgetAddress, type SoundCloudWidget } from "./soundcloud";
 
 export type OutputEvents = {
-  /** Where it is, and how long the item is once that's known. */
-  time: (position_ms: number, duration_ms: number | null) => void;
+  /**
+   * Where it is, and how long the item is once that's known. `whole` is false
+   * when the length is only the playing track's, a playlist's lengths not all
+   * known: then it's never taken for a short item's (CodeRabbit on #149).
+   */
+  time: (position_ms: number, duration_ms: number | null, whole?: boolean) => void;
   playing: () => void;
   paused: () => void;
   waiting: () => void;
@@ -160,7 +164,7 @@ export const soundcloudOutput: OutputFactory = (events) => {
     current.getDuration((ms) => {
       if (load !== loads) return;
       trackLength = ms > 0 ? ms : null;
-      events.time(position, total());
+      events.time(position, total(), count === 1);
     });
   };
   const readied = () => {
@@ -174,7 +178,7 @@ export const soundcloudOutput: OutputFactory = (events) => {
       const found = sounds.map(lengthOf);
       if (found.length && found.every((length) => length > 0)) {
         lengths = found;
-        events.time(0, total());
+        events.time(0, total(), true);
         return;
       }
       // Not every track's length is known yet: a track at a time, as the widget gives each.
@@ -224,7 +228,7 @@ export const soundcloudOutput: OutputFactory = (events) => {
           if (wanted === "pause") events.paused();
         });
         made.bind(on.PLAY_PROGRESS, (event) => {
-          events.time(before(sound) + (event?.currentPosition ?? 0), total());
+          events.time(before(sound) + (event?.currentPosition ?? 0), total(), lengths.length > 0 || count === 1);
         });
         // The widget moves itself on to a playlist's next track, and says PLAY.
         // The item ends after its last track, whether or not every length is known.

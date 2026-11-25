@@ -85,6 +85,8 @@ export function createPlayer(options: PlayerOptions = {}) {
   let heard = 0;
   let last: number | null = null;
   let counted = false;
+  /** Whether the length the output gave is the whole item's, not one track's of a playlist. */
+  let whole = true;
   let moving: ReturnType<typeof setTimeout> | null = null;
   let checking: ReturnType<typeof setTimeout> | null = null;
   const outputs: Partial<Record<"file" | "soundcloud", Output>> = {};
@@ -103,13 +105,15 @@ export function createPlayer(options: PlayerOptions = {}) {
     // Only the output in use is heard: one let go of may still say something.
     const live = () => current === outputs[kind];
     return {
-      time: (position, duration) => {
+      time: (position, duration, isWhole) => {
         if (!live()) return;
         if (now.state === "playing" && last !== null) {
           const step = position - last;
           if (step > 0 && step <= MAX_STEP_MS) heard += step;
         }
         last = position;
+        // The item's own length, as its module typed it, is the whole item's.
+        whole = duration === null ? true : (isWhole ?? true);
         const length = duration ?? now.item?.duration_ms ?? null;
         set({ position_ms: position, duration_ms: length });
         countIfHeard();
@@ -165,16 +169,22 @@ export function createPlayer(options: PlayerOptions = {}) {
     heard = 0;
     last = null;
     counted = false;
+    whole = true;
   };
 
-  /** Each play-through counts once: the setting's seconds, or nearly all of a shorter track. */
+  /**
+   * Each play-through counts once: the setting's seconds, or nearly all of a
+   * shorter item. Only a length that's the whole item's makes it short: one
+   * track's of a playlist never does (CodeRabbit on #149).
+   */
   function countIfHeard(atEnd = false) {
     const item = now.item;
     if (!item || counted) return;
     const need = settings.count_after_seconds * 1000;
     const length = now.duration_ms;
-    const enough = length !== null && length < need ? length * 0.9 : need;
-    if (heard >= enough || (atEnd && length !== null && length < need && heard >= length * 0.9)) {
+    const short = whole && length !== null && length < need;
+    const enough = short ? length * 0.9 : need;
+    if (heard >= enough || (atEnd && short && heard >= length * 0.9)) {
       counted = true;
       item.count?.();
     }

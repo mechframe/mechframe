@@ -233,6 +233,21 @@ describe("counting", () => {
     expect(count).toHaveBeenCalledTimes(2);
   });
 
+  it("doesn't count a playlist as short from one track's length (CodeRabbit on #149)", () => {
+    const { player, outputs } = setup();
+    const count = vi.fn();
+    const set = item("Catalyst", { stream_url: undefined, soundcloud_url: "https://soundcloud.com/petrodestroys/sets/catalyst", duration_ms: undefined, count });
+    player.play([set], 0, "/");
+    const widget = outputs.made.soundcloud[0];
+    if (!widget) throw new Error("No SoundCloud output.");
+    widget.events.playing();
+    // A 10-second first track, the playlist's whole length not known: not "short".
+    for (let at = 0; at <= 10_000; at += 1000) widget.events.time(at, 10_000, false);
+    expect(count).not.toHaveBeenCalled();
+    for (let at = 0; at <= 20_000; at += 1000) widget.events.time(at, null, false);
+    expect(count).toHaveBeenCalledTimes(1);
+  });
+
   it("takes its seconds from the settings", () => {
     const { player, file } = setup();
     const count = vi.fn();

@@ -13,8 +13,13 @@ import type { PlayerItem } from "../../web/types";
 function heard() {
   const said: string[] = [];
   const times: [number, number | null][] = [];
+  /** Whether each time said its length was the whole item's. */
+  const wholes: boolean[] = [];
   const events: OutputEvents = {
-    time: (position, duration) => times.push([position, duration]),
+    time: (position, duration, whole) => {
+      times.push([position, duration]);
+      wholes.push(whole ?? true);
+    },
     playing: () => said.push("playing"),
     paused: () => said.push("paused"),
     waiting: () => said.push("waiting"),
@@ -22,7 +27,7 @@ function heard() {
     failed: () => said.push("failed"),
     blocked: () => said.push("blocked"),
   };
-  return { events, said, times };
+  return { events, said, times, wholes };
 }
 
 const FILE: PlayerItem = { key: "discography.track:a", title: "Gather Around", line: "Vibrant Mindz", stream_url: "https://cdn.test/a.mp3" };
@@ -177,14 +182,14 @@ describe("SoundCloud's widget", () => {
 
   async function loaded(options: Parameters<typeof fakeSoundCloud>[0] = {}) {
     const fake = fakeSoundCloud(options);
-    const { events, said, times } = heard();
+    const { events, said, times, wholes } = heard();
     const output = soundcloudOutput(events);
     output.load(SET);
     output.play();
     await vi.waitFor(() => {
       expect(fake.frames).toHaveLength(1);
     });
-    return { ...fake, output, said, times };
+    return { ...fake, output, said, times, wholes };
   }
 
   it("plays a hidden widget once it's ready, its own parts hidden", async () => {
@@ -219,7 +224,7 @@ describe("SoundCloud's widget", () => {
   });
 
   it("gives a playlist one timeline across its tracks, and seeks within it (CodeRabbit on #149)", async () => {
-    const { calls, output, say, times } = await loaded({ lengths: [60_000, 60_000] });
+    const { calls, output, say, times, wholes } = await loaded({ lengths: [60_000, 60_000] });
     say("ready");
     expect(times.at(-1)).toEqual([0, 120_000]);
     say("play");
@@ -229,6 +234,8 @@ describe("SoundCloud's widget", () => {
     say("play");
     say("progress", { currentPosition: 5_000 });
     expect(times.at(-1)).toEqual([65_000, 120_000]);
+    // Every length known: the item's whole length, which the store may count a short item by.
+    expect(wholes.every(Boolean)).toBe(true);
     // Within the track playing: a seek in it.
     output.seek(90_000);
     expect(calls.at(-1)).toBe("seek 30000");
@@ -243,7 +250,7 @@ describe("SoundCloud's widget", () => {
 
   it("plays a playlist with a length it doesn't give to its end, a track at a time (CodeRabbit on #149)", async () => {
     // The second track's length isn't known yet: each track's own place shows.
-    const { output, say, said, times, calls } = await loaded({ lengths: [60_000, 0] });
+    const { output, say, said, times, calls, wholes } = await loaded({ lengths: [60_000, 0] });
     say("ready");
     expect(times.at(-1)).toEqual([0, 60_000]);
     say("play");
@@ -257,6 +264,8 @@ describe("SoundCloud's widget", () => {
     say("play");
     say("progress", { currentPosition: 3_000 });
     expect(times.at(-1)).toEqual([3_000, null]);
+    // Each track's own length is never the whole item's (CodeRabbit on #149).
+    expect(wholes.some(Boolean)).toBe(false);
     say("finish");
     expect(said).toEqual(["playing", "playing", "ended"]);
   });
