@@ -16,6 +16,7 @@
  */
 import { createContext, use, useId, type AriaAttributes, type ComponentPropsWithRef, type ReactNode } from "react";
 
+import { Icon } from "./Icon";
 import { shows } from "./words";
 
 type FieldWiring = { id: string; describedBy: string | undefined; invalid: boolean };
@@ -106,8 +107,14 @@ export function TextArea({ className, ...props }: ComponentPropsWithRef<"textare
   return <textarea {...useWiring(props)} className={className ? `mf-input ${className}` : "mf-input"} />;
 }
 
+/** In a box with the boards' chevron, which only the admin draws in place of the browser's arrow (kit.css, B6). */
 export function Select({ className, ...props }: ComponentPropsWithRef<"select">) {
-  return <select {...useWiring(props)} className={className ? `mf-input mf-select ${className}` : "mf-input mf-select"} />;
+  return (
+    <span className="mf-select-box">
+      <select {...useWiring(props)} className={className ? `mf-input mf-select ${className}` : "mf-input mf-select"} />
+      <Icon name="chevron-down" className="mf-select-chevron" />
+    </span>
+  );
 }
 
 export type SwitchProps = {

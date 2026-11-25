@@ -64,7 +64,9 @@ describe("Settings → Writing", () => {
     expect(rule).toBeChecked();
     expect(screen.getByRole("textbox", { name: "About the site" })).toHaveValue("A label.");
     await user.click(rule);
-    expect(await screen.findByText("Fake reviews are banned by the FTC.")).toBeInTheDocument();
+    // Said in the warning colour, as its risk (VM Website Dev 17's W2).
+    expect(await screen.findByText("Fake reviews are banned by the FTC.")).toHaveClass("mf-ai-warning");
+    expect(screen.getByText("Stops guessing.")).not.toHaveClass("mf-ai-warning");
     await user.click(screen.getByRole("button", { name: "Save" }));
     expect(await screen.findByText("Writing rules saved.")).toBeInTheDocument();
     const [put] = sentTo(sent, "PUT", "/api/kernel/admin/settings/kernel.writing");
@@ -138,6 +140,14 @@ describe("a writing style's page", () => {
     await waitFor(() => {
       expect(screen.getByRole("alert")).toHaveTextContent("Someone changed this style since you opened it.");
     });
+  });
+
+  it("marks the Writing tab on a style's page, the page it belongs to (VM Website Dev 17's S1)", async () => {
+    answers({ [`GET /api/kernel/admin/writing/styles/${STYLE.id}`]: { status: 200, body: STYLE } });
+    renderApp({ path: `/admin/settings/writing/styles/${STYLE.id}`, session: admin });
+    const tabs = within(await screen.findByRole("navigation", { name: "Settings" }));
+    expect(tabs.getByRole("link", { name: "Writing" })).toHaveAttribute("aria-current", "page");
+    expect(tabs.getByRole("link", { name: "AI" })).not.toHaveAttribute("aria-current");
   });
 
   it("deletes a style once asked again", async () => {

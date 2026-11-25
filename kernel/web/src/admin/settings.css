@@ -55,6 +55,23 @@
     margin-bottom: 0;
   }
 
+  /* A one-column form's card, as the boards draw it (VM Website Dev 17's ask; decision 0040,
+     amended): the AI's, Writing's, a style's and the Site tab's cards. B1: it stops at 760px. Its
+     parts 18px apart, the head 14px above them, or its description 18px (C2). B5: its buttons the
+     kit's small size, 34px. Features' cards keep the page's width. */
+  .mf-admin-look .mf-settings-card--form {
+    max-width: 47.5rem;
+    gap: 1.125rem;
+  }
+
+  .mf-admin-look .mf-settings-card--form > .mf-card-head:not(:has(.mf-card-description)) {
+    margin-bottom: -0.25rem;
+  }
+
+  .mf-admin-look .mf-settings-card--form .mf-button {
+    min-height: 2.125rem;
+  }
+
   .mf-settings-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));

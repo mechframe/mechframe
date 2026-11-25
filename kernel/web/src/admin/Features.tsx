@@ -126,18 +126,20 @@ export default function Features() {
   } else {
     body = grouped(items).map((group) => (
       <Card key={group.id} className="mf-settings-card" title={group.title}>
-        {group.items.map((item) => (
-          <Switch
-            key={item.id}
-            label={item.name}
-            hint={moduleHint(item, byId)}
-            checked={item.switched}
-            disabled={busy !== null}
-            onChange={(on) => {
-              choose(item, on);
-            }}
-          />
-        ))}
+        <div className="mf-switch-rows">
+          {group.items.map((item) => (
+            <Switch
+              key={item.id}
+              label={item.name}
+              hint={moduleHint(item, byId)}
+              checked={item.switched}
+              disabled={busy !== null}
+              onChange={(on) => {
+                choose(item, on);
+              }}
+            />
+          ))}
+        </div>
       </Card>
     ));
   }

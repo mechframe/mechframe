@@ -72,7 +72,7 @@ function RulesCard() {
 
   if (form.read === "failed" || catalogue.isError) {
     return (
-      <Card className="mf-settings-card" title="Writing rules">
+      <Card className="mf-settings-card mf-settings-card--form" title="Writing rules">
         <LoadError
           what="the writing rules"
           error={form.problem ?? catalogue.error}
@@ -86,7 +86,7 @@ function RulesCard() {
   }
   if (form.read === "loading" || !catalogue.data) {
     return (
-      <Card className="mf-settings-card" title="Writing rules">
+      <Card className="mf-settings-card mf-settings-card--form" title="Writing rules">
         <p className="mf-settings-quiet">Loading the writing rules…</p>
       </Card>
     );
@@ -105,7 +105,7 @@ function RulesCard() {
 
   return (
     <Card
-      className="mf-settings-card"
+      className="mf-settings-card mf-settings-card--form"
       title="Writing rules"
       description="What every AI task starts from, whoever asks and in whichever style."
       actions={
@@ -176,26 +176,29 @@ function RulesCard() {
           </Field>
         ) : (
           <>
-            {rules.map((rule) => {
-              const on = !off.has(rule.id);
-              return (
-                <Switch
-                  key={rule.id}
-                  label={rule.label}
-                  hint={!on && rule.warning ? rule.warning : rule.why}
-                  checked={on}
-                  onChange={(next) => {
-                    const left = new Set(off);
-                    if (next) left.delete(rule.id);
-                    else left.add(rule.id);
-                    form.set(
-                      "rules_off",
-                      rules.map((each) => each.id).filter((id) => left.has(id)),
-                    );
-                  }}
-                />
-              );
-            })}
+            <div className="mf-switch-rows">
+              {rules.map((rule) => {
+                const on = !off.has(rule.id);
+                return (
+                  <Switch
+                    key={rule.id}
+                    label={rule.label}
+                    // A rule switched off says its risk in the warning colour (VM Website Dev 17's W2).
+                    hint={!on && rule.warning ? <span className="mf-ai-warning">{rule.warning}</span> : rule.why}
+                    checked={on}
+                    onChange={(next) => {
+                      const left = new Set(off);
+                      if (next) left.delete(rule.id);
+                      else left.add(rule.id);
+                      form.set(
+                        "rules_off",
+                        rules.map((each) => each.id).filter((id) => left.has(id)),
+                      );
+                    }}
+                  />
+                );
+              })}
+            </div>
             <Field label={WRITING_LABELS.added_rules} hint="One a line, after the defaults." error={form.errors.added_rules}>
               <TextArea
                 rows={4}
@@ -208,8 +211,10 @@ function RulesCard() {
             </Field>
           </>
         )}
-        <h3 className="mf-ai-subhead">The brief</h3>
-        <p className="mf-ai-note">What the site says about itself. A box left empty is left out.</p>
+        <div className="mf-ai-brief">
+          <h3 className="mf-ai-subhead">The brief</h3>
+          <p className="mf-ai-note">What the site says about itself. A box left empty is left out.</p>
+        </div>
         {BRIEF.map(([name, label, hint]) => (
           <Field key={name} label={label} hint={hint} error={form.errors[name]}>
             <TextArea
@@ -246,19 +251,17 @@ function StylesCard() {
       <ul className="mf-ai-styles">
         {styles.data.items.map((style) => (
           <li key={style.id}>
-            <span>
-              <LinkButton variant="secondary" size="small" to={`/admin/settings/writing/styles/${style.id}`}>
-                {style.name}
-              </LinkButton>
-            </span>
-            <span className="mf-ai-note">{style.description}</span>
+            <LinkButton variant="secondary" size="small" to={`/admin/settings/writing/styles/${style.id}`}>
+              {style.name}
+            </LinkButton>
+            <span className="mf-ai-style-line">{style.description}</span>
           </li>
         ))}
       </ul>
     );
   }
   return (
-    <Card className="mf-settings-card" title="Writing styles" description="Voices a writer can pick in Write with AI. A style shapes how the writing sounds, never what it says." actions={add}>
+    <Card className="mf-settings-card mf-settings-card--form" title="Writing styles" description="Voices a writer can pick in Write with AI. A style shapes how the writing sounds, never what it says." actions={add}>
       {body}
     </Card>
   );

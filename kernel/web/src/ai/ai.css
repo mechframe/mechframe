@@ -19,17 +19,31 @@
 }
 
 /* Settings → AI's two forms, as the board draws them (VM Website Dev 16's A1 to A4): their parts
-   14px apart, and the Model row under a 1px rule, 18px from the key's form above it (the card's
-   16px gap and 2px more) and 18px from its own first line. */
+   14px apart, and the Model row under a 1px rule, 18px from the key's form above it (the form
+   card's gap, settings.css) and 18px from its own first line. */
 .mf-ai-key,
 .mf-ai-model {
   gap: 0.875rem;
 }
 
 .mf-ai-model {
-  margin-top: 0.125rem;
   padding-top: 1.125rem;
   border-top: 1px solid var(--mf-color-border);
+}
+
+/* A writing style's form, its parts 18px apart as its board draws them. */
+.mf-ai-wide-form {
+  gap: 1.125rem;
+}
+
+/* B8: a note's lines at the font's own height, as the boards draw them. */
+.mf-admin-look .mf-ai-note {
+  line-height: normal;
+}
+
+/* W2: a rule switched off says its risk in the warning colour. */
+.mf-ai-warning {
+  color: var(--mf-color-warning);
 }
 
 /* Try again on the label's line, centred on it. */
@@ -77,9 +91,9 @@
   margin: 0 0 var(--mf-space-2);
 }
 
+/* W4: a 1px rule above each style, 12px above and below; its description 14px beside the name's
+   button, in the soft colour. */
 .mf-ai-styles {
-  display: grid;
-  gap: var(--mf-space-2);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -88,14 +102,52 @@
 .mf-ai-styles li {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--mf-space-3);
+  align-items: center;
+  gap: 0.375rem 0.875rem;
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--mf-color-border);
 }
 
+/* The longest name a style may have (80 characters, no space) breaks inside the card rather than
+   running out of it; a short one stays on one line (Codex, cubic and CodeRabbit on #156). */
+.mf-ai-styles li > .mf-button {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: start;
+}
+
+/* Beside the name while 12rem of it fits there, under the name when it doesn't. */
+.mf-ai-style-line {
+  flex: 1 1 12rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font: var(--mf-type-small);
+  line-height: normal;
+  color: var(--mf-color-text);
+}
+
+/* W3: the rules form's parts 18px apart. */
 .mf-ai-rules {
   display: grid;
-  gap: var(--mf-space-3);
+  gap: 1.125rem;
+}
+
+/* W3: The brief under a 1px rule, 18px above its 15px title. */
+.mf-ai-brief {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding-top: 1.125rem;
+  border-top: 1px solid var(--mf-color-border);
+}
+
+.mf-ai-brief > .mf-ai-subhead {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: normal;
+  letter-spacing: normal;
 }
 
 .mf-ai-subhead {

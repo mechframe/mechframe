@@ -247,7 +247,7 @@ Set in the site's admin (Admin → Settings), not on the host:
 | `footer_note` | string | `You're getting this because you asked for news from ${site_name}.` | The footer's first line; ${site_name} is the site's name |
 | `send_per_hour` | int | `400` | How many newsletter copies may go out in an hour, 1 to 10,000: a sixtieth each minute. 400 by default, under a Spacemail mailbox's 500 with room for the site's own mail |
 
-### `contact` 0.1.1 (experimental)
+### `contact` 0.1.2 (experimental)
 
 The site's contact form, and an Inbox where its people read each message, reply from their own email and set spam aside.
 

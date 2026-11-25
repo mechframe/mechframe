@@ -231,7 +231,7 @@ export default function AiSettings() {
 
   return (
     <SettingsPage page="AI">
-      <Card className="mf-settings-card" title="Anthropic key" description="The AI's writing help in the editor, for staff who may use it.">
+      <Card className="mf-settings-card mf-settings-card--form" title="Anthropic key" description="The AI's writing help in the editor, for staff who may use it.">
         {unreadable ? (
           <Attention tone="danger" what="The saved key can't be read" why="This happens when the server's ENCRYPTION_KEYS change. Save the key again." />
         ) : null}
