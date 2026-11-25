@@ -27,11 +27,11 @@ MechFrame (`CLAUDE.md`, `SPEC.md`), public at mechframe/mechframe; M4 of `dev pl
    - one 12 px sentence under the select, in the hint's place;
    - Try again on the label's line.
    One small PR.
-2. **The kit to the boards** (the owner: "Kit to the boards"), 22 lines. They're quoted in `C:\DEV\VM Website\dev plans\2026-11-24-admin-forms-kit-ask.md`, measured in `2026-11-24-admin-writing-parity.md`, and drawn on the boards at `C:\DEV\VM Website\design\site\AdminAI.dc.html`, `AdminWriting.dc.html`, `AdminStyle.dc.html` and `AdminSettings.dc.html`.
-   - **B1 to B10 and C1 to C5:** the parts every admin form shares.
-   - **W2 to W4 and S1:** Writing's own.
-   - **T1 and T2:** contact's settings section.
-   - **C1's minimum:** a box is as tall as its rows.
+2. **The kit to the boards** (the owner: "Kit to the boards"), 22 lines: the ask's 19, then its addendum's 3. They're quoted in `C:\DEV\VM Website\dev plans\2026-11-24-admin-forms-kit-ask.md`, measured in `C:\DEV\VM Website\dev plans\2026-11-24-admin-writing-parity.md`, and drawn on the boards at `C:\DEV\VM Website\design\site\AdminAI.dc.html`, `AdminWriting.dc.html`, `AdminStyle.dc.html` and `AdminSettings.dc.html`.
+   - **Lines 1 to 15, B1 to B10 and C1 to C5:** the parts every admin form shares.
+   - **Lines 16 to 19, W2 to W4 and S1:** Writing's own.
+   - **Line 20, C1 more:** drop the kit's 96 px minimum on a text box, so a box is as tall as its rows (a 3-row box 74 px on the board, 96 built).
+   - **Lines 21 and 22, T1 and T2:** contact's settings section.
    - **Scope:** admin only, under `.mf-admin-look`. B4's hint goes under the control there, by CSS order, so member forms keep the kit's order.
    - **No contract:** the owner made the call. Amend decision 0040's line on the kit, and test each line at 1440 and 390 in both themes (`admin.spec.ts`'s way).
 3. **Step 1's close:** its other three tests passed on 2026-11-25 (`docs/HANDOFF.md`). Once the site's parity tools say the boards hold, set Step 1 to done in `docs/progress.json` and run `python -m tools.progress`.
@@ -47,7 +47,7 @@ Close out at a natural break past ~400K tokens, with the main lane's prompt; the
 
 - **The full suite** takes about 55 minutes. Merge `main` first, then run it in the background with its log in the scratchpad:
   `$env:PYTHONUTF8 = "1"; $env:MECHFRAME_REQUIRE_DB = "1"; .venv\Scripts\python.exe -m pytest --cov -q -rfE`
-- **E2E:** `npm run build`, then `node node_modules/@playwright/test/cli.js test <spec>`. A spec that changes the site's one settings section runs serial.
+- **E2E:** with `TEST_DATABASE_URL` set (the owner's machine: the `devkit` role on port 55432), `npm run build`, then `node node_modules/@playwright/test/cli.js test <spec>`. A spec that changes the site's one settings section runs serial.
 - **More traps:** `docs/HANDOFF.md`, Notes.
 - **Commits:** `git commit -F <file>`, after `git branch --show-current`. Resolve review threads by the comment's id.
 

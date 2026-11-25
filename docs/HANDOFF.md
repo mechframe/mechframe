@@ -13,7 +13,7 @@ Overwritten every session. This one: 2026-11-24, about 20:00 Eastern, to 2026-11
 - **The side lane** (M9 and M10; Results in `dev plans/done/2026-11-24-side-lane-m9-audio-player.md` and `-m10-discography-0-1-1.md`, §9 each):
   - #149, audio-player 0.1.0 (decision 0071), with `kernel.client_address` on the surface;
   - #151, discography 0.1.1, audio-player's first source.
-  - It's now on featured's contract (approved): first the "item references" hook (decision 0072: `kernel/refs.py`, its exports, a build beside `search.build` in the app, SPEC 6 and 7's hooks rows), then featured 0.1.0 (0073, `featured_0001`), then discography 0.1.2.
+  - It's now on featured, its contract approved by the owner (on the side lane's branch until its first PR): first the "item references" hook (decision 0072: `kernel/refs.py`, its exports, a build beside `search.build` in the app, SPEC 6 and 7's hooks rows), then featured 0.1.0 (0073, `featured_0001`), then discography 0.1.2.
 - **Step 1's close, checked:** schemas validate, tests pass on `main`, and `mechframe check` passed on a fresh site with all six modules. It fails one test, "the admin page matches its board": VM Website Dev 17's asks are open (below). The owner chose to do them first (2026-11-25), so Step 1 stays "next".
 - **VM Website:** Dev 17 is offline. Dev 19 was told #152's push and landing, and asked to pass it on.
 - **The ledger** shows the rows from this handoff's `main`.
@@ -22,7 +22,7 @@ Overwritten every session. This one: 2026-11-24, about 20:00 Eastern, to 2026-11
 
 1. **Dev 17's asks, queued since 2026-11-24 with the owner's OK**, in this order:
    - **A1 to A4, Settings › AI's Model row** (`kernel/web/src/ai/AiSettings.tsx`), record: `C:\DEV\VM Website\dev plans\2026-11-24-admin-ai-parity.md`.
-   - **The kit to the boards** (the owner: "Kit to the boards"): B1 to B10 and C1 to C5, the parts every admin form shares; W2 to W4 and S1, Writing's own; T1 and T2, contact's settings; C1's 96 px minimum. Records: `C:\DEV\VM Website\dev plans\2026-11-24-admin-forms-kit-ask.md` (the 22 lines) and `2026-11-24-admin-writing-parity.md`.
+   - **The kit to the boards** (the owner: "Kit to the boards"): B1 to B10 and C1 to C5, the parts every admin form shares; W2 to W4 and S1, Writing's own; C1 more, dropping the kit's 96 px minimum on a text box; T1 and T2, contact's settings. That's 22 lines. Records: `C:\DEV\VM Website\dev plans\2026-11-24-admin-forms-kit-ask.md` and `C:\DEV\VM Website\dev plans\2026-11-24-admin-writing-parity.md`.
 2. **Then Step 1's close:** once the site's parity tools say the boards hold, mark Step 1 done in `docs/progress.json`.
 3. **Small follow-ups,** each its own PR or folded into a nearby one:
    - embeds' `VideoPlaylist` "Prev" button named "Previous video", which axe refuses;
