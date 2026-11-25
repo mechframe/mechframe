@@ -58,4 +58,22 @@ MechFrame: website modules on a FastAPI and Postgres kernel (`CLAUDE.md`, `SPEC.
 
 ## 9. Result
 
-(Filled in by the side lane.)
+Session M10, 2026-11-24 from about 22:55 Eastern (03:55 UTC on the 25th), the side lane, in this worktree on `feat/discography-0-1-1`. **discography 0.1.1 is #151**, one commit on `a9959ee` plus this Result. What it did is in `modules/discography/CHANGELOG.md` and the contract's "Changes as built (0.1.1)".
+
+- **Built:** every bullet of audio-player's contract §2 "discography 0.1.1" block, plus §4's two calls: the card reads `GET /admin/plays`, and an item's `count` calls `POST /tracks/{id}/plays`. A tracklist line gains `id`, and `recipes/artist-or-band.json` gains `audio-player`.
+- **Found:**
+  - The kernel turns a module off with one it requires, so "audio-player off, discography on" never happens on a running site. The pages keep `Plays` for a modules read that says it's off, and draw the player while that read is still on its way.
+  - The seed's fixed `ctx.now` (2026-01-01) put the plays where the card never looks, so the plays use the kernel's clock, which `kernel/seed.py`'s docstring allows for times relative to the run.
+- **Tests, run here:**
+  - discography and audio-player Python, 148 passed;
+  - discography with coverage, 126 passed, 90.47%;
+  - `test_plays.py` (10), seen failing first;
+  - Vitest for both modules, 118 passed;
+  - `tests/` and `kernel/tests/contract/` (counts in #151's body);
+  - discography's e2e in both themes, 2 passed, with the dock at the foot at 390 and axe clean;
+  - ruff, black, mypy (271 files), ESLint, `tsc`;
+  - `validate_schemas`, 0 problems;
+  - a fresh site with media, embeds, audio-player and discography: `mechframe check` passed.
+- **module-contract-lint:** every row passes (in #151's body).
+- **For the main lane's handoff:** the IDs used were none (no decision, no migration), so decisions 0072 and up and `discography_0002` stay free. The generated files changed: `catalog.json`, the OpenAPI spec and `schema.ts`, `docs/HOST-VARIABLES.md` and `progress.json` (Step 2's row).
+- **The owner's call, still open:** the live check in Safari on an iPhone (audio-player's contract §7).
