@@ -9,6 +9,10 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { THEMES, axe, makeUser, signInTo, theme } from "../../../../kernel/tests/e2e/support";
 
+// The token and Buffer's channels are the site's, one of each: the two themes' runs
+// take turns, or one saves over the other mid-run.
+test.describe.configure({ mode: "serial" });
+
 /** A post written and published over the API, as the signed-in admin. */
 async function livePost(page: Page, title: string): Promise<string> {
   const origin = new URL(page.url()).origin;

@@ -13,15 +13,16 @@ from typing import Any
 
 import pytest
 import pytest_asyncio
+from social import buffer, service
+from social import privacy as social_privacy
+from social.models import Channel, Share
+from social.schemas import Settings, ShareSend
 from sqlalchemy import delete, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from harness.fake_buffer import FakeBuffer
 from kernel import Database, Problem, privacy, server_copy
 from kernel.settings import settings
-from social import buffer, privacy as social_privacy, service
-from social.models import Channel, Share
-from social.schemas import Settings, ShareSend
 
 from ..conftest import make_person
 
@@ -74,7 +75,9 @@ async def test_two_sends_of_one_thing_at_once_share_once(
     database: Database, channel: str, fake: FakeBuffer, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     thing = uuid.uuid4()
-    card = server_copy.Preview(url="https://site.test/blog/race", title="Race", description="", image=None)
+    card = server_copy.Preview(
+        url="https://site.test/blog/race", title="Race", description="", image=None
+    )
 
     async def preview(db: object, content_type: str, content_id: uuid.UUID) -> server_copy.Preview:
         return card
@@ -167,16 +170,35 @@ async def test_export_lists_a_persons_shares_and_erase_keeps_them_the_sites(
         created_at=now,
         updated_at=now,
     )
-    db.add(share)
+    # Shared by the same person before they had a name: kept by their address, its account gone.
+    by_address = Share(
+        content_type="blog.post",
+        content_id=uuid.uuid4(),
+        admin_path="/admin/blog/y",
+        channel_id=share.channel_id,
+        channel_name="@testsite",
+        service="twitter",
+        text="Blues",
+        link="https://site.test/blog/blues",
+        mode="queue",
+        state="sent",
+        sent_by_id=None,
+        sent_by_name=email.upper(),
+        created_at=now,
+        updated_at=now,
+    )
+    db.add_all([share, by_address])
     await db.commit()
     subject = privacy.Subject(user_id=person, email=email)
     exported = await social_privacy.export_user_data(db, subject)
-    assert [row["text"] for row in exported["social_shares"]] == ["Jazz"]
+    assert sorted(row["text"] for row in exported["social_shares"]) == ["Blues", "Jazz"]
     await social_privacy.delete_user_data(db, subject)
     await db.commit()
-    kept = await db.scalar(select(Share).where(Share.id == share.id).execution_options(populate_existing=True))
+    kept = await db.scalar(
+        select(Share).where(Share.id == share.id).execution_options(populate_existing=True)
+    )
     assert kept is not None
     assert (kept.sent_by_id, kept.sent_by_name) == (None, "")
     assert (await social_privacy.export_user_data(db, subject))["social_shares"] == []
-    await db.execute(delete(Share).where(Share.id == share.id))
+    await db.execute(delete(Share).where(Share.id.in_((share.id, by_address.id))))
     await db.commit()

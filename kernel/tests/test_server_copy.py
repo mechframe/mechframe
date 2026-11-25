@@ -967,7 +967,11 @@ class _NoteSource(search.Source):
 
     async def document(self, db: AsyncSession, content_id: uuid.UUID) -> search.Document | None:
         path = self.notes.get(content_id)
-        return None if path is None else search.Document("notes.note", content_id, "Jazz at noon", "", path)
+        return (
+            None
+            if path is None
+            else search.Document("notes.note", content_id, "Jazz at noon", "", path)
+        )
 
     async def documents(self, db: AsyncSession):  # type: ignore[no-untyped-def]  # pragma: no cover
         for _ in ():

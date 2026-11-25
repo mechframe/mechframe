@@ -124,7 +124,9 @@ async def buffer_trouble(body: BufferTrouble, request: Request) -> Response:
     fake.down.update(body.down)
     for post_id in body.sent:
         fake.posts[post_id].update(
-            status="sent", sentAt="2026-11-24T13:00:00Z", externalLink=f"https://network.test/{post_id}"
+            status="sent",
+            sentAt="2026-11-24T13:00:00Z",
+            externalLink=f"https://network.test/{post_id}",
         )
     for post_id in body.deleted:
         fake.posts.pop(post_id, None)

@@ -8,9 +8,9 @@ from collections.abc import Iterator
 
 import httpx
 import pytest
+from social import buffer
 
 from harness.fake_buffer import REFUSED_TOKEN, FakeBuffer
-from social import buffer
 
 TOKEN = "buffer-token-for-the-client-tests-001"
 CARD = buffer.LinkCard(
@@ -62,9 +62,13 @@ async def test_an_error_that_names_the_token_is_scrubbed_of_it() -> None:
 
 async def test_x_gets_the_link_in_its_text_and_linkedin_a_card(fake: FakeBuffer) -> None:
     client = buffer.Client(TOKEN)
-    queued = await client.create_post(channel_id="ch-x", service="twitter", text="Jazz", when="queue", card=CARD)
+    queued = await client.create_post(
+        channel_id="ch-x", service="twitter", text="Jazz", when="queue", card=CARD
+    )
     assert queued.state == "queued"
-    await client.create_post(channel_id="ch-linkedin", service="linkedin", text="Jazz", when="now", card=CARD)
+    await client.create_post(
+        channel_id="ch-linkedin", service="linkedin", text="Jazz", when="now", card=CARD
+    )
     x, linkedin = (post["input"] for post in fake.made())
     assert x["text"] == "Jazz\n\nhttps://site.test/blog/jazz"
     assert x["mode"] == "addToQueue"
@@ -77,7 +81,9 @@ async def test_x_gets_the_link_in_its_text_and_linkedin_a_card(fake: FakeBuffer)
     }
 
 
-async def test_a_lost_answer_after_a_post_went_is_unanswered_and_elsewhere_slow(fake: FakeBuffer) -> None:
+async def test_a_lost_answer_after_a_post_went_is_unanswered_and_elsewhere_slow(
+    fake: FakeBuffer,
+) -> None:
     fake.trouble.append("lose")
     with pytest.raises(buffer.Unanswered):
         await buffer.Client(TOKEN).create_post(
@@ -149,14 +155,24 @@ def test_a_paste_that_couldnt_be_a_token(value: str, words: str) -> None:
 def test_each_networks_limit_counts_the_link() -> None:
     link = "https://site.test/blog/jazz"
     fits = "x" * (280 - len(link) - 2)
-    assert buffer.text_problem(name="@t", descriptor="", service="twitter", text=fits, link=link) is None
-    said = buffer.text_problem(name="@t", descriptor="", service="twitter", text=fits + "x", link=link)
+    assert (
+        buffer.text_problem(name="@t", descriptor="", service="twitter", text=fits, link=link)
+        is None
+    )
+    said = buffer.text_problem(
+        name="@t", descriptor="", service="twitter", text=fits + "x", link=link
+    )
     assert said is not None
     assert "280" in said
     assert buffer.text_for("twitter", f"See {link}", link) == f"See {link}"
 
 
 def test_a_network_without_link_posts_has_a_problem() -> None:
-    said = buffer.problem(name="t", descriptor="", service="instagram", disconnected=False, locked=False)
+    said = buffer.problem(
+        name="t", descriptor="", service="instagram", disconnected=False, locked=False
+    )
     assert "Instagram takes no link posts" in said
-    assert buffer.problem(name="t", descriptor="", service="bluesky", disconnected=False, locked=False) == ""
+    assert (
+        buffer.problem(name="t", descriptor="", service="bluesky", disconnected=False, locked=False)
+        == ""
+    )

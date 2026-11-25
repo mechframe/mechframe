@@ -100,7 +100,17 @@ ROUTES = [
     ("GET", STATE, None),
     ("POST", CHANNELS, None),
     ("GET", f"{SHARES}?type=blog.post&id={NOBODY}", None),
-    ("POST", SHARES, {"type": "blog.post", "id": NOBODY, "admin_path": "/admin/blog", "channel_ids": ["x"], "text": "t"}),
+    (
+        "POST",
+        SHARES,
+        {
+            "type": "blog.post",
+            "id": NOBODY,
+            "admin_path": "/admin/blog",
+            "channel_ids": ["x"],
+            "text": "t",
+        },
+    ),
     ("POST", f"{SHARES}/refresh", {"type": "blog.post", "id": NOBODY}),
     ("DELETE", f"{SHARES}/{NOBODY}", None),
 ]
@@ -161,7 +171,11 @@ async def test_a_value_that_couldnt_be_a_token_is_refused_without_repeating_it(
     await browser.as_new("member", "admin")
     form = await browser.http.get(SETTINGS)
     refused = await browser.http.put(
-        SETTINGS, json={"version": form.json()["version"], "changes": {"buffer_token": "has a space in it ok"}}
+        SETTINGS,
+        json={
+            "version": form.json()["version"],
+            "changes": {"buffer_token": "has a space in it ok"},
+        },
     )
     assert refused.status_code == 422
     assert "has a space" not in refused.text
@@ -266,9 +280,17 @@ async def test_a_draft_in_buffer_and_now_and_at_a_time(browser: Browser) -> None
         ({"channel_ids": ["ch-nowhere"]}, 422, "social.channel_unknown"),
         ({"channel_ids": ["ch-x"], "text": "x" * 260}, 422, "social.text_too_long"),
         ({"channel_ids": ["ch-x"], "text": "   "}, 422, "social.text_needed"),
-        ({"channel_ids": ["ch-x"], "when": "at", "due_at": "2020-01-01T00:00:00+00:00"}, 422, "social.time_passed"),
+        (
+            {"channel_ids": ["ch-x"], "when": "at", "due_at": "2020-01-01T00:00:00+00:00"},
+            422,
+            "social.time_passed",
+        ),
         ({"channel_ids": ["ch-x"], "when": "at"}, 422, "social.time_needed"),
-        ({"channel_ids": ["ch-x"], "admin_path": "https://elsewhere.test/admin"}, 422, "kernel.invalid_request"),
+        (
+            {"channel_ids": ["ch-x"], "admin_path": "https://elsewhere.test/admin"},
+            422,
+            "kernel.invalid_request",
+        ),
     ],
 )
 async def test_each_refusal_comes_before_anything_leaves(
@@ -285,7 +307,8 @@ async def test_each_refusal_comes_before_anything_leaves(
 async def test_a_draft_post_isnt_shared(browser: Browser) -> None:
     await _ready(browser)
     made = await browser.http.post(
-        "/api/blog/admin/posts", json={"title": "Not yet", "slug": unique("draft"), "body": "Words."}
+        "/api/blog/admin/posts",
+        json={"title": "Not yet", "slug": unique("draft"), "body": "Words."},
     )
     post = made.json()
     view = (await browser.http.get(SHARES, params={"type": "blog.post", "id": post["id"]})).json()
@@ -337,7 +360,9 @@ async def test_one_buffer_refused_doesnt_count_but_one_unanswered_does(browser: 
     assert again.status_code == 409
 
 
-async def test_a_fault_after_the_post_went_is_unknown_and_a_limit_is_refused(browser: Browser) -> None:
+async def test_a_fault_after_the_post_went_is_unknown_and_a_limit_is_refused(
+    browser: Browser,
+) -> None:
     await _ready(browser)
     post = await _live_post(browser)
     await browser.buffer(trouble=["fault", "limit"])
@@ -354,7 +379,9 @@ async def test_refresh_reads_buffer_again_and_a_waiting_post_can_be_taken_back(
 ) -> None:
     await _ready(browser)
     post = await _live_post(browser)
-    shared = (await browser.http.post(SHARES, json=_send(post, "ch-x", "ch-bluesky", "ch-linkedin"))).json()
+    shared = (
+        await browser.http.post(SHARES, json=_send(post, "ch-x", "ch-bluesky", "ch-linkedin"))
+    ).json()
     made = [one["id"] for one in await browser.buffer_posts()]
     await browser.buffer(sent=[made[0]], deleted=[made[1]])
     thing = {"type": "blog.post", "id": post["id"]}
@@ -368,7 +395,9 @@ async def test_refresh_reads_buffer_again_and_a_waiting_post_can_be_taken_back(
     assert waiting["state"] == "queued"
     taken = await browser.http.delete(f"{SHARES}/{waiting['id']}")
     assert taken.status_code == 200, taken.text
-    assert {one["channel_id"]: one["state"] for one in taken.json()["history"]}["ch-linkedin"] == "removed"
+    assert {one["channel_id"]: one["state"] for one in taken.json()["history"]}[
+        "ch-linkedin"
+    ] == "removed"
     assert made[2] not in [one["id"] for one in await browser.buffer_posts()]
     sent = await browser.http.delete(f"{SHARES}/{by_channel['ch-x']['id']}")
     assert sent.status_code == 409
