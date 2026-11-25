@@ -216,4 +216,41 @@ describe("SoundCloud's widget", () => {
     say("error");
     expect(said).toEqual(["failed"]);
   });
+
+  it("asks for the Widget API again after it failed to load, and plays once it comes (Codex on #149)", async () => {
+    const { events, said } = heard();
+    const output = soundcloudOutput(events);
+    const script = () => document.head.querySelector<HTMLScriptElement>(`script[src="${WIDGET_API}"]`);
+    output.load(SET);
+    output.play();
+    script()?.dispatchEvent(new Event("error"));
+    await vi.waitFor(() => {
+      expect(said).toEqual(["failed"]);
+    });
+    expect(script()).toBeNull();
+    // The store's retry loads the same link again: a second script is asked for.
+    output.load(SET);
+    output.play();
+    expect(script()).not.toBeNull();
+    const fake = fakeSoundCloud();
+    script()?.dispatchEvent(new Event("load"));
+    await vi.waitFor(() => {
+      expect(fake.frames).toHaveLength(1);
+    });
+    fake.say("ready");
+    expect(fake.calls).toEqual(["volume 100", "play"]);
+    script()?.remove();
+  });
+
+  it("makes one widget for a link loaded twice while the API comes", async () => {
+    const fake = fakeSoundCloud();
+    const output = soundcloudOutput(heard().events);
+    output.load(SET);
+    output.load(SET);
+    await vi.waitFor(() => {
+      expect(fake.frames).toHaveLength(1);
+    });
+    await Promise.resolve();
+    expect(document.querySelectorAll(`.${HOST_CLASS}`)).toHaveLength(1);
+  });
 });

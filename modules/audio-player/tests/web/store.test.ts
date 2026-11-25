@@ -280,14 +280,31 @@ describe("SoundCloud", () => {
     expect(outputs.made.soundcloud[0]?.calls).toEqual(["load", "play"]);
   });
 
-  it("never plays without media consent: it waits, paused", () => {
+  it("never loads SoundCloud without media consent: it waits, paused, then loads once allowed", () => {
     const { player, outputs } = setup();
-    player.configure({ soundcloudAllowed: () => false });
+    let allowed = false;
+    player.configure({ soundcloudAllowed: () => allowed });
     player.play([CATALYST], 0, "/");
-    expect(player.snapshot().state).toBe("paused");
-    expect(outputs.made.soundcloud[0]?.calls).toEqual(["load"]);
+    expect(player.snapshot()).toMatchObject({ item: CATALYST, state: "paused" });
+    const calls = () => outputs.made.soundcloud[0]?.calls.filter((call) => call !== "volume") ?? [];
+    expect(calls()).toEqual([]);
     player.toggle();
-    expect(outputs.made.soundcloud[0]?.calls).toEqual(["load"]);
+    expect(calls()).toEqual([]);
+    allowed = true;
+    player.toggle();
+    expect(calls()).toEqual(["load", "play"]);
+  });
+
+  it("doesn't load SoundCloud without consent when the queue reaches it on its own (Codex on #149)", () => {
+    const { player, outputs, file } = setup();
+    player.configure({ soundcloudAllowed: () => false });
+    player.play([A, CATALYST], 0, "/");
+    file().events.ended();
+    expect(player.snapshot()).toMatchObject({ index: 1, state: "paused" });
+    // A paused queue moved onto it doesn't load it either. (Stopping an output that loaded nothing reaches no one.)
+    player.prev();
+    player.next();
+    expect(outputs.made.soundcloud[0]?.calls.filter((call) => call === "load" || call === "play") ?? []).toEqual([]);
   });
 
   it("says when the browser wants SoundCloud's own Play", () => {

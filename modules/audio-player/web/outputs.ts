@@ -103,6 +103,8 @@ export const soundcloudOutput: OutputFactory = (events) => {
   let wanted: "play" | "pause" = "pause";
   let duration: number | null = null;
   let loadedUrl: string | null = null;
+  /** The link whose widget is being made, while the Widget API loads. */
+  let making: string | null = null;
   let watchdog: ReturnType<typeof setTimeout> | null = null;
   let volume = 1;
 
@@ -143,9 +145,11 @@ export const soundcloudOutput: OutputFactory = (events) => {
   };
 
   const make = (url: string) => {
+    making = url;
     loadSoundCloud()
       .then((api) => {
-        if (loadedUrl !== url) return;
+        if (making === url) making = null;
+        if (loadedUrl !== url || widget) return;
         host = document.createElement("div");
         host.className = HOST_CLASS;
         frame = document.createElement("iframe");
@@ -184,6 +188,9 @@ export const soundcloudOutput: OutputFactory = (events) => {
         });
       })
       .catch(() => {
+        if (making === url) making = null;
+        // Nothing to reuse: the next load of this link asks for the API again (Codex on #149).
+        if (loadedUrl === url) loadedUrl = null;
         events.failed();
       });
   };
@@ -194,7 +201,8 @@ export const soundcloudOutput: OutputFactory = (events) => {
       wanted = "pause";
       settle();
       duration = null;
-      if (loadedUrl === url) return;
+      // The same link again reuses the widget once there is one, or the one being made.
+      if (loadedUrl === url && (widget || making === url)) return;
       loadedUrl = url;
       ready = false;
       if (!widget) {

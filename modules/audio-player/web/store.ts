@@ -88,6 +88,8 @@ export function createPlayer(options: PlayerOptions = {}) {
   let checking: ReturnType<typeof setTimeout> | null = null;
   const outputs: Partial<Record<"file" | "soundcloud", Output>> = {};
   let current: Output | null = null;
+  /** The key of the item `current` has loaded: none while a SoundCloud item waits for consent. */
+  let loaded: string | null = null;
 
   const set = (patch: Partial<Snapshot>) => {
     now = { ...now, ...patch };
@@ -203,8 +205,14 @@ export function createPlayer(options: PlayerOptions = {}) {
     if (current && current !== output) current.stop();
     current = output;
     rewind();
-    output.load(item);
     const allowed = !viaSoundCloud(item) || soundcloudAllowed();
+    // SoundCloud is loaded only once media is granted: loading it is already
+    // reaching SoundCloud (Codex on #149). It waits, paused, unloaded.
+    loaded = null;
+    if (allowed) {
+      output.load(item);
+      loaded = item.key;
+    }
     set({ index, item, position_ms: 0, duration_ms: item.duration_ms ?? null, state: playing && allowed ? "loading" : "paused" });
     if (playing && allowed) {
       pauseOthers();
@@ -218,6 +226,7 @@ export function createPlayer(options: PlayerOptions = {}) {
     moving = null;
     current?.stop();
     current = null;
+    loaded = null;
     rewind();
     set({ ...IDLE, volume: now.volume });
   };
@@ -289,6 +298,12 @@ export function createPlayer(options: PlayerOptions = {}) {
         return;
       }
       if (viaSoundCloud(item) && !soundcloudAllowed()) return;
+      // An item that waited for consent is loaded now, from its start.
+      if (loaded !== item.key) {
+        current.load(item);
+        loaded = item.key;
+        describe(item);
+      }
       pauseOthers();
       set({ state: "loading" });
       current.play();
