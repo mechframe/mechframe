@@ -148,6 +148,30 @@
       "conflicts": []
     },
     {
+      "id": "featured",
+      "name": "Featured",
+      "version": "0.1.0",
+      "status": "experimental",
+      "category": "content",
+      "summary": "Homepage players staff choose: ordered, schedulable lists of other modules' items or YouTube links.",
+      "use_when": [
+        "The homepage or a page shows hand-picked items that staff reorder or schedule",
+        "Staff need to swap featured content on a date without a deploy",
+        "A page plays a list of YouTube videos that staff choose"
+      ],
+      "avoid_when": [
+        "The list is simply the newest items; query the module that owns them instead",
+        "Each item needs its own fields and pages; build it in its own module"
+      ],
+      "requires": {
+        "kernel": "^0.1",
+        "modules": {
+          "embeds": "^0.1"
+        }
+      },
+      "conflicts": []
+    },
+    {
       "id": "media",
       "name": "Media library",
       "version": "0.1.4",

@@ -19,7 +19,9 @@ mounts), users (accounts made without judging their passwords) and seed (the
 modules' seed data, `kernel.seed`, hook 4) and ai (the fake Anthropic's
 answers and the requests it was sent, `harness.fake_anthropic`, decision
 0058) and buffer (the fake Buffer's trouble and the posts it made,
-`harness.fake_buffer`, decision 0067). Still to come with K2 and K3:
+`harness.fake_buffer`, decision 0067) and youtube (the fake YouTube's titles
+and the lookups it was sent, `harness.fake_youtube`, decision 0073). Still to
+come with K2 and K3:
 oauth/grant, delete-hooks.
 """
 
@@ -40,6 +42,7 @@ from sqlalchemy import delete, select
 from harness import probe
 from harness.fake_anthropic import FakeAnthropic
 from harness.fake_buffer import FakeBuffer
+from harness.fake_youtube import FakeYouTube
 from harness.registry import discover
 from kernel import ai, clock, create_app, crypto, jobs, seed, storage
 from kernel.access import needs_step_up, public, undeclared
@@ -88,6 +91,7 @@ async def reset(request: Request, body: Reset | None = None) -> Response:
     _captured(request).clear()
     _fake_anthropic(request).forget()
     _fake_buffer(request).forget()
+    _fake_youtube(request).forget()
     return Response(status_code=204)
 
 
@@ -137,6 +141,35 @@ async def buffer_trouble(body: BufferTrouble, request: Request) -> Response:
 async def buffer_made(request: Request) -> dict[str, Any]:
     """The posts the fake Buffer made since the last reset, oldest first."""
     return {"posts": _fake_buffer(request).made()}
+
+
+def _fake_youtube(request: Request) -> FakeYouTube:
+    fake: FakeYouTube = request.app.state.fake_youtube
+    return fake
+
+
+class YouTubeVideos(BaseModel):
+    """The fake YouTube's titles by video id, and the ids that answer 404 or
+    too late (`harness.fake_youtube`)."""
+
+    titles: dict[str, str] = Field(default_factory=dict, max_length=20)
+    down: list[str] = Field(default_factory=list, max_length=20)
+    slow: list[str] = Field(default_factory=list, max_length=20)
+
+
+@router.post("/youtube", status_code=204)
+async def youtube_videos(body: YouTubeVideos, request: Request) -> Response:
+    fake = _fake_youtube(request)
+    fake.titles.update(body.titles)
+    fake.down.update(body.down)
+    fake.slow.update(body.slow)
+    return Response(status_code=204)
+
+
+@router.get("/youtube")
+async def youtube_asked(request: Request) -> dict[str, Any]:
+    """Every address the fake YouTube was asked since the last reset, oldest first."""
+    return {"asked": list(_fake_youtube(request).asked)}
 
 
 class AiAnswer(BaseModel):
@@ -375,6 +408,12 @@ def build_test_app(database_url: str | None = None, *, env_file: bool = True) ->
     fake_buffer = FakeBuffer()
     social_buffer.use_transport(fake_buffer.transport)
     app.state.fake_buffer = fake_buffer
+    # And every YouTube title to its fake, never to YouTube (decision 0073).
+    from featured import youtube as featured_youtube
+
+    fake_youtube = FakeYouTube()
+    featured_youtube.use_transport(fake_youtube.transport)
+    app.state.fake_youtube = fake_youtube
     app.include_router(router, prefix="/api/_test")
     started = app.router.lifespan_context
 

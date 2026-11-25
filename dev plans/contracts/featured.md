@@ -275,3 +275,25 @@ Branch `featured`, `featured_0001`, `depends_on` `kernel_0002` as audio-player's
 - **`pick`'s limit is 20 when none is given,** 1 to 50 when it is, and its words at most 200 characters (ValueError otherwise). Words that are only spaces count as none.
 - **`find`'s answer is held to the ask:** a source that answers an id it wasn't asked for, or a `Ref` under another id, has that left out.
 - **The registry's switches are given to `refs.install`** by `assemble`. Without them, as in a unit test, every source counts as on.
+
+## Changes as built (featured 0.1.0, `feat/featured-0-1-0`)
+
+None changes what was approved; each says what §2 meant, or adds what a screen needed.
+
+- **The answers:**
+  - `LiveSlot` holds the slot's `kinds` too, so a Videos page can name its filters; a link's `kind` is its key.
+  - `AdminPlacement` holds `item: {type, id}` beside `ref`, so a placement that's `hidden` (its module off) or `removed` is still known, and a save can keep it.
+  - `AdminSlot` holds `now: {title, starts_at, ends_at} | null`, the first thing live, for the strip and the Dashboard's card; `GET /admin/slots` answers `types` too, the types the modules on give, by label.
+- **The refusals named:**
+  - a slot's type no module on gives is 422 `featured.unknown_type`, on `POST` and `PATCH`; one the slot took already may stay while its module is off;
+  - a new item whose module is off is 422 `featured.not_accepted`;
+  - a placement listed twice, or an `id` that isn't the slot's, is 422 `kernel.invalid_request`.
+- **A link is kept as its watch address,** `https://www.youtube.com/watch?v=<id>`, built from the id embeds read: what a link carried besides (a start time, a playlist) is dropped. `POST /admin/youtube` answers that address. Each lookup is given a second in all, not per step.
+- **The Dashboard:** the item's key is `featured.ending_<key>`; "in 2 days" counts whole days, at least one; its date is the server's, in UTC. Setup's step is done once there's a slot and each has something live.
+- **The audit's list** is cut short to fit the kernel's 4 KiB, with `count` and `more`.
+- **Players:**
+  - the board's word is "player", so "New slot" is "New player" and a slot's settings are "{label} settings";
+  - one save bar for every list changed, each saved in turn; a conflict asks theirs or mine through the kit's `SaveConflict`, the list as one field, and "Keep mine" saves at their version, a placement they removed added again as new;
+  - the kit's `SaveBar` gains `what`, the words after its count (the main lane's OK);
+  - the picker reads 20 a page.
+- **The harness:** its probe notes give `probe.note` (hook 11), its test support has a fake YouTube (`harness.fake_youtube`, `/api/_test/youtube`), and `/featured.html?slot=<key>` draws a slot through `useFeatured`.

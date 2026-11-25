@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mechframe.local/schema/events/featured.placement.changed.v1.schema.json",
+  "additionalProperties": false,
+  "description": "What a slot holds, or the slot itself, changed.",
+  "properties": {
+    "slot_key": {
+      "title": "Slot Key",
+      "type": "string"
+    }
+  },
+  "required": [
+    "slot_key"
+  ],
+  "title": "featured.placement.changed (v1)",
+  "type": "object"
+}
