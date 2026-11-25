@@ -1,58 +1,58 @@
 # Handoff
 
-Overwritten every session. This one: 2026-11-24, about 13:00 to 19:45 Eastern (Claude Code, the owner's machine, the owner on Remote Control), session M4i of `dev plans/2026-11-21-vibrant-mindz-push-plan.md`, the main lane. Landed: #147 (generated covers) and #148 (the footer's shift). The side lane landed #145 (discography 0.1.0) and has #149 (audio-player 0.1.0) open. `main` is `1a1b4b8`, #148's head; this handoff is its own docs PR.
+Overwritten every session. This one: 2026-11-24, about 20:00 Eastern, to 2026-11-25, about 10:00 Eastern (Claude Code, the owner's machine, the owner on Remote Control at times), session M4j of `dev plans/2026-11-21-vibrant-mindz-push-plan.md`, the main lane. Landed: #150 (M4i's handoff) and #152 (social posting). The side lane landed #149 (audio-player 0.1.0) and #151 (discography 0.1.1). `main` is `bd0ce93`, #152's head; this handoff is its own docs PR.
 
 ## State
 
-- **#147, generated covers** (decision 0065; `dev plans/contracts/blog-covers.md`), landed at `0a217b1`. It's blog 0.1.4 and media 0.1.4.
-  - **What it does:** Draw a cover in the post editor, for `kernel.ai.write` and `media.image.upload`, while a key works and media's storage is on. Claude draws an SVG in Editorial, Signal, Minimal or Custom, in the site's colours, with its name in the corner. `kernel.svg` cleans it, the dialog shows the kernel's own PNG of it, and Use this cover keeps a 2400 × 1260 PNG with its alt text.
-  - **The kernel gains:** `svg` and `ai.budget` on its surface, `sayAi` on the web, and the toast's `returnTo`. A render runs in a process of its own, stopped at 10 seconds.
-  - **The reviews:** Codex's four findings and CodeRabbit's twelve are fixed, each code fix with a test seen failing first. The contract's "Changes after approval" lists them.
-  - **The tests:** full Python suite 3,709 passed, 97.43%; web 1,032. The e2e cover test passes alone and beside `ai.spec.ts`; storage is off in `harness.e2e`, so the kept file is stood in at the browser.
-- **#148, the footer's shift** (decision 0066; `dev plans/contracts/footer-shift.md`), landed at `1a1b4b8`.
-  - **What it does:** one rule in `frames.css`. Nothing after `<main>` is drawn while it's empty, or while it holds only the session guard's empty busy mark (CodeRabbit on #148). `!important`, to win over a site's own unlayered footer styles.
-  - **Measured:** 0.13 to 0.14 at 412 before, 0 after, on the kernel's home and its 404 page. `frame.spec.ts` checks the rule's states directly and fails without either line.
-  - **Also in it:** CI's Python job may now run 30 minutes, not 20 (the owner's OK). Green runs take 14 to 18.
-- **The side lane** (AI DevKit Development 44 and 46 WT):
-  - **#145, discography 0.1.0,** landed at `5c12f8e`. Its result is §9 of `dev plans/2026-11-24-side-lane-m8b-discography-web.md`.
-  - **#149, audio-player 0.1.0,** is open, from `.claude/worktrees/discography-0-1-0` on `feat/audio-player`. It puts `kernel.client_address` on the surface (decision 0071). Discography 0.1.1 follows it.
-- **The owner's answers (2026-11-24):** the footer went right after covers. Social posting is a `social` module, its Buffer token on the host or saved in Settings like the AI's key, not as recommended (`blog.md` §8, 7).
-- **VM Website Dev 17** is the site's session now (Dev 15 stood down). It has both landings.
-- **The ledger** shows the rows from `1a1b4b8`. v1.0 stays 80% (49 of 61): step 1 is still "next".
+- **#152, social posting** (decision 0067; `dev plans/contracts/social.md`, approved as recommended, all five answers), landed at `bd0ce93`. It's social 0.1.0 and blog 0.1.5.
+  - **What it does:** a Share card after After publishing in blog's post editor, for `social.post.send` (admin, editor). You pick the channels Buffer reaches, edit one text, and send to Buffer's queue, now, at a time, or as a Buffer draft. Refresh and Take it back follow. The token is `BUFFER_ACCESS_TOKEN` or one saved in Settings › Site › Social, sealed; the saved one wins, with Check the token.
+  - **The kernel gains:** `server_copy.preview(db, type, id)` and `search.public_document` (a thing's link from its search source and its own module's page), and the props slot `content.share`, drawn with `<ShareParts type id live />` (SPEC 6 and 8). Any module can share; discography's card is one line once its releases are searched.
+  - **Never twice:** each channel's share is committed `sending` under an advisory lock before Buffer is asked. One with no answer back, or Buffer's `UNEXPECTED`, is `unknown` and counts as shared.
+  - **Reviews:** Codex's two and CodeRabbit's eleven are fixed, each with a test. The contract's "Changes after approval" lists them.
+  - **Tests:** full Python suite 3,795 passed, 97.30%; web 1,112; e2e 130 of 130; `mechframe check` passed. No suite calls Buffer: `harness/fake_buffer.py`, and `/api/_test/buffer` in the test app.
+- **The side lane** (M9 and M10; Results in `dev plans/done/2026-11-24-side-lane-m9-audio-player.md` and `-m10-discography-0-1-1.md`, §9 each):
+  - #149, audio-player 0.1.0 (decision 0071), with `kernel.client_address` on the surface;
+  - #151, discography 0.1.1, audio-player's first source.
+  - It's now on featured, its contract approved by the owner (on the side lane's branch until its first PR): first the "item references" hook (decision 0072: `kernel/refs.py`, its exports, a build beside `search.build` in the app, SPEC 6 and 7's hooks rows), then featured 0.1.0 (0073, `featured_0001`), then discography 0.1.2.
+- **Step 1's close, checked:** schemas validate, tests pass on `main`, and `mechframe check` passed on a fresh site with all six modules. It fails one test, "the admin page matches its board": VM Website Dev 17's asks are open (below). The owner chose to do them first (2026-11-25), so Step 1 stays "next".
+- **VM Website:** Dev 17 is offline. Dev 19 was told #152's push and landing, and asked to pass it on.
+- **The ledger** shows the rows from this handoff's `main`.
 
 ## Next
 
-1. **Social posting:** its contract first, `dev plans/contracts/social.md`, for the owner. It's a `social` module any module shares through, blog first, VybeSite's Buffer integration (`backend/app/services/buffer_service.py`) the source. The token is `BUFFER_ACCESS_TOKEN` or one saved in Settings, sealed, the saved one winning, with a Check, as `kernel.ai`'s key is.
-2. **Then step 1's close:** with social in, check step 1's six modules against the push plan's "done when" and mark it.
-3. **Small follow-ups,** each a PR of its own or folded into a nearby one:
-   - blog's own `/blog` grows under the footer as its list arrives (0.03 at 412): hold the page until its first read;
-   - embeds' `VideoPlaylist` "Prev" button is named "Previous video", which axe refuses (the side lane);
-   - the review items #145 left: a sweep of unreferenced masters, the kit's row editors' keys and focus, batched reindex reads, a module-only downgrade test, a replacement committed mid-job.
+1. **Dev 17's asks, queued since 2026-11-24 with the owner's OK**, in this order:
+   - **A1 to A4, Settings › AI's Model row** (`kernel/web/src/ai/AiSettings.tsx`), record: `C:\DEV\VM Website\dev plans\2026-11-24-admin-ai-parity.md`.
+   - **The kit to the boards** (the owner: "Kit to the boards"): B1 to B10 and C1 to C5, the parts every admin form shares; W2 to W4 and S1, Writing's own; C1 more, dropping the kit's 96 px minimum on a text box; T1 and T2, contact's settings. That's 22 lines. Records: `C:\DEV\VM Website\dev plans\2026-11-24-admin-forms-kit-ask.md` and `C:\DEV\VM Website\dev plans\2026-11-24-admin-writing-parity.md`.
+2. **Then Step 1's close:** once the site's parity tools say the boards hold, mark Step 1 done in `docs/progress.json`.
+3. **Small follow-ups,** each its own PR or folded into a nearby one:
+   - embeds' `VideoPlaylist` "Prev" button named "Previous video", which axe refuses;
+   - blog's own `/blog` growing under the footer as its list arrives;
+   - #145's review items: unreferenced masters, the kit's row editors' keys and focus, batched reindex reads, a module-only downgrade test, a replacement committed mid-job.
 
 ## Open questions for the owner
 
-- Social's contract, when it's written.
-- Discography's settings: the Music panel saves through the kernel's settings routes, which ask for `kernel.settings.manage`; no route checks `discography.settings.manage`. It's a question for every module's settings.
+- Where the Share card sits on the AdminPost board: built from the kit's parts after After publishing (§8, 3). VM Website draws it and sends any differences.
+- Discography's settings permission: every module's settings save through `kernel.settings.manage`.
+- The iPhone Safari check of the audio player (audio-player's contract §7).
 - Earlier ones: the flaky axe test at `kernel/tests/e2e/sign-in.spec.ts:389`; hooks 6 to 8's changes after approval; the Vibrant Mindz content; `mechframe-iac-probe` on Railway.
 
 ## Notes
 
-- **IDs:** the main lane used 0065 and 0066, and has 0067 to 0069, `kernel_0017`, `kernel_0018` and `blog_0002`. The side lane has 0070, 0071 (written) and up.
+- **IDs:** the main lane used 0067, and has 0068 and 0069, `kernel_0017`, `kernel_0018` and `blog_0002`. The side lane has 0072 (refs) and 0073 (featured) planned, and 0074 and up, `featured_0001` and `discography_0002`.
 - **Traps met:**
-  - A loop that resolves "every unresolved thread" closes the bots' newest ones too. Resolve by the comment's id.
-  - Bash heredocs mangle `\n` and `\x89` inside Python strings: write the script with the Write tool, and check its bytes with `od -c`.
-  - Playwright empties `test-results/` each run, so a throwaway spec goes in `kernel/tests/e2e/zz-*.spec.ts` for one run, then is deleted.
-  - A test page's inline `<style>` needs `bypassCSP: true`: the site's policy refuses it.
-  - GitHub refuses a fast-forward to `main` until "CI result" passes: the rule is the gate.
-  - On Windows, `npm run api:check` reports campaigns' and media's `schema.ts` stale. It's line endings only; CI on Linux is fine.
+  - A Bash heredoc turns `\n` inside a Python string into a real line break: write the file with the Write or Edit tool.
+  - Two Playwright tests of one spec ran at once and saved the site's one settings section over each other. A spec on global state is `test.describe.configure({ mode: "serial" })`.
+  - Two requests through the contract suite's in-process ASGI app didn't race: the lock's mutant passed. Race in a service test with the check's read slowed.
+  - GitHub showed the gitleaks check "in progress" for hours after its job finished green. Read the job: `gh api repos/mechframe/mechframe/actions/jobs/<id>`.
+  - CodeRabbit's free reviews run out mid-PR; its review then lands later, as one batch.
 - **Still true:**
-  - Run the full suite with `$env:PYTHONUTF8 = "1"`. It takes about 55 minutes here now.
+  - Run the full suite with `$env:PYTHONUTF8 = "1"`; it takes about 55 minutes.
   - Commit with `git commit -F <file>`, and check `git branch --show-current` first.
-  - The root lint and black sweep `.claude/worktrees/`, and `npx.cmd` mangles arguments.
-  - Never `prettier --write` an existing file: the repo isn't prettier-formatted. A new file can take `--print-width 160`.
+  - Never `prettier --write` an existing file.
+  - On Windows, `npm run api:check` reports some `schema.ts` stale over line endings; CI on Linux is fine.
 - **`CLAUDE.md` is about 175 lines.** Lean it when the owner says.
 
 ## Warnings
 
-- Nothing from VybeSite's `dev plans\` or `snapshots\`. Run its brand check on lifted code: social lifts its Buffer service.
+- Nothing from VybeSite's `dev plans\` or `snapshots\`. Run its brand check on lifted code.
 - Editing CI's security gates is the owner's call. Never apply a site's `railway.ts` for the owner, never type a key for them, never create the Buffer account, and never edit `C:\DEV\VM Website`.

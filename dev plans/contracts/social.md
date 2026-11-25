@@ -2,7 +2,7 @@
 feature: Social posting, the `social` module (decision 0067; `blog.md` §8, 4 and 7, answered 2026-11-22 and 2026-11-24)
 status: approved
 approved: 2026-11-24, as recommended ("Approve as recommended"): §8's five answers
-plan: `dev plans/2026-11-24-next-session-m4j-social.md` §4, 1 and 2; the fourth of blog's PRs (`blog.md` §8, 1), before step 1 is closed
+plan: `dev plans/done/2026-11-24-next-session-m4j-social.md` §4, 1 and 2; the fourth of blog's PRs (`blog.md` §8, 1), before step 1 is closed
 pr: — (read from GitHub just before the push)
 ---
 
