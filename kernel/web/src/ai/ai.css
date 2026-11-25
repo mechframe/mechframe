@@ -18,11 +18,23 @@
   color: var(--mf-color-text-muted);
 }
 
-.mf-ai-model-failed {
-  display: flex;
-  flex-wrap: wrap;
+/* Settings → AI's two forms, as the board draws them (VM Website Dev 16's A1 to A4): their parts
+   14px apart, and the Model row under a 1px rule, 18px from the key's form above it (the card's
+   16px gap and 2px more) and 18px from its own first line. */
+.mf-ai-key,
+.mf-ai-model {
+  gap: 0.875rem;
+}
+
+.mf-ai-model {
+  margin-top: 0.125rem;
+  padding-top: 1.125rem;
+  border-top: 1px solid var(--mf-color-border);
+}
+
+/* Try again on the label's line, centred on it. */
+.mf-ai-model .mf-field-head {
   align-items: center;
-  gap: var(--mf-space-2);
 }
 
 .mf-ai-problem {

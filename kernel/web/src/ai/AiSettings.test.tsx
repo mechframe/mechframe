@@ -47,7 +47,7 @@ describe("Settings → AI", () => {
     const field = await opened();
     expect(field).toHaveValue("");
     expect(field).toHaveAttribute("type", "password");
-    expect(screen.getByRole("status")).toHaveTextContent(sourceWords("environment"));
+    expect(screen.getByText(sourceWords("environment"))).toHaveAttribute("role", "status");
     expect(await screen.findByRole("combobox", { name: "Model" })).toHaveValue("claude-opus-5-5");
     expect(screen.queryByRole("button", { name: "Remove the saved key" })).toBeNull();
     expect(screen.getByRole("link", { name: "AI" })).toHaveAttribute("aria-current", "page");
@@ -241,6 +241,56 @@ describe("Settings → AI's model (decision 0064)", () => {
     expect(screen.getByRole("combobox", { name: "Model" })).toBeDisabled();
     expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
     expect(screen.getByRole("button", { name: "Save the model" })).toBeDisabled();
+  });
+
+  // VM Website Dev 16's A1 to A4 (`2026-11-24-admin-ai-parity.md`): the row as its board draws it.
+  const LISTED = "Anthropic's newest model of each kind, listed when this page opens.";
+  const FAILED = "Couldn't load Anthropic's model list, so the model in use is the only one shown.";
+  const NO_KEY = "Anthropic's model list loads once a key works.";
+  const follows = (first: HTMLElement, then: HTMLElement) => Boolean(first.compareDocumentPosition(then) & Node.DOCUMENT_POSITION_FOLLOWING);
+
+  it("is a form of its own after the key's, its source said first, above the Model label (A1, A2)", async () => {
+    answers(false, { source: "environment" });
+    await opened();
+    const key = screen.getByRole("form", { name: "Anthropic key" });
+    const row = await screen.findByRole("form", { name: "Model" });
+    expect(follows(key, row)).toBe(true);
+    const said = within(row).getByText(modelSourceWords("environment"));
+    expect(said).toHaveAttribute("role", "status");
+    expect(follows(said, within(row).getByText("Model", { selector: "label" }))).toBe(true);
+  });
+
+  it("says the source before the warning when the model isn't listed (A2)", async () => {
+    answers(true, { source: "settings", model: "claude-opus-4-typo", model_source: "settings" }, {
+      [MODELS]: listed({ id: "claude-opus-4-typo", name: null, source: "settings", listed: false }),
+    });
+    renderApp({ path: "/admin/settings/ai", session: admin });
+    const warning = await screen.findByText("Anthropic doesn't list claude-opus-4-typo for this key, so the AI's writing help may fail.");
+    expect(follows(screen.getByText(modelSourceWords("settings")), warning)).toBe(true);
+  });
+
+  it("describes the select with the list's hint while the list reads (A3, Host's key)", async () => {
+    answers(false, { source: "environment" });
+    await opened();
+    expect(await model()).toHaveAccessibleDescription(LISTED);
+  });
+
+  it("puts a state's sentence in the hint's place, never the list's hint beside it (A3, No key)", async () => {
+    answers(false, { source: "none" }, { [MODELS]: problem(503, "kernel.ai_off") });
+    await opened();
+    await screen.findByText(NO_KEY);
+    expect(screen.getByRole("combobox", { name: "Model" })).toHaveAccessibleDescription(NO_KEY);
+    expect(screen.queryByText(LISTED)).toBeNull();
+  });
+
+  it("puts a state's sentence in the hint's place, and Try again on the Model label's line (A3, A4, Model list failed)", async () => {
+    answers(false, { source: "environment" }, { [MODELS]: problem(502, "kernel.ai_failed") });
+    await opened();
+    await screen.findByText(FAILED);
+    expect(screen.getByRole("combobox", { name: "Model" })).toHaveAccessibleDescription(FAILED);
+    expect(screen.queryByText(LISTED)).toBeNull();
+    const label = screen.getByText("Model", { selector: "label" });
+    expect(label.parentElement).toContainElement(screen.getByRole("button", { name: "Try again" }));
   });
 
   it("warns when Anthropic doesn't list the model saved, and lists it first (Model not listed)", async () => {
