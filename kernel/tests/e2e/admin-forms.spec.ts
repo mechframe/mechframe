@@ -4,7 +4,8 @@
 // measured at 1440 and 390 in both themes. The boards: VM Website's `AdminAI.dc.html`,
 // `AdminWriting.dc.html`, `AdminStyle.dc.html` and `AdminSettings.dc.html` (canvas version 111),
 // drawn by its `admin_kit.py`. Reads whose state the shared database can't promise (no key, no
-// styles, one style) are answered by a route.
+// styles, one style) are answered by a route. Last, K3, K6, P2 and P3, the parts the admin's lists
+// and dashboard share (pills, tables, the stat card), on the kit's page.
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
 import { THEMES, makeUser, signInTo, theme } from "./support";
@@ -334,5 +335,45 @@ test("Settings › Site: contact's topics (T1, T2) and the form cards (B1)", asy
       color: await tokenColor(page, "--mf-color-text-muted"),
     });
     expect.soft(await styleOf(first, ["border-top-width"]), at).toEqual({ "border-top-width": "0px" });
+  });
+});
+
+test("the kit's pills, a table's heads and rows' names, and a dashboard card (K3, K6, P2, P3)", async ({ page }) => {
+  // VM Website's asks of 2026-11-25 (`2026-11-25-admin-music-ask.md`, items 5 and 6, and
+  // `2026-11-25-statcard-ask.md`): `admin_kit.pill`, the boards' tables and AdminDashboard's `stat()`.
+  await page.goto("/kit.html");
+  const admin = page.locator("section.mf-admin-look").filter({ has: page.getByRole("heading", { name: "The admin's look" }) });
+  await expect(admin).toBeVisible();
+  const pill = admin.locator(".mf-pill").filter({ hasText: "Processing" });
+  const people = admin.locator('[data-kit="people"]');
+  const head = people.getByRole("columnheader", { name: "Email" });
+  const name = people.getByRole("rowheader", { name: "Ann Example" });
+  const cell = people.getByRole("cell", { name: "ann.example@mechframe.test" });
+  const card = admin.locator(".mf-stat").filter({ hasText: "Plays this week" });
+  const link = card.getByRole("link", { name: "Music" });
+  const figure = card.locator(".mf-stat-value");
+  const laidOut = ["font-size", "font-weight", "line-height", "color", "text-align", "vertical-align", "padding-top", "padding-left", "border-top-width"];
+
+  await eachLook(page, async (at) => {
+    // K3: a pill's words 12px at 600, in the font's own line; the pill 24px tall.
+    expect.soft(await styleOf(pill, ["font-size", "font-weight", "line-height"]), at).toEqual({ "font-size": "12px", "font-weight": "600", "line-height": "normal" });
+    expect.soft((await boxOf(pill)).height, at).toBeCloseTo(24, 0);
+    // K6: a column's head 12px at 600, muted, in the font's own line.
+    expect.soft(await styleOf(head, ["font-size", "font-weight", "line-height", "color"]), at).toEqual({
+      "font-size": "12px",
+      "font-weight": "600",
+      "line-height": "normal",
+      color: await tokenColor(page, "--mf-color-text-muted"),
+    });
+    // K6: a row's name at 600, laid out as its row's other cells, which stay at 400.
+    const cellStyle = await styleOf(cell, laidOut);
+    expect.soft(cellStyle["font-weight"], at).toBe("400");
+    expect.soft(await styleOf(name, laidOut), at).toEqual({ ...cellStyle, "font-weight": "600" });
+    // P2: the card's link as tall as its words, or its chevron if that's taller: no minimum.
+    const chevron = (await boxOf(link.locator("svg"))).height;
+    expect.soft((await boxOf(link)).height, at).toBeCloseTo(Math.max(await lineOf(link), chevron), 0);
+    // P3: the figure in the font's own line.
+    expect.soft(await styleOf(figure, ["line-height"]), at).toEqual({ "line-height": "normal" });
+    expect.soft((await boxOf(figure)).height, at).toBeCloseTo(await lineOf(figure), 0);
   });
 });

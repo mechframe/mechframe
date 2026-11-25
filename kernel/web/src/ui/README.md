@@ -16,7 +16,7 @@ The behavior is ported from VybeSite; the look is drawn from the Vibrant Mindz a
 | `StatCard` | A dashboard card (`admin.dashboard.widget`): what it counts, its state as a pill, the figure, a line, and a link to the detail |
 | `Accordion` | A collapsible section on `<details>`, remembering the reader's own choice, opening by itself when its first state is a problem (a later one keeps to its pill) |
 | `Tabs` | WAI-ARIA tabs: one tab stop, arrows, Home and End; every panel stays drawn |
-| `Table` | Records in a sideways scroller that keeps the focused control in view, a tab stop named by its caption while it slides; empty, its caption over the empty state |
+| `Table` | Records in a sideways scroller that keeps the focused control in view, a tab stop named by its caption while it slides; empty, its caption over the empty state. `rowHeader` names the column that names each row: its cell is the row's header, at 600 |
 | `Dialog` | A modal `<dialog>` named by its heading, focus in and back |
 | `UnsavedDialog`, `useUnsavedGuard`, `useLeaveGuard` | Asking before a move away loses changes: `useUnsavedGuard` with `UnsavedDialog`; `useLeaveGuard` is the blocker alone, for an editor that draws its own question, or the move is held with nothing said |
 | `SaveBar` | A form's Save while it has changes, with room kept below what scrolls |

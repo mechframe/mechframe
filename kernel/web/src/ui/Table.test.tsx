@@ -26,6 +26,27 @@ describe("Table", () => {
     expect(within(rows[1] as HTMLElement).getByRole("cell", { name: "2" })).toHaveClass("mf-cell-end");
   });
 
+  it("draws the column that names each row as the row's header, the other cells as cells (K6)", () => {
+    render(<Table caption="People" columns={COLUMNS} rows={PEOPLE} rowKey={(person) => person.id} rowHeader="email" />);
+    const table = screen.getByRole("table", { name: "People" });
+    const header = within(table).getByRole("rowheader", { name: "ann@example.test" });
+    expect(header.tagName).toBe("TH");
+    expect(header).toHaveAttribute("scope", "row");
+    expect(header).toHaveClass("mf-table-name");
+    expect(within(table).getAllByRole("rowheader")).toHaveLength(2);
+    expect(within(table).getAllByRole("columnheader")).toHaveLength(3);
+    const row = within(table).getAllByRole("row")[1] as HTMLElement;
+    expect(within(row).getAllByRole("cell").map((cell) => cell.textContent)).toEqual(["2", "Edit ann@example.test"]);
+  });
+
+  it("names no row by a key that's no column's, and only ever by one column (cubic on #158)", () => {
+    const { unmount } = render(<Table caption="People" columns={COLUMNS} rows={PEOPLE} rowKey={(person) => person.id} rowHeader="nobody" />);
+    expect(screen.queryAllByRole("rowheader")).toEqual([]);
+    unmount();
+    render(<Table caption="People" columns={COLUMNS} rows={PEOPLE} rowKey={(person) => person.id} rowHeader="roles" />);
+    for (const row of screen.getAllByRole("row").slice(1)) expect(within(row).getAllByRole("rowheader")).toHaveLength(1);
+  });
+
   it("can keep its caption for screen readers only", () => {
     render(<Table caption="People" captionHidden columns={COLUMNS} rows={PEOPLE} rowKey={(person) => person.id} />);
     expect(screen.getByText("People", { selector: "caption" })).toHaveClass("mf-visually-hidden");

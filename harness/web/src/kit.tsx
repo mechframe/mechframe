@@ -37,6 +37,7 @@ import {
   SearchFields,
   SectionHistory,
   Select,
+  StatCard,
   Switch,
   Table,
   Tabs,
@@ -221,6 +222,18 @@ function AdminLook() {
         </Chip>
       </div>
 
+      <h3>Dashboard cards</h3>
+      <div className="kit-grid">
+        <StatCard
+          label="Plays this week"
+          value="1,284"
+          line="Up 18% on last week"
+          state={{ tone: "success", label: "Live" }}
+          link={{ label: "Music", to: "/kit.html#tabs" }}
+          level={3}
+        />
+      </div>
+
       <h3>Needs you</h3>
       <div className="kit-stack">
         <Attention
@@ -260,7 +273,7 @@ function AdminLook() {
       <div className="kit-stack">
         <Card title="People" flush>
           <div data-kit="people">
-            <Table caption="People" captionHidden columns={COLUMNS} rows={PEOPLE} rowKey={(person) => person.id} />
+            <Table caption="People" captionHidden columns={COLUMNS} rows={PEOPLE} rowKey={(person) => person.id} rowHeader="name" />
           </div>
         </Card>
         <Card title="Sign-ins" flush>
