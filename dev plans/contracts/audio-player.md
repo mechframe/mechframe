@@ -225,3 +225,17 @@ No user ids, addresses or browser names anywhere: `data_hooks` stay false.
 ## Changes after approval
 
 None yet.
+
+## Changes as built (audio-player 0.1.0, `feat/audio-player`)
+
+- **`PlayerState` gains `blocked`:** a browser wouldn't start the hidden widget, so SoundCloud's own player shows for its Play (§8, 5). Its note reads "Press Play in SoundCloud's player to start it."
+- **The parts take a little more than §2 named:**
+  - `PlayerDock` takes the `queue` it starts while nothing plays (the release's tracks), as well as its `label`. Until something plays, it shows that queue's first, and its Previous does nothing.
+  - `PlayerBar` takes `previousLabel` and `nextLabel` ("Previous spotlight track"), and `bars`.
+  - `PlayButton` takes `className` and its own `children`, its name staying "Play {label}".
+  - A queue of one draws no Previous or Next.
+- **A shorter track counts once 90% of it is heard,** as "nearly all of it": a seek to its end doesn't count.
+- **The job is `audio-player.prune`;** the scaffold's `rollup_plays` went, since a counted play adds to its day's total at once.
+- **The hooks read the player from `PlayerContext`** when one is given (the tests' own, on fake outputs), else the app's one.
+- **The e2e page is the harness's `/player.html`.** Its axe check leaves out embeds' playlist, whose "Prev" is named "Previous video", which axe's `label-content-name-mismatch` refuses. That's embeds' to fix, and is reported in the PR.
+

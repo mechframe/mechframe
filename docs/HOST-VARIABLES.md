@@ -203,6 +203,19 @@ The kernel's defaults suit a small site on one service. Change these only with a
 
 Each module's own host variables, from its `module.json`, and the settings its admin page holds. A planned module's are as its scaffold has them so far; they grow as it's built.
 
+### `audio-player` 0.1.0 (experimental)
+
+One player for the site's own audio: waveforms, a queue, one thing at a time, and plays counted with no personal data.
+
+No host variables of its own.
+
+Set in the site's admin (Admin → Settings), not on the host:
+
+| Setting | Type | Default | What it's for |
+| --- | --- | --- | --- |
+| `autoplay_next` | bool | `true` | Play the next track in the queue when one ends |
+| `count_after_seconds` | int | `30` | Seconds really heard before a play counts, from 5 to 120 (or the whole of a shorter track) |
+
 ### `blog` 0.1.3 (experimental)
 
 Dated posts in Markdown, with categories, a cover from the media library, scheduling and related posts.
@@ -286,19 +299,6 @@ The site's fixed pages, About to Privacy, written in Markdown and placed in the 
 No host variables of its own.
 
 **From the kernel:** Write with AI needs `ANTHROPIC_API_KEY` or a key saved in Settings → AI.
-
-### `audio-player` 0.1.0 (planned, not built yet)
-
-One site-wide player with waveforms and a queue, where only one thing plays at a time across every player.
-
-No host variables of its own.
-
-Set in the site's admin (Admin → Settings), not on the host:
-
-| Setting | Type | Default | What it's for |
-| --- | --- | --- | --- |
-| `autoplay_next` | bool | `true` | Move to the next item in a queue when one ends |
-| `count_after_seconds` | int | `30` | Seconds of listening before a play counts |
 
 ### `comments` 0.1.0 (planned, not built yet)
 
