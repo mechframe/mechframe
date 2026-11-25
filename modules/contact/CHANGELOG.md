@@ -1,5 +1,9 @@
 # Changelog: contact
 
+## 0.1.2
+
+- The Settings section drawn to the Site tab's board (VM Website Dev 17's T1 and T2; decision 0040, amended): Add a topic is as wide as its words, a topic's First is worded as a field's label (the theme's meta size, muted, at 400) beside its switch with no row's rule, a topic's name, First and moves share a line while they fit, and the section's parts are 18px apart, the topics' 12.
+
 ## 0.1.1
 
 - Its reads and its send in `public.ts`, for a site that draws its own form: `useContactForm`, `useSendMessage`, `fieldErrors` and the types `ContactFormAnswer`, `NewMessage`, `Received`, `Topic`, `FieldErrors` and `MessageField` (MODULE.md, "Extension points"). `ContactForm` works through the same hooks.

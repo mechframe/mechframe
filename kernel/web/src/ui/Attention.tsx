@@ -25,7 +25,7 @@ const LABEL = { info: "Note", warning: "Warning", danger: "Problem" } as const;
 
 export function Attention({ tone, what, why, action }: AttentionProps) {
   return (
-    <div className={`mf-attention mf-attention--${tone}`}>
+    <div className={`mf-attention mf-attention--${tone}${action ? "" : " mf-attention--notice"}`}>
       <Icon name={tone === "info" ? "info" : "warning"} label={LABEL[tone]} className="mf-attention-icon" />
       <div className="mf-attention-words">
         <span className="mf-attention-what">{what}</span>

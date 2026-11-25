@@ -17,6 +17,22 @@ describe("Field", () => {
     expect(input).toHaveAttribute("aria-invalid", "true");
   });
 
+  it("puts a select in a box with the boards' chevron, which nothing reads (VM Website Dev 17's B6)", () => {
+    const { container } = render(
+      <Field label="Rules">
+        <Select defaultValue="a">
+          <option value="a">The default rules</option>
+        </Select>
+      </Field>,
+    );
+    const select = screen.getByRole("combobox", { name: "Rules" });
+    const box = select.parentElement;
+    expect(box).toHaveClass("mf-select-box");
+    const chevron = box?.querySelector("svg.mf-select-chevron");
+    expect(chevron).toHaveAttribute("aria-hidden", "true");
+    expect(container.querySelectorAll("svg")).toHaveLength(1);
+  });
+
   it("is valid and described by its hint alone when nothing is wrong", () => {
     render(
       <Field label="Tagline" hint="A line under the name.">

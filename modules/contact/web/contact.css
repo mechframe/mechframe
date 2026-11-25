@@ -212,23 +212,53 @@
   gap: 0.5rem;
 }
 
-/* The Settings section: the intro, then each topic on a line of its own. */
-.mf-contact-settings,
-.mf-contact-topics {
+/* The Settings section: the intro, then each topic on a line of its own, as the Site tab's board
+   draws them (VM Website `AdminSettings.dc.html`): the section's parts 18px apart, the topics' 12. */
+.mf-contact-settings {
   display: grid;
-  gap: 1rem;
+  gap: 1.125rem;
 }
 
 .mf-contact-topics {
+  display: grid;
+  gap: 0.75rem;
   margin: 0;
   padding: 0;
   border: 0;
 }
 
 .mf-contact-topics legend {
+  margin-bottom: 0.375rem;
   padding: 0;
   font-weight: 600;
   color: var(--mf-color-text-strong);
+}
+
+/* A note's lines at the font's own height in the admin, as the boards draw them (B8). */
+.mf-admin-look .mf-contact-hint {
+  line-height: normal;
+}
+
+/* T1: Add a topic as wide as its words, never the card's width. */
+.mf-contact-topics > .mf-button {
+  justify-self: start;
+}
+
+/* T2: a topic's First is worded as a field's label (13px, muted, at 400) beside its switch, a
+   part of the topic's line: no switch row's rule or room. */
+.mf-contact-first.mf-switch-row {
+  justify-content: flex-start;
+  gap: 0.625rem;
+  min-height: 2.125rem;
+  padding: 0;
+  border-top: 0;
+}
+
+.mf-contact-first .mf-switch-label {
+  font: var(--mf-type-meta);
+  font-weight: 400;
+  line-height: normal;
+  color: var(--mf-color-text-muted);
 }
 
 .mf-contact-topics ol {
@@ -239,16 +269,16 @@
   list-style: none;
 }
 
+/* A topic's name, its First and its moves on one line while they fit, the name taking the room. */
 .mf-contact-topic {
-  display: grid;
-  gap: 0.5rem;
-  align-items: end;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.5rem 0.75rem;
 }
 
-@media (min-width: 48rem) {
-  .mf-contact-topic {
-    grid-template-columns: minmax(0, 1fr) auto auto;
-  }
+.mf-contact-topic > .mf-field {
+  flex: 1 1 16.25rem;
 }
 
 .mf-contact-topic-moves {

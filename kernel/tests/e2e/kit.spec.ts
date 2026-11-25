@@ -223,7 +223,9 @@ for (const [theme, canvas] of Object.entries(THEMES)) {
         ".mf-attention-why": "normal",
         ".mf-table": "normal",
         ".mf-search-input": "normal",
-        ".mf-input": "1.45",
+        // The boards' `.a-in` sets `font: inherit` after its 1.45, so a field is normal there too
+        // (VM Website Dev 17's C1: a 4-row box 92px, not 101).
+        ".mf-input": "normal",
         ".mf-editor-text": "1.8",
       });
       expect(lines.prose).not.toBe("normal");

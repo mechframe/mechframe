@@ -18,7 +18,8 @@ export const SETTINGS_TABS = [
   { to: "/admin/settings/features", label: "Features", permission: "kernel.module.manage" },
   { to: "/admin/settings/system", label: "System", permission: "kernel.settings.manage" },
   { to: "/admin/settings/ai", label: "AI", permission: "kernel.settings.manage" },
-  { to: "/admin/settings/writing", label: "Writing", permission: "kernel.writing.manage" },
+  // A writing style's page belongs to Writing, so the tab stays marked there (VM Website Dev 17's S1).
+  { to: "/admin/settings/writing", label: "Writing", permission: "kernel.writing.manage", under: true },
 ] as const;
 
 export type SettingsPageProps = {
@@ -37,7 +38,7 @@ export function SettingsPage({ page, actions, children }: SettingsPageProps) {
         <ul className="mf-tab-row">
           {tabs.map((tab) => (
             <li key={tab.to}>
-              <NavLink to={tab.to} end className="mf-tab mf-tab-link">
+              <NavLink to={tab.to} end={!("under" in tab)} className="mf-tab mf-tab-link">
                 {tab.label}
               </NavLink>
             </li>

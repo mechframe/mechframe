@@ -1352,7 +1352,8 @@
      (the owner, 2026-11-22: match the boards, keep 1.5 for prose; media's round 2). The tokens
      stay as they are: inside the admin the root takes normal, and so does each part of the kit
      whose `font` shorthand sets type.body or type.small. Long text keeps its own: `.mf-prose`
-     (type.body), the Markdown editor's text (1.8) and a field (1.45, the boards' too). */
+     (type.body) and the Markdown editor's text (1.8). A field's control is normal in the admin too
+     (the boards' `.a-in` sets `font: inherit` after its 1.45): "The admin's forms", below. */
   .mf-admin-look,
   .mf-admin-look :is(
       .mf-button,
@@ -1375,5 +1376,157 @@
       .mf-load-error-why
     ) {
     line-height: normal;
+  }
+
+  /* --- The admin's forms, to the boards ---------------------------------- */
+
+  /* VM Website Dev 17's ask, "Kit to the boards" (decision 0040, amended): the parts every admin
+     form shares, as VM Website's `admin_kit.py` draws them (AdminAI, AdminWriting, AdminStyle and
+     AdminSettings). Admin only: the member pages' boards keep the kit's order and sizes. */
+
+  /* B3, B4: a label at 400; a hint under its control, after any error, 12px at 400. A field's
+     words and its control in the font's own line height (C1: the boards' `.a-in` sets `font:
+     inherit` after its 1.45, so it's normal there too). */
+  .mf-admin-look :is(.mf-field-label, .mf-field-hint) {
+    font-weight: 400;
+    line-height: normal;
+  }
+
+  .mf-admin-look .mf-field > .mf-field-error {
+    order: 1;
+  }
+
+  .mf-admin-look .mf-field > .mf-field-hint {
+    order: 2;
+    font-size: 0.75rem;
+  }
+
+  .mf-admin-look .mf-input {
+    line-height: normal;
+  }
+
+  /* C1: a text box as tall as its rows (a 3-row box 74px, a 4-row 92px), no minimum. */
+  .mf-admin-look textarea.mf-input {
+    min-height: 0;
+  }
+
+  /* B5: a dialog's buttons are the small size, 34px (a form card's too: settings.css). */
+  .mf-admin-look .mf-dialog .mf-button {
+    min-height: 2.125rem;
+  }
+
+  /* B6: the boards' chevron (16px, muted) 10px from the select's right edge, in 30px of room. The
+     box is there on every page; only the admin draws the chevron in place of the browser's arrow. */
+  .mf-select-box {
+    position: relative;
+    display: block;
+  }
+
+  .mf-select-chevron {
+    display: none;
+  }
+
+  .mf-admin-look .mf-select {
+    appearance: none;
+    padding-right: 1.875rem;
+  }
+
+  .mf-admin-look .mf-select-chevron {
+    position: absolute;
+    top: 50%;
+    right: 0.625rem;
+    display: block;
+    color: var(--mf-color-text-muted);
+    pointer-events: none;
+    transform: translateY(-50%);
+  }
+
+  /* B9: a select that's off at the kit's 55%, not the browser's 70%. */
+  .mf-admin-look .mf-select:disabled {
+    cursor: not-allowed;
+    opacity: var(--mf-opacity-55);
+  }
+
+  /* B7: History (and every accordion) 51px tall, radius 12, its title 16px. */
+  .mf-admin-look .mf-accordion {
+    border-radius: 0.75rem;
+  }
+
+  .mf-admin-look .mf-accordion-summary {
+    min-height: 0;
+  }
+
+  .mf-admin-look .mf-accordion-title {
+    font-size: 1rem;
+  }
+
+  /* B10: a warning with nothing to click, above a row, on the canvas's ground, radius 12. */
+  .mf-admin-look .mf-attention--notice {
+    border-radius: 0.75rem;
+    background: var(--mf-color-canvas);
+  }
+
+  /* C2 (and B2): a card's head keeps its button on the title's line, centred on it, and its
+     description 14px under both, 8px below; at 390 too. */
+  .mf-admin-look .mf-card-head:has(> .mf-card-words) {
+    row-gap: 0.5rem;
+  }
+
+  .mf-admin-look .mf-card-words {
+    display: contents;
+  }
+
+  .mf-admin-look .mf-card-description {
+    flex-basis: 100%;
+    order: 1;
+    font: var(--mf-type-small);
+    line-height: normal;
+  }
+
+  /* C3: a card's empty state, a dashed box in the second line colour, its words centred. */
+  .mf-admin-look .mf-card > .mf-empty {
+    align-items: center;
+    gap: 0.375rem;
+    padding: 1.75rem 1rem;
+    border: 1px dashed var(--mf-color-border-strong);
+    border-radius: 0.75rem;
+    text-align: center;
+  }
+
+  .mf-admin-look .mf-card > .mf-empty .mf-empty-title {
+    font-size: 1rem;
+  }
+
+  /* C4: a dialog's lead 14px, in the muted colour. */
+  .mf-admin-look .mf-dialog-lead {
+    font: var(--mf-type-small);
+    line-height: normal;
+    color: var(--mf-color-text-muted);
+  }
+
+  /* C5: a switch row, a 1px rule above it and 12px above and below its words; rows in a list
+     (`.mf-switch-rows`) touch. Its name 16px at 400, its hint 13px; the switch with no edge. */
+  .mf-switch-rows {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .mf-admin-look .mf-switch-row {
+    padding: 0.75rem 0;
+    border-top: 1px solid var(--mf-color-border);
+  }
+
+  .mf-admin-look .mf-switch-label {
+    font-size: 1rem;
+    font-weight: 400;
+  }
+
+  .mf-admin-look .mf-switch {
+    border: 0;
+  }
+
+  .mf-admin-look .mf-switch-knob {
+    top: 4px;
+    left: 4px;
   }
 }

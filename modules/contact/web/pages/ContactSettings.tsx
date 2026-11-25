@@ -66,7 +66,7 @@ export default function ContactSettings() {
               <Field label={`Topic ${String(index + 1)}`}>
                 <Input value={topic.label} maxLength={80} onChange={(event) => { change(index, { label: event.target.value }); }} />
               </Field>
-              <Switch label="First" checked={topic.first} onChange={(first) => { change(index, { first }); }} />
+              <Switch label="First" className="mf-contact-first" checked={topic.first} onChange={(first) => { change(index, { first }); }} />
               <div className="mf-contact-topic-moves">
                 <Button size="small" disabled={index === 0} onClick={() => { swap(index, -1); }} aria-label={`Move ${topic.label || "this topic"} up`}>
                   Up

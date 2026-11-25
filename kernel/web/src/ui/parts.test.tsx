@@ -102,10 +102,16 @@ describe("Attention", () => {
     expect(screen.getByRole("link", { name: "See them" })).toHaveAttribute("href", "/admin/settings/system");
   });
 
-  it("is a warning without an action too", () => {
-    render(<Attention tone="warning" what="No description" why="Search shows the first words instead." />);
+  it("is a warning without an action too, drawn as a notice (VM Website Dev 17's B10)", () => {
+    const { container } = render(<Attention tone="warning" what="No description" why="Search shows the first words instead." />);
     expect(screen.getByRole("img", { name: "Warning" })).toBeInTheDocument();
     expect(screen.queryByRole("link")).toBeNull();
+    expect(container.firstElementChild).toHaveClass("mf-attention--notice");
+  });
+
+  it("is no notice when it has an action", () => {
+    const { container } = renderWithKernel(<Attention tone="info" what="New" why="Read it." action={{ label: "Open", to: "/admin" }} />);
+    expect(container.querySelector(".mf-attention")).not.toHaveClass("mf-attention--notice");
   });
 
   it("says what's only worth knowing as a note, in the info tone (K4.6)", () => {

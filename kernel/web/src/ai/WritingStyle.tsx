@@ -139,7 +139,7 @@ function Editor({ id, start, version }: { id: string | null; start: Shape; versi
 
   return (
     <Card
-      className="mf-settings-card"
+      className="mf-settings-card mf-settings-card--form"
       title={id === null ? "New writing style" : saved.name}
       actions={
         <LinkButton size="small" to="/admin/settings/writing">
@@ -148,7 +148,7 @@ function Editor({ id, start, version }: { id: string | null; start: Shape; versi
       }
     >
       <form
-        className="mf-ai-form"
+        className="mf-ai-form mf-ai-wide-form"
         onSubmit={(event) => {
           event.preventDefault();
           void save();

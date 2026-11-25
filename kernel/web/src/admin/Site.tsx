@@ -145,7 +145,7 @@ function ModuleSections() {
       {sections.map((section) => {
         const Part = lazyPart(section.lazy);
         return (
-          <Card key={section.key} className="mf-settings-card" title={section.title} description={`From the ${section.module} module`}>
+          <Card key={section.key} className="mf-settings-card mf-settings-card--form" title={section.title} description={`From the ${section.module} module`}>
             <ErrorBoundary where={`${section.module}'s settings section`}>
               <Suspense fallback={<p className="mf-settings-quiet">Loading…</p>}>
                 <Part />
@@ -248,7 +248,7 @@ export default function Site() {
             submit();
           }}
         >
-          <Card className="mf-settings-card" title="The site">
+          <Card className="mf-settings-card mf-settings-card--form" title="The site">
             <Conflict form={identity} labels={SITE_LABELS} />
             <div className="mf-settings-grid">
               <Field label="Site name" hint="Set on the host, as SITE_NAME.">
@@ -330,7 +330,7 @@ export default function Site() {
             />
             <History form={identity} labels={SITE_LABELS} />
           </Card>
-          <Card className="mf-settings-card" title="Accounts">
+          <Card className="mf-settings-card mf-settings-card--form" title="Accounts">
             <Conflict form={accounts} labels={ACCOUNT_LABELS} />
             <Switch
               label="Anyone can sign up"
