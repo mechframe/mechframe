@@ -312,6 +312,24 @@ async def remove(db: AsyncSession, content_type: str, content_id: uuid.UUID) -> 
     await _drop(db, content_type, content_id)
 
 
+async def public_document(
+    db: AsyncSession, content_type: str, content_id: uuid.UUID
+) -> Document | None:
+    """The thing as its source shows it now, read from its rows, not the
+    index, when the public may see it: None for a type no module searches, a
+    thing gone or not for the public, or a lifecycle row that isn't published.
+    A link preview starts here (`server_copy.preview`, decision 0067)."""
+    source = _sources.get(content_type)
+    if source is None:
+        return None
+    doc = await source.document(db, content_id)
+    if doc is None or doc.type != content_type or doc.id != content_id:
+        return None
+    if content_id not in await _public(db, content_type, [content_id]):
+        return None
+    return doc
+
+
 # --- the kernel hearing kernel.content.*, and the reindex ------------------------------
 
 

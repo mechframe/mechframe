@@ -257,6 +257,14 @@ _SEED = [
     "('2026-11-24', 'discography.track', '00000000-0000-0000-0000-00000000000d', repeat('f', 64))",
     "INSERT INTO audio_player_play_daily (source, item_id, day, plays) VALUES "
     "('discography.track', '00000000-0000-0000-0000-00000000000d', '2026-11-24', 1)",
+    "INSERT INTO social_channel (id, name, service, descriptor, position, listed_at) VALUES "
+    "('ch-x', '@site', 'twitter', 'Profile', 0, now())",
+    "INSERT INTO social_share (id, content_type, content_id, admin_path, channel_id, "
+    "channel_name, service, text, link, mode, state, buffer_post_id, sent_by_id, sent_by_name, "
+    "created_at, updated_at) VALUES (gen_random_uuid(), 'blog.post', "
+    "'00000000-0000-0000-0000-00000000000f', '/admin/blog/x', 'ch-x', '@site (Profile)', "
+    "'twitter', 'Words', 'https://site.test/blog/x', 'queue', 'queued', 'post-1', :user, 'Rae', "
+    "now(), now())",
 ]
 
 

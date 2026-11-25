@@ -56,5 +56,6 @@ Generated covers (#147) and the footer's shift (#148) are done, and M4i's prompt
 | `contracts/ai-model.md` | The AI's model (decision 0064): Settings → AI's dropdown of Anthropic's newest Opus, Sonnet and Haiku, read each time; a saved model wins over `ANTHROPIC_MODEL`, saved only through its own route (settings' `own_route`); its own list budget. Approved 2026-11-24 as recommended, built in #144 |
 | `contracts/blog-covers.md` | Generated covers (decision 0065): Draw a cover in the post editor, Claude's SVG cleaned by `kernel.svg` and kept as a PNG in the media library (blog 0.1.4, #147). Approved 2026-11-24 |
 | `contracts/footer-shift.md` | The footer's first-load shift (decision 0066): the site frame draws nothing after an empty `<main>`, so the page and the footer arrive together. Approved 2026-11-24 |
+| `contracts/social.md` | Social posting (decision 0067): the `social` module, any module's published item shared to the site's channels through Buffer, from a Share card the kernel's `content.share` slot carries; the token on the host or saved in Settings. Draft, for the owner |
 
 `npm-audit-allowlist/`: the proposal for `npm audit` with an expiring allowlist, adopted 2026-11-17 (#75, decision 0015). The tool, its list and its tests now live in `tools/` and `tests/`; the README stays as the record of why.

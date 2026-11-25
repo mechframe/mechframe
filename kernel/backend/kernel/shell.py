@@ -381,6 +381,9 @@ def install(app: FastAPI, routes: server_copy.Routes, built: Shell) -> None:
     after every other route, so each of those still takes precedence."""
     app.state.public_routes = routes
     app.state.shell = built
+    # A link preview reads the pages as this answers them (decision 0067).
+    registry: ModuleRegistry = app.state.modules
+    server_copy.serve(routes, registry.on)
     router = APIRouter()
     marks = [Depends(public)]
     router.add_api_route(

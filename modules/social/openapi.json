@@ -1,0 +1,834 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Social",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/social/admin/state": {
+      "get": {
+        "summary": "Token State",
+        "description": "Where the token in use comes from and the channels it reached: never the token.",
+        "operationId": "token_state_api_social_admin_state_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenState"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/social/admin/channels": {
+      "post": {
+        "summary": "Check Channels",
+        "description": "Asks Buffer which channels the token reaches, and keeps them: Settings'\nCheck and the Share card's Refresh.",
+        "operationId": "check_channels_api_social_admin_channels_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChannelList"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/social/admin/shares": {
+      "get": {
+        "summary": "Share View",
+        "description": "What the Share card opens with, from the database alone.",
+        "operationId": "share_view_api_social_admin_shares_get",
+        "parameters": [
+          {
+            "name": "type",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 64,
+              "pattern": "^[a-z][a-z0-9-]*\\.[a-z][a-z0-9_]*$",
+              "title": "Type"
+            }
+          },
+          {
+            "name": "id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Share",
+        "description": "Shares the thing to the chosen channels: each refusal before anything leaves.",
+        "operationId": "share_api_social_admin_shares_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShareSend"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareSent"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/social/admin/shares/refresh": {
+      "post": {
+        "summary": "Refresh",
+        "description": "Asks Buffer how each post still waiting there stands.",
+        "operationId": "refresh_api_social_admin_shares_refresh_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Thing"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareHistory"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/social/admin/shares/{share_id}": {
+      "delete": {
+        "summary": "Take Back",
+        "description": "Takes a post still waiting in Buffer back out of it.",
+        "operationId": "take_back_api_social_admin_shares__share_id__delete",
+        "parameters": [
+          {
+            "name": "share_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Share Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareHistory"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ChannelList": {
+        "properties": {
+          "channels": {
+            "items": {
+              "$ref": "#/components/schemas/SocialChannel"
+            },
+            "type": "array",
+            "title": "Channels"
+          },
+          "listed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Listed At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "channels",
+          "listed_at"
+        ],
+        "title": "ChannelList"
+      },
+      "Problem": {
+        "title": "Problem",
+        "description": "RFC 9457 problem details (SPEC 7): `type` is `urn:mechframe:problem:<code>`, `code` is stable, and field errors are in `errors` by dotted path. Some problems carry more members, such as `retry_after`.",
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "errors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "required": [
+          "type",
+          "title",
+          "status",
+          "detail",
+          "code"
+        ],
+        "additionalProperties": true
+      },
+      "ShareHistory": {
+        "properties": {
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/SocialShare"
+            },
+            "type": "array",
+            "title": "History"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "history"
+        ],
+        "title": "ShareHistory"
+      },
+      "SharePreview": {
+        "properties": {
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "image": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "url",
+          "title",
+          "description",
+          "image"
+        ],
+        "title": "SharePreview",
+        "description": "The thing's link, as its page's head tags name it."
+      },
+      "ShareSend": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 3,
+            "pattern": "^[a-z][a-z0-9-]*\\.[a-z][a-z0-9_]*$",
+            "title": "Type"
+          },
+          "id": {
+            "type": "string",
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Id"
+          },
+          "admin_path": {
+            "type": "string",
+            "maxLength": 300,
+            "minLength": 6,
+            "title": "Admin Path"
+          },
+          "channel_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 10,
+            "minItems": 1,
+            "title": "Channel Ids"
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 5000,
+            "title": "Text"
+          },
+          "when": {
+            "type": "string",
+            "enum": [
+              "queue",
+              "now",
+              "at",
+              "draft"
+            ],
+            "title": "When",
+            "default": "queue"
+          },
+          "due_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 40
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due At"
+          },
+          "again": {
+            "type": "boolean",
+            "title": "Again",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "type",
+          "id",
+          "admin_path",
+          "channel_ids",
+          "text"
+        ],
+        "title": "ShareSend"
+      },
+      "ShareSent": {
+        "properties": {
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/SocialShare"
+            },
+            "type": "array",
+            "title": "Results"
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/SocialShare"
+            },
+            "type": "array",
+            "title": "History"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "results",
+          "history"
+        ],
+        "title": "ShareSent"
+      },
+      "ShareView": {
+        "properties": {
+          "ready": {
+            "type": "boolean",
+            "title": "Ready"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "saved",
+              "host",
+              "none"
+            ],
+            "title": "Source"
+          },
+          "unreadable": {
+            "type": "boolean",
+            "title": "Unreadable"
+          },
+          "live": {
+            "type": "boolean",
+            "title": "Live"
+          },
+          "card": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SharePreview"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "channels": {
+            "items": {
+              "$ref": "#/components/schemas/SocialChannel"
+            },
+            "type": "array",
+            "title": "Channels"
+          },
+          "listed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Listed At"
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/SocialShare"
+            },
+            "type": "array",
+            "title": "History"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "ready",
+          "source",
+          "unreadable",
+          "live",
+          "card",
+          "text",
+          "channels",
+          "listed_at",
+          "history"
+        ],
+        "title": "ShareView",
+        "description": "What the Share card opens with, from the database alone."
+      },
+      "SocialChannel": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "service": {
+            "type": "string",
+            "title": "Service"
+          },
+          "network": {
+            "type": "string",
+            "title": "Network"
+          },
+          "descriptor": {
+            "type": "string",
+            "title": "Descriptor"
+          },
+          "usable": {
+            "type": "boolean",
+            "title": "Usable"
+          },
+          "problem": {
+            "type": "string",
+            "title": "Problem"
+          },
+          "queue_paused": {
+            "type": "boolean",
+            "title": "Queue Paused"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "service",
+          "network",
+          "descriptor",
+          "usable",
+          "problem",
+          "queue_paused",
+          "limit"
+        ],
+        "title": "SocialChannel"
+      },
+      "SocialShare": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "channel_id": {
+            "type": "string",
+            "title": "Channel Id"
+          },
+          "channel_name": {
+            "type": "string",
+            "title": "Channel Name"
+          },
+          "service": {
+            "type": "string",
+            "title": "Service"
+          },
+          "network": {
+            "type": "string",
+            "title": "Network"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "link": {
+            "type": "string",
+            "title": "Link"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "queue",
+              "now",
+              "at",
+              "draft"
+            ],
+            "title": "Mode"
+          },
+          "due_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due At"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "sending",
+              "queued",
+              "draft",
+              "sent",
+              "failed",
+              "refused",
+              "unknown",
+              "removed"
+            ],
+            "title": "State"
+          },
+          "error": {
+            "type": "string",
+            "title": "Error"
+          },
+          "external_link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "External Link"
+          },
+          "sent_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sent At"
+          },
+          "sent_by_name": {
+            "type": "string",
+            "title": "Sent By Name"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "channel_id",
+          "channel_name",
+          "service",
+          "network",
+          "text",
+          "link",
+          "mode",
+          "due_at",
+          "state",
+          "error",
+          "external_link",
+          "sent_at",
+          "sent_by_name",
+          "created_at"
+        ],
+        "title": "SocialShare"
+      },
+      "Thing": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 3,
+            "pattern": "^[a-z][a-z0-9-]*\\.[a-z][a-z0-9_]*$",
+            "title": "Type"
+          },
+          "id": {
+            "type": "string",
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "type",
+          "id"
+        ],
+        "title": "Thing",
+        "description": "A thing to share, by its content type and id."
+      },
+      "TokenState": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": [
+              "saved",
+              "host",
+              "none"
+            ],
+            "title": "Source"
+          },
+          "unreadable": {
+            "type": "boolean",
+            "title": "Unreadable"
+          },
+          "channels": {
+            "items": {
+              "$ref": "#/components/schemas/SocialChannel"
+            },
+            "type": "array",
+            "title": "Channels"
+          },
+          "listed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Listed At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source",
+          "unreadable",
+          "channels",
+          "listed_at"
+        ],
+        "title": "TokenState",
+        "description": "Never the token: where the one in use comes from, and what it reached."
+      }
+    }
+  }
+}

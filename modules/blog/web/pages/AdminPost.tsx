@@ -3,7 +3,8 @@
 // whose Write with AI (the kernel's, decision 0058) may fill the title, summary and search words,
 // then Publish, Details (Category, Author, Address, Summary, Cover image, which
 // Draw a cover can fill: decision 0065's generated cover), Related
-// posts, Search and sharing, and After publishing beside them. A live post's save
+// posts, Search and sharing, After publishing and, with social on, Share (decision 0067)
+// beside them. A live post's save
 // changes the site at once (pages' contract §8, 3): its panel says Live, and its
 // button Update. A save someone else got to first asks field by field (the kit's
 // SaveConflict); leaving with changes asks first. pages' editor is the pattern.
@@ -27,6 +28,7 @@ import {
   SaveConflict,
   SearchFields,
   Select,
+  ShareParts,
   Switch,
   TextArea,
   UnsavedDialog,
@@ -666,6 +668,8 @@ function Editor({ saved: first, start }: { saved: Full | null; start: Form }) {
               />
             </div>
           </Card>
+          {/* The site's channels, through social's Share card when it's on (decision 0067). */}
+          {saved ? <ShareParts type="blog.post" id={saved.id} live={live} /> : null}
         </div>
       </div>
       {dirty ? (

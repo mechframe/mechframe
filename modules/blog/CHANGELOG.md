@@ -1,5 +1,9 @@
 # Changelog: blog
 
+## 0.1.5
+
+- The post editor draws the kernel's `ShareParts` after After publishing (decision 0067): with `social` on, its Share card shares a live post to the site's channels through Buffer. Blog imports nothing of social, and draws nothing there without it.
+
 ## 0.1.4
 
 - Generated covers (decision 0065, `dev plans/contracts/blog-covers.md`): Draw a cover in the editor's Cover image block, for someone holding `kernel.ai.write` and `media.image.upload` while a key works and media's storage is on. Claude draws an SVG from the post as it stands, in Editorial, Signal, Minimal or Custom, in the site's colours and with its name in the corner if asked; the kernel cleans it to an allowlist (`kernel.svg`), and Use this cover keeps it in the media library as a 2400 × 1260 PNG with its alt text (`media.public.store`), placed as the post's cover. `GET /admin/covers` says whether storage is on, `POST /admin/covers/draw` draws (one call against the AI's budget, its one repair try included), answering the SVG and a preview the kernel rendered as the PNG will be, and `POST /admin/covers` keeps it (422 `blog.cover_refused`). It requires media `^0.1.4`. The task, its styles and the wordmark are VybeSite's, lifted from `services/anthropic_service.py` at `8be91df`.

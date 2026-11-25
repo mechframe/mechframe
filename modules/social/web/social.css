@@ -1,0 +1,100 @@
+/* social's Share card and Settings section (`dev plans/contracts/social.md`), on the
+   theme's tokens only. Every control is at least 24px each way (WCAG 2.2's target size). */
+
+.mf-social-form,
+.mf-social-settings,
+.mf-social-stack {
+  display: grid;
+  gap: var(--mf-space-4);
+}
+
+.mf-social-stack {
+  gap: var(--mf-space-2);
+}
+
+.mf-social-quiet {
+  margin: 0;
+  font: var(--mf-type-small);
+  color: var(--mf-color-text-muted);
+}
+
+.mf-social-error {
+  margin: 0;
+  font: var(--mf-type-small);
+  color: var(--mf-color-danger);
+}
+
+.mf-social-channels {
+  display: grid;
+  gap: var(--mf-space-2);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.mf-social-channels legend {
+  padding: 0;
+  margin-bottom: var(--mf-space-2);
+  font: var(--mf-type-small);
+  color: var(--mf-color-text-muted);
+}
+
+.mf-social-chips,
+.mf-social-actions,
+.mf-social-share-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mf-space-2);
+}
+
+.mf-social-unusable,
+.mf-social-history,
+.mf-social-listed {
+  display: grid;
+  gap: var(--mf-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mf-social-unusable li {
+  font: var(--mf-type-small);
+  color: var(--mf-color-text-muted);
+}
+
+.mf-social-history-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mf-space-2);
+}
+
+.mf-social-history-head h3 {
+  margin: 0;
+  font: var(--mf-type-body);
+  font-weight: 600;
+}
+
+.mf-social-share {
+  display: grid;
+  gap: var(--mf-space-1);
+  padding-top: var(--mf-space-2);
+  border-top: 1px solid var(--mf-color-border);
+}
+
+.mf-social-share-head,
+.mf-social-listed li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mf-space-2);
+}
+
+.mf-social-share-channel {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

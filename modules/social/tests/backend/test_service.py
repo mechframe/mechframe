@@ -1,0 +1,330 @@
+"""social's service against the test database, with no app (`dev plans/contracts/social.md`
+§7): two sends of one thing at once share once, a saved token that can't be
+opened is reported and never swapped for the host's, and export and erase."""
+
+from __future__ import annotations
+
+import asyncio
+import json
+import uuid
+from collections.abc import AsyncIterator, Iterator
+from datetime import UTC, datetime, timedelta
+from typing import Any
+
+import pytest
+import pytest_asyncio
+from social import buffer, service
+from social import privacy as social_privacy
+from social.models import Channel, Share
+from social.schemas import Settings, ShareSend
+from sqlalchemy import delete, select, text
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from harness.fake_buffer import FakeBuffer
+from kernel import Database, Problem, privacy, server_copy
+from kernel.settings import settings
+
+from ..conftest import make_person
+
+pytestmark = pytest.mark.db
+
+TOKEN = "buffer-token-for-the-service-tests-01"
+
+
+@pytest.fixture(autouse=True)
+def registered() -> Iterator[None]:
+    """social's settings, as an app with social on registers them."""
+    known = "social" in settings.models
+    if not known:
+        settings.register("social", Settings)
+    yield
+    if not known:
+        settings.models.pop("social", None)
+        settings.own_routes.pop("social", None)
+
+
+@pytest.fixture
+def fake() -> Iterator[FakeBuffer]:
+    found = FakeBuffer()
+    before = buffer.use_transport(found.transport)
+    yield found
+    buffer.use_transport(before)
+
+
+@pytest_asyncio.fixture(loop_scope="session")
+async def channel(db: AsyncSession) -> AsyncIterator[str]:
+    """A channel of this test's own, beside whatever another test listed."""
+    channel_id = f"race-{uuid.uuid4().hex[:10]}"
+    version = (await settings.form(db, "social"))["version"]
+    db.add(
+        Channel(
+            id=channel_id,
+            name="@race",
+            service="twitter",
+            position=99,
+            listed_at=datetime.now(UTC),
+            settings_version=version,
+        )
+    )
+    await db.commit()
+    yield channel_id
+    await db.execute(delete(Share).where(Share.channel_id == channel_id))
+    await db.execute(delete(Channel).where(Channel.id == channel_id))
+    await db.commit()
+
+
+async def test_two_sends_of_one_thing_at_once_share_once(
+    database: Database, channel: str, fake: FakeBuffer, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    thing = uuid.uuid4()
+    card = server_copy.Preview(
+        url="https://site.test/blog/race", title="Race", description="", image=None
+    )
+
+    async def preview(db: object, content_type: str, content_id: uuid.UUID) -> server_copy.Preview:
+        return card
+
+    async def token(db: object) -> str:
+        return TOKEN
+
+    read = service.history
+
+    async def slow(db: AsyncSession, content_type: str, content_id: uuid.UUID) -> list[Share]:
+        # Both sends read their history, then wait: without the lock on the
+        # thing, both would find nothing and both would share.
+        found = await read(db, content_type, content_id)
+        await asyncio.sleep(0.3)
+        return found
+
+    monkeypatch.setattr(server_copy, "preview", preview)
+    monkeypatch.setattr(service, "token_in_use", token)
+    monkeypatch.setattr(service, "history", slow)
+    body = ShareSend(
+        type="blog.post",
+        id=str(thing),
+        admin_path="/admin/blog/race",
+        channel_ids=[channel],
+        text="Race",
+        when="draft",
+    )
+
+    async def press() -> int:
+        async with database.sessions() as db:
+            try:
+                await service.send(db, body, user=None)
+            except Problem as refused:
+                return refused.status
+            return 200
+
+    assert sorted(await asyncio.gather(press(), press())) == [200, 409]
+    assert len(fake.made()) == 1
+
+
+async def test_a_late_settings_event_keeps_a_list_checked_since(
+    db: AsyncSession, channel: str
+) -> None:
+    """The token's change at version n forgets the lists checked before n,
+    never one checked at n or after, however late it's delivered (Codex on #152)."""
+    now = (await settings.form(db, "social"))["version"]
+    older = f"old-{uuid.uuid4().hex[:10]}"
+    db.add(
+        Channel(
+            id=older,
+            name="@old",
+            service="twitter",
+            position=98,
+            listed_at=datetime.now(UTC),
+            settings_version=now - 1,
+        )
+    )
+    await db.commit()
+    assert channel in [row.id for row in await service.channels(db)]
+    assert older not in [row.id for row in await service.channels(db)]
+    await service.forget_channels(db, now)
+    await db.commit()
+    left = set(await db.scalars(select(Channel.id).where(Channel.id.in_((channel, older)))))
+    assert left == {channel}
+
+
+async def _keep(db: AsyncSession, values: dict[str, Any]) -> None:
+    await db.execute(text("DELETE FROM kernel_setting WHERE module_id = 'social'"))
+    await db.execute(
+        text(
+            "INSERT INTO kernel_setting (module_id, version, values, updated_at) "
+            "VALUES ('social', 1, CAST(:values AS jsonb), now())"
+        ),
+        {"values": json.dumps(values)},
+    )
+    await db.commit()
+
+
+async def test_a_saved_token_that_cant_be_opened_is_reported_not_swapped(
+    db: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("BUFFER_ACCESS_TOKEN", "host-buffer-token-for-the-tests-0001")
+    try:
+        await _keep(db, {"buffer_token": {"sealed": "not-a-sealed-token", "changes": 1}})
+        state = await service.token_state(db)
+        assert (state.source, state.unreadable, state.usable) == ("saved", True, False)
+        with pytest.raises(Problem) as refused:
+            await service.token_in_use(db)
+        assert refused.value.code == "social.token_unreadable"
+        await _keep(db, {})
+        assert (await service.token_state(db)).source == "host"
+        assert await service.token_in_use(db) == "host-buffer-token-for-the-tests-0001"
+    finally:
+        await db.execute(text("DELETE FROM kernel_setting WHERE module_id = 'social'"))
+        await db.commit()
+
+
+async def test_export_lists_a_persons_shares_and_erase_keeps_them_the_sites(
+    db: AsyncSession,
+) -> None:
+    person, email = await make_person(db)
+    now = datetime.now(UTC)
+    share = Share(
+        content_type="blog.post",
+        content_id=uuid.uuid4(),
+        admin_path="/admin/blog/x",
+        channel_id=f"ch-{uuid.uuid4().hex[:8]}",
+        channel_name="@testsite",
+        service="twitter",
+        text="Jazz",
+        link="https://site.test/blog/jazz",
+        mode="queue",
+        state="queued",
+        sent_by_id=person,
+        sent_by_name="Ada",
+        created_at=now,
+        updated_at=now,
+    )
+    # Shared by the same person before they had a name: kept by their address, its account gone.
+    by_address = Share(
+        content_type="blog.post",
+        content_id=uuid.uuid4(),
+        admin_path="/admin/blog/y",
+        channel_id=share.channel_id,
+        channel_name="@testsite",
+        service="twitter",
+        text="Blues",
+        link="https://site.test/blog/blues",
+        mode="queue",
+        state="sent",
+        sent_by_id=None,
+        sent_by_name=email.upper(),
+        created_at=now,
+        updated_at=now,
+    )
+    # Someone else, who chose the person's address as their name: theirs stays theirs (CodeRabbit on #152).
+    other, _ = await make_person(db)
+    named_so = Share(
+        content_type="blog.post",
+        content_id=uuid.uuid4(),
+        admin_path="/admin/blog/z",
+        channel_id=share.channel_id,
+        channel_name="@testsite",
+        service="twitter",
+        text="Soul",
+        link="https://site.test/blog/soul",
+        mode="queue",
+        state="sent",
+        sent_by_id=other,
+        sent_by_name=email,
+        created_at=now,
+        updated_at=now,
+    )
+    db.add_all([share, by_address, named_so])
+    await db.commit()
+    subject = privacy.Subject(user_id=person, email=email)
+    exported = await social_privacy.export_user_data(db, subject)
+    assert sorted(row["text"] for row in exported["social_shares"]) == ["Blues", "Jazz"]
+    await social_privacy.delete_user_data(db, subject)
+    await db.commit()
+    kept = await db.scalar(
+        select(Share).where(Share.id == share.id).execution_options(populate_existing=True)
+    )
+    assert kept is not None
+    assert (kept.sent_by_id, kept.sent_by_name) == (None, "")
+    theirs = await db.scalar(
+        select(Share).where(Share.id == named_so.id).execution_options(populate_existing=True)
+    )
+    assert theirs is not None
+    assert (theirs.sent_by_id, theirs.sent_by_name) == (other, email)
+    assert (await social_privacy.export_user_data(db, subject))["social_shares"] == []
+    await db.execute(delete(Share).where(Share.id.in_((share.id, by_address.id, named_so.id))))
+    await db.commit()
+
+
+async def test_a_token_saved_while_buffer_lists_leaves_that_list_unused(
+    db: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The version is read before the token: a list Buffer gave while a new
+    token was saved belongs to the old one (CodeRabbit on #152)."""
+
+    async def token(db_: object) -> str:
+        return TOKEN
+
+    form = await settings.form(db, "social")
+
+    async def listed(self: buffer.Client) -> list[buffer.Listed]:
+        # Another admin's save lands while Buffer answers.
+        await db.execute(
+            text(
+                "INSERT INTO kernel_setting (module_id, version, values, updated_at) "
+                "VALUES ('social', :version, '{}'::jsonb, now()) "
+                "ON CONFLICT (module_id) DO UPDATE SET version = :version"
+            ),
+            {"version": form["version"] + 1},
+        )
+        return [
+            buffer.Listed(id=f"meanwhile-{uuid.uuid4().hex[:8]}", name="@new", service="twitter")
+        ]
+
+    monkeypatch.setattr(service, "token_in_use", token)
+    monkeypatch.setattr(buffer.Client, "channels", listed)
+    try:
+        found = await service.list_channels(db)
+        await db.commit()
+        assert [channel["name"] for channel in found["channels"]] == ["@new"]
+        assert await service.channels(db) == []
+    finally:
+        await db.execute(text("DELETE FROM kernel_setting WHERE module_id = 'social'"))
+        await db.execute(delete(Channel).where(Channel.id.like("meanwhile-%")))
+        await db.commit()
+
+
+async def test_a_share_stuck_sending_is_on_the_dashboard_once_its_wait_is_up(
+    db: AsyncSession,
+) -> None:
+    """`send` commits `sending`, then the answers: a server that stopped in
+    between leaves the share there, which counts as not confirmed after five
+    minutes (CodeRabbit on #152)."""
+    await db.execute(delete(Share))
+    now = datetime.now(UTC)
+
+    def stuck(minutes: int) -> Share:
+        return Share(
+            content_type="blog.post",
+            content_id=uuid.uuid4(),
+            admin_path=f"/admin/blog/stuck-{minutes}",
+            channel_id="ch-x",
+            channel_name="@testsite (Profile)",
+            service="twitter",
+            text="Jazz",
+            link="https://site.test/blog/jazz",
+            mode="queue",
+            state="sending",
+            created_at=now - timedelta(minutes=minutes),
+            updated_at=now - timedelta(minutes=minutes),
+        )
+
+    db.add(stuck(1))
+    await db.commit()
+    assert await service.troubled_item(db) is None
+    db.add(stuck(10))
+    await db.commit()
+    item = await service.troubled_item(db)
+    assert item is not None
+    assert item.to == "/admin/blog/stuck-10"
+    await db.execute(delete(Share))
+    await db.commit()

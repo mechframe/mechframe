@@ -22,6 +22,7 @@ export { defineModule, defineSite } from "./src/modules";
 export type { ModuleDefinition, ModuleRoute, SiteDefinition } from "./src/modules";
 export type {
   AdminLinkEntry,
+  ContentShareEntry,
   EditorToolEntry,
   IconName,
   Lazy,
@@ -29,6 +30,7 @@ export type {
   LinkEntry,
   LinkLoaders,
   ProseEmbedEntry,
+  SharePartProps,
   SlotName,
   Slots,
 } from "./src/slots/types";
@@ -47,6 +49,9 @@ export { useSession, useSignOut } from "./src/session/session";
 export type { Session, SessionUser } from "./src/session/session";
 export { RequireAuth, RequirePermission } from "./src/guards/guards";
 export { SLOT_LINKS, useSlot, SlotOutlet } from "./src/slots/slots";
+// Where an admin page offers to share what it's about (`content.share`, decision 0067).
+export { ShareParts } from "./src/slots/ShareParts";
+export type { ShareProps } from "./src/slots/ShareParts";
 export { useModuleEnabled, useSite } from "./src/site/site";
 export type { Site } from "./src/site/site";
 // A third-party script or iframe held for the visitor's consent (hook 6, decision 0052).
