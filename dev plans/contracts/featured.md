@@ -261,3 +261,10 @@ Branch `featured`, `featured_0001`, `depends_on` `kernel_0002` as audio-player's
 ## Changes after approval
 
 None yet.
+
+## Changes as built (the hook, `feat/hook-item-references`)
+
+- **`types` takes the session,** `types(db)`, since which modules are on is read through it.
+- **`pick`'s limit is 20 when none is given,** 1 to 50 when it is, and its words at most 200 characters (ValueError otherwise). Words that are only spaces count as none.
+- **`find`'s answer is held to the ask:** a source that answers an id it wasn't asked for, or a `Ref` under another id, has that left out.
+- **The registry's switches are given to `refs.install`** by `assemble`. Without them, as in a unit test, every source counts as on.
