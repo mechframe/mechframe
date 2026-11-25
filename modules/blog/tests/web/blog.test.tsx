@@ -7,6 +7,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { defineModule } from "@/kernel";
 import { renderApp, testUser } from "@/kernel/testing";
 
 import type { Card, Full, Listed, LivePost } from "../../web/api";
@@ -415,6 +416,39 @@ describe("the editor", () => {
     expect(await screen.findByText("Kept for when the site has comments.")).toBeInTheDocument();
     expect(screen.getByText("Kept for when the site has Community.")).toBeInTheDocument();
     expect(screen.getByText("Kept for when the site has a newsletter.")).toBeInTheDocument();
+  });
+
+  it("draws the site's Share card for the post, with social on, and none without it", async () => {
+    const given: string[] = [];
+    const social = defineModule({
+      id: "social",
+      routes: { public: [], member: [], admin: [] },
+      slots: {
+        "content.share": [
+          {
+            id: "buffer",
+            lazy: () =>
+              Promise.resolve({
+                default: ({ type, id, live, adminPath }: { type: string; id: string; live: boolean; adminPath: string }) => {
+                  given.push(`${type} ${id} ${String(live)} ${adminPath}`);
+                  return <p>The Share card</p>;
+                },
+              }),
+          },
+        ],
+      },
+    });
+    routed({ [`GET ${ONE}`]: { status: 200, body: full({ status: "published", published_at: "2026-11-20T12:00:00+00:00" }) } });
+    renderApp({ path: `/admin/blog/${ID}`, modules: [blog, social], session: editor });
+    expect(await screen.findByText("The Share card")).toBeInTheDocument();
+    expect(given.at(-1)).toBe(`blog.post ${ID} true /admin/blog/${ID}`);
+  });
+
+  it("draws no Share card while social is off", async () => {
+    routed({ [`GET ${ONE}`]: { status: 200, body: full({ status: "published", published_at: "2026-11-20T12:00:00+00:00" }) } });
+    renderApp({ path: `/admin/blog/${ID}`, modules: [blog], session: editor });
+    expect(await screen.findByText("Live. Saving changes the post on the site at once.")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Share" })).toBeNull();
   });
 
   it("says Live and Update for a live post, and Unpublish takes it down", async () => {

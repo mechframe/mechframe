@@ -1,7 +1,7 @@
 {
   "id": "blog",
   "name": "Blog",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "status": "experimental",
   "category": "content",
   "summary": "Dated posts in Markdown, with categories, scheduling, related posts and a cover from media or the AI.",

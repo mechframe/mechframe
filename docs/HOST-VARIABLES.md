@@ -203,7 +203,7 @@ The kernel's defaults suit a small site on one service. Change these only with a
 
 Each module's own host variables, from its `module.json`, and the settings its admin page holds. A planned module's are as its scaffold has them so far; they grow as it's built.
 
-### `blog` 0.1.4 (experimental)
+### `blog` 0.1.5 (experimental)
 
 Dated posts in Markdown, with categories, scheduling, related posts and a cover from media or the AI.
 
@@ -286,6 +286,21 @@ The site's fixed pages, About to Privacy, written in Markdown and placed in the 
 No host variables of its own.
 
 **From the kernel:** Write with AI needs `ANTHROPIC_API_KEY` or a key saved in Settings → AI.
+
+### `social` 0.1.0 (experimental)
+
+Shares a published post, release or product to the site's social channels through Buffer, from its own admin page.
+
+| Variable | Needed | On Railway | What it's for |
+| --- | --- | --- | --- |
+| `BUFFER_ACCESS_TOKEN` | Optional · Secret · Environment only | You type it (`mechframe add` lists it) | The Buffer account's access token, from publish.buffer.com's API settings, typed into the host's variables by the owner; one saved in Settings wins over it |
+| `SOCIAL_RATE_LIMIT` | Optional · Environment only | You type it (`mechframe add` lists it) | How many shares and channel checks a person may make, as count/period; 30/1h by default, under Buffer's own limit of 100 requests every 15 minutes |
+
+Set in the site's admin (Admin → Settings), not on the host:
+
+| Setting | Type | Default | What it's for |
+| --- | --- | --- | --- |
+| `buffer_token` | string | blank | A Buffer access token saved in Settings, sealed; it wins over the host's BUFFER_ACCESS_TOKEN |
 
 ### `audio-player` 0.1.0 (planned, not built yet)
 
@@ -374,4 +389,4 @@ Read only by tests, local runs and the CLI. None of these belong in a live host'
 
 Typed into the host by the site's owner, and rotated by typing a new value; for `ENCRYPTION_KEYS`, the new key goes in front and the old one stays behind it.
 
-`ANTHROPIC_API_KEY`, `CAMPAIGNS_BOUNCE_IMAP_PASSWORD`, `CAMPAIGNS_RESEND_WEBHOOK_SECRET`, `DATABASE_URL`, `ENCRYPTION_KEYS`, `RESEND_API_KEY`, `SECRET_KEY`, `SMTP_PASSWORD`, `STORAGE_SECRET_ACCESS_KEY`.
+`ANTHROPIC_API_KEY`, `BUFFER_ACCESS_TOKEN`, `CAMPAIGNS_BOUNCE_IMAP_PASSWORD`, `CAMPAIGNS_RESEND_WEBHOOK_SECRET`, `DATABASE_URL`, `ENCRYPTION_KEYS`, `RESEND_API_KEY`, `SECRET_KEY`, `SMTP_PASSWORD`, `STORAGE_SECRET_ACCESS_KEY`.

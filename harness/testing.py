@@ -18,7 +18,8 @@ queued now: the probe modules', `harness.probe`, which only the test support
 mounts), users (accounts made without judging their passwords) and seed (the
 modules' seed data, `kernel.seed`, hook 4) and ai (the fake Anthropic's
 answers and the requests it was sent, `harness.fake_anthropic`, decision
-0058). Still to come with K2 and K3:
+0058) and buffer (the fake Buffer's trouble and the posts it made,
+`harness.fake_buffer`, decision 0067). Still to come with K2 and K3:
 oauth/grant, delete-hooks.
 """
 
@@ -38,6 +39,7 @@ from sqlalchemy import delete, select
 
 from harness import probe
 from harness.fake_anthropic import FakeAnthropic
+from harness.fake_buffer import FakeBuffer
 from harness.registry import discover
 from kernel import ai, clock, create_app, crypto, jobs, seed, storage
 from kernel.access import needs_step_up, public, undeclared
@@ -85,12 +87,54 @@ async def reset(request: Request, body: Reset | None = None) -> Response:
         await session.commit()
     _captured(request).clear()
     _fake_anthropic(request).forget()
+    _fake_buffer(request).forget()
     return Response(status_code=204)
 
 
 def _fake_anthropic(request: Request) -> FakeAnthropic:
     fake: FakeAnthropic = request.app.state.fake_anthropic
     return fake
+
+
+def _fake_buffer(request: Request) -> FakeBuffer:
+    fake: FakeBuffer = request.app.state.fake_buffer
+    return fake
+
+
+class BufferTrouble(BaseModel):
+    """The fake Buffer's next posts go wrong in these ways, in order, and these
+    addresses of the site don't answer (`harness.fake_buffer`)."""
+
+    trouble: list[str] = Field(default_factory=list, max_length=20)
+    down: list[str] = Field(default_factory=list, max_length=20)
+    #: Posts Buffer has sent since, and posts deleted there, by Buffer's id.
+    sent: list[str] = Field(default_factory=list, max_length=20)
+    deleted: list[str] = Field(default_factory=list, max_length=20)
+
+
+@router.post("/buffer", status_code=204)
+async def buffer_trouble(body: BufferTrouble, request: Request) -> Response:
+    fake = _fake_buffer(request)
+    unknown = sorted(set(body.trouble) - {"refuse", "lose", "limit", "fault"})
+    if unknown:
+        raise Problem(
+            "kernel.invalid_request", 422, f"The fake Buffer has no {', '.join(unknown)}."
+        )
+    fake.trouble.extend(body.trouble)
+    fake.down.update(body.down)
+    for post_id in body.sent:
+        fake.posts[post_id].update(
+            status="sent", sentAt="2026-11-24T13:00:00Z", externalLink=f"https://network.test/{post_id}"
+        )
+    for post_id in body.deleted:
+        fake.posts.pop(post_id, None)
+    return Response(status_code=204)
+
+
+@router.get("/buffer")
+async def buffer_made(request: Request) -> dict[str, Any]:
+    """The posts the fake Buffer made since the last reset, oldest first."""
+    return {"posts": _fake_buffer(request).made()}
 
 
 class AiAnswer(BaseModel):
@@ -323,6 +367,12 @@ def build_test_app(database_url: str | None = None, *, env_file: bool = True) ->
     fake = FakeAnthropic()
     ai.use_transport(fake.transport)
     app.state.fake_anthropic = fake
+    # And every Buffer call to its fake, never to Buffer (decision 0067).
+    from social import buffer as social_buffer  # on the path once the modules are loaded
+
+    fake_buffer = FakeBuffer()
+    social_buffer.use_transport(fake_buffer.transport)
+    app.state.fake_buffer = fake_buffer
     app.include_router(router, prefix="/api/_test")
     started = app.router.lifespan_context
 

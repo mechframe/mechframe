@@ -7,7 +7,7 @@
     {
       "id": "blog",
       "name": "Blog",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "status": "experimental",
       "category": "content",
       "summary": "Dated posts in Markdown, with categories, scheduling, related posts and a cover from media or the AI.",
@@ -162,6 +162,29 @@
         "The page is dated news or a story with an author and comments: that's a blog post",
         "The page is laid out from designed sections and blocks: VybeSite's builder comes as pages' next version",
         "The page is drawn from the site's own code and never changes: put it in the site's own pages"
+      ],
+      "requires": {
+        "kernel": "^0.1",
+        "modules": {}
+      },
+      "conflicts": []
+    },
+    {
+      "id": "social",
+      "name": "Social",
+      "version": "0.1.0",
+      "status": "experimental",
+      "category": "comms",
+      "summary": "Shares a published post, release or product to the site's social channels through Buffer, from its own admin page.",
+      "use_when": [
+        "The site's people should post a new blog post, release or product to the site's LinkedIn, Facebook, X, Threads, Bluesky or Mastodon accounts",
+        "One Buffer account already holds the site's channels, or can: Buffer posts to each network for it",
+        "Whoever shares should pick the channels, edit the words and choose when it goes out, and see how each post stands"
+      ],
+      "avoid_when": [
+        "Posts should go out by themselves whenever something publishes",
+        "A post needs a picture or a video of its own (Instagram, TikTok, YouTube, Pinterest): 0.1.0 posts links",
+        "The site wants likes, clicks and other numbers back from the networks"
       ],
       "requires": {
         "kernel": "^0.1",
