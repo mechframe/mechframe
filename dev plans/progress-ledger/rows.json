@@ -808,9 +808,9 @@
    "step": "Step 2: discography, audio player, featured",
    "status": "next",
    "status_label": "Next",
-   "prs": "#145",
+   "prs": "#145 #149",
    "decisions": "0070 0071",
-   "note": "discography, the music library: releases, tracks, credits and streaming links with covers from media, a track playing from an upload made into an MP3 stream by a job (soundfile) or from a SoundCloud link, its four admin boards and three pages, and its public.py and public.ts for audio-player, featured and a site's own pages (#145, decision 0070); audio-player, the player modules hand items to: inline and docked bars, a queue and waveforms, one thing playing at a time with YouTube's player, SoundCloud behind its controls, and plays counted once per listener a day with nothing kept that identifies anyone (decision 0071); featured to come"
+   "note": "discography, the music library: releases, tracks, credits and streaming links with covers from media, a track playing from an upload made into an MP3 stream by a job (soundfile) or from a SoundCloud link, its four admin boards and three pages, and its public.py and public.ts for audio-player, featured and a site's own pages (#145, decision 0070); audio-player, the player modules hand items to: inline and docked bars, a queue and waveforms, one thing playing at a time with YouTube's player, SoundCloud behind its controls, and plays counted once per listener a day with nothing kept that identifies anyone (#149, decision 0071); featured to come"
   },
   {
    "milestone": "MechFrame v1.0",

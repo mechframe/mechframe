@@ -3,7 +3,7 @@ feature: The audio-player module, the site's one player for its own audio: inlin
 status: approved
 approved: 2026-11-24 (the owner: "Approve as recommended", the six answers in §8 as recommended)
 plan: `docs/plans/vibrant-mindz-backend/backend-plan.md` (§2, 2) and `players-admin.md` ("Front end"); `dev plans/2026-11-24-side-lane-m9-audio-player.md`; VM Website's boards `design/site/Main.dc.html` (the Spotlight bar, the hero's Play, the Releases deck, the Videos player), `Release.dc.html` (the docked bar) and `AdminDashboard.dc.html` ("Plays this week")
-pr: — (two PRs: audio-player 0.1.0, then discography 0.1.1, §8, 1); decision 0071; migration `audio_player_0001`
+pr: #149 (audio-player 0.1.0), then discography 0.1.1's own (§8, 1); decision 0071; migration `audio_player_0001`
 ---
 
 # Contract: `audio-player`
