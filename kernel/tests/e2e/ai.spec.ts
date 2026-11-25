@@ -4,7 +4,7 @@
 // either tab or in the dialog, in either theme. The Model row lists Anthropic's newest of each kind,
 // and a model saved there is used until Use the host's model clears it (decision 0064). Every AI
 // call goes to the harness's fake Anthropic.
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
 import { THEMES, axe, makeUser, signInTo, theme } from "./support";
 
@@ -61,6 +61,55 @@ test("a model saved in Settings → AI is used, and Use the host's model clears 
   await expect(model).toHaveValue("claude-opus-5-5");
   await expect(page.getByRole("button", { name: "Use the host's model" })).toHaveCount(0);
 });
+
+/** `locator`'s box, in CSS pixels. */
+async function boxOf(locator: Locator): Promise<{ top: number; bottom: number; middle: number; right: number }> {
+  const box = await locator.boundingBox();
+  if (!box) throw new Error("not drawn");
+  return { top: box.y, bottom: box.y + box.height, middle: box.y + box.height / 2, right: box.x + box.width };
+}
+
+const FAILED = "Couldn't load Anthropic's model list, so the model in use is the only one shown.";
+
+for (const [name, canvas] of Object.entries(THEMES)) {
+  // VM Website Dev 16's A1 to A4 (`2026-11-24-admin-ai-parity.md`): the Model row as its board draws it,
+  // in its Model list failed state, which shows all four.
+  test(`the Model row sits as its board draws it, at 1440 and 390, in ${name}`, async ({ page }) => {
+    await page.route("**/api/kernel/admin/ai/models", (route) =>
+      route.fulfill({
+        status: 502,
+        contentType: "application/problem+json",
+        body: JSON.stringify({ type: "urn:mechframe:problem:kernel.ai_failed", title: "Refused", status: 502, detail: "Refused.", code: "kernel.ai_failed" }),
+      }),
+    );
+    await signedInAdmin(page, "/admin/settings/ai");
+    const key = page.getByRole("form", { name: "Anthropic key" });
+    const row = page.getByRole("form", { name: "Model" });
+    await expect(row.getByText(FAILED)).toBeVisible();
+    for (const width of [1440, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      await theme(page, name, canvas);
+      const at = `at ${String(width)}`;
+      // A1: a 1px rule above the row, 18px from the key's form and 18px from the row's first line.
+      const rule = await row.evaluate((form) => {
+        const style = getComputedStyle(form);
+        return { width: style.borderTopWidth, style: style.borderTopStyle, below: style.paddingTop };
+      });
+      expect.soft(rule, at).toEqual({ width: "1px", style: "solid", below: "18px" });
+      expect.soft((await boxOf(row)).top - (await boxOf(key)).bottom, at).toBeCloseTo(18, 0);
+      // A2: where the model comes from, first.
+      const label = row.locator("label", { hasText: /^Model$/ });
+      expect.soft((await boxOf(row.getByRole("status"))).bottom, at).toBeLessThan((await boxOf(label)).top);
+      // A3: the state's sentence is the select's one hint.
+      await expect.soft(row.getByRole("combobox", { name: "Model" }), at).toHaveAccessibleDescription(FAILED);
+      await expect.soft(page.getByText("Anthropic's newest model of each kind, listed when this page opens."), at).toHaveCount(0);
+      // A4: Try again on the label's line, centred on it, at the row's right.
+      const again = await boxOf(row.getByRole("button", { name: "Try again" }));
+      expect.soft(again.middle, at).toBeCloseTo((await boxOf(label)).middle, 0);
+      expect.soft(again.right, at).toBeCloseTo((await boxOf(row)).right, 0);
+    }
+  });
+}
 
 test("the writing rules and a style are kept in Settings → Writing", async ({ page }) => {
   await signedInAdmin(page, "/admin/settings/writing");

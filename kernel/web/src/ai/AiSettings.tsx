@@ -10,6 +10,10 @@
  * dropdown of Anthropic's newest Opus, Sonnet and Haiku, read from Anthropic
  * each time the page opens, in the words of VM Website's board. The host's
  * ANTHROPIC_MODEL is used until one is saved; Use the host's model clears it.
+ * The row is drawn as its board draws it (VM Website Dev 16's A1 to A4,
+ * `2026-11-24-admin-ai-parity.md`): a form of its own under a rule, where the
+ * model comes from said first, one sentence in the hint's place, and Try again
+ * on the label's line.
  */
 import { useState } from "react";
 
@@ -94,12 +98,35 @@ function ModelRow({ list, model, source, version, onSaved }: { list: ModelList; 
     }
   };
 
+  // One sentence under the select, the state's in the hint's place: the list's hint would be untrue
+  // when there's no key or the list failed (VM Website Dev 16's A3).
+  const hint = noKey
+    ? "Anthropic's model list loads once a key works."
+    : failed
+      ? "Couldn't load Anthropic's model list, so the model in use is the only one shown."
+      : "Anthropic's newest model of each kind, listed when this page opens.";
+
+  // The row as its board draws it (A1 to A4): a form of its own under a rule, where the model comes
+  // from said first, and Try again on the label's line.
   return (
-    <div className="mf-ai-form">
+    <form className="mf-ai-form mf-ai-model" aria-label="Model">
+      <p className="mf-ai-note" role="status">
+        {modelSourceWords(source)}
+      </p>
       {inUse && !inUse.listed ? (
         <Attention tone="warning" what={`Anthropic doesn't list ${inUse.id} for this key, so the AI's writing help may fail.`} why="Choose another, or use the host's model." />
       ) : null}
-      <Field label="Model" hint="Anthropic's newest model of each kind, listed when this page opens.">
+      <Field
+        label="Model"
+        hint={hint}
+        aside={
+          failed ? (
+            <Button size="small" disabled={list.isFetching} onClick={() => void list.refetch()}>
+              Try again
+            </Button>
+          ) : null
+        }
+      >
         <Select
           value={chosen}
           disabled={!shown || saving}
@@ -115,16 +142,6 @@ function ModelRow({ list, model, source, version, onSaved }: { list: ModelList; 
           ))}
         </Select>
       </Field>
-      <p className="mf-ai-note">{modelSourceWords(source)}</p>
-      {noKey ? <p className="mf-ai-note">Anthropic's model list loads once a key works.</p> : null}
-      {failed ? (
-        <div className="mf-ai-model-failed">
-          <p className="mf-ai-note">Couldn't load Anthropic's model list, so the model in use is the only one shown.</p>
-          <Button size="small" disabled={list.isFetching} onClick={() => void list.refetch()}>
-            Try again
-          </Button>
-        </div>
-      ) : null}
       <div className="mf-dialog-actions">
         {source === "settings" ? (
           <Button disabled={saving} onClick={() => void pick(null, "Using the host's model.")}>
@@ -135,7 +152,7 @@ function ModelRow({ list, model, source, version, onSaved }: { list: ModelList; 
           {saving ? "Saving…" : "Save the model"}
         </Button>
       </div>
-    </div>
+    </form>
   );
 }
 
@@ -222,7 +239,8 @@ export default function AiSettings() {
           {sourceWords(source)}
         </p>
         <form
-          className="mf-ai-form"
+          className="mf-ai-form mf-ai-key"
+          aria-label="Anthropic key"
           onSubmit={(event) => {
             event.preventDefault();
             if (typed.trim()) void keep(typed.trim(), "Key saved.");
