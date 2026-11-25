@@ -367,7 +367,9 @@ class ProbeRefs(refs.Source):
     async def pick(
         self, db: AsyncSession, q: str | None, *, cursor: str | None, limit: int
     ) -> refs.RefPage:
-        skip = int(cursor) if cursor and cursor.isascii() and cursor.isdecimal() else 0
+        if cursor is not None and not (cursor.isascii() and cursor.isdecimal()):
+            raise ValueError(f"{cursor!r} isn't a page of the probe's notes.")
+        skip = int(cursor) if cursor else 0
         # Newest edit first, as the hook says (cubic on #157).
         statement = select(ProbeNote).order_by(ProbeNote.edited_at.desc(), ProbeNote.id)
         if q:

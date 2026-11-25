@@ -64,7 +64,10 @@ class Things(refs.Source):
             for each in reversed(self.items.values())
             if not q or q.lower() in each.title.lower()
         ]
-        start = int(cursor) if cursor and cursor.isdecimal() else 0
+        # A cursor that isn't one of its own is refused, as a real source's is (cubic on #157).
+        if cursor is not None and not (cursor.isascii() and cursor.isdecimal()):
+            raise ValueError(f"{cursor!r} isn't a page of these things.")
+        start = int(cursor) if cursor else 0
         end = start + limit
         return {"items": found[start:end], "next_cursor": str(end) if end < len(found) else None}
 

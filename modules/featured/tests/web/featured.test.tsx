@@ -190,7 +190,9 @@ describe("featured's words", () => {
       expect(exists("2026-11-01T01:30")).toBe(true);
       expect(exists("")).toBe(false);
     } finally {
-      process.env.TZ = zone;
+      // Unset, it's deleted: assigning undefined would set the string "undefined" (cubic on #157).
+      if (zone === undefined) delete process.env.TZ;
+      else process.env.TZ = zone;
     }
   });
 });

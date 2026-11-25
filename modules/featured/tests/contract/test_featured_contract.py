@@ -323,6 +323,10 @@ async def test_the_picker_finds_drafts_too_newest_edit_first(browser: Browser) -
     ]
     wrong = await browser.http.get(f"{SLOTS}/{slot['key']}/pick", params={"type": "youtube"})
     assert (wrong.status_code, wrong.json()["code"]) == (422, "featured.not_accepted")
+    lost = await browser.http.get(
+        f"{SLOTS}/{slot['key']}/pick", params={"type": "probe.note", "cursor": "nope"}
+    )
+    assert (lost.status_code, lost.json()["code"]) == (422, "kernel.invalid_request")
     await admin.http.aclose()
 
 

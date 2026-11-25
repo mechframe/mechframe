@@ -537,6 +537,10 @@ async def test_the_picker_reads_only_what_the_slot_takes(
         "Gather Around",
     ]
     assert rest["next_cursor"] is None
+    # A cursor that isn't a page is refused, never read as the first (cubic on #157).
+    await _refused(
+        "kernel.invalid_request", service.choices(db, slot.key, "music.track", None, "nope")
+    )
     for kind in ("music.album", "youtube"):
         await _refused("featured.not_accepted", service.choices(db, slot.key, kind, None, None))
     sources.switches.off.add("music")
