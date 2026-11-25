@@ -59,6 +59,15 @@
     border-bottom: 0;
   }
 
+  /* Nothing after <main> is drawn while it's empty, or holds only the session guard's empty busy
+     mark: the page and the footer arrive together, so the page's arrival never moves the footer
+     (decision 0066; the busy mark, CodeRabbit on #148). Important, because these rules are in the
+     layer mf.base, and a site's own footer styles, outside any layer, would win otherwise. */
+  .mf-site > #main:empty ~ *,
+  .mf-site > #main:has(> [aria-busy="true"]:only-child:empty) ~ * {
+    display: none !important;
+  }
+
   .mf-site-header nav,
   .mf-site-footer nav,
   .mf-slot-links {

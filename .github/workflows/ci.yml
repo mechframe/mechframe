@@ -90,7 +90,8 @@ jobs:
     needs: changes
     if: needs.changes.outputs.python == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Green runs take 13 to 18 minutes; 20 cut off pip-audit after the tests passed (the owner, 2026-11-24).
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
