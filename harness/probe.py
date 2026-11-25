@@ -20,7 +20,8 @@ is judged by the bot check (hook 5), and it adds a bot provider of its own,
 video player's host in the category `media` (hook 6), so the site asks
 consent for `media` while it's on. A note made by someone signed in is
 theirs, and `export_user_data` and `delete_user_data` (hook 7) give and
-anonymise a person's notes. Its Dashboard parts (hook 8): the setup step
+anonymise a person's notes. Its notes are what another module may point at
+(hook 11, `REFS`): `probe.note`, live once published. Its Dashboard parts (hook 8): the setup step
 "Set the probe's count", done once its settings' count is 2 or more, and a
 "Needs you" item, both for those who hold `kernel.settings.manage`.
 Their table, `probe_note`, lives on a metadata of its own (`TABLES`), which
@@ -30,13 +31,13 @@ the test support makes when its app starts, so the migrations never see it.
 from __future__ import annotations
 
 import uuid
-from collections.abc import AsyncIterator, Mapping
+from collections.abc import AsyncIterator, Mapping, Sequence
 from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
-from sqlalchemy import MetaData, String, Text, delete, select
+from sqlalchemy import DateTime, MetaData, String, Text, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -44,9 +45,11 @@ from kernel import (
     BotProof,
     attention,
     bot,
+    clock,
     jobs,
     lifecycle,
     privacy,
+    refs,
     search,
     seed,
     server_copy,
@@ -125,6 +128,10 @@ class ProbeNote(lifecycle.Publishable, _Tables):
     body: Mapped[str] = mapped_column(Text, default="")
     #: Who wrote it: only the seed says (hook 4).
     author_id: Mapped[uuid.UUID | None] = mapped_column(default=None)
+    #: When it was made or last changed: what featured's picker lists first (hook 11).
+    edited_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=clock.now, onupdate=clock.now
+    )
 
 
 class NewNote(BaseModel):
@@ -331,6 +338,53 @@ class ProbeSearch(search.Source):
 SEARCH = (ProbeSearch(),)
 
 
+# --- hook 11, item references: notes another module may point at ------------------------
+
+
+def _ref(note: ProbeNote) -> refs.Ref:
+    live = note.status == lifecycle.PUBLISHED
+    return refs.Ref(
+        id=note.id,
+        title=note.title,
+        line=f"A note, {note.slug}",
+        image=None,
+        path=f"/probe/notes/{note.slug}" if live else None,
+        live=live,
+    )
+
+
+class ProbeRefs(refs.Source):
+    """The probe's notes as `featured` points at them: drafts too, each `live`
+    once published, found by title, newest edit first, a page at a time by its place."""
+
+    type = "probe.note"
+    label = "Notes"
+
+    async def find(self, db: AsyncSession, ids: Sequence[uuid.UUID]) -> dict[uuid.UUID, refs.Ref]:
+        found = await db.scalars(select(ProbeNote).where(ProbeNote.id.in_(ids)))
+        return {note.id: _ref(note) for note in found}
+
+    async def pick(
+        self, db: AsyncSession, q: str | None, *, cursor: str | None, limit: int
+    ) -> refs.RefPage:
+        if cursor is not None and not (cursor.isascii() and cursor.isdecimal()):
+            raise ValueError(f"{cursor!r} isn't a page of the probe's notes.")
+        skip = int(cursor) if cursor else 0
+        # Newest edit first, as the hook says (cubic on #157).
+        statement = select(ProbeNote).order_by(ProbeNote.edited_at.desc(), ProbeNote.id)
+        if q:
+            statement = statement.where(ProbeNote.title.ilike(f"%{q}%"))
+        notes = list(await db.scalars(statement.offset(skip).limit(limit + 1)))
+        more = len(notes) > limit
+        return {
+            "items": [_ref(note) for note in notes[:limit]],
+            "next_cursor": str(skip + limit) if more else None,
+        }
+
+
+REFS = (ProbeRefs(),)
+
+
 # --- hook 4, seed data: notes a demo can start from ---------------------------------------
 
 #: The seeded notes' slugs: the first two published, the third a draft.
@@ -522,6 +576,7 @@ MODULES = (
         pages=ProbePages(),
         publishable=(ProbeNote,),
         searchable=SEARCH,
+        referable=REFS,
         seed=seed_notes,
         bot_provider=BOT_PROVIDER,
         csp=CSP,

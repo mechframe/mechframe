@@ -284,6 +284,18 @@ YouTube, SoundCloud, Spotify and Bandcamp players from a pasted link, loaded onl
 
 No host variables of its own.
 
+### `featured` 0.1.0 (experimental)
+
+Homepage players staff choose: ordered, schedulable lists of other modules' items or YouTube links.
+
+No host variables of its own.
+
+Set in the site's admin (Admin → Settings), not on the host:
+
+| Setting | Type | Default | What it's for |
+| --- | --- | --- | --- |
+| `oembed_titles` | bool | `true` | Fill a pasted YouTube link's title from YouTube's oEmbed |
+
 ### `media` 0.1.4 (experimental)
 
 Images uploaded once with alt text, cleaned of metadata, and placed by any module.
@@ -328,18 +340,6 @@ Set in the site's admin (Admin → Settings), not on the host:
 | `guest_comments` | bool | `true` | Guests may comment; every guest comment waits for approval (owner answer Q4) |
 | `edit_window_minutes` | int | `15` | Minutes a comment stays editable |
 | `max_links` | int | `2` | Links allowed in one comment |
-
-### `featured` 0.1.0 (planned, not built yet)
-
-Named slots of ordered, schedulable placements, such as a homepage spotlight or featured products.
-
-No host variables of its own.
-
-Set in the site's admin (Admin → Settings), not on the host:
-
-| Setting | Type | Default | What it's for |
-| --- | --- | --- | --- |
-| `oembed_titles` | bool | `true` | Fill a pasted YouTube link's title from YouTube's oEmbed |
 
 ### `licensing` 0.1.0 (planned, not built yet)
 

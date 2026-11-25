@@ -28,6 +28,11 @@ describe("SaveBar", () => {
     expect(screen.getByRole("button", { name: "Discard" })).toBeDisabled();
   });
 
+  it("says what changed after the count, when it's told", () => {
+    render(<SaveBar changes={2} onSave={vi.fn()} onDiscard={vi.fn()} what="Hook It Up added, Gather Around scheduled" />);
+    expect(screen.getByRole("region", { name: "Changes not saved" })).toHaveTextContent("2 changes not saved: Hook It Up added, Gather Around scheduled");
+  });
+
   it("keeps room below what scrolls while it shows, so focus is never under it (WCAG 2.4.11)", () => {
     const { rerender, unmount } = render(<SaveBar changes={2} onSave={vi.fn()} onDiscard={vi.fn()} />);
     // jsdom lays nothing out: the bar is 0px, plus its gap and a ring's room.

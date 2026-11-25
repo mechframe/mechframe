@@ -20,6 +20,8 @@ export type SaveBarProps = {
   saving?: boolean;
   /** The save's words: "Save" by default, "Save and go live" where saving publishes. */
   saveLabel?: string;
+  /** What changed, after the count: "Hook It Up added, Gather Around scheduled". */
+  what?: string;
 };
 
 /** The room the bar takes below what scrolls: its height, its 16px gap, and the 8px a focus ring needs. */
@@ -34,7 +36,7 @@ function keepRoom(): void {
   else root.style.setProperty(SAVE_BAR_ROOM, `${String(Math.max(...rooms.values()))}px`);
 }
 
-export function SaveBar({ changes, onSave, onDiscard, saving = false, saveLabel = "Save" }: SaveBarProps) {
+export function SaveBar({ changes, onSave, onDiscard, saving = false, saveLabel = "Save", what }: SaveBarProps) {
   const bar = useRef<HTMLDivElement>(null);
   const shown = changes > 0;
 
@@ -62,6 +64,7 @@ export function SaveBar({ changes, onSave, onDiscard, saving = false, saveLabel 
       <span className="mf-save-bar-dot" aria-hidden="true" />
       <span className="mf-save-bar-words">
         {changes === 1 ? "1 change not saved" : `${String(changes)} changes not saved`}
+        {what ? `: ${what}` : null}
       </span>
       <span className="mf-save-bar-actions">
         <Button onClick={onDiscard} disabled={saving}>

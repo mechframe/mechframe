@@ -265,6 +265,16 @@ _SEED = [
     "'00000000-0000-0000-0000-00000000000f', '/admin/blog/x', 'ch-x', '@site (Profile)', "
     "'twitter', 'Words', 'https://site.test/blog/x', 'queue', 'queued', 'post-1', :user, 'Rae', "
     "now(), now())",
+    "INSERT INTO featured_slot (key, label, accepts, kinds, on_dashboard, position, version, "
+    "created_at, updated_at) VALUES ('spotlight', 'Spotlight', "
+    '\'["discography.track", "youtube"]\', \'[{"key": "music-video", "label": "Music video"}]\', '
+    "true, 0, 1, now(), now())",
+    "INSERT INTO featured_placement (id, slot_key, position, ref_type, ref_id, url, video_id, "
+    "title, kind, starts_at, ends_at, created_at, updated_at) VALUES "
+    "(gen_random_uuid(), 'spotlight', 0, 'discography.track', "
+    "'00000000-0000-0000-0000-00000000000d', NULL, NULL, NULL, NULL, now(), NULL, now(), now()), "
+    "(gen_random_uuid(), 'spotlight', 1, NULL, NULL, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', "
+    "'dQw4w9WgXcQ', 'Hook It Up', 'music-video', NULL, NULL, now(), now())",
 ]
 
 
