@@ -12,7 +12,7 @@ import userEvent from "@testing-library/user-event";
 import { useRef } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { CONSENT_COOKIE } from "@/kernel";
+import { CONSENT_COOKIE, useConsent } from "@/kernel";
 import { renderApp, renderWithKernel, testUser } from "@/kernel/testing";
 import { Equalizer, PlayButton, PlayerBar, PlayerDock, Waveform, useExclusive, type PlayerItem } from "@/modules/audio-player/public";
 
@@ -181,6 +181,35 @@ describe("the bar", () => {
     );
     await userEvent.click(screen.getByRole("button", { name: "Play Catalyst, first" }));
     expect(made.soundcloud[0]?.calls.filter((call) => call !== "volume")).toEqual(["load", "play"]);
+  });
+
+  it("doesn't grant media again when Pause is pressed after it was withdrawn (CodeRabbit on #149)", async () => {
+    routed(SETTINGS);
+    const { player, made } = testPlayer();
+    function Withdraw() {
+      const media = useConsent("media");
+      return (
+        <button type="button" onClick={media.withdraw}>
+          Withdraw media
+        </button>
+      );
+    }
+    draw(
+      <>
+        <PlayButton queue={[CATALYST]} label="Catalyst" />
+        <Withdraw />
+      </>,
+      player,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Play Catalyst" }));
+    act(() => {
+      made.soundcloud[0]?.events.playing();
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Withdraw media" }));
+    expect(document.cookie).not.toContain(`${CONSENT_COOKIE}=media`);
+    await userEvent.click(screen.getByRole("button", { name: "Pause Catalyst" }));
+    expect(player.snapshot().state).toBe("paused");
+    expect(document.cookie).not.toContain(`${CONSENT_COOKIE}=media`);
   });
 
   it("says when a track can't play", async () => {

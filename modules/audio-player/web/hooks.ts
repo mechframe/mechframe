@@ -68,7 +68,9 @@ export function usePlayer(): PlayerControls {
         player.play(queue, index, page);
       },
       toggle: () => {
-        pressing(snapshot.item);
+        // Only a press that will play is consent: a Pause never grants it (CodeRabbit on #149).
+        const going = snapshot.state === "playing" || snapshot.state === "loading" || snapshot.state === "blocked";
+        if (!going) pressing(snapshot.item);
         player.toggle();
       },
       pause: () => {

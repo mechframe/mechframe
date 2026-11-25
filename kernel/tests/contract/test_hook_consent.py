@@ -58,6 +58,9 @@ async def test_the_site_lists_media_while_a_module_with_a_media_host_is_on(api: 
         await switch("audio-player", False)
         # probe-addon needs the probe, so it's off too; it named no category anyway.
         assert await _consent(api) == {"mode": "ask", "categories": []}
+        await switch("embeds", True)
+        # embeds' players alone still wait for media (CodeRabbit on #149).
+        assert await _consent(api) == {"mode": "ask", "categories": ["media"]}
     finally:
         for module in MEDIA:
             await switch(module, True)

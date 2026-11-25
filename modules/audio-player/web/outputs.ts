@@ -295,7 +295,9 @@ export const soundcloudOutput: OutputFactory = (events) => {
       while (at < lengths.length - 1 && ms >= before(at + 1)) at += 1;
       const within = ms - before(at);
       if (at === sound) {
-        widget.seekTo(within);
+        // Still being skipped to: the newest seek is the one it goes to once it plays (CodeRabbit on #149).
+        if (pendingSeek !== null) pendingSeek = within;
+        else widget.seekTo(within);
         return;
       }
       pendingSeek = within;

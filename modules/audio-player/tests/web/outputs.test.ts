@@ -270,6 +270,20 @@ describe("SoundCloud's widget", () => {
     expect(said).toEqual(["playing", "playing", "ended"]);
   });
 
+  it("keeps the newest seek into a track still being skipped to (CodeRabbit on #149)", async () => {
+    const { calls, flush, output, say } = await loaded({ lengths: [60_000, 60_000], deferred: true });
+    say("ready");
+    flush();
+    output.seek(90_000);
+    expect(calls.at(-1)).toBe("skip 1");
+    // A second seek into the same track before it plays: it wins.
+    output.seek(100_000);
+    say("play");
+    flush();
+    expect(calls).toContain("seek 40000");
+    expect(calls).not.toContain("seek 30000");
+  });
+
   it("drops a getter's answer that comes after another load (CodeRabbit on #149)", async () => {
     const { calls, flush, output, say, times } = await loaded({ lengths: [60_000, 60_000], deferred: true });
     say("ready");
