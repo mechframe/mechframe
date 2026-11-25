@@ -79,7 +79,7 @@ Side lane M11, 2026-11-25, about 14:00 to 17:30 Eastern (19:00 to 22:30 UTC).
   - `harness.fake_youtube`, with `/api/_test/youtube`;
   - `/featured.html`;
   - `tests/test_migrations.py`'s `_SEED`.
-- **discography 0.1.2** on `feat/discography-0-1-2`, its own PR (#158 expected, from GitHub at push):
+- **discography 0.1.2** on `feat/discography-0-1-2`, its own PR, #159 (#158 is the main lane's kit PR):
   - `refs.py` with `discography.release` and `discography.track`;
   - `GET /releases?ids=` and `GET /tracks?ids=`, with `useReleases({ ids })` and `useTracks(ids)`;
   - VM Website's D1 to D4, K2, K3's words, K6's card and K8, in discography's own files.
