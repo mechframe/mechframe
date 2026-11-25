@@ -111,15 +111,20 @@ export const soundcloudOutput: OutputFactory = (events) => {
   let volume = 1;
   /** Counts each load: an answer that comes for an earlier one is dropped. */
   let loads = 0;
-  /** Each track's length: one for a track, each of a playlist's; none until known. */
+  /** How many tracks it has: a playlist's, or one. Kept apart from their lengths (CodeRabbit on #149). */
+  let count = 1;
+  /** Every track's length, once the widget gives them all; none before. */
   let lengths: number[] = [];
+  /** The playing track's own length, while not every track's is known. */
+  let trackLength: number | null = null;
   /** The track of a playlist that plays now. */
   let sound = 0;
   /** Where to go in a track skipped to, once it plays. */
   let pendingSeek: number | null = null;
 
+  /** Where a track starts on the item's timeline: 0 while the lengths aren't all known. */
   const before = (at: number) => lengths.slice(0, at).reduce((sum, each) => sum + each, 0);
-  const total = () => (lengths.length ? before(lengths.length) : null);
+  const total = () => (lengths.length ? before(lengths.length) : trackLength);
   const settle = () => {
     if (watchdog) clearTimeout(watchdog);
     watchdog = null;
@@ -150,6 +155,14 @@ export const soundcloudOutput: OutputFactory = (events) => {
     const duration = typeof sound === "object" && sound !== null ? (sound as { duration?: unknown }).duration : undefined;
     return typeof duration === "number" && duration > 0 ? duration : 0;
   };
+  /** The playing track's own length, while the timeline is a track at a time. */
+  const measure = (current: SoundCloudWidget, load: number, position: number) => {
+    current.getDuration((ms) => {
+      if (load !== loads) return;
+      trackLength = ms > 0 ? ms : null;
+      events.time(position, total());
+    });
+  };
   const readied = () => {
     ready = true;
     const load = loads;
@@ -157,18 +170,16 @@ export const soundcloudOutput: OutputFactory = (events) => {
     current?.setVolume(Math.round(volume * 100));
     current?.getSounds((sounds) => {
       if (load !== loads) return;
+      count = Math.max(1, sounds.length);
       const found = sounds.map(lengthOf);
       if (found.length && found.every((length) => length > 0)) {
         lengths = found;
         events.time(0, total());
         return;
       }
-      // A playlist's tracks not all known yet: the track playing, as the widget gives it.
-      current.getDuration((ms) => {
-        if (load !== loads) return;
-        lengths = ms > 0 ? [ms] : [];
-        events.time(0, total());
-      });
+      // Not every track's length is known yet: a track at a time, as the widget gives each.
+      lengths = [];
+      measure(current, load, 0);
     });
     if (wanted === "play") begin();
   };
@@ -198,7 +209,10 @@ export const soundcloudOutput: OutputFactory = (events) => {
           const load = loads;
           made.getCurrentSoundIndex((at) => {
             if (load !== loads) return;
+            const moved = at !== sound;
             sound = at;
+            // A track at a time: the new track's own length.
+            if (moved && !lengths.length) measure(made, load, 0);
             if (pendingSeek !== null) {
               made.seekTo(pendingSeek);
               pendingSeek = null;
@@ -213,8 +227,9 @@ export const soundcloudOutput: OutputFactory = (events) => {
           events.time(before(sound) + (event?.currentPosition ?? 0), total());
         });
         // The widget moves itself on to a playlist's next track, and says PLAY.
+        // The item ends after its last track, whether or not every length is known.
         made.bind(on.FINISH, () => {
-          if (sound >= lengths.length - 1) events.ended();
+          if (sound >= count - 1) events.ended();
         });
         made.bind(on.ERROR, () => {
           settle();
@@ -235,7 +250,9 @@ export const soundcloudOutput: OutputFactory = (events) => {
       wanted = "pause";
       settle();
       loads += 1;
+      count = 1;
       lengths = [];
+      trackLength = null;
       sound = 0;
       pendingSeek = null;
       // Its widget is on its way: that one starts it.

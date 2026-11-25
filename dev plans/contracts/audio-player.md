@@ -246,7 +246,8 @@ None yet.
 - **A SoundCloud playlist has one timeline** (CodeRabbit), going beyond §2's "plays as one item, the widget running through its tracks":
   - its tracks' lengths add up;
   - the place is the tracks before plus where the playing one is;
-  - a seek into another track skips to it and seeks once it plays.
+  - a seek into another track skips to it and seeks once it plays;
+  - while the widget hasn't given every track's length, it runs a track at a time, each with its own length, and still ends only after its last track (the track count is kept apart).
 - **The widget's answers:** a getter's answer for an earlier load is dropped, and FINISH reads the track it knows. The same link loaded again starts over. A Widget API that failed to load is asked for again (Codex).
 - **The dock's Escape gives focus back** to Queue or Volume when the panel held it (CodeRabbit).
 - **The settings route answers through `answer()`,** as SPEC 7 asks of a route that sets a header. A source is refused unless it `fullmatch`es `<module>.<type>` (CodeRabbit).

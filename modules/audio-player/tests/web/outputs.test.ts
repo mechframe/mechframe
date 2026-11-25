@@ -241,6 +241,26 @@ describe("SoundCloud's widget", () => {
     expect(times.at(-1)).toEqual([10_000, 120_000]);
   });
 
+  it("plays a playlist with a length it doesn't give to its end, a track at a time (CodeRabbit on #149)", async () => {
+    // The second track's length isn't known yet: each track's own place shows.
+    const { output, say, said, times, calls } = await loaded({ lengths: [60_000, 0] });
+    say("ready");
+    expect(times.at(-1)).toEqual([0, 60_000]);
+    say("play");
+    say("progress", { currentPosition: 5_000 });
+    expect(times.at(-1)).toEqual([5_000, 60_000]);
+    output.seek(20_000);
+    expect(calls.at(-1)).toBe("seek 20000");
+    say("finish");
+    // Not ended: the playlist has a second track.
+    expect(said).toEqual(["playing"]);
+    say("play");
+    say("progress", { currentPosition: 3_000 });
+    expect(times.at(-1)).toEqual([3_000, null]);
+    say("finish");
+    expect(said).toEqual(["playing", "playing", "ended"]);
+  });
+
   it("drops a getter's answer that comes after another load (CodeRabbit on #149)", async () => {
     const { calls, flush, output, say, times } = await loaded({ lengths: [60_000, 60_000], deferred: true });
     say("ready");
