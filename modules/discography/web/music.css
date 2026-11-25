@@ -16,6 +16,33 @@
   .mf-music-board--panel {
     grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem);
   }
+
+  /* The boards' side columns (K8): Tracks' panel 340 px, Credits' Roles 280 px. */
+  .mf-music-board--tracks {
+    grid-template-columns: minmax(0, 1fr) 21.25rem;
+  }
+
+  .mf-music-board--roles {
+    grid-template-columns: minmax(0, 1fr) 17.5rem;
+  }
+}
+
+/* A note that is the page's own child keeps 20 px from what follows (D3). */
+.mf-music-note {
+  margin-bottom: var(--mf-space-5);
+}
+
+/* A group of controls under one label, as a field's label is (D1): no outline. */
+.mf-music-group {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.mf-music-group > legend {
+  padding: 0;
+  margin-bottom: var(--mf-space-2);
 }
 
 .mf-music-main,
@@ -84,6 +111,17 @@
   }
 }
 
+/* A track's row: its column as wide as its two move buttons, the pill on a line of its own on a phone (D4). */
+.mf-music-release--track {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+@media (min-width: 40rem) {
+  .mf-music-release--track {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+}
+
 .mf-music-thumb,
 .mf-music-thumb-plain {
   width: 100%;
@@ -130,10 +168,17 @@
 
 /* --- the admin: the album editor ----------------------------------------- */
 
+/* One above the other on a phone, so "Choose a back cover" stays in the card (D4). */
 .mf-music-covers {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--mf-space-4);
+}
+
+@media (min-width: 40rem) {
+  .mf-music-covers {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .mf-music-cover {
@@ -158,9 +203,10 @@
   color: var(--mf-color-text-muted);
 }
 
+/* The role as wide as its words, "Produced by" whole, up to 11rem (D2). */
 .mf-music-credit {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr) auto;
+  grid-template-columns: fit-content(11rem) minmax(0, 1fr) auto;
   gap: var(--mf-space-2);
   align-items: end;
 }

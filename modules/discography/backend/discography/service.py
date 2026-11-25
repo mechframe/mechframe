@@ -660,6 +660,62 @@ async def newest(db: AsyncSession, limit: int = PER_PAGE) -> list[Release]:
     )
 
 
+#: The ids one read by id takes (0.1.2).
+MAX_IDS = 50
+
+
+async def releases_by_id(
+    db: AsyncSession, ids: Sequence[uuid.UUID], *, kind: str | None = None
+) -> list[dict[str, Any]]:
+    """The live releases among `ids`, in the order given, each once: a
+    homepage's deck, after `featured` chose them."""
+    wanted = list(dict.fromkeys(ids))
+    if not wanted:
+        return []
+    statement = select(Release).where(Release.id.in_(wanted), lifecycle.visible(Release))
+    if kind is not None:
+        statement = statement.where(Release.kind == kind)
+    found = {release.id: release for release in await db.scalars(statement)}
+    return await cards(db, [found[each] for each in wanted if each in found])
+
+
+async def tracks_by_id(db: AsyncSession, ids: Sequence[uuid.UUID]) -> list[dict[str, Any]]:
+    """The live tracks that play among `ids`, in the order given, each once,
+    with its release: a homepage's Spotlight, after `featured` chose them."""
+    wanted = list(dict.fromkeys(ids))
+    if not wanted:
+        return []
+    rows = list(
+        await db.execute(
+            select(Track, Release)
+            .join(Release, Release.id == Track.release_id)
+            .where(Track.id.in_(wanted), lifecycle.visible(Release), playable_clause())
+        )
+    )
+    releases = list({release.id: release for _, release in rows}.values())
+    pictures = await pictures_of(db, releases)
+    numbered = {
+        track.id: number
+        for tracks in (await tracks_of(db, [release.id for release in releases])).values()
+        for number, track in _shown_tracks(tracks)
+    }
+    label = (await settings_of(db)).show_explicit_badge
+    found: dict[uuid.UUID, dict[str, Any]] = {}
+    for track, release in rows:
+        cover = pictures.get(release.cover_id) if release.cover_id else None
+        found[track.id] = {
+            **_line(release, track, numbered[track.id], label=label),
+            "release": {
+                "title": release.title,
+                "slug": release.slug,
+                "artist_line": release.artist_line,
+                "cover": _cover(cover),
+                "path": release_path(release),
+            },
+        }
+    return [found[each] for each in wanted if each in found]
+
+
 def _valid_slug(slug: str) -> bool:
     return len(slug) <= MAX_SLUG and _SLUG.fullmatch(slug) is not None
 

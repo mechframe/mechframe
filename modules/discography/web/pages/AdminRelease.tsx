@@ -440,12 +440,14 @@ function Editor({ server, notice }: { server: FullRelease; notice: ReactNode }) 
         />
       ) : null}
       {silent ? (
-        <Attention
-          tone="warning"
-          what={`${silent.title} can't play`}
-          why="It has no audio file or link, so it's hidden from the release's page and the site's players skip it."
-          action={{ label: "Add audio", to: `/admin/music/tracks?track=${silent.id}` }}
-        />
+        <div className="mf-music-note">
+          <Attention
+            tone="danger"
+            what={`${silent.title} can't play`}
+            why="It has no audio file or link, so it's hidden from the release's page and the site's players skip it."
+            action={{ label: "Add audio", to: `/admin/music/tracks?track=${silent.id}` }}
+          />
+        </div>
       ) : null}
       <div className="mf-music-editor">
         <div className="mf-music-main">
@@ -629,7 +631,7 @@ function Editor({ server, notice }: { server: FullRelease; notice: ReactNode }) 
                   {tracks.map((track, index) => {
                     const state = trackState(track.audio);
                     return (
-                      <li key={track.id} className="mf-music-release">
+                      <li key={track.id} className="mf-music-release mf-music-release--track">
                         <span className="mf-music-order">
                           <Button
                             size="small"
@@ -692,8 +694,8 @@ function Editor({ server, notice }: { server: FullRelease; notice: ReactNode }) 
                 {live && saved.published_at ? <span>since {when(saved.published_at)}</span> : null}
               </p>
               {!live ? (
-                <fieldset className="mf-music-stack">
-                  <legend>When</legend>
+                <fieldset className="mf-music-stack mf-music-group">
+                  <legend className="mf-field-label">When</legend>
                   <label>
                     <input
                       type="radio"

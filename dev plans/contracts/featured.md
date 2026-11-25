@@ -298,3 +298,12 @@ None changes what was approved; each says what §2 meant, or adds what a screen 
   - the kit's `SaveBar` gains `what`, the words after its count (the main lane's OK);
   - the picker reads 20 a page.
 - **The harness:** its probe notes give `probe.note` (hook 11), its test support has a fake YouTube (`harness.fake_youtube`, `/api/_test/youtube`), and `/featured.html?slot=<key>` draws a slot through `useFeatured`.
+
+## Changes as built (discography 0.1.2, `feat/discography-0-1-2`)
+
+None changes what was approved; each says what §2 meant.
+
+- **The two sources' lines** leave out what a release hasn't got: a release with no year reads "petro and J Tone, 1 track". A release's count is of its tracks that play. The picture is the front cover's smallest copy.
+- **The picker** searches the title alone (a track's own, not its release's), drafts too, newest edit first; its cursor is `<updated_at>~<id>`, and one that isn't is a ValueError, which featured answers 422.
+- **The reads by id** take `ids` repeated (`?ids=a&ids=b`). `GET /releases?ids=` answers the releases on the site, as `GET /releases` does, with or without a track that plays (featured's `live` already asked for one), still filtered by `kind`, on one page; a `cursor` beside `ids` is 422. `GET /tracks?ids=` answers `TrackCard`s, each a `TrackLine` numbered among its release's tracks that play, with its `release`.
+- **VM Website's parity ask** (the owner's split, "Side lane, after featured") rides in this PR: D1 (a group's label over its controls, no outline), D2 (the role as wide as its words), D3 (20 px under a page's note), D4 (a track row's buttons and the covers at 390), K2 (a track that can't play is a red note everywhere, Credits' note amber), K3's words ("Live", "Tracklist to come" amber), K6's card round each table, and K8 (Tracks' panel 340 px, Credits' Roles 280 px).

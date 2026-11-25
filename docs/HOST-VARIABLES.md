@@ -262,7 +262,7 @@ Set in the site's admin (Admin → Settings), not on the host:
 | `intro` | string | `Send a message and we'll reply by email.` | The line under the Contact page's heading |
 | `topics` | json | a list (see the module's MODULE.md) | What a message can be about, in the form's order; a first topic's new messages come first in the Inbox |
 
-### `discography` 0.1.1 (experimental)
+### `discography` 0.1.2 (experimental)
 
 Albums, EPs and singles with tracks, credits and streaming links; tracks play from an upload or a SoundCloud link.
 
