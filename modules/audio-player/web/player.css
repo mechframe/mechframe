@@ -1,0 +1,313 @@
+/* audio-player's look (dev plans/contracts/audio-player.md §2), from the theme's
+   tokens only: the Spotlight's bar and waveform, the Release board's dock, the
+   rows' equalizer, and SoundCloud's hidden widget. A site restyles any of it. */
+
+.mf-player-bar,
+.mf-player-dock {
+  display: flex;
+  align-items: center;
+  gap: var(--mf-space-4);
+  padding: var(--mf-space-3) var(--mf-space-4);
+  background: var(--mf-color-surface-raised);
+  color: var(--mf-color-text);
+  border: 1px solid var(--mf-color-border);
+  border-radius: var(--mf-radius-card);
+}
+
+.mf-player-dock {
+  position: sticky;
+  bottom: 0;
+  border-radius: 0;
+  border-width: 1px 0 0;
+  box-shadow: var(--mf-shadow-e2);
+}
+
+.mf-player-cover {
+  flex: none;
+  width: 52px;
+  height: 52px;
+  border-radius: var(--mf-radius-md);
+  object-fit: cover;
+  background: var(--mf-color-well);
+}
+
+.mf-player-words {
+  flex: 0 1 280px;
+  min-width: 0;
+}
+
+.mf-player-title,
+.mf-player-line,
+.mf-player-note,
+.mf-player-count {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mf-player-title {
+  color: var(--mf-color-text-strong);
+  font-weight: 600;
+}
+
+.mf-player-line,
+.mf-player-count,
+.mf-player-hint {
+  color: var(--mf-color-text-muted);
+  font-size: var(--mf-type-small);
+}
+
+.mf-player-note {
+  color: var(--mf-color-warning);
+  font-size: var(--mf-type-small);
+}
+
+.mf-player-credit {
+  color: var(--mf-color-link);
+}
+
+.mf-player-transport {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--mf-space-2);
+}
+
+.mf-player-button {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  color: var(--mf-color-text-strong);
+  background: transparent;
+  border: 1px solid var(--mf-color-border-control);
+  border-radius: var(--mf-radius-full);
+  cursor: pointer;
+}
+
+.mf-player-button:hover {
+  background: var(--mf-color-neutral-tint);
+}
+
+.mf-player-play {
+  width: 52px;
+  height: 52px;
+  color: var(--mf-color-on-accent);
+  background: var(--mf-color-accent);
+  border-color: var(--mf-color-accent);
+}
+
+.mf-player-play:hover {
+  background: var(--mf-color-accent-hover);
+}
+
+.mf-player-button:focus-visible,
+.mf-wave-live:focus-visible,
+.mf-player-progress:focus-visible,
+.mf-player-queue-row:focus-visible {
+  outline: none;
+  box-shadow: var(--mf-shadow-focus-ring);
+}
+
+/* The waveform: bars 4 wide on a 7 step, the played layer over the unplayed. */
+.mf-wave {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 48px;
+}
+
+.mf-wave-live {
+  cursor: pointer;
+  border-radius: var(--mf-radius-sm);
+}
+
+.mf-wave-picture {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.mf-wave-rest {
+  fill: var(--mf-color-border-strong);
+}
+
+.mf-wave-done {
+  fill: var(--mf-color-accent);
+}
+
+/* The dock's progress, a thin bar, and the count under it. */
+.mf-player-progress-box {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.mf-player-progress {
+  position: relative;
+  height: 4px;
+  margin: var(--mf-space-2) 0;
+  overflow: hidden;
+  background: var(--mf-color-border);
+  border-radius: var(--mf-radius-full);
+  cursor: pointer;
+}
+
+.mf-player-progress-done {
+  position: absolute;
+  inset: 0;
+  background: var(--mf-color-accent);
+  transform-origin: left center;
+}
+
+.mf-player-extra {
+  position: relative;
+  display: flex;
+  flex: none;
+  gap: var(--mf-space-2);
+}
+
+.mf-player-popover {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + var(--mf-space-2));
+  z-index: 2;
+  margin: 0;
+  padding: var(--mf-space-2);
+  background: var(--mf-color-surface-raised);
+  border: 1px solid var(--mf-color-border);
+  border-radius: var(--mf-radius-md);
+  box-shadow: var(--mf-shadow-e3);
+}
+
+.mf-player-queue {
+  width: 280px;
+  max-height: 320px;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.mf-player-queue-row {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  padding: var(--mf-space-2);
+  color: var(--mf-color-text);
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: var(--mf-radius-sm);
+  cursor: pointer;
+}
+
+.mf-player-queue-row[aria-current="true"] {
+  color: var(--mf-color-text-strong);
+  background: var(--mf-color-neutral-tint);
+}
+
+.mf-player-volume input {
+  width: 160px;
+  accent-color: var(--mf-color-accent);
+}
+
+/* The bars by the row that plays; they move only for those who don't ask for less motion. */
+.mf-player-eq {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 14px;
+}
+
+.mf-player-eq > span {
+  width: 3px;
+  height: 40%;
+  background: var(--mf-color-accent);
+  border-radius: var(--mf-radius-xs);
+}
+
+.mf-player-eq > span:nth-child(2) {
+  height: 75%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .mf-player-eq-on > span {
+    animation: mf-player-eq 0.9s var(--mf-motion-easing-in-out) infinite alternate;
+  }
+
+  .mf-player-eq-on > span:nth-child(2) {
+    animation-delay: -0.3s;
+  }
+
+  .mf-player-eq-on > span:nth-child(3) {
+    animation-delay: -0.6s;
+  }
+}
+
+@keyframes mf-player-eq {
+  from {
+    height: 25%;
+  }
+
+  to {
+    height: 100%;
+  }
+}
+
+.mf-player-settings {
+  display: grid;
+  gap: var(--mf-space-4);
+  max-width: 40rem;
+}
+
+/* SoundCloud's widget, off the page behind the site's controls; shown only when a browser wants its own Play. */
+.mf-player-host {
+  position: fixed;
+  bottom: 0;
+  left: -10000px;
+  width: 320px;
+  height: 166px;
+}
+
+.mf-player-host iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.mf-player-host-shown {
+  bottom: var(--mf-space-4);
+  left: var(--mf-space-4);
+  z-index: 50;
+  overflow: hidden;
+  background: var(--mf-color-surface);
+  border-radius: var(--mf-radius-md);
+  box-shadow: var(--mf-shadow-e3);
+}
+
+/* The Spotlight's layout under 600px: the cover and title, the waveform under them, then the controls. */
+@media (width <= 600px) {
+  .mf-player-bar {
+    flex-wrap: wrap;
+    gap: var(--mf-space-3);
+  }
+
+  .mf-player-bar .mf-player-words {
+    flex: 1 1 0;
+  }
+
+  .mf-player-bar .mf-wave {
+    order: 3;
+    flex-basis: 100%;
+  }
+
+  .mf-player-bar .mf-player-transport {
+    order: 4;
+  }
+}
+
+/* The dock under 700px drops its progress, Queue and Volume, as the board does. */
+@media (width <= 700px) {
+  .mf-player-dock .mf-player-wide {
+    display: none;
+  }
+}
