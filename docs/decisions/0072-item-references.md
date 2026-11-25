@@ -24,7 +24,8 @@
      - `find` asks each id once, at most 200, and answers only those asked. `pick` takes 1 to 50 a page and a query `q` of at most 200 characters, and refuses a source's page past its limit or holding anything but `refs.Ref` (CubicDev on #153).
   3. **The start refuses:**
      - what isn't a `refs.Source`;
-     - a type outside the module's own id, or longer than 80 characters, what a module that points stores it in;
+     - a type outside the module's own id;
+     - a type longer than 80 characters, the most a module that points stores;
      - a source without a label;
      - a type two modules give.
   4. **No table and no route of the kernel's.** The module that points answers through its own routes, under its own permission, and keeps `{type, id}` with no foreign key (SPEC 10).
