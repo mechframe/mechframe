@@ -22,6 +22,12 @@ export type Column<Row> = {
   cell: (row: Row) => ReactNode;
   /** `end` for numbers and actions. */
   align?: "start" | "end";
+  /**
+   * The column that names each row (a person, a post, a track): its cell is the
+   * row's header, so a screen reader names the row by it, and it's drawn at 600,
+   * as the boards draw a row's name (K6). One column at most.
+   */
+  rowHeader?: boolean;
 };
 
 export type TableProps<Row> = {
@@ -105,11 +111,17 @@ export function Table<Row>({ caption, captionHidden = false, columns, rows, rowK
         <tbody>
           {rows.map((row) => (
             <tr key={rowKey(row)}>
-              {columns.map((column) => (
-                <td key={column.key} className={column.align === "end" ? "mf-cell-end" : undefined}>
-                  {column.cell(row)}
-                </td>
-              ))}
+              {columns.map((column) =>
+                column.rowHeader ? (
+                  <th key={column.key} scope="row" className={column.align === "end" ? "mf-table-name mf-cell-end" : "mf-table-name"}>
+                    {column.cell(row)}
+                  </th>
+                ) : (
+                  <td key={column.key} className={column.align === "end" ? "mf-cell-end" : undefined}>
+                    {column.cell(row)}
+                  </td>
+                ),
+              )}
             </tr>
           ))}
         </tbody>

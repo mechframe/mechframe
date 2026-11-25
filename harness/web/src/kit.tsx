@@ -37,6 +37,7 @@ import {
   SearchFields,
   SectionHistory,
   Select,
+  StatCard,
   Switch,
   Table,
   Tabs,
@@ -57,7 +58,7 @@ const PEOPLE: Person[] = [
 ];
 
 const COLUMNS: Column<Person>[] = [
-  { key: "name", header: "Name", cell: (person) => person.name },
+  { key: "name", header: "Name", cell: (person) => person.name, rowHeader: true },
   { key: "email", header: "Email", cell: (person) => person.email },
   { key: "roles", header: "Roles", cell: (person) => person.roles },
   { key: "joined", header: "Joined", cell: (person) => person.joined },
@@ -219,6 +220,18 @@ function AdminLook() {
         <Chip pressed={false} onPressedChange={() => undefined}>
           Scheduled
         </Chip>
+      </div>
+
+      <h3>Dashboard cards</h3>
+      <div className="kit-grid">
+        <StatCard
+          label="Plays this week"
+          value="1,284"
+          line="Up 18% on last week"
+          state={{ tone: "success", label: "Live" }}
+          link={{ label: "Music", to: "/kit.html#tabs" }}
+          level={3}
+        />
       </div>
 
       <h3>Needs you</h3>

@@ -814,7 +814,7 @@
     text-align: left;
   }
 
-  .mf-table th {
+  .mf-table thead th {
     padding: 0.75rem 0.625rem;
     font: var(--mf-type-meta);
     font-weight: 600;
@@ -823,11 +823,19 @@
     white-space: nowrap;
   }
 
-  .mf-table td {
+  .mf-table td,
+  .mf-table tbody th {
     padding: 0.75rem 0.625rem;
     border-top: 1px solid var(--mf-color-border);
     color: var(--mf-color-text-strong);
     vertical-align: middle;
+  }
+
+  /* The column that names each row (`rowHeader`): the row's header cell, laid out as its other
+     cells, its words at 600 as the boards draw a row's name (K6). */
+  .mf-table .mf-table-name {
+    font-weight: 600;
+    text-align: start;
   }
 
   .mf-table tbody tr:hover {
@@ -1534,5 +1542,34 @@
   .mf-admin-look .mf-switch-knob {
     top: 4px;
     left: 4px;
+  }
+
+  /* --- The admin's lists and dashboard, to the boards ------------------- */
+
+  /* VM Website's asks of 2026-11-25 (decision 0040, amended): the parts Admin › Music's lists and
+     the dashboard share, as `admin_kit.pill`, the boards' tables and AdminDashboard's `stat()`
+     draw them. Admin only, as the forms' above. */
+
+  /* K3: a pill's words 12px, in the font's own line; the pill stays 24px tall. */
+  .mf-admin-look .mf-pill {
+    font-size: 0.75rem;
+    line-height: normal;
+  }
+
+  /* K6: a column's head 12px, in the font's own line. A row's name: `.mf-table-name`, above. */
+  .mf-admin-look .mf-table thead th {
+    font-size: 0.75rem;
+    line-height: normal;
+  }
+
+  /* P2: a dashboard card's link as tall as its words, with no minimum: it's the card's one target,
+     inside the card's 20px padding, so it keeps WCAG 2.5.8 by its spacing. P3: its figure in the
+     font's own line. */
+  .mf-admin-look .mf-stat-link {
+    min-height: 0;
+  }
+
+  .mf-admin-look .mf-stat-value {
+    line-height: normal;
   }
 }
