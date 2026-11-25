@@ -181,8 +181,9 @@ export function createPlayer(options: PlayerOptions = {}) {
     const item = now.item;
     if (!item || counted) return;
     const need = settings.count_after_seconds * 1000;
-    const length = now.duration_ms;
-    const short = whole && length !== null && length < need;
+    // The whole item's length: the output's when it is one, else the module's own, if it gave one.
+    const length = whole ? now.duration_ms : (item.duration_ms ?? null);
+    const short = length !== null && length < need;
     const enough = short ? length * 0.9 : need;
     if (heard >= enough || (atEnd && short && heard >= length * 0.9)) {
       counted = true;

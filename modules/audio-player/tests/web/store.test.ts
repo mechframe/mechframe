@@ -248,6 +248,22 @@ describe("counting", () => {
     expect(count).toHaveBeenCalledTimes(1);
   });
 
+  it("counts a short playlist by the whole length its module gave, not one track's (CodeRabbit on #149)", () => {
+    const { player, outputs } = setup();
+    const count = vi.fn();
+    // A 20-second playlist, as discography typed it; the widget gives only an 8-second track's length.
+    const set = item("Interlude", { stream_url: undefined, soundcloud_url: "https://soundcloud.com/petrodestroys/sets/interlude", duration_ms: 20_000, count });
+    player.play([set], 0, "/");
+    const widget = outputs.made.soundcloud[0];
+    if (!widget) throw new Error("No SoundCloud output.");
+    widget.events.playing();
+    for (let at = 0; at <= 8_000; at += 1000) widget.events.time(at, 8_000, false);
+    expect(count).not.toHaveBeenCalled();
+    for (let at = 0; at <= 10_000; at += 1000) widget.events.time(at, 12_000, false);
+    // 18 seconds heard: 90% of the whole 20.
+    expect(count).toHaveBeenCalledTimes(1);
+  });
+
   it("takes its seconds from the settings", () => {
     const { player, file } = setup();
     const count = vi.fn();
