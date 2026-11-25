@@ -203,12 +203,17 @@
   color: var(--mf-color-text-muted);
 }
 
-/* The role as wide as its words, "Produced by" whole, up to 11rem (D2). */
 .mf-music-credit {
   display: grid;
-  grid-template-columns: fit-content(11rem) minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr) auto;
   gap: var(--mf-space-2);
   align-items: end;
+}
+
+/* A credit's row (`Credits`): its role as wide as its words, "Produced by" whole, up to 11rem, and the
+   name the rest (D2). The release's link rows and the Roles list keep the grid above (cubic on #159). */
+.mf-music-credit--role {
+  grid-template-columns: fit-content(11rem) minmax(0, 1fr) auto;
 }
 
 .mf-music-list {

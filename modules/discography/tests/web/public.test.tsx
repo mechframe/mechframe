@@ -146,14 +146,24 @@ describe("discography's public surface", () => {
     expect(tracksAsked?.searchParams.getAll("ids")).toEqual(["t-2", "t-1"]);
   });
 
-  it("asks for no tracks while there are none to ask for", async () => {
-    const sent = routed({});
+  it("answers an empty selection as nothing, asking no one, so an empty deck shows no albums staff didn't choose (Codex on #159)", async () => {
+    const sent = routed({
+      "GET /api/discography/releases": { status: 200, body: { items: [card({ title: "Unified Vibration" }), card()], next_cursor: null } },
+    });
     function Empty() {
-      const found = useTracks([]);
-      return <p>{found.fetchStatus}</p>;
+      const deck = useReleases({ ids: [] });
+      const spotlight = useTracks([]);
+      const albums = deck.data?.pages.flatMap((page) => page.items) ?? [];
+      return (
+        <>
+          <p>{`deck ${deck.status}, ${String(albums.length)} albums, more ${String(deck.hasNextPage)}`}</p>
+          <p>{`spotlight ${spotlight.status}, ${String(spotlight.data?.items.length)} tracks`}</p>
+        </>
+      );
     }
     renderWithKernel(<Empty />);
-    expect(await screen.findByText("idle")).toBeInTheDocument();
+    expect(await screen.findByText("deck success, 0 albums, more false")).toBeInTheDocument();
+    expect(screen.getByText("spotlight success, 0 tracks")).toBeInTheDocument();
     expect(sent).toEqual([]);
   });
 
