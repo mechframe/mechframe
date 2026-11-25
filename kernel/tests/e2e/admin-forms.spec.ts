@@ -96,6 +96,14 @@ const A_STYLE = {
   samples: ["We play loud and we play late."],
 };
 
+/** The longest name a style may have (80 characters, no space) and a long description. */
+const LONG_STYLE = {
+  ...A_STYLE,
+  id: "00000000-0000-4000-8000-0000000000a3",
+  name: "Unbroken".repeat(10),
+  description: "For the long announcements that need every word: tours, releases, collaborations and the stories behind them.",
+};
+
 /** Each width in each theme, the page laid out again for it. */
 async function eachLook(page: Page, check: (at: string, width: number) => Promise<void>): Promise<void> {
   for (const [name, canvas] of Object.entries(THEMES)) {
@@ -147,6 +155,8 @@ test("Settings › AI: the field's parts, the select, History and the warning (B
     expect.soft(await styleOf(select, ["appearance", "padding-right"]), at).toEqual({ appearance: "none", "padding-right": "30px" });
     const chevron = await boxOf(card.locator(".mf-select-chevron"));
     const selected = await boxOf(select);
+    // The box is the select's own height, so the chevron centres on the select (cubic on #156).
+    expect.soft((await boxOf(card.locator(".mf-select-box"))).height, at).toBeCloseTo(selected.height, 0);
     expect.soft(chevron.width, at).toBeCloseTo(16, 0);
     expect.soft(selected.right - chevron.right, at).toBeCloseTo(10, 0);
     expect.soft(chevron.middle, at).toBeCloseTo(selected.middle, 0);
@@ -177,7 +187,11 @@ test("Settings › AI: the field's parts, the select, History and the warning (B
 test("Settings › Writing: the card, its head, the rule rows, The brief and the styles (B1, C1, C2, C5, W2 to W4)", async ({ page }) => {
   await page.route(STYLES, (route) =>
     route.request().method() === "GET"
-      ? route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ items: [A_STYLE, { ...A_STYLE, id: "00000000-0000-4000-8000-0000000000a2", name: "Plain" }] }) })
+      ? route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ items: [A_STYLE, { ...A_STYLE, id: "00000000-0000-4000-8000-0000000000a2", name: "Plain" }, LONG_STYLE] }),
+        })
       : route.fallback(),
   );
   await signedInAdmin(page, "/admin/settings/writing");
@@ -244,6 +258,12 @@ test("Settings › Writing: the card, its head, the rule rows, The brief and the
     const words = style.getByText("For news the site is glad to share.");
     expect.soft((await boxOf(words)).left, at).toBeGreaterThan(name.right);
     expect.soft(await styleOf(words, ["font-size", "color"]), at).toEqual({ "font-size": "14px", color: await tokenColor(page, "--mf-color-text") });
+    // The longest name a style may have stays inside the card, its description too, at 390 as well
+    // (Codex, cubic and CodeRabbit on #156).
+    const list = await boxOf(styles.locator(".mf-ai-styles"));
+    const long = styles.locator("li").filter({ has: page.getByRole("link", { name: LONG_STYLE.name }) });
+    expect.soft((await boxOf(long.getByRole("link"))).right, at).toBeLessThanOrEqual(list.right + 0.5);
+    expect.soft((await boxOf(long.locator(".mf-ai-style-line"))).right, at).toBeLessThanOrEqual(list.right + 0.5);
   });
 });
 

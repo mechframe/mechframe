@@ -1422,6 +1422,12 @@
     display: block;
   }
 
+  /* A block in its box, so the box is the select's own height whatever the font's line, and the
+     chevron centres on the select (cubic on #156). */
+  .mf-select-box > .mf-select {
+    display: block;
+  }
+
   .mf-select-chevron {
     display: none;
   }
