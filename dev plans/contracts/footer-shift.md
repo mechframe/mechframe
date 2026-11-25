@@ -25,7 +25,7 @@ On every MechFrame site, a page's first load no longer moves the footer. Today t
 }
 ```
 
-- While `<main id="main">` holds nothing, the footer is hidden, and so is anything else the frame draws after `<main>`: the kernel's footer, a site's own (`defineSite({ footer })`), and the `AfterFooter` holder. `<main>` is empty while the page's code loads (`Loaded`'s `Suspense fallback={null}`), while the module switches are read (`ModuleGate`), and while a member page waits for the session (`RequireAuth`).
+- While `<main id="main">` holds nothing, the footer is hidden, and so is anything else the frame draws after `<main>`: the kernel's footer, a site's own (`defineSite({ footer })`), and the `AfterFooter` holder. `<main>` is empty while the page's code loads (`Loaded`'s `Suspense fallback={null}`) and while the module switches are read (`ModuleGate`). While a member page waits for the session, `RequireAuth` draws an empty `<div aria-busy="true">` there, which the rule counts as empty too (below, "Changes after approval").
 - When the page is in, the footer appears under it. An element that appears isn't a layout shift; only one that moves is, so the score is 0.
 - The header is above `<main>` and draws at once, as now.
 - A move between pages keeps the page shown until the next one is ready (React Router's navigations are transitions), so `<main>` isn't empty between pages and the footer stays.
@@ -71,6 +71,7 @@ None. The owner's answer, 2026-11-24, as recommended:
 
 ## Changes after approval
 
+- 2026-11-24, CodeRabbit on #148: **the session wait isn't an empty `<main>`.** `RequireAuth` draws `<div aria-busy="true">` while the session is read, which `:empty` doesn't match. The rule gains `.mf-site > #main:has(> [aria-busy="true"]:only-child:empty) ~ *`, so that state holds the footer back too; the guard's markup is unchanged. `frame.spec.ts` checks the rule's states directly: an empty `<main>` and the busy mark alone hide the footer, a page shows it; without the `:has` line, it fails. The first-load tests now count only shifts that move the footer or what follows it: a member page's own content growing as its data arrives (`/account`'s cards, 0.03 at 1440) is the page's, as blog's is.
 - 2026-11-24, as built:
   - **The test** gives the footer VM Website's height (327 px) and a `display: flex` of its own in a stylesheet outside any layer, as a site's footer styles are, in every case, so the separate "site's own footer" case is folded in. It runs with Playwright's `bypassCSP`: the site's policy refuses the test's inline stylesheet.
   - **It measures `/` and the 404 page, not `/blog`.** Blog's page draws its heading first and its list once its read answers, so the list still grows under the footer then (50 px, 0.03 at 412, under 0.1): that's the page's own, not the frame's. Before the rule, `/` and the 404 measured 0.13 and 0.14 at 412; after it, 0. A page holding back until its first read closes its own part (a follow-up for blog's, and any other module page that draws in two steps).

@@ -6,7 +6,7 @@
   - VM Website Dev 15 measured it on staging: a layout shift of 0.40 on a phone and 0.16 at 1440, on every page's first load, which alone takes about 19 points off Lighthouse's Performance (`C:\DEV\VM Website\dev plans\2026-11-24-lighthouse-after-141.md`). Good is 0.1 or under.
   - `<main>` is also empty while the module switches are read (`ModuleGate`) and while a member page waits for the session (`RequireAuth`).
 - **Decision:**
-  1. **One rule in `frames.css`:** `.mf-site > #main:empty ~ * { display: none !important; }`. While `<main>` holds nothing, the footer and anything else after `<main>` (a site's own footer, the `AfterFooter` holder) aren't drawn. When the page is in, the footer appears under it. An element that appears isn't a layout shift, so the score is 0.
+  1. **One rule in `frames.css`:** `.mf-site > #main:empty ~ * { display: none !important; }`, and the same for a `<main>` holding only the session guard's empty busy mark (`#main:has(> [aria-busy="true"]:only-child:empty)`; CodeRabbit on #148). While `<main>` holds nothing, the footer and anything else after `<main>` (a site's own footer, the `AfterFooter` holder) aren't drawn. When the page is in, the footer appears under it. An element that appears isn't a layout shift, so the score is 0.
   2. **`!important`,** because the frame's rules are in the layer `mf.base`, and a site's own footer styles, outside any layer, would win with their own `display` otherwise.
   3. **A move between pages** keeps the page shown until the next one is ready (React Router's navigations are transitions), so the footer stays.
 - **Rejected:**

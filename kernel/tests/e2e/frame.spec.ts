@@ -125,12 +125,16 @@ for (const [theme, canvas] of Object.entries(THEMES)) {
 // frame paints before a page's code arrives, and everything after an empty <main> waits for it. Every
 // script is held back, so the frame always paints first, as on a phone. The footer is as tall as VM
 // Website's (327 px), set by a stylesheet outside any layer, as a site's own footer styles are, with a
-// display of its own; a layout-shift observer sums what moved, from the first load until the page is
-// drawn. Without the frame's rule, the footer moves from under the header to under the page.
+// display of its own; a layout-shift observer sums the shifts that moved the footer (or anything after
+// <main>), from the first load until the page is drawn: a page's own content growing is the page's.
+// Without the frame's rule, the footer moves from under the header to under the page.
 const SHIFTS = `
   window.__shifts = 0;
+  const after = (node) => node instanceof Element && node.closest(".mf-site > #main ~ *") !== null;
   new PerformanceObserver((list) => {
-    for (const entry of list.getEntries()) if (!entry.hadRecentInput) window.__shifts += entry.value;
+    for (const entry of list.getEntries()) {
+      if (!entry.hadRecentInput && (entry.sources || []).some((source) => after(source.node))) window.__shifts += entry.value;
+    }
   }).observe({ type: "layout-shift", buffered: true });
   document.addEventListener("DOMContentLoaded", () => {
     const own = document.createElement("style");
@@ -173,9 +177,32 @@ for (const [width, height] of [
     // content once its read answers still grows under the footer then: that's the page's own.
     for (const address of ["/", "/no-such-page"]) {
       test(`doesn't move the footer on ${address}`, async ({ page }) => {
-        // The header's links, loaded from the modules, nudge it a little (under 0.003): not the footer.
         expect(await firstLoad(page, address)).toBeLessThanOrEqual(0.01);
       });
     }
+
+    // The rule's states, as the page can hold them: an empty <main>, and a member page's while
+    // the session is read, holding only the guard's empty busy mark (CodeRabbit on #148), each
+    // hide the footer; a page in <main> shows it.
+    test("holds the footer back while <main> is empty or holds only the session's busy mark", async ({ page }) => {
+      await page.goto("/");
+      await expect(page.locator("#main > *").first()).toBeVisible();
+      const shown = () =>
+        page.evaluate(() => {
+          const footer = document.querySelector(".mf-site > #main ~ footer");
+          return footer ? getComputedStyle(footer).display !== "none" : null;
+        });
+      expect(await shown()).toBe(true);
+      await page.evaluate(() => {
+        const busy = document.createElement("div");
+        busy.setAttribute("aria-busy", "true");
+        document.getElementById("main")?.replaceChildren(busy);
+      });
+      expect(await shown()).toBe(false);
+      await page.evaluate(() => {
+        document.getElementById("main")?.replaceChildren();
+      });
+      expect(await shown()).toBe(false);
+    });
   });
 }
