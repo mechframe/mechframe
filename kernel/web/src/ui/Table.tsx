@@ -22,12 +22,6 @@ export type Column<Row> = {
   cell: (row: Row) => ReactNode;
   /** `end` for numbers and actions. */
   align?: "start" | "end";
-  /**
-   * The column that names each row (a person, a post, a track): its cell is the
-   * row's header, so a screen reader names the row by it, and it's drawn at 600,
-   * as the boards draw a row's name (K6). One column at most.
-   */
-  rowHeader?: boolean;
 };
 
 export type TableProps<Row> = {
@@ -39,6 +33,13 @@ export type TableProps<Row> = {
   rows: readonly Row[];
   rowKey: (row: Row) => Key;
   empty?: ReactNode;
+  /**
+   * The key of the column that names each row (a person, a post, a track): its
+   * cell is the row's header, so a screen reader names the row by it, drawn at
+   * 600 as the boards draw a row's name (K6). The table's to say, so a row has
+   * one name at most (cubic on #158).
+   */
+  rowHeader?: string;
 };
 
 /** Scrolls the control that took the focus into view inside the scroller: Chrome won't if part of it shows. */
@@ -73,7 +74,7 @@ function useOverflows(): [(element: HTMLDivElement | null) => void, boolean] {
   return [setElement, overflows];
 }
 
-export function Table<Row>({ caption, captionHidden = false, columns, rows, rowKey, empty }: TableProps<Row>) {
+export function Table<Row>({ caption, captionHidden = false, columns, rows, rowKey, empty, rowHeader }: TableProps<Row>) {
   const id = useId();
   const [scroller, overflows] = useOverflows();
   const captionClass = captionHidden ? "mf-visually-hidden" : "mf-table-caption";
@@ -112,7 +113,7 @@ export function Table<Row>({ caption, captionHidden = false, columns, rows, rowK
           {rows.map((row) => (
             <tr key={rowKey(row)}>
               {columns.map((column) =>
-                column.rowHeader ? (
+                column.key === rowHeader ? (
                   <th key={column.key} scope="row" className={column.align === "end" ? "mf-table-name mf-cell-end" : "mf-table-name"}>
                     {column.cell(row)}
                   </th>

@@ -58,7 +58,7 @@ const PEOPLE: Person[] = [
 ];
 
 const COLUMNS: Column<Person>[] = [
-  { key: "name", header: "Name", cell: (person) => person.name, rowHeader: true },
+  { key: "name", header: "Name", cell: (person) => person.name },
   { key: "email", header: "Email", cell: (person) => person.email },
   { key: "roles", header: "Roles", cell: (person) => person.roles },
   { key: "joined", header: "Joined", cell: (person) => person.joined },
@@ -273,7 +273,7 @@ function AdminLook() {
       <div className="kit-stack">
         <Card title="People" flush>
           <div data-kit="people">
-            <Table caption="People" captionHidden columns={COLUMNS} rows={PEOPLE} rowKey={(person) => person.id} />
+            <Table caption="People" captionHidden columns={COLUMNS} rows={PEOPLE} rowKey={(person) => person.id} rowHeader="name" />
           </div>
         </Card>
         <Card title="Sign-ins" flush>
