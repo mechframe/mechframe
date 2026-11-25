@@ -442,6 +442,29 @@ async def test_a_slots_change_and_whats_still_in_use(
     assert said[-1][0] == "featured.placement.changed"
 
 
+async def test_a_name_with_an_at_sign_is_saved_and_never_audited(
+    db: AsyncSession, sources: Sources
+) -> None:
+    """The audit refuses an `@` as an address (Codex on #157): the label stays out of it."""
+    slot = await _slot(db, label="Live @ Home")
+    renamed = await service.change_slot(
+        db, slot.key, slot.version, {"label": "Live @ Work"}, by=None
+    )
+    assert renamed.label == "Live @ Work"
+    entries = list(
+        await db.scalars(
+            select(AuditEvent).where(AuditEvent.target_id == slot.key).order_by(AuditEvent.id)
+        )
+    )
+    assert [entry.action for entry in entries] == ["featured.slot.created", "featured.slot.changed"]
+    assert entries[0].details == {
+        "accepts": ["music.track"],
+        "kinds": [],
+        "on_dashboard": slot.on_dashboard,
+    }
+    assert entries[1].details == {"label": True}
+
+
 async def test_a_slot_goes_with_its_placements(
     db: AsyncSession, sources: Sources, said: list[tuple[str, Any]]
 ) -> None:

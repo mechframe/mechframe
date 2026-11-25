@@ -24,6 +24,8 @@ export type PlacementRowProps = {
   /** The row dragged now, shared by the list. */
   dragging: number | null;
   onDragging: (index: number | null) => void;
+  /** While a save is on its way: nothing changes until it answers (Codex on #157). */
+  disabled?: boolean;
 };
 
 /** The words under a row's title. */
@@ -34,7 +36,7 @@ function lineOf(row: Row, typeLabel: string): string {
   return `${typeLabel} are switched off on the site. Saving keeps it.`;
 }
 
-export function PlacementRow({ row, state, index, count, kinds, typeLabel, onMove, onRemove, onDates, onKind, dragging, onDragging }: PlacementRowProps) {
+export function PlacementRow({ row, state, index, count, kinds, typeLabel, onMove, onRemove, onDates, onKind, dragging, onDragging, disabled = false }: PlacementRowProps) {
   const title = titleOf(row);
   const pill = PILLS[state];
   const drop = (event: DragEvent<HTMLLIElement>) => {
@@ -45,7 +47,7 @@ export function PlacementRow({ row, state, index, count, kinds, typeLabel, onMov
   return (
     <li
       className={`mf-featured-row${dragging === index ? " mf-featured-row--dragged" : ""}`}
-      draggable
+      draggable={!disabled}
       onDragStart={(event) => {
         event.dataTransfer.effectAllowed = "move";
         event.dataTransfer.setData("text/plain", title);
@@ -55,7 +57,7 @@ export function PlacementRow({ row, state, index, count, kinds, typeLabel, onMov
         onDragging(null);
       }}
       onDragOver={(event) => {
-        if (dragging !== null) event.preventDefault();
+        if (dragging !== null && !disabled) event.preventDefault();
       }}
       onDrop={drop}
     >
@@ -63,10 +65,10 @@ export function PlacementRow({ row, state, index, count, kinds, typeLabel, onMov
         <Icon name="grip" />
       </span>
       <span className="mf-featured-order">
-        <Button size="small" icon="chevron-down" className="mf-featured-up" aria-label={`Move ${title} up`} disabled={index === 0} onClick={() => {
+        <Button size="small" icon="chevron-down" className="mf-featured-up" aria-label={`Move ${title} up`} disabled={disabled || index === 0} onClick={() => {
             onMove(index - 1);
           }} />
-        <Button size="small" icon="chevron-down" aria-label={`Move ${title} down`} disabled={index === count - 1} onClick={() => {
+        <Button size="small" icon="chevron-down" aria-label={`Move ${title} down`} disabled={disabled || index === count - 1} onClick={() => {
             onMove(index + 1);
           }} />
       </span>
@@ -90,6 +92,7 @@ export function PlacementRow({ row, state, index, count, kinds, typeLabel, onMov
           className="mf-featured-kind"
           aria-label={`Kind of ${title}`}
           value={row.link.kind ?? ""}
+          disabled={disabled}
           onChange={(event) => {
             onKind(event.target.value || null);
           }}
@@ -102,11 +105,11 @@ export function PlacementRow({ row, state, index, count, kinds, typeLabel, onMov
           ))}
         </Select>
       ) : null}
-      <Button size="small" icon="calendar" className="mf-featured-dates" aria-label={`Dates of ${title}: ${datesWords(row.starts_at, row.ends_at)}`} onClick={onDates} disabled={row.removed}>
+      <Button size="small" icon="calendar" className="mf-featured-dates" aria-label={`Dates of ${title}: ${datesWords(row.starts_at, row.ends_at)}`} onClick={onDates} disabled={disabled || row.removed}>
         {datesWords(row.starts_at, row.ends_at)}
       </Button>
       <Pill tone={pill.tone}>{pill.label}</Pill>
-      <Button size="small" icon="close" aria-label={`Remove ${title}`} onClick={onRemove} />
+      <Button size="small" icon="close" aria-label={`Remove ${title}`} onClick={onRemove} disabled={disabled} />
     </li>
   );
 }

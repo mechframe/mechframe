@@ -98,7 +98,11 @@ type PanelProps = {
   onCancelConflict: () => void;
 };
 
-function SlotPanel({ slot, full, rows, types, mayMake, refused, conflict, saving, onRows, onSettings, onResolve, onCancelConflict }: PanelProps) {
+function SlotPanel({ slot, full, rows, types, mayMake, refused, conflict, saving, onRows: edit, onSettings, onResolve, onCancelConflict }: PanelProps) {
+  // Nothing changes while a save is on its way, so its answer never drops an edit made meanwhile (Codex on #157).
+  const onRows = (next: Row[]) => {
+    if (!saving) edit(next);
+  };
   const [picking, setPicking] = useState<string | null>(null);
   const [pasting, setPasting] = useState(false);
   const [dating, setDating] = useState<number | null>(null);
@@ -175,7 +179,7 @@ function SlotPanel({ slot, full, rows, types, mayMake, refused, conflict, saving
               <Button
                 key={each.type}
                 icon="plus"
-                disabled={room <= 0}
+                disabled={saving || room <= 0}
                 onClick={() => {
                   setPicking(each.type);
                 }}
@@ -186,7 +190,7 @@ function SlotPanel({ slot, full, rows, types, mayMake, refused, conflict, saving
             {slot.accepts.includes(YOUTUBE) ? (
               <Button
                 icon="plus"
-                disabled={room <= 0}
+                disabled={saving || room <= 0}
                 onClick={() => {
                   setPasting(true);
                 }}
@@ -226,6 +230,7 @@ function SlotPanel({ slot, full, rows, types, mayMake, refused, conflict, saving
                 }}
                 dragging={dragging}
                 onDragging={setDragging}
+                disabled={saving}
               />
             ))}
           </ol>
@@ -335,7 +340,8 @@ export default function Players() {
             body: { version: draft.version, items: bodyOf(draft.rows) },
           });
           if (data) queryClient.setQueryData(["get", SLOT, { params: { path: { key } } }], data);
-          drop(key);
+          // Only the draft this save sent: one that differs is kept, to be saved again.
+          setDrafts((now) => (now[key] === draft ? Object.fromEntries(Object.entries(now).filter(([each]) => each !== key)) : now));
           if (conflict?.key === key) setConflict(null);
           void queryClient.invalidateQueries({ queryKey: ["get", SLOTS] });
           void queryClient.invalidateQueries({ queryKey: ["get", LIVE] });

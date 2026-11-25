@@ -282,6 +282,31 @@ describe("Players", () => {
     expect(await screen.findByText("Saved. It's live on the site.")).toBeInTheDocument();
   });
 
+  it("holds the list still while its save is on its way, so no edit is lost (Codex on #157)", async () => {
+    let answer: (value: Answer) => void = () => undefined;
+    routed({
+      "PUT /api/featured/admin/slots/spotlight/placements": () =>
+        new Promise<Answer>((resolve) => {
+          answer = resolve;
+        }),
+    });
+    const list = await players();
+    await userEvent.click(within(list).getByRole("button", { name: "Move Gather Around up" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save and go live" }));
+    await waitFor(() => {
+      expect(within(list).getByRole("button", { name: "Remove Gather Around" })).toBeDisabled();
+    });
+    expect(within(list).getByRole("button", { name: "Move Catalyst (full album) up" })).toBeDisabled();
+    expect(within(list).getByRole("button", { name: /^Dates of Gather Around/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Add track" })).toBeDisabled();
+    expect(within(list).getAllByRole("listitem")[0]).toHaveAttribute("draggable", "false");
+    answer({ status: 200, body: { ...SPOTLIGHT, version: 5, items: [SPOTLIGHT.items[1], SPOTLIGHT.items[0]] } });
+    await waitFor(() => {
+      expect(within(list).getByRole("button", { name: "Remove Gather Around" })).toBeEnabled();
+    });
+    expect(screen.queryByRole("region", { name: "Changes not saved" })).toBeNull();
+  });
+
   it("asks theirs or mine when someone saved first, and saves mine at their version", async () => {
     const theirs: FullSlot = { ...SPOTLIGHT, version: 6, items: [SPOTLIGHT.items[1] as AdminPlacement] };
     let puts = 0;

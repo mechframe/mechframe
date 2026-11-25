@@ -290,7 +290,8 @@ None changes what was approved; each says what §2 meant, or adds what a screen 
   - a placement listed twice, or an `id` that isn't the slot's, is 422 `kernel.invalid_request`.
 - **A link is kept as its watch address,** `https://www.youtube.com/watch?v=<id>`, built from the id embeds read: what a link carried besides (a start time, a playlist) is dropped. `POST /admin/youtube` answers that address. Each lookup is given a second in all, not per step.
 - **The Dashboard:** the item's key is `featured.ending_<key>`; "in 2 days" counts whole days, at least one; its date is the server's, in UTC. Setup's step is done once there's a slot and each has something live.
-- **The audit's list** is cut short to fit the kernel's 4 KiB, with `count` and `more`.
+- **The audit's list** is cut short to fit the kernel's 4 KiB, with `count` and `more`. It never holds a player's name, which may have an `@` the audit refuses as an address (Codex on #157): `featured.slot.created` keeps what it takes, its kinds' keys and `on_dashboard`, and `featured.slot.changed` says the label changed, not to what.
+- **While a save is on its way** the list can't be changed, so its answer never drops an edit made meanwhile (Codex on #157).
 - **Players:**
   - the board's word is "player", so "New slot" is "New player" and a slot's settings are "{label} settings";
   - one save bar for every list changed, each saved in turn; a conflict asks theirs or mine through the kit's `SaveConflict`, the list as one field, and "Keep mine" saves at their version, a placement they removed added again as new;

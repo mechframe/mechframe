@@ -436,7 +436,13 @@ async def create_slot(
         "featured.slot.created",
         actor=by,
         target=(SLOT, key),
-        details={"label": name, "accepts": taken},
+        # Never the label: a name may hold an `@`, which the audit refuses as an
+        # address (Codex on #157). The key, its target, is a slug.
+        details={
+            "accepts": taken,
+            "kinds": [each["key"] for each in made_kinds],
+            "on_dashboard": slot.on_dashboard,
+        },
     )
     return slot
 
@@ -467,7 +473,7 @@ async def change_slot(
     changed: dict[str, Any] = {}
     if fields.get("label") is not None:
         slot.label = _label(fields["label"])
-        changed["label"] = slot.label
+        changed["label"] = True  # that it changed, not to what (see create_slot)
     if fields.get("accepts") is not None:
         accepts = await _check_accepts(db, fields["accepts"], kept=slot.accepts)
         for kind in set(slot.accepts) - set(accepts):
