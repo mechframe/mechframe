@@ -1,0 +1,79 @@
+{
+  "id": "audio-player",
+  "name": "Audio player",
+  "version": "0.1.0",
+  "status": "experimental",
+  "category": "media",
+  "summary": "One player for the site's own audio: waveforms, a queue, one thing at a time, and plays counted with no personal data.",
+  "use_when": [
+    "The site plays its own audio, such as albums, singles or readings, and another module hands the player what to play",
+    "Several players on one page, a YouTube player among them, must never play over each other",
+    "The team wants to know how often each track is played, without a cookie or a consent banner for it"
+  ],
+  "avoid_when": [
+    "The audio only lives on SoundCloud or Spotify and a provider's own player is enough: that's embeds",
+    "Music must keep playing while a visitor moves between pages: this player stops on a page move"
+  ],
+  "requires": {
+    "kernel": "^0.1",
+    "modules": {}
+  },
+  "conflicts": [],
+  "permissions": [],
+  "settings": [
+    {
+      "key": "autoplay_next",
+      "type": "bool",
+      "default": true,
+      "secret": false,
+      "description": "Play the next track in the queue when one ends"
+    },
+    {
+      "key": "count_after_seconds",
+      "type": "int",
+      "default": 30,
+      "secret": false,
+      "description": "Seconds really heard before a play counts, from 5 to 120 (or the whole of a shorter track)"
+    }
+  ],
+  "env": [],
+  "routes": {
+    "api": "/api/audio-player",
+    "public": [],
+    "member": [],
+    "admin": []
+  },
+  "tables": [
+    "audio_player_salt",
+    "audio_player_play",
+    "audio_player_play_daily"
+  ],
+  "events": {
+    "emits": [],
+    "listens": []
+  },
+  "slots": [
+    "admin.settings.section"
+  ],
+  "bindings": [
+    "web"
+  ],
+  "jobs": [
+    {
+      "name": "prune",
+      "schedule": "15 3 * * *"
+    }
+  ],
+  "notifications": [],
+  "vocabularies": [],
+  "content_types": [],
+  "data_hooks": {
+    "export": false,
+    "delete": false
+  },
+  "source": {
+    "from": "new (Vibrant Mindz backend scaffold, 2026-11-15)",
+    "commit": "n/a",
+    "license": "proprietary"
+  }
+}

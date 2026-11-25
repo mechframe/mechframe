@@ -252,6 +252,11 @@ _SEED = [
     "(gen_random_uuid(), NULL, 'spotify', 'https://open.spotify.com/artist/1', 0)",
     "INSERT INTO discography_move (old_path, release_id, track_id, created_at) VALUES "
     "('catalyst-ep', '00000000-0000-0000-0000-00000000000c', NULL, now())",
+    "INSERT INTO audio_player_salt (day, salt) VALUES ('2026-11-24', decode(repeat('ab', 32), 'hex'))",
+    "INSERT INTO audio_player_play (day, source, item_id, listener) VALUES "
+    "('2026-11-24', 'discography.track', '00000000-0000-0000-0000-00000000000d', repeat('f', 64))",
+    "INSERT INTO audio_player_play_daily (source, item_id, day, plays) VALUES "
+    "('discography.track', '00000000-0000-0000-0000-00000000000d', '2026-11-24', 1)",
 ]
 
 
