@@ -14,9 +14,9 @@ Staff choose what the homepage features on Admin › Homepage › Players, witho
 
 ## 2. Interfaces
 
-### The hook, item references (its own PR; decision 0072; §8, 1)
+### The hook, item references (hook 11, its own PR; decision 0072; §8, 1)
 
-A tenth row in SPEC 7's "Hooks every module can fill". A module whose things another module may point at (pick, list, show as removed) fills it. The module that points never imports it. Built with the skill `mechframe-hook-designer`, as hooks 1 to 8 were.
+A ninth row in SPEC 7's "Hooks every module can fill". A module whose things another module may point at (pick, list, show as removed) fills it. The module that points never imports it. Built with the skill `mechframe-hook-designer`, as hooks 1 to 8 were.
 
 ```python
 # a module's refs.py
@@ -38,7 +38,7 @@ class Source(ABC):
     async def pick(self, db: AsyncSession, q: str | None, *, cursor: str | None, limit: int) -> RefPage  # drafts too, newest edit first
 RefPage = TypedDict("RefPage", {"items": list[Ref], "next_cursor": str | None})
 
-def types() -> dict[str, str]                       # each module on's types, by type: its label
+async def types(db: AsyncSession) -> dict[str, str]  # each module on's types, by type: its label
 async def find(db, type: str, ids) -> dict[uuid.UUID, Ref]
 async def pick(db, type: str, q: str | None, *, cursor: str | None, limit: int = 20) -> RefPage   # limit at most 50
 class UnknownType(LookupError)                      # a type no module on gives
@@ -52,7 +52,7 @@ class UnknownType(LookupError)                      # a type no module on gives
 **A slot** has these fields:
 - a `key` the site's code reads (a slug, 40 at most: `spotlight`);
 - a `label` (its tab: "Spotlight");
-- what it takes, `accepts`: types from `refs.types()`, or `"youtube"` for links;
+- what it takes, `accepts`: types from `await refs.types(db)`, or `"youtube"` for links;
 - for links, its `kinds` (`[{key, label}]`: Music video, Rap battle, Poetry);
 - `on_dashboard`.
 
@@ -61,6 +61,7 @@ Slots are made on the Players page by an admin (§8, 2).
 **A placement** is either an item (`{type, id}`) or a link (a YouTube video's address, its title and its kind). Each has optional `starts_at` and `ends_at`, and its place in the list.
 - **It's live** while `starts_at <= now < ends_at`, an open end counting as always.
 - **A live item is shown** only while its source says `live`. A gone item is never shown.
+- **A placement whose module is off** (`refs.UnknownType`) is left out of the public read and shows `hidden` in the admin's. A save keeps it as it is.
 
 **HTTP** (`/api/featured`, behind `require_module("featured")`):
 
@@ -75,7 +76,7 @@ Slots are made on the Players page by an admin (§8, 2).
     - `state` is one of `live`, `next` (the soonest to start), `scheduled`, `ended`, `hidden` (its item isn't on the site) or `removed`.
   - `PUT /admin/slots/{key}/placements` takes `{version, items: [{id?, ref?: {type, id}, link?: {url, title, kind?}, starts_at?, ends_at?}]}` → `FullSlot`. The whole list in one save:
     - 409 `featured.changed`, with the slot as it is now;
-    - 422 `featured.not_accepted` (a type it doesn't take), `featured.not_found` (an id its source hasn't got), `featured.not_youtube`, `featured.unknown_kind`, `featured.bad_dates` (an end before its start) and `featured.too_many` (100);
+    - 422 `featured.not_accepted` (a type it doesn't take), `featured.not_found` (an id its source hasn't got), `featured.not_youtube`, `featured.no_title` (a link's title is 1 to 200 characters), `featured.unknown_kind`, `featured.bad_dates` (an end not after its start) and `featured.too_many` (100);
     - it emits `featured.placement.changed` v1 `{slot_key}`, and is audited as `featured.slot.saved` with the list.
   - `GET /admin/slots/{key}/pick?type=&q=&cursor=` → `RefPage` through `refs.pick`. 422 `featured.not_accepted` for a type the slot doesn't take.
   - `POST /admin/youtube` `{urls: [str]}` (20 at most) → `{items: [{url, video_id, title}], refused: [{url, reason}]}`.
@@ -87,7 +88,7 @@ Slots are made on the Players page by an admin (§8, 2).
   - `DELETE /admin/slots/{key}` → 204, with its placements.
 
 **YouTube's titles:** `GET https://www.youtube.com/oembed?url=<the watch address>&format=json`.
-- Only that address, over httpx with a 5 s timeout, so no address someone typed is fetched.
+- Only that address, so no address someone typed is fetched. The links are looked up at once over httpx, each with a 1 s timeout, so the route answers within about a second (SPEC 7).
 - A failure leaves the title null, for staff to type.
 
 **Backend, `featured.public`** (for a site's own code, and modules that list `featured` in `requires`):
@@ -99,7 +100,7 @@ async def live(db: AsyncSession, key: str) -> LiveSlot | None   # what GET /slot
 **Settings:** `oembed_titles` (bool, true), the scaffold's.
 
 **Dashboard (hook 8):**
-- **`ATTENTION`,** for each `on_dashboard` slot whose live items all end within two days, with nothing scheduled after:
+- **`ATTENTION`,** for each `on_dashboard` slot with something live, whose live items all end within two days, with nothing scheduled after:
   - "{title} leaves the {label} in 2 days";
   - "After {the last end, as "Nov 17"} the {label} is empty on the site unless something else is scheduled.";
   - "Schedule the next one", to `/admin/featured?slot={key}`, tone info, for `featured.placement.manage`.
@@ -147,7 +148,7 @@ Branch `featured`, `featured_0001`, `depends_on` `kernel_0002` as audio-player's
 | Table | Columns |
 |---|---|
 | `featured_slot` | `key` (≤ 40, slug) PK, `label` (≤ 60), `accepts` (jsonb list of types or `"youtube"`), `kinds` (jsonb `[{key, label}]`, ≤ 12), `on_dashboard` (bool), `position` (int, its tab's place), `version` (int), `created_at`, `updated_at` |
-| `featured_placement` | `id` (uuid) PK; `slot_key` FK `featured_slot.key` ON DELETE CASCADE; `position` (int), unique (`slot_key`, `position`) DEFERRABLE; either `ref_type` (≤ 80) and `ref_id` (uuid), or `url` (≤ 500), `video_id` (char 11), `title` (≤ 200, null until typed) and `kind` (≤ 40, null), one or the other by CHECK; `starts_at` and `ends_at` (timestamptz, null), CHECK `ends_at > starts_at`; `created_at`, `updated_at`; index (`ref_type`, `ref_id`) |
+| `featured_placement` | `id` (uuid) PK; `slot_key` FK `featured_slot.key` ON DELETE CASCADE; `position` (int), unique (`slot_key`, `position`) DEFERRABLE; either `ref_type` (≤ 80) and `ref_id` (uuid), or `url` (≤ 500), `video_id` (char 11), `title` (1 to 200) and `kind` (≤ 40, null), one or the other by CHECK; `starts_at` and `ends_at` (timestamptz, null), CHECK `ends_at > starts_at`; `created_at`, `updated_at`; index (`ref_type`, `ref_id`) |
 
 - **No foreign key into another module** (SPEC 10): a gone item shows as removed, and a save leaves it out.
 - **No personal data:** `data_hooks` stay false.
@@ -161,7 +162,7 @@ Branch `featured`, `featured_0001`, `depends_on` `kernel_0002` as audio-player's
   - SPEC 7's hooks row; `module-contract-lint`'s hooks section; decision 0072;
   - the main lane hears of it first: a kernel change in the side lane.
 - **`modules/_featured/` becomes `modules/featured/`,** its `module.json` and `MODULE.md` saying what's agreed here:
-  - `backend/featured/`: `__init__` (`CSP` empty), `models`, `schemas`, `service`, `router`, `public`, `youtube` (the oEmbed call), `dashboard`, `events`. The scaffold's `jobs.py` and `server_copy.py` go: it has no job and no public pages.
+  - `backend/featured/`: `__init__` (`CSP` empty), `models`, `schemas`, `service`, `router`, `public`, `youtube` (the oEmbed call), `dashboard`, `events`. The scaffold's `jobs.py` and `server_copy.py` go, and its `module.json`'s job `announce_boundaries`: it has no job and no public pages. `requires` gains `embeds ^0.1`.
   - `web/`: `module.web.ts`, `api.ts`, `public.ts`, `pages/Players.tsx`, `components/` (the tab, the row, the picker, the dates and Paste links dialogs, the slot's settings), `widgets/SpotlightCard.tsx`, `featured.css`.
 - **The harness:** an e2e page drawing a slot through `useFeatured`.
 - **Generated again:** `catalog.json`, OpenAPI and `schema.ts`, host variables, `progress.json`.
@@ -196,7 +197,7 @@ Branch `featured`, `featured_0001`, `depends_on` `kernel_0002` as audio-player's
 - **featured, backend:**
   - what's live at the edges of `starts_at` and `ends_at`, an open end included;
   - an item its source says isn't live, or gone, is left out of the public read, and shows `hidden` or `removed` in the admin's;
-  - each 422 and the 409, and two saves of one slot at once making one version (a real race, checked with a mutant);
+  - each 422 and the 409, a placement whose module is off, and two saves of one slot at once making one version (a real race, checked with a mutant);
   - the oEmbed call on a fake transport: only YouTube's address, a timeout, a failure leaving the title null;
   - `ATTENTION` two days out and not three, and `SETUP`.
 - **HTTP:**
@@ -260,7 +261,13 @@ Branch `featured`, `featured_0001`, `depends_on` `kernel_0002` as audio-player's
 
 ## Changes after approval
 
-None yet.
+- **2026-11-25, the hook's PR (#153) and its reviews.** None changes what was approved; each says what §2 meant:
+  - `types` takes the session, `await refs.types(db)`;
+  - a placement whose module is off shows `hidden`;
+  - YouTube's titles come back within about a second, each lookup's timeout 1 s;
+  - the two-day warning needs something live;
+  - a link's title is required (`featured.no_title`), and an end must be after its start;
+  - §4 names the scaffold's job, which goes, and the requirement on embeds.
 
 ## Changes as built (the hook, `feat/hook-item-references`)
 

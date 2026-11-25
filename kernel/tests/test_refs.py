@@ -1,4 +1,4 @@
-"""Item references (decision 0072, the tenth hook; `dev plans/contracts/featured.md`
+"""Item references (decision 0072, hook 11; `dev plans/contracts/featured.md`
 Â§2, "The hook"): a module's `refs.py`'s `REFS`, found by `load_module`, checked
 at the start, and read through `kernel.refs` for the modules that are on."""
 
@@ -88,6 +88,7 @@ def test_only_the_module_that_takes_part_shows() -> None:
         ("music", "music", "Tracks"),  # not <module>.<name>
         ("music", "music.Track", "Tracks"),
         ("music", "music.track", ""),  # no label
+        ("music", "music." + "t" * 80, "Tracks"),  # longer than a stored type (CubicDev on #153)
     ],
 )
 def test_a_type_the_module_may_not_give_is_refused(module_id: str, kind: str, label: str) -> None:
@@ -166,6 +167,36 @@ async def test_pick_reaches_the_source_within_its_limits(tracks: Tracks) -> None
             await refs.pick(None, "music.track", None, cursor=None, limit=limit)  # type: ignore[arg-type]
     with pytest.raises(ValueError, match="at most"):
         await refs.pick(None, "music.track", "x" * (refs.MAX_QUERY + 1), cursor=None)  # type: ignore[arg-type]
+
+
+async def test_pick_passes_the_cursor_and_the_next_one(tracks: Tracks) -> None:
+    async def paged(
+        db: AsyncSession, q: str | None, *, cursor: str | None, limit: int
+    ) -> refs.RefPage:
+        tracks.asked.append(("pick", q, cursor, limit))
+        return {"items": [tracks.rows[DRAFT]], "next_cursor": "after-draft"}
+
+    tracks.pick = paged  # type: ignore[method-assign]
+    page = await refs.pick(None, "music.track", None, cursor="after-album", limit=1)  # type: ignore[arg-type]
+    assert tracks.asked == [("pick", None, "after-album", 1)]
+    assert (page["items"], page["next_cursor"]) == ([tracks.rows[DRAFT]], "after-draft")
+
+
+async def test_a_page_past_its_limit_or_not_of_refs_is_refused(tracks: Tracks) -> None:
+    # Cutting it would lose what the next cursor has passed (CubicDev on #153).
+    answers: list[Any] = [
+        {"items": list(tracks.rows.values()), "next_cursor": None},  # 2 for a limit of 1
+        {"items": [object()], "next_cursor": None},
+        {"items": [], "next_cursor": 7},
+    ]
+
+    async def wrong(db: AsyncSession, q: str | None, *, cursor: str | None, limit: int) -> Any:
+        return answers.pop(0)
+
+    tracks.pick = wrong  # type: ignore[method-assign]
+    for _ in range(3):
+        with pytest.raises(ValueError, match="music"):
+            await refs.pick(None, "music.track", None, cursor=None, limit=1)  # type: ignore[arg-type]
 
 
 async def test_a_type_no_module_on_gives_is_unknown(tracks: Tracks) -> None:

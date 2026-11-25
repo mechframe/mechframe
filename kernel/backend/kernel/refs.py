@@ -1,5 +1,5 @@
-"""Item references: what another module may point at (decision 0072, the
-tenth hook; `dev plans/contracts/featured.md` §2, "The hook"; SPEC.md
+"""Item references: what another module may point at (decision 0072, hook
+11; `dev plans/contracts/featured.md` §2, "The hook"; SPEC.md
 sections 6 and 7).
 
 A module whose things another may pick, list or show as gone gives a source
@@ -44,8 +44,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 if TYPE_CHECKING:
     from kernel.modules import InstalledModule
 
-#: A thing's type, `<module id>.<name>`, as discography's `discography.track`.
+#: A thing's type, `<module id>.<name>`, as discography's `discography.track`,
+#: and its longest: what a module that points stores it in (CubicDev on #153).
 TYPE = re.compile(r"[a-z][a-z0-9-]*\.[a-z][a-z0-9_]*")
+MAX_TYPE = 80
 #: The ids one `find` may ask for.
 MAX_IDS = 200
 #: A page of `pick`: its size when none is asked, and the largest.
@@ -119,11 +121,13 @@ def build(installed: Iterable[InstalledModule]) -> dict[str, Source]:
             kind = getattr(source, "type", None)
             if (
                 not isinstance(kind, str)
+                or len(kind) > MAX_TYPE
                 or not TYPE.fullmatch(kind)
                 or kind.partition(".")[0] != module.id
             ):
                 raise ValueError(
-                    f"{module.id} may only give {module.id}.<name> types in REFS, not {kind!r}."
+                    f"{module.id} may only give {module.id}.<name> types in REFS, "
+                    f"{MAX_TYPE} characters at most, not {kind!r}."
                 )
             label = getattr(source, "label", None)
             if not isinstance(label, str) or not label.strip():
@@ -192,11 +196,26 @@ async def pick(
 ) -> RefPage:
     """A page of things of `type` to choose from, matching `q` when it has
     words. UnknownType for a type no module on gives; ValueError for a limit
-    outside 1 to MAX_PICK or words past MAX_QUERY."""
+    outside 1 to MAX_PICK or words past MAX_QUERY, and for a source's page
+    that holds more than `limit`, or anything but a `Ref`, or a cursor that
+    isn't a string: cutting it would lose what its next cursor has passed
+    (CubicDev on #153)."""
     if not 1 <= limit <= MAX_PICK:
         raise ValueError(f"A page holds 1 to {MAX_PICK} things.")
     words = (q or "").strip() or None
     if words is not None and len(words) > MAX_QUERY:
         raise ValueError(f"A search is at most {MAX_QUERY} characters.")
     source = await _source(db, type)
-    return await source.pick(db, words, cursor=cursor, limit=limit)
+    page = await source.pick(db, words, cursor=cursor, limit=limit)
+    items, after = page.get("items"), page.get("next_cursor")
+    if (
+        not isinstance(items, list)
+        or len(items) > limit
+        or not all(isinstance(each, Ref) for each in items)
+        or not (after is None or isinstance(after, str))
+    ):
+        raise ValueError(
+            f"{type.partition('.')[0]}'s {type} answered a page that isn't at most {limit} refs.Ref "
+            "with a string or null next_cursor."
+        )
+    return {"items": items, "next_cursor": after}
