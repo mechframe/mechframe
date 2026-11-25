@@ -264,6 +264,10 @@ test("Settings › Writing: the card, its head, the rule rows, The brief and the
     const long = styles.locator("li").filter({ has: page.getByRole("link", { name: LONG_STYLE.name }) });
     expect.soft((await boxOf(long.getByRole("link"))).right, at).toBeLessThanOrEqual(list.right + 0.5);
     expect.soft((await boxOf(long.locator(".mf-ai-style-line"))).right, at).toBeLessThanOrEqual(list.right + 0.5);
+    // None of the long name hidden in its link, and a short name on the button's one line (CodeRabbit on #156).
+    const hidden = await long.getByRole("link").evaluate((link) => link.scrollWidth - link.clientWidth);
+    expect.soft(hidden, at).toBeLessThanOrEqual(0);
+    expect.soft(name.height, at).toBeCloseTo(34, 0);
   });
 });
 
