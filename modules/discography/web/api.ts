@@ -28,6 +28,7 @@ export type AdminRole = Schemas["AdminRole"];
 export type NewRelease = Schemas["NewRelease"];
 export type ReleaseChange = Schemas["ReleaseChange"];
 export type TrackChange = Schemas["TrackChange"];
+export type PlaysWeek = Schemas["PlaysWeek"];
 export type Kind = ReleaseCard["kind"];
 export type Status = AdminRelease["status"];
 export type Profile = AdminPerson["profile"];
@@ -41,6 +42,7 @@ export const PEOPLE = "/api/discography/admin/people";
 export const ROLES = "/api/discography/admin/roles";
 export const LINKS = "/api/discography/admin/links";
 export const PUBLIC_RELEASES = "/api/discography/releases";
+export const PLAYS = "/api/discography/admin/plays";
 
 /** Who may manage the library, and who may change the Music settings (the kernel's settings routes). */
 export const MANAGE = "discography.release.manage";

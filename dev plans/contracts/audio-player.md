@@ -3,7 +3,7 @@ feature: The audio-player module, the site's one player for its own audio: inlin
 status: approved
 approved: 2026-11-24 (the owner: "Approve as recommended", the six answers in §8 as recommended)
 plan: `docs/plans/vibrant-mindz-backend/backend-plan.md` (§2, 2) and `players-admin.md` ("Front end"); `dev plans/2026-11-24-side-lane-m9-audio-player.md`; VM Website's boards `design/site/Main.dc.html` (the Spotlight bar, the hero's Play, the Releases deck, the Videos player), `Release.dc.html` (the docked bar) and `AdminDashboard.dc.html` ("Plays this week")
-pr: #149 (audio-player 0.1.0), then discography 0.1.1's own (§8, 1); decision 0071; migration `audio_player_0001`
+pr: #149 (audio-player 0.1.0), then discography 0.1.1's own, #151 (§8, 1); decision 0071; migration `audio_player_0001`
 ---
 
 # Contract: `audio-player`
@@ -252,4 +252,8 @@ None yet.
 - **The widget's answers:** a getter's answer for an earlier load is dropped, and FINISH reads the track it knows. The same link loaded again starts over. A Widget API that failed to load is asked for again (Codex).
 - **The dock's Escape gives focus back** to Queue or Volume when the panel held it (CodeRabbit).
 - **The settings route answers through `answer()`,** as SPEC 7 asks of a route that sets a header. A source is refused unless it `fullmatch`es `<module>.<type>` (CodeRabbit).
+
+## Changes as built (discography 0.1.1, #151)
+
+The "discography 0.1.1" block is built as §2 says. What it didn't name is in discography's contract, "Changes as built (0.1.1)": the card's read and its words, Play album's name, and the seed's plays dated by the real clock. One thing reaches back here: **"While audio-player is off" can't happen while the site runs,** since the kernel turns discography off with it (discography requires it). The pages keep `Plays` only for a modules read that says it's off. No change to audio-player.
 

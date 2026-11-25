@@ -6,7 +6,7 @@
  */
 import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { renderApp, testUser } from "@/kernel/testing";
 
@@ -14,6 +14,7 @@ import type { AdminRelease, AdminTrack, FullRelease, FullTrack, LiveRelease, Liv
 import { clock, msOf } from "../../web/api";
 import { changed, mineOf, movedTrack, releaseBody, releaseFormOf, same } from "../../web/editing";
 import discography from "../../web/module.web";
+import { playsWords } from "../../web/widgets/PlaysCard";
 
 type Answer = { status: number; body?: unknown };
 type Answers = Record<string, Answer | ((request: Request) => Answer | Promise<Answer>)>;
@@ -162,6 +163,7 @@ const LIVE: LiveRelease = {
   updated_at: "2026-11-21T12:00:00+00:00",
   tracks: [
     {
+      id: T1,
       title: "Gather Around",
       slug: "gather-around",
       number: 1,
@@ -175,6 +177,7 @@ const LIVE: LiveRelease = {
       path: "/music/unified-vibration/gather-around",
     },
     {
+      id: T2,
       title: "Boom Bap Piff",
       slug: "boom-bap-piff",
       number: 2,
@@ -210,11 +213,13 @@ describe("the site's music", () => {
     expect(await screen.findByRole("link", { name: "SoundCloud" })).toHaveAttribute("href", "https://soundcloud.com/vibrantmindz");
   });
 
-  it("plays an upload in the browser's own player, loading nothing until it's pressed, and links a SoundCloud track", async () => {
+  it("with audio-player off, plays an upload in the browser's own player, loading nothing until it's pressed, and links a SoundCloud track", async () => {
     routed({ "GET /api/discography/releases/unified-vibration": { status: 200, body: LIVE } });
-    renderApp({ path: "/music/unified-vibration", modules: [discography] });
+    renderApp({ path: "/music/unified-vibration", modules: [discography], on: ["discography"] });
 
     expect(await screen.findByRole("heading", { level: 1, name: "Unified Vibration" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Play album" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "Player" })).toBeNull();
     const player = document.querySelector("audio");
     expect(player).toHaveAttribute("preload", "none");
     expect(player).toHaveAttribute("src", `${FILES}/abc.mp3`);
@@ -255,6 +260,110 @@ describe("the site's music", () => {
     expect(screen.getByRole("heading", { level: 2, name: "Lyrics" })).toBeInTheDocument();
     expect(screen.getByText("Second verse")).toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: "Unified Vibration" })[0]).toHaveAttribute("href", "/music/unified-vibration");
+  });
+});
+
+describe("the site's music with audio-player (0.1.1)", () => {
+  const PLAYER = { "GET /api/audio-player/settings": { status: 200, body: { autoplay_next: true, count_after_seconds: 30 } } };
+  const ON = ["discography", "audio-player"];
+
+  beforeEach(() => {
+    // jsdom has no media playback: the player's one <audio> plays and pauses on these.
+    vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue(undefined);
+    vi.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(() => undefined);
+    vi.spyOn(HTMLMediaElement.prototype, "load").mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("plays the album and each row through the player, the row that plays showing its bars, and docks the Player", async () => {
+    routed({ ...PLAYER, "GET /api/discography/releases/unified-vibration": { status: 200, body: LIVE } });
+    const user = userEvent.setup();
+    renderApp({ path: "/music/unified-vibration", modules: [discography], on: ON });
+
+    expect(await screen.findByRole("heading", { level: 1, name: "Unified Vibration" })).toBeInTheDocument();
+    expect(document.querySelector("audio")).toBeNull(); // the browser's own player isn't drawn
+    const album = screen.getByRole("button", { name: "Play album" });
+    expect(album).toHaveTextContent("Play album");
+    const rows = screen.getAllByRole("listitem").filter((row) => row.classList.contains("mf-music-track"));
+    expect(rows).toHaveLength(2);
+    const [first, second] = rows as [HTMLElement, HTMLElement];
+    expect(within(first).getByRole("button", { name: "Play 01 Gather Around" })).toBeInTheDocument();
+    expect(within(second).getByRole("button", { name: "Play 02 Boom Bap Piff" })).toBeInTheDocument();
+    const dock = screen.getByRole("region", { name: "Player" });
+    expect(dock.closest("main")).toBeNull(); // after the footer, as the board draws it
+    expect(within(dock).getByText("Gather Around")).toBeInTheDocument();
+    expect(within(dock).getByText("Unified Vibration, Vibrant Mindz")).toBeInTheDocument();
+
+    await user.click(within(first).getByRole("button", { name: "Play 01 Gather Around" }));
+    expect(await within(first).findByRole("button", { name: "Pause 01 Gather Around" })).toBeInTheDocument();
+    expect(first.querySelector(".mf-player-eq-on")).not.toBeNull();
+    expect(second.querySelector(".mf-player-eq")).toBeNull();
+    expect(screen.getByRole("button", { name: "Pause album" })).toHaveTextContent("Pause album");
+
+    await user.click(screen.getByRole("button", { name: "Pause album" }));
+    expect(await screen.findByRole("button", { name: "Play album" })).toBeInTheDocument();
+    expect(first.querySelector(".mf-player-eq")).not.toBeNull(); // still there, and still
+    expect(first.querySelector(".mf-player-eq-on")).toBeNull();
+  });
+
+  it("draws a track's page with the player's bar and its waveform", async () => {
+    const shown: LiveTrack = {
+      ...(LIVE.tracks[0] as LiveRelease["tracks"][number]),
+      release: { title: "Unified Vibration", slug: "unified-vibration", kind: "album", path: "/music/unified-vibration" },
+      artist_line: "Vibrant Mindz",
+      cover: null,
+      peaks: Array.from({ length: 1000 }, (_, at) => at % 256),
+      lyrics: null,
+      credits: [],
+    };
+    routed({ ...PLAYER, "GET /api/discography/releases/unified-vibration/tracks/gather-around": { status: 200, body: shown } });
+    renderApp({ path: "/music/unified-vibration/gather-around", modules: [discography], on: ON });
+
+    expect(await screen.findByRole("heading", { level: 1, name: "Gather Around" })).toBeInTheDocument();
+    const bar = screen.getByRole("region", { name: "Player" });
+    expect(bar.querySelector(".mf-wave svg")).not.toBeNull(); // the track's waveform, a picture until it plays
+    expect(within(bar).getByText("Unified Vibration, Vibrant Mindz")).toBeInTheDocument();
+    expect(within(bar).getByRole("button", { name: /^Play/ })).toBeInTheDocument();
+    expect(document.querySelector("audio")).toBeNull();
+  });
+});
+
+describe("the Dashboard's Plays this week (0.1.1)", () => {
+  const ATTENTION = {
+    "GET /api/kernel/admin/attention": { status: 200, body: { items: [] } },
+    "GET /api/kernel/admin/setup": { status: 200, body: { items: [] } },
+    "GET /api/kernel/notifications": { status: 200, body: { items: [], next_cursor: null, unread: 0 } },
+  };
+
+  it("says the week's plays, the change on the one before, and the track that leads", async () => {
+    routed({ ...ATTENTION, "GET /api/discography/admin/plays": { status: 200, body: { this_week: 1284, last_week: 1088, leading: "Gather Around" } } });
+    renderApp({ path: "/admin", modules: [discography], session: editor });
+
+    const card = (await screen.findByRole("heading", { level: 2, name: "Plays this week" })).closest("section") as HTMLElement;
+    expect(await within(card).findByText("1,284")).toBeInTheDocument();
+    expect(within(card).getByText("Up 18% on last week; Gather Around leads")).toBeInTheDocument();
+    expect(within(card).getByText("Up 18%")).toBeInTheDocument();
+    expect(within(card).getByRole("link", { name: "Music" })).toHaveAttribute("href", "/admin/music");
+  });
+
+  it("isn't drawn for someone who can't manage the library", async () => {
+    routed({ ...ATTENTION, "GET /api/discography/admin/plays": { status: 200, body: { this_week: 1, last_week: 0, leading: "Gather Around" } } });
+    renderApp({ path: "/admin", modules: [discography], session: testUser({ roles: ["member", "moderator"], second_factor: true, permissions: ["auth.audit.read"] }) });
+    expect(await screen.findByText("Nothing needs you right now.")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Plays this week" })).toBeNull();
+  });
+
+  it.each([
+    [{ this_week: 0, last_week: 40, leading: null }, { value: "0", line: "No plays yet this week" }],
+    [{ this_week: 12, last_week: 0, leading: "Catalyst" }, { value: "12", line: "None the week before; Catalyst leads", state: { tone: "info", label: "New" } }],
+    [{ this_week: 93, last_week: 100, leading: "Catalyst" }, { value: "93", line: "Down 7% on last week; Catalyst leads", state: { tone: "warning", label: "Down 7%" } }],
+    [{ this_week: 100, last_week: 100, leading: "Catalyst" }, { value: "100", line: "The same as last week; Catalyst leads", state: { tone: "neutral", label: "Level" } }],
+    [{ this_week: 1284, last_week: 1088, leading: "Gather Around" }, { value: "1,284", line: "Up 18% on last week; Gather Around leads", state: { tone: "success", label: "Up 18%" } }],
+  ])("words %j as the board does", (week, words) => {
+    expect(playsWords(week)).toEqual(words);
   });
 });
 

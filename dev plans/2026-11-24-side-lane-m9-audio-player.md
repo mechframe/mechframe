@@ -67,4 +67,14 @@ In the contract's §8:
 
 ## 9. Result
 
-(Filled in by the side lane.)
+AI DevKit Development 46 WT, 2026-11-24, about 17:30 to 22:45 Eastern.
+
+- **The contract,** `dev plans/contracts/audio-player.md`, was approved as recommended, all six answers. Decision 0071: audio-player requires only the kernel, a source module requires it, and plays are counted once per listener a day under a daily salt.
+- **#149, audio-player 0.1.0,** landed at `a9959ee` (2026-11-25 03:44 UTC). Its parts and its `public.count`, `forget`, `plays` and `add_daily` are as MODULE.md says. The contract's two "Changes as built" sections list what moved from §2.
+- **The kernel:** `client_address` joined its public surface (SPEC 6). `kernel/tests/contract/test_hook_consent.py` now lists audio-player among the modules with a media host.
+- **Review:** Codex's two findings and CodeRabbit's eighteen over five rounds, each fixed with a test seen failing first. CodeRabbit was rate-limited on the final head, so it never reviewed the last three small fixes. They were landed under the rule: "CI result" green, no open thread.
+- **Tests:** Python 508 passed after the last merge of main; web 58; e2e 3 (the harness's `/player.html`). `mechframe check` passed on a fresh site.
+- **Found, not fixed** (for the main lane's handoff):
+  - embeds' `VideoPlaylist`: its "Prev" button is named "Previous video", which axe refuses (`label-content-name-mismatch`, serious). It's a small embeds fix.
+  - `npm run api:check` on Windows calls media's `schema.ts` stale over line endings only. CI on Linux passes it.
+- **Next:** discography 0.1.1, the contract's second PR: `dev plans/2026-11-24-side-lane-m10-discography-0-1-1.md`.

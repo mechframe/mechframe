@@ -3,7 +3,7 @@ feature: The discography module, the site's music library: releases, tracks, cre
 status: approved
 approved: 2026-11-24 (the owner: "Approve as recommended", the five answers in §8 as recommended)
 plan: `docs/plans/vibrant-mindz-backend/backend-plan.md` (§2, 3) and `players-admin.md`; `dev plans/2026-11-23-side-lane-m8-discography.md`; the canvas's Music boards (VM Website `design/site/AdminMusic`, `AdminAlbum`, `AdminTracks`, `AdminCredits`, `Music` and `Release.dc.html`; the Album editor at https://claude.ai/artifact/W7EZQumtcK36K3xczG8mNH)
-pr: #145; decision 0070; migration `discography_0001`
+pr: #145, then 0.1.1 as #151 (audio-player's contract §2); decision 0070; migration `discography_0001`
 ---
 
 # Contract: `discography`
@@ -191,3 +191,16 @@ Files: masters in the private bucket at `discography/masters/<track_id>/<n>.<ext
 - **Search follows `show_lyrics`:** discography hears `kernel.settings.changed` for itself (`discography.reindex_on_settings`) and indexes its live releases again.
 - **A track's old address** whose track can't play any more answers 404, never another track that took its slug since.
 - **The track panel's audio answer** asks, as a save does, where someone else saved a field the person had changed. The editors keep what's typed when a read in the background fails, and a field typed back to its saved value while a save waits still counts as a change.
+
+## Changes as built (0.1.1, audio-player's first source, `feat/discography-0-1-1`)
+
+The job is audio-player's contract's "discography 0.1.1" block (`dev plans/contracts/audio-player.md` §2), built as it says. What the block didn't name, and what building it found:
+
+- **A tracklist's line carries the track's `id`,** for `POST /tracks/{id}/plays`.
+- **The Dashboard card reads `GET /admin/plays`** (`discography.release.manage`): `{this_week, last_week, leading}`. The weeks are today and the six days before, then the seven before those, by UTC days, as audio-player keeps them. Only tracks there are now count: an item that isn't a track adds nothing. A tie for the lead goes to the title first in order.
+- **The card's words** follow the board ("Up 18% on last week; Gather Around leads", the pill "Up 18%"). The block names only the first and "No plays yet this week", so the rest are this build's: "Down 7% on last week", "The same as last week" (the pill "Level"), and "None the week before" (the pill "New"). The figure is "0" when there are no plays yet.
+- **Play album is a `PlayButton`** named "Play album" or "Pause album", its words its name. Once the release is the player's queue, it pauses or resumes the track that plays, rather than starting the first again.
+- **"While audio-player is off" can't happen while the site runs.** The kernel turns a module off when one it requires is off, so audio-player off turns discography off too, routes and pages included. The pages keep `Plays` for a modules read that says audio-player is off (the Vitest case), and draw the player while the read is still on its way, so nothing flashes. The count route needs no check of its own.
+- **The seed's plays** end on the day it's run, not on the seed's fixed `ctx.now` (2026-01-01), which the card never reads back to. A second run makes no track, so it writes none again.
+- **`recipes/artist-or-band.json`** gains `audio-player`, since discography now needs it.
+- **A play holds its track's row** (FOR KEY SHARE) until its transaction ends (CodeRabbit on #151). A delete then waits, and its `forget` takes the play too. Otherwise a play written after the delete stayed in audio-player's rows until the prune.

@@ -1,7 +1,8 @@
 // discography's web binding (SPEC.md section 8; dev plans/contracts/discography.md):
 // the library at /music, each live release at /music/:release and each track that
 // plays at /music/:release/:track; Albums, Tracks and Credits under Music in the
-// sidebar, in the boards' order, with the album editor; and Music in the header.
+// sidebar, in the boards' order, with the album editor; Music in the header; and
+// the Dashboard's "Plays this week" (0.1.1).
 import { defineModule } from "@/kernel";
 
 import { MANAGE } from "./api";
@@ -29,5 +30,6 @@ export default defineModule({
       { label: "Tracks", to: "/admin/music/tracks", section: "Music", icon: "music", permission: MANAGE },
       { label: "Credits", to: "/admin/music/credits", section: "Music", icon: "music", permission: MANAGE },
     ],
+    "admin.dashboard.widget": [{ lazy: () => import("./widgets/PlaysCard"), permission: MANAGE }],
   },
 });

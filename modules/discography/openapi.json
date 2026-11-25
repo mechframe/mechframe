@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Discography",
-    "version": "0.1.0"
+    "version": "0.1.1"
   },
   "paths": {
     "/api/discography/releases": {
@@ -233,6 +233,79 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ArtistLinks"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/discography/tracks/{track_id}/plays": {
+      "post": {
+        "summary": "Played",
+        "description": "The player heard the track long enough: one play of a live track that\nplays, counted once a listener a day. 204 whether it counted or not, so a\ndraft's id says nothing.",
+        "operationId": "played_api_discography_tracks__track_id__plays_post",
+        "parameters": [
+          {
+            "name": "track_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Track Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/discography/admin/plays": {
+      "get": {
+        "summary": "Read Plays",
+        "description": "The Dashboard's \"Plays this week\": the last seven days' plays (UTC), the\nseven before, and the track played most.",
+        "operationId": "read_plays_api_discography_admin_plays_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaysWeek"
                 }
               }
             }
@@ -2335,6 +2408,11 @@
       },
       "LiveTrack": {
         "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
           "title": {
             "type": "string",
             "title": "Title"
@@ -2468,6 +2546,7 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
+          "id",
           "title",
           "slug",
           "number",
@@ -2780,6 +2859,38 @@
           "version"
         ],
         "title": "PersonChange"
+      },
+      "PlaysWeek": {
+        "properties": {
+          "this_week": {
+            "type": "integer",
+            "title": "This Week"
+          },
+          "last_week": {
+            "type": "integer",
+            "title": "Last Week"
+          },
+          "leading": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Leading"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "this_week",
+          "last_week",
+          "leading"
+        ],
+        "title": "PlaysWeek",
+        "description": "The Dashboard's \"Plays this week\", from audio-player's daily totals."
       },
       "Problem": {
         "title": "Problem",
@@ -3486,6 +3597,11 @@
       },
       "TrackLine": {
         "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
           "title": {
             "type": "string",
             "title": "Title"
@@ -3570,6 +3686,7 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
+          "id",
           "title",
           "slug",
           "number",

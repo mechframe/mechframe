@@ -1,21 +1,32 @@
 // A track that plays, at /music/:release/:track (`dev plans/contracts/discography.md`
-// §2): its title, its release, the browser's own player for an upload or a link to
-// SoundCloud, its credits, and its lyrics while the site shows them. The words are
-// the server copy's own. An address it left moves on; any other is the 404 page.
+// §2): its title, its release, audio-player's bar with its waveform (0.1.1; with
+// audio-player off, the browser's own player for an upload or a link to
+// SoundCloud), its credits, and its lyrics while the site shows them. The words
+// are the server copy's own. An address it left moves on; any other is the 404 page.
+import { useMemo } from "react";
 import { Link, Navigate, useLocation, useParams } from "react-router";
 
-import { ApiProblem, LoadError, NotFound, Seo } from "@/kernel";
+import { ApiProblem, LoadError, NotFound, Seo, useModuleEnabled } from "@/kernel";
+import { PlayerBar } from "@/modules/audio-player/public";
 import { Picture } from "@/modules/media/public";
 
 import { clock } from "../api";
 import { Plays } from "../components/Plays";
 import "../music.css";
+import { playerItem } from "../player";
 import { isMoved, useTrack } from "../reads";
 
 export default function Track() {
   const { release: slug = "", track: trackSlug = "" } = useParams();
   const { search, hash } = useLocation();
   const found = useTrack(slug, trackSlug);
+  // Off only when the site says so: discography is never on without it (its requirement).
+  const player = useModuleEnabled("audio-player") !== false;
+  const queue = useMemo(() => {
+    const shown = found.data;
+    if (!shown || isMoved(shown)) return [];
+    return [playerItem(shown, { title: shown.release.title, artist_line: shown.artist_line, cover: shown.cover })];
+  }, [found.data]);
   if (found.isPending) return null;
   if (found.error) {
     if (found.error instanceof ApiProblem && found.error.status === 404) return <NotFound />;
@@ -51,9 +62,10 @@ export default function Track() {
             {track.duration_ms ? <span>{clock(track.duration_ms)}</span> : null}
             {track.explicit ? <span className="mf-music-advisory">Parental Advisory</span> : null}
           </p>
-          <Plays track={track} label={track.title} />
+          {player ? null : <Plays track={track} label={track.title} />}
         </div>
       </section>
+      {player ? <PlayerBar queue={queue} label="Player" /> : null}
       {track.credits.length ? (
         <section aria-labelledby="mf-music-credits" className="mf-music-words">
           <h2 id="mf-music-credits">Credits</h2>

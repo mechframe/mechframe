@@ -101,7 +101,7 @@
     {
       "id": "discography",
       "name": "Discography",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "status": "experimental",
       "category": "media",
       "summary": "Albums, EPs and singles with tracks, credits and streaming links; tracks play from an upload or a SoundCloud link.",
@@ -118,7 +118,8 @@
         "kernel": "^0.1",
         "modules": {
           "media": "^0.1",
-          "embeds": "^0.1"
+          "embeds": "^0.1",
+          "audio-player": "^0.1"
         }
       },
       "conflicts": []

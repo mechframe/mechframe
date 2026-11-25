@@ -1,5 +1,13 @@
 # Changelog: discography
 
+## 0.1.1
+
+- Plays through `audio-player`, which it now requires (`dev plans/contracts/audio-player.md` §2, "discography 0.1.1"; decision 0071): the Release page's Play album and each row's play, the three bars by the row that plays and the Player docked after the footer; the Track page's bar with its waveform. If the modules read says `audio-player` is off, both pages keep the browser's own player.
+- `POST /api/discography/tracks/{id}/plays` (public, 60 an hour from one address) counts a live track that plays through `audio_player.public.count`, and answers 204 whether it counted or not. A tracklist's lines carry each track's `id`.
+- The Dashboard's "Plays this week" (`admin.dashboard.widget`, for `discography.release.manage`), from `GET /admin/plays`: the last seven days' plays, the change on the seven before, and the track that leads.
+- Deleting a track or a release forgets its plays in the same transaction. The seed gives each track it makes two weeks of daily plays, ending on the day it's run.
+- `web/public.ts` gains `playerItem(track, release)` and `playerQueue(release)`.
+
 ## 0.1.0
 
 - The music library, built to its approved contract (`dev plans/contracts/discography.md`; decision 0070; migration `discography_0001`): releases with a kind (album, EP, single), their tracks in order, credits as rows of a role and a name, streaming links from nine platforms, and front and back covers from media.
