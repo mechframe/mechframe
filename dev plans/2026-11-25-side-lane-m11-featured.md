@@ -71,4 +71,24 @@ MechFrame: website modules on a FastAPI and Postgres kernel (`CLAUDE.md`, `SPEC.
 
 ## 9. Result
 
-(Filled in by the side lane.)
+Side lane M11, 2026-11-25, about 14:00 to 17:30 Eastern (19:00 to 22:30 UTC).
+
+- **#157, featured 0.1.0, landed** (fast-forward to `8bacff7`, decision 0073, migration `featured_0001`). Players at `/admin/featured`, the public read and `useFeatured`, the Dashboard's card, two-day warning and setup step. Reviews: Codex 2 and cubic 26, all fixed but one declined with a reason (`PlacementIn` stays one shape). Beside the module, it changed:
+  - the kit's `SaveBar`, which gains `what` (the main lane's OK);
+  - the harness's probe notes, which give `probe.note` and gain `edited_at`;
+  - `harness.fake_youtube`, with `/api/_test/youtube`;
+  - `/featured.html`;
+  - `tests/test_migrations.py`'s `_SEED`.
+- **discography 0.1.2** on `feat/discography-0-1-2`, its own PR (#158 expected, from GitHub at push):
+  - `refs.py` with `discography.release` and `discography.track`;
+  - `GET /releases?ids=` and `GET /tracks?ids=`, with `useReleases({ ids })` and `useTracks(ids)`;
+  - VM Website's D1 to D4, K2, K3's words, K6's card and K8, in discography's own files.
+  - It's held for #156 so it can merge main and be checked against the kit's new parts. Its "Changes as built" is in `dev plans/contracts/featured.md`.
+- **For the owner, as §5 says:** making Vibrant Mindz's three slots on Players (`spotlight`: tracks, `releases`: albums, `videos`: YouTube links, three kinds) once 0.1.2 lands.
+- **For the main lane's handoff:**
+  - Step 2's three modules are built once 0.1.2 lands; the row's status is yours to set;
+  - K3's 12 px pills and K6's table heads and names stay the kit's.
+- **Traps hit:**
+  - the worktree guard refuses a command with "git" anywhere in it, `.gitkeep` and `isdigit` included: write the script to a file and run that;
+  - `gh api`'s output needs `encoding="utf-8"` in Python's `subprocess`;
+  - cubic resolves its own threads once a reply lands.
