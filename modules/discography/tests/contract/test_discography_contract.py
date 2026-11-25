@@ -102,6 +102,7 @@ def _json_ld(html: str) -> list[dict[str, Any]]:
         ("PUT", f"{API}/admin/roles", {"items": [{"name": "Artist"}]}),
         ("GET", f"{API}/admin/links", None),
         ("PUT", f"{API}/admin/links", {"links": []}),
+        ("GET", f"{API}/admin/plays", None),
     ],
 )
 async def test_signed_out_is_401_and_a_member_is_403(
@@ -716,3 +717,48 @@ async def test_the_server_copy_of_a_release_a_track_the_library_and_a_draft(
     for text in (html, on_track.text, library.text, sitemap, llms):
         assert stream not in text  # no audio address goes to crawlers
         assert "/discography/stream/" not in text
+
+
+# --- plays (0.1.1, `dev plans/contracts/audio-player.md` §2 and §7) -----------------------
+
+
+async def _week(browser: Browser) -> dict[str, Any]:
+    read = await browser.http.get(f"{API}/admin/plays")
+    assert read.status_code == 200, read.text
+    week: dict[str, Any] = read.json()
+    return week
+
+
+async def test_a_play_counts_once_for_a_live_track_that_plays_and_never_for_a_draft(
+    browser: Browser,
+) -> None:
+    await browser.as_new("member", "editor")
+    release = await _release(browser)
+    plays = await _linked(browser, release["id"], f"Heard {uuid.uuid4().hex[:6]}")
+    silent = await browser.http.post(f"{ADMIN}/{release['id']}/tracks", json={"title": "Waits"})
+    assert silent.status_code == 201, silent.text
+    await _publish(browser, release["id"])
+    draft = await _linked(browser, (await _release(browser))["id"])
+    shown = (await _read(browser, release["slug"]))[1]
+    assert [line["id"] for line in shown["tracks"]] == [plays["id"]]
+    before = await _week(browser)
+    browser.forget()
+
+    for each in (plays["id"], plays["id"], silent.json()["id"], draft["id"], NOBODY):
+        answer = await browser.http.post(f"{API}/tracks/{each}/plays")
+        assert (answer.status_code, answer.content) == (204, b""), answer.text
+    assert (await browser.http.post(f"{API}/tracks/not-an-id/plays")).status_code == 422
+
+    await browser.as_new("member", "editor")
+    after = await _week(browser)
+    assert after["this_week"] == before["this_week"] + 1
+    assert set(after) == {"this_week", "last_week", "leading"}
+
+
+async def test_the_61st_play_in_an_hour_from_one_address_is_429(browser: Browser) -> None:
+    for _ in range(60):
+        answer = await browser.http.post(f"{API}/tracks/{NOBODY}/plays")
+        assert answer.status_code == 204, answer.text
+    sixty_first = await browser.http.post(f"{API}/tracks/{NOBODY}/plays")
+    assert sixty_first.status_code == 429, sixty_first.text
+    assert sixty_first.json()["code"] == "kernel.rate_limited"

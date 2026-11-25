@@ -17,6 +17,11 @@ names what left it, so none chains. Only a live release leaves one.
 **Credits** name a person in a role. A name is one person however often it's
 credited (matched without case); one whose last credit goes is removed in the
 same save. Covers are media's images, recorded as the release's uses.
+
+**Plays** are audio-player's (0.1.1, `dev plans/contracts/audio-player.md` §2):
+a live track that plays counts through `audio_player.public.count`, a deleted
+track's plays are forgotten in the transaction that deletes it, and the
+Dashboard's card reads its two weeks through `plays`.
 """
 
 from __future__ import annotations
@@ -27,12 +32,14 @@ import secrets
 import unicodedata
 import uuid
 from collections.abc import Iterable, Sequence
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from typing import Any, BinaryIO, cast
 from urllib.parse import urlsplit
 
 import sqlalchemy as sa
+from audio_player import public as audio_player
 from embeds import public as embeds
+from fastapi import Request
 from media import public as media
 from sqlalchemy import delete, func, or_, select
 from sqlalchemy.dialects.postgresql import insert
@@ -67,6 +74,10 @@ ADMIN_PER_PAGE = 50
 MAX_MASTER_BYTES = 60 * 1024 * 1024
 PROCESS = "discography.process_track"
 DELETE_FILES = "discography.delete_files"
+#: A track's plays, as audio-player keeps them.
+PLAYS = "discography.track"
+#: "Plays this week": today and the six days before.
+WEEK = 7
 _SLUG = re.compile(SLUG_PATTERN)
 
 #: Each platform's hosts, and its name on a page.
@@ -693,6 +704,7 @@ async def _move_of(db: AsyncSession, old: str) -> tuple[bool, str | None]:
 def _line(release: Release, track: Track, number: int, *, label: bool) -> dict[str, Any]:
     """A track as a tracklist shows it; `label` is the site's `show_explicit_badge`."""
     return {
+        "id": str(track.id),
         "title": track.title,
         "slug": track.slug,
         "number": number,
@@ -1122,6 +1134,7 @@ async def remove_release(db: AsyncSession, release_id: uuid.UUID, *, by: uuid.UU
     await db.delete(release)
     await db.flush()
     await _prune_people(db)
+    await audio_player.forget(db, PLAYS, [track.id for track in tracks])
     await media.release(db, owner=owner(release_id))
     await search.remove(db, CONTENT_TYPE, release_id)
     await _delete_later(db, files)
@@ -1414,6 +1427,7 @@ async def remove_track(db: AsyncSession, track_id: uuid.UUID, *, by: uuid.UUID |
         each.position = position
     await db.flush()
     await _prune_people(db)
+    await audio_player.forget(db, PLAYS, [track_id])
     await _delete_later(db, files)
     await events.emit(
         db, "discography.track.deleted", TrackDeleted(track_id=track_id, release_id=release.id)
@@ -1624,3 +1638,47 @@ async def failed_upload(db: AsyncSession) -> tuple[Release, Track] | None:
         )
     ).first()
     return None if row is None else (row[0], row[1])
+
+
+# --- plays -----------------------------------------------------------------------------------
+
+
+async def count_play(db: AsyncSession, request: Request, track_id: uuid.UUID) -> bool:
+    """One play of a live track that plays, counted once a listener a day by
+    audio-player; False for anything else, which counts nothing. Written in the
+    caller's transaction."""
+    row = (
+        await db.execute(
+            select(Track)
+            .join(Release, Release.id == Track.release_id)
+            .where(Track.id == track_id, lifecycle.visible(Release))
+        )
+    ).first()
+    if row is None or not plays_from(row[0]):
+        return False
+    return await audio_player.count(db, request, source=PLAYS, item_id=track_id)
+
+
+async def plays_week(db: AsyncSession, today: date) -> dict[str, Any]:
+    """The Dashboard's "Plays this week": the plays of today and the six days
+    before, of the seven before those, and the track with the most this week
+    (the first title in order on a tie). Only tracks there are now count."""
+    start = today - timedelta(days=WEEK - 1)
+    this = await audio_player.plays(db, PLAYS, since=start, until=today)
+    last = await audio_player.plays(
+        db, PLAYS, since=start - timedelta(days=WEEK), until=start - timedelta(days=1)
+    )
+    ids = set(this) | set(last)
+    titles: dict[uuid.UUID, str] = {}
+    if ids:
+        rows = await db.execute(select(Track.id, Track.title).where(Track.id.in_(ids)))
+        titles = {row.id: row.title for row in rows}
+    this = {each: plays for each, plays in this.items() if each in titles}
+    leader = min(
+        this, key=lambda each: (-this[each], titles[each].casefold(), str(each)), default=None
+    )
+    return {
+        "this_week": sum(this.values()),
+        "last_week": sum(plays for each, plays in last.items() if each in titles),
+        "leading": None if leader is None else titles[leader],
+    }

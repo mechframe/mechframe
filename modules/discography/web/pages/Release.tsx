@@ -1,18 +1,23 @@
 // A live release at /music/:release (`dev plans/contracts/discography.md` §2; the
 // site's Release board): its front cover (and back, behind Front and Back), kind,
 // year and Parental Advisory, the title, artist and credit lines, where else it
-// plays, then the tracks that play, each in the browser's own player or as a
-// SoundCloud link, and the credits. The words are the server copy's own. An
-// address the release left moves on; any other is the 404 page.
-import { useState } from "react";
+// plays, then the tracks that play, and the credits. With audio-player on (0.1.1),
+// Play album and each row's play start the release's tracks, the row that plays
+// shows the three bars, and the Player docks after the footer; with it off, each
+// track plays in the browser's own player or as a SoundCloud link. The words are
+// the server copy's own. An address the release left moves on; any other is the
+// 404 page.
+import { useMemo, useState } from "react";
 import { Link, Navigate, useLocation, useParams } from "react-router";
 
-import { ApiProblem, LoadError, NotFound, Seo } from "@/kernel";
+import { ApiProblem, LoadError, NotFound, Seo, useModuleEnabled } from "@/kernel";
 import { Picture } from "@/modules/media/public";
 
 import { KIND_WORDS, clock } from "../api";
+import { PlayAlbum, PlayTrack, ReleaseDock } from "../components/Listen";
 import { Plays } from "../components/Plays";
 import "../music.css";
+import { playerQueue } from "../player";
 import { isMoved, useRelease } from "../reads";
 
 export default function Release() {
@@ -20,6 +25,9 @@ export default function Release() {
   const { search, hash } = useLocation();
   const found = useRelease(slug);
   const [back, setBack] = useState(false);
+  // Off only when the site says so: discography is never on without it (its requirement).
+  const player = useModuleEnabled("audio-player") !== false;
+  const queue = useMemo(() => (found.data && !isMoved(found.data) ? playerQueue(found.data) : []), [found.data]);
   if (found.isPending) return null;
   if (found.error) {
     if (found.error instanceof ApiProblem && found.error.status === 404) return <NotFound />;
@@ -106,19 +114,25 @@ export default function Release() {
         {release.tracks.length ? (
           <>
             <p className="mf-music-lead">{release.tracklist_to_come ? `${count} for now. The full tracklist is to come.` : count}</p>
+            {player ? <PlayAlbum queue={queue} /> : null}
             <ol className="mf-music-tracklist">
-              {release.tracks.map((track) => (
-                <li key={track.slug} className="mf-music-track">
-                  <div className="mf-music-track-head">
-                    <span className="mf-music-number">{String(track.number).padStart(2, "0")}</span>
-                    <Link to={track.path}>{track.title}</Link>
-                    {track.explicit ? <span className="mf-music-advisory">Explicit</span> : null}
-                    <span className="mf-music-number">{track.duration_ms ? clock(track.duration_ms) : ""}</span>
-                  </div>
-                  <Plays track={track} label={track.title} />
-                </li>
-              ))}
+              {release.tracks.map((track, index) => {
+                const number = String(track.number).padStart(2, "0");
+                return (
+                  <li key={track.slug} className="mf-music-track">
+                    <div className="mf-music-track-head">
+                      {player ? <PlayTrack queue={queue} index={index} label={`${number} ${track.title}`} /> : null}
+                      <span className="mf-music-number">{number}</span>
+                      <Link to={track.path}>{track.title}</Link>
+                      {track.explicit ? <span className="mf-music-advisory">Explicit</span> : null}
+                      <span className="mf-music-number">{track.duration_ms ? clock(track.duration_ms) : ""}</span>
+                    </div>
+                    {player ? null : <Plays track={track} label={track.title} />}
+                  </li>
+                );
+              })}
             </ol>
+            {player ? <ReleaseDock queue={queue} /> : null}
           </>
         ) : (
           <p>The tracklist is to come.</p>

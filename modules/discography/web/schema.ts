@@ -84,6 +84,49 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/discography/tracks/{track_id}/plays": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Played
+         * @description The player heard the track long enough: one play of a live track that
+         *     plays, counted once a listener a day. 204 whether it counted or not, so a
+         *     draft's id says nothing.
+         */
+        post: operations["played_api_discography_tracks__track_id__plays_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/discography/admin/plays": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Plays
+         * @description The Dashboard's "Plays this week": the last seven days' plays (UTC), the
+         *     seven before, and the track played most.
+         */
+        get: operations["read_plays_api_discography_admin_plays_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/discography/admin/releases": {
         parameters: {
             query?: never;
@@ -738,6 +781,11 @@ export interface components {
          * @description A track as its own page draws it.
          */
         LiveTrack: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
             /** Title */
             title: string;
             /** Slug */
@@ -878,6 +926,18 @@ export interface components {
             name?: string | null;
             /** Profile */
             profile?: ("unlinked" | "collective" | "not_member") | null;
+        };
+        /**
+         * PlaysWeek
+         * @description The Dashboard's "Plays this week", from audio-player's daily totals.
+         */
+        PlaysWeek: {
+            /** This Week */
+            this_week: number;
+            /** Last Week */
+            last_week: number;
+            /** Leading */
+            leading: string | null;
         };
         /**
          * Problem
@@ -1072,6 +1132,11 @@ export interface components {
          * @description A track as a release's tracklist shows it: only tracks that play.
          */
         TrackLine: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
             /** Title */
             title: string;
             /** Slug */
@@ -1246,6 +1311,73 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ArtistLinks"];
+                };
+            };
+            /** @description A problem (RFC 9457) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    played_api_discography_tracks__track_id__plays_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                track_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description A problem (RFC 9457) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    read_plays_api_discography_admin_plays_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlaysWeek"];
                 };
             };
             /** @description A problem (RFC 9457) */

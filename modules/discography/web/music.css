@@ -346,6 +346,35 @@
   min-height: 2.5rem;
 }
 
+/* With audio-player on (0.1.1): Play album, and each row's play beside its number. */
+.mf-music-play {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0 var(--mf-space-5);
+  color: var(--mf-color-on-accent);
+  background: var(--mf-color-accent);
+  border: 1px solid var(--mf-color-accent);
+  border-radius: var(--mf-radius-full);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mf-music-play:hover {
+  background: var(--mf-color-accent-hover);
+}
+
+.mf-music-play:focus-visible {
+  outline: none;
+  box-shadow: var(--mf-shadow-focus-ring);
+}
+
+.mf-music-track-head:has(.mf-player-button) {
+  align-items: center;
+}
+
 .mf-music-lyrics {
   margin: 0;
   white-space: pre-wrap;

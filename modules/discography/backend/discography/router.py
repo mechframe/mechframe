@@ -1,14 +1,14 @@
 """discography's routes (`dev plans/contracts/discography.md` §2), mounted by
 the kernel at /api/discography behind require_module("discography"). The live
-releases, their tracks and the artist's links are the public's; everything
-under /admin needs `discography.release.manage`."""
+releases, their tracks, the artist's links and a track's play are the
+public's; everything under /admin needs `discography.release.manage`."""
 
 from __future__ import annotations
 
 import uuid
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Depends, File, Query, Response, UploadFile
+from fastapi import APIRouter, Depends, File, Query, Request, Response, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from discography import service
@@ -28,17 +28,20 @@ from discography.schemas import (
     NewRelease,
     NewTrack,
     PersonChange,
+    PlaysWeek,
     PublishRelease,
     ReleaseCards,
     ReleaseChange,
     RolesPut,
     TrackChange,
 )
-from kernel import Problem, get_db, public, require_permission
+from kernel import Problem, clock, get_db, public, rate_limit, require_permission
 
 router = APIRouter()
 
 MANAGE = require_permission("discography.release.manage")
+#: Plays from one address in an hour: a whole album twice over, and then some.
+PLAYS_PER_IP = "60/1h"
 
 
 def _size(file: UploadFile) -> int:
@@ -96,6 +99,32 @@ async def read_track(slug: str, track: str, db: AsyncSession = Depends(get_db)) 
 async def list_artist_links(db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
     """The artist's own links: the Music page's "Listen everywhere"."""
     return {"items": await service.artist_links(db)}
+
+
+@router.post(
+    "/tracks/{track_id}/plays",
+    status_code=204,
+    dependencies=[Depends(public), Depends(rate_limit(PLAYS_PER_IP))],
+)
+async def played(
+    track_id: uuid.UUID, request: Request, db: AsyncSession = Depends(get_db)
+) -> Response:
+    """The player heard the track long enough: one play of a live track that
+    plays, counted once a listener a day. 204 whether it counted or not, so a
+    draft's id says nothing."""
+    if await service.count_play(db, request, track_id):
+        await db.commit()
+    return Response(status_code=204)
+
+
+# --- the dashboard ---------------------------------------------------------------------------
+
+
+@router.get("/admin/plays", response_model=PlaysWeek, dependencies=[Depends(MANAGE)])
+async def read_plays(db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
+    """The Dashboard's "Plays this week": the last seven days' plays (UTC), the
+    seven before, and the track played most."""
+    return await service.plays_week(db, clock.now().date())
 
 
 # --- releases --------------------------------------------------------------------------------

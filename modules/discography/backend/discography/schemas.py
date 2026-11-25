@@ -109,6 +109,8 @@ class ReleaseCards(Answer):
 class TrackLine(Answer):
     """A track as a release's tracklist shows it: only tracks that play."""
 
+    #: What the player counts its plays by (`POST /tracks/{id}/plays`).
+    id: Id
     title: str
     slug: str
     #: Its place on the release, from 1.
@@ -164,6 +166,17 @@ class ArtistLinks(Answer):
     """The artist's own links: "Listen everywhere"."""
 
     items: list[MusicLink]
+
+
+class PlaysWeek(Answer):
+    """The Dashboard's "Plays this week", from audio-player's daily totals."""
+
+    #: Today's plays and the six days' before.
+    this_week: int
+    #: The seven days' before those.
+    last_week: int
+    #: The title of the track played most this week; null with none.
+    leading: str | None
 
 
 # --- the admin -------------------------------------------------------------------------------

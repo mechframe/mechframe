@@ -1,11 +1,13 @@
 // The music library in a browser (`dev plans/contracts/discography.md` §7): an
 // editor makes a release on the Albums board, adds a SoundCloud track and a credit
 // in the album editor and publishes it; the Tracks and Credits boards show them; a
-// visitor finds it at /music, opens it and its track, and is offered SoundCloud's
-// link, with nothing loaded from SoundCloud. Each board and page has nothing
-// serious for axe, in both themes, at 1440 and at a phone's 390. The e2e server
-// runs with storage off (harness.e2e), so no track is uploaded here: the contract
-// suite uploads one through the job.
+// visitor finds it at /music and opens it: Play album, the row's play and the
+// Player docked at the window's foot, with SoundCloud's credit (0.1.1, audio-player's
+// contract §7), and its track's page with the player's bar. Nothing loads from
+// SoundCloud until Play is pressed. Each board and page has nothing serious for axe,
+// in both themes, at 1440 and at a phone's 390. The e2e server runs with storage
+// off (harness.e2e), so no track is uploaded here: the contract suite uploads one
+// through the job, and audio-player's own spec plays a real file.
 import { randomBytes } from "node:crypto";
 
 import { expect, test, type Page } from "@playwright/test";
@@ -74,7 +76,7 @@ for (const [name, canvas] of Object.entries(THEMES)) {
     await expect(page.getByRole("cell", { name: person, exact: true })).toBeVisible();
     await cleanAtEachWidth(page);
 
-    // A visitor, with no session: the library lists it, and its pages offer the link.
+    // A visitor, with no session: the library lists it, and its pages play it through audio-player.
     const visitor = await browser.newContext();
     const listener = await visitor.newPage();
     const asked: string[] = [];
@@ -87,11 +89,23 @@ for (const [name, canvas] of Object.entries(THEMES)) {
     await cleanAtEachWidth(listener);
     await listener.getByRole("link", { name: title }).click();
     await expect(listener.getByRole("heading", { level: 1, name: title })).toBeVisible();
-    await expect(listener.getByRole("link", { name: /Listen to the full album on SoundCloud/ })).toHaveAttribute("href", "https://soundcloud.com/petrodestroys/sets/catalyst");
     await expect(listener.getByText(`Artist: ${person}`)).toBeVisible();
+    await expect(listener.getByRole("button", { name: "Play album" })).toBeVisible();
+    await expect(listener.getByRole("button", { name: "Play 01 The full album" })).toBeVisible();
+    const dock = listener.getByRole("region", { name: "Player" });
+    await expect(dock).toHaveCount(1);
+    await expect(dock.getByText("The full album")).toBeVisible();
+    await expect(dock.getByRole("link", { name: "on SoundCloud (opens SoundCloud)" })).toHaveAttribute("href", "https://soundcloud.com/petrodestroys/sets/catalyst");
+    expect(await dock.evaluate((node) => node.closest("main") === null)).toBe(true); // after the footer
     await cleanAtEachWidth(listener);
+    // On a phone the page runs past the window, and the dock rides its foot.
+    await listener.setViewportSize(WIDTHS[1]);
+    const box = await dock.boundingBox();
+    expect(box && Math.round(box.y + box.height)).toBe(WIDTHS[1].height);
+    await listener.setViewportSize(WIDTHS[0]);
     await listener.getByRole("link", { name: "The full album", exact: true }).click();
     await expect(listener.getByRole("heading", { level: 1, name: "The full album" })).toBeVisible();
+    await expect(listener.getByRole("region", { name: "Player" })).toHaveCount(1);
     await cleanAtEachWidth(listener);
     expect(asked.filter((host) => host.endsWith("soundcloud.com"))).toEqual([]);
 
