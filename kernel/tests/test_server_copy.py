@@ -17,7 +17,7 @@ import pytest
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from kernel import server_copy
+from kernel import search, server_copy
 from kernel.modules import InstalledModule, Manifest
 from kernel.server_copy import Entry, Html, Identity, Moved, Page, SiteSettings
 from kernel.settings import settings
@@ -952,3 +952,100 @@ def test_the_module_templates_pages_agree_with_its_module_json() -> None:
     loaded = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(loaded)
     server_copy.build([InstalledModule(listed, pages=loaded.PAGES)])  # the start would take it
+
+
+# --- a link preview (decision 0067) --------------------------------------------------------------
+
+
+class _NoteSource(search.Source):
+    """A searched type with no lifecycle: a note is public while it's listed."""
+
+    content_type = "notes.note"
+
+    def __init__(self, notes: dict[uuid.UUID, str]) -> None:
+        self.notes = notes
+
+    async def document(self, db: AsyncSession, content_id: uuid.UUID) -> search.Document | None:
+        path = self.notes.get(content_id)
+        return None if path is None else search.Document("notes.note", content_id, "Jazz at noon", "", path)
+
+    async def documents(self, db: AsyncSession):  # type: ignore[no-untyped-def]  # pragma: no cover
+        for _ in ():
+            yield _
+
+
+def _served(
+    monkeypatch: pytest.MonkeyPatch,
+    answers: dict[str, Page | Moved | None],
+    notes: dict[uuid.UUID, str],
+    *,
+    on: frozenset[str] = frozenset({"notes"}),
+    card: str | None = None,
+) -> None:
+    routes = server_copy.build(
+        [public_module("notes", public=["/notes/:slug"], pages=FakePages(answers=answers))]
+    )
+
+    async def switched_on(db: object) -> frozenset[str]:
+        return on
+
+    async def site(db: object) -> Identity:
+        return Identity(name="Test Site", url=SITE, card_image=card)
+
+    monkeypatch.setattr(server_copy, "_served", server_copy._Served())
+    server_copy.serve(routes, switched_on)
+    monkeypatch.setattr(server_copy._site, "url", SITE)
+    monkeypatch.setattr(server_copy, "identity", site)
+    monkeypatch.setattr(search, "_sources", {"notes.note": _NoteSource(notes)})
+
+
+_DB: Any = object()  # nothing here reads the database
+
+
+async def test_a_public_things_preview_is_its_pages_head(monkeypatch: pytest.MonkeyPatch) -> None:
+    note = uuid.uuid4()
+    page = Page("Jazz at noon · Test Site", "Where to hear it.", "", image="/media/jazz.png")
+    _served(monkeypatch, {"/notes/jazz noon": page}, {note: "/notes/jazz noon"})
+    found = await server_copy.preview(_DB, "notes.note", note)
+    assert found == server_copy.Preview(
+        url=f"{SITE}/notes/jazz%20noon",
+        title="Jazz at noon",
+        description="Where to hear it.",
+        image=f"{SITE}/media/jazz.png",
+    )
+
+
+async def test_a_page_with_no_image_shows_the_sites_card_or_none(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    note = uuid.uuid4()
+    answers: dict[str, Page | Moved | None] = {"/notes/a": Page("A", "", "")}
+    _served(monkeypatch, answers, {note: "/notes/a"}, card="https://cdn.test/card.png")
+    found = await server_copy.preview(_DB, "notes.note", note)
+    assert found is not None
+    assert found.image == "https://cdn.test/card.png"
+    _served(monkeypatch, answers, {note: "/notes/a"})
+    found = await server_copy.preview(_DB, "notes.note", note)
+    assert found is not None
+    assert found.image is None
+
+
+@pytest.mark.parametrize("why", ["unsearched", "not public", "moved", "missing", "off"])
+async def test_no_preview_for_what_isnt_a_public_page(
+    monkeypatch: pytest.MonkeyPatch, why: str
+) -> None:
+    note = uuid.uuid4()
+    answers: dict[str, Page | Moved | None] = {
+        "/notes/a": (
+            Moved("/notes/b") if why == "moved" else None if why == "missing" else Page("A", "", "")
+        )
+    }
+    notes = {} if why == "not public" else {note: "/notes/a"}
+    _served(monkeypatch, answers, notes, on=frozenset() if why == "off" else frozenset({"notes"}))
+    kind = "notes.other" if why == "unsearched" else "notes.note"
+    assert await server_copy.preview(_DB, kind, note) is None
+
+
+async def test_no_preview_before_the_app_serves_pages(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(server_copy, "_served", server_copy._Served())
+    assert await server_copy.preview(_DB, "notes.note", uuid.uuid4()) is None

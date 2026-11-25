@@ -26,6 +26,16 @@ export type EditorToolEntry = { id: string; lazy: LazyOf<{ editor: MarkdownTools
 /** A player for the links it `claims`, alone in their paragraph (`prose.embed`), given the link and its words. */
 export type ProseEmbedEntry = { claims: (href: string) => boolean; lazy: LazyOf<{ href: string; words: string }> };
 
+/**
+ * What a `content.share` part is given (decision 0067): the thing an admin page
+ * is about, by its content type (`blog.post`) and id, whether it's public now,
+ * and the admin page it's drawn on, where the part's own notices can send people.
+ */
+export type SharePartProps = { type: string; id: string; live: boolean; adminPath: string };
+
+/** A card on an admin page for sharing what it's about (`content.share`). `id` names it within its module. */
+export type ContentShareEntry = { id: string; lazy: LazyOf<SharePartProps>; permission?: string };
+
 /** A link in a menu. `to` is a path on this site. */
 export type LinkEntry = {
   label: string;
@@ -54,6 +64,8 @@ export type Slots = {
   "editor.tools"?: EditorToolEntry[];
   /** Every Prose's players (decision 0060). */
   "prose.embed"?: ProseEmbedEntry[];
+  /** The share cards a module's admin page draws for its content with `ShareParts` (decision 0067). */
+  "content.share"?: ContentShareEntry[];
 };
 
 export type SlotName = keyof Slots;
@@ -72,16 +84,21 @@ export const SLOT_NAMES = [
   "site.footer",
   "editor.tools",
   "prose.embed",
+  "content.share",
 ] as const satisfies readonly SlotName[];
 
 /** The slots the kit draws in its text, their parts given props: never a `SlotOutlet`. */
 export const TEXT_SLOTS = ["editor.tools", "prose.embed"] as const satisfies readonly SlotName[];
 
+/** The slots whose parts are given props, each drawn by its own outlet: the text slots and `content.share` (`ShareParts`). */
+export const GIVEN_SLOTS = [...TEXT_SLOTS, "content.share"] as const satisfies readonly SlotName[];
+
 export type LinkSlotName = (typeof LINK_SLOTS)[number];
 export type TextSlotName = (typeof TEXT_SLOTS)[number];
-export type PartSlotName = Exclude<SlotName, LinkSlotName | TextSlotName>;
+export type GivenSlotName = (typeof GIVEN_SLOTS)[number];
+export type PartSlotName = Exclude<SlotName, LinkSlotName | GivenSlotName>;
 /** The slots a `SlotOutlet` can show. */
-export type OutletSlotName = Exclude<SlotName, TextSlotName>;
+export type OutletSlotName = Exclude<SlotName, GivenSlotName>;
 
 /**
  * A link slot's entries loaded from the module's own API (decision 0056): each

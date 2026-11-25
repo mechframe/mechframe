@@ -96,8 +96,8 @@ function checkSlots(definition: ModuleDefinition): void {
         }
       } else if (typeof entry.lazy !== "function") {
         throw new Error(`${definition.id}'s ${name} entry must load its part (lazy).`);
-      } else if (name === "editor.tools" && (typeof entry.id !== "string" || entry.id === "")) {
-        throw new Error(`${definition.id}'s editor.tools entry must have an id.`);
+      } else if ((name === "editor.tools" || name === "content.share") && (typeof entry.id !== "string" || entry.id === "")) {
+        throw new Error(`${definition.id}'s ${name} entry must have an id.`);
       } else if (name === "prose.embed" && typeof entry.claims !== "function") {
         throw new Error(`${definition.id}'s prose.embed entry must say which links it claims (claims).`);
       }

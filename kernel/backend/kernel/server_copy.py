@@ -76,7 +76,8 @@ import html
 import json
 import logging
 import re
-from collections.abc import Iterable, Mapping, Sequence
+import uuid
+from collections.abc import Awaitable, Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from typing import TYPE_CHECKING, Any, Literal, cast
@@ -947,3 +948,66 @@ def llms_txt(found: Sequence[tuple[str, Entry]], routes: Routes, site: Identity)
     for module_id, lines in sections.items():
         out += [f"## {_line(routes.name(module_id))}", "", *lines, ""]
     return "\n".join(out).rstrip("\n") + "\n"
+
+
+# --- a link preview (decision 0067) --------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class Preview:
+    """What a link to a public thing shows where it's shared: the address,
+    absolute; its own title, as search shows it (the page's <title> may add the
+    site's name); the description and image its page's head tags give, the
+    image absolute, the site's social card when the page has none, or None
+    without either."""
+
+    url: str
+    title: str
+    description: str
+    image: str | None
+
+
+@dataclass
+class _Served:
+    routes: Routes | None = None
+    on: Callable[[AsyncSession], Awaitable[frozenset[str]]] | None = None
+
+
+_served = _Served()
+
+
+def serve(routes: Routes, on: Callable[[AsyncSession], Awaitable[frozenset[str]]]) -> None:
+    """The pages and the module switches `preview` reads, as the shell
+    answers them (`shell.install`)."""
+    _served.routes = routes
+    _served.on = on
+
+
+async def preview(db: AsyncSession, content_type: str, content_id: uuid.UUID) -> Preview | None:
+    """The link preview of a public thing, named by its content type and id
+    (`blog.post`): its path from the type's search source, then its page from
+    the module that answers that path, as the shell would answer it now.
+    None for a type nobody searches, a thing that isn't public, a module
+    that's off, or a path that answers a move or a 404. A module shares
+    another's content through this, importing nothing of it (`social`)."""
+    from kernel import search  # search's own imports reach this module at the start
+
+    if _served.routes is None or _served.on is None:
+        return None
+    doc = await search.public_document(db, content_type, content_id)
+    if doc is None:
+        return None
+    match = _served.routes.resolve(doc.path, await _served.on(db))
+    if match is None or match.member:
+        return None
+    found = await _served.routes.pages_of(match.module).page(db, doc.path, match.params)
+    if not isinstance(found, Page):
+        return None
+    image = found.image or (await identity(db)).card_image
+    return Preview(
+        url=_site.url + _encoded(doc.path) + found.query,
+        # The thing's own title, as search shows it: the page's <title> may add the site's name.
+        title=doc.title,
+        description=found.description,
+        image=absolute(image, _site.url) if image else None,
+    )

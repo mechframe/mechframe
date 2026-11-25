@@ -304,7 +304,8 @@
           "account.section",
           "site.footer",
           "editor.tools",
-          "prose.embed"
+          "prose.embed",
+          "content.share"
         ]
       }
     },
