@@ -2,7 +2,7 @@
 
 Session prompts and working plans, the owner's convention across `C:\DEV`. Each session ends with two starting prompts saved here (`CLAUDE.md`, "Two lanes", since 2026-11-22): `<date>-next-session-<topic>.md` for the main lane and `<date>-side-lane-<topic>.md` for the side lane, in a worktree. When a prompt's session is done, it moves to `done/`, so the ones left here are the jobs. Durable decisions go in `docs/decisions/`, not here.
 
-Blog 0.1.3 (#143) and the AI's model (#144) are done, and M4h's prompt is in `done/`, with the earlier ones. The jobs now are `2026-11-24-next-session-m4i-covers-build.md` (the main lane: finish generated covers, then the footer's shift, then social posting) and the side lane's own `2026-11-24-side-lane-m8b-discography-web.md`, on `feat/discography` in its worktree (`discography` 0.1.0's web).
+Generated covers (#147) and the footer's shift (#148) are done, and M4i's prompt is in `done/`, with the earlier ones; the side lane's discography 0.1.0 (#145) is done too. The jobs now are `2026-11-24-next-session-m4j-social.md` (the main lane: social posting's contract, then the module) and the side lane's own `2026-11-24-side-lane-m9-audio-player.md`, in its worktree (`audio-player` 0.1.0, #149, then discography 0.1.1).
 
 `progress-ledger/` is the source of the visual progress ledger, https://claude.ai/artifact/48auLkb7Ajmyn2SNAni9rm: its page (`index.html`) and the rows `python -m tools.progress` makes from `docs/progress.json` (`rows.json`); its README says how to republish it.
 
