@@ -41,25 +41,23 @@ export function usePlayer(): PlayerControls {
   const snapshot = useSyncExternalStore(player.subscribe, player.snapshot, player.snapshot);
 
   useEffect(() => player.attach(page), [player, page]);
-  // Read when the player asks, so a grant from another part counts at once.
-  const granted = useRef(media.granted);
+  // The player holds one value for the app: every part says what the kernel's
+  // consent is, and the press that grants it says so at once, whichever part was
+  // pressed (CodeRabbit on #149).
+  const { granted, grant } = media;
   useEffect(() => {
-    granted.current = media.granted;
-  }, [media.granted]);
-  useEffect(() => {
-    player.configure({ soundcloudAllowed: () => granted.current });
-  }, [player]);
+    player.configure({ mediaGranted: granted });
+  }, [player, granted]);
   useEffect(() => {
     if (settings.data) player.configure(settings.data);
   }, [player, settings.data]);
 
-  const { grant } = media;
   return useMemo(() => {
     /** A press that's about to start `item`: for SoundCloud, that's the visitor's consent to `media`. */
     const pressing = (item: PlayerItem | null | undefined) => {
-      if (viaSoundCloud(item) && !granted.current) {
+      if (viaSoundCloud(item) && !granted) {
         grant();
-        granted.current = true;
+        player.configure({ mediaGranted: true });
       }
     };
     const after = (step: 1 | -1) => snapshot.queue[(snapshot.index + step + snapshot.queue.length) % Math.max(1, snapshot.queue.length)];
@@ -91,7 +89,7 @@ export function usePlayer(): PlayerControls {
         player.setVolume(volume);
       },
     };
-  }, [player, page, snapshot, grant]);
+  }, [player, page, snapshot, granted, grant]);
 }
 
 /**

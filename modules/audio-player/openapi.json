@@ -8,7 +8,7 @@
     "/api/audio-player/settings": {
       "get": {
         "summary": "Read Settings",
-        "description": "Whether the next track plays when one ends, and how long a play takes to count.",
+        "description": "Whether the next track plays when one ends, and how long a play takes to count.\nBuilt with `answer`, as a route that sets a header is (SPEC 7).",
         "operationId": "read_settings_api_audio_player_settings_get",
         "responses": {
           "200": {

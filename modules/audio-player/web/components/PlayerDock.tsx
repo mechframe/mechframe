@@ -4,7 +4,7 @@
 // something does: the cover, the title and line, Previous, Play and Next, a thin
 // progress slider, "Track 2 of 15", the queue and the volume. Under 700px the
 // progress, Queue and Volume hide, as on the board.
-import { useEffect, useId, useState, type PointerEvent } from "react";
+import { useEffect, useId, useRef, useState, type PointerEvent } from "react";
 
 import { usePlayer } from "../hooks";
 import type { PlayerItem } from "../types";
@@ -26,20 +26,27 @@ export function PlayerDock({ queue, label }: PlayerDockProps) {
   const player = usePlayer();
   const [open, setOpen] = useState<Open>(null);
   const ids = { queue: useId(), volume: useId() };
+  const triggers = { queue: useRef<HTMLButtonElement>(null), volume: useRef<HTMLButtonElement>(null) };
+  const panelRef = useRef<HTMLElement | null>(null);
   const active = player.queue.length > 0;
   const list = active ? player.queue : queue;
   const at = active ? player.index : 0;
   const item = list[at];
+  const { queue: queueButton, volume: volumeButton } = triggers;
   useEffect(() => {
     if (!open) return;
     const close = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(null);
+      if (event.key !== "Escape") return;
+      // Focus in the panel goes back to its button, or the keyboard loses its place (CodeRabbit on #149).
+      const held = panelRef.current?.contains(document.activeElement) ?? false;
+      setOpen(null);
+      if (held) (open === "queue" ? queueButton : volumeButton).current?.focus();
     };
     window.addEventListener("keydown", close);
     return () => {
       window.removeEventListener("keydown", close);
     };
-  }, [open]);
+  }, [open, queueButton, volumeButton]);
   if (!item) return null;
   const going = active && isGoing(player.state);
   const length = active ? (player.duration_ms ?? 0) : 0;
@@ -96,6 +103,7 @@ export function PlayerDock({ queue, label }: PlayerDockProps) {
           className="mf-player-button"
           aria-label="Queue"
           aria-expanded={open === "queue"}
+          ref={queueButton}
           aria-controls={ids.queue}
           onClick={() => { toggle("queue"); }}
         >
@@ -106,13 +114,21 @@ export function PlayerDock({ queue, label }: PlayerDockProps) {
           className="mf-player-button"
           aria-label="Volume"
           aria-expanded={open === "volume"}
+          ref={volumeButton}
           aria-controls={ids.volume}
           onClick={() => { toggle("volume"); }}
         >
           <VolumeIcon />
         </button>
         {open === "queue" ? (
-          <ol id={ids.queue} className="mf-player-popover mf-player-queue" aria-label="Queue">
+          <ol
+            ref={(node) => {
+              panelRef.current = node;
+            }}
+            id={ids.queue}
+            className="mf-player-popover mf-player-queue"
+            aria-label="Queue"
+          >
             {list.map((each, index) => {
               const here = active && index === at;
               return (
@@ -133,7 +149,13 @@ export function PlayerDock({ queue, label }: PlayerDockProps) {
           </ol>
         ) : null}
         {open === "volume" ? (
-          <div id={ids.volume} className="mf-player-popover mf-player-volume">
+          <div
+            ref={(node) => {
+              panelRef.current = node;
+            }}
+            id={ids.volume}
+            className="mf-player-popover mf-player-volume"
+          >
             <input
               type="range"
               min={0}

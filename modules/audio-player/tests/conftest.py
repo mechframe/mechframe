@@ -1,11 +1,12 @@
 """Fixtures for audio-player's tests: a session on the migrated test database
 (the root conftest's `migrated_url`). Every test counts plays of items it makes
 up, so tests sharing the database never meet (isolation by unique keys); a test
-that needs a day of its own picks one no other test uses."""
+that needs a day of its own takes the next one no other test has had."""
 
 from __future__ import annotations
 
-import random
+import itertools
+import secrets
 import uuid
 from collections.abc import AsyncIterator
 from datetime import date, timedelta
@@ -34,6 +35,11 @@ def item() -> uuid.UUID:
     return uuid.uuid4()
 
 
+#: Days centuries from now, which no prune touches: each call the next, never the
+#: same twice in a run (CodeRabbit on #149: two random days could meet).
+_DAYS = itertools.count(secrets.randbelow(1_000) * 2_000)
+
+
 def far_day() -> date:
-    """A day centuries from now, which no other test (and no prune) touches."""
-    return date(2400, 1, 1) + timedelta(days=random.randrange(200_000))
+    """A day no other test has had."""
+    return date(2400, 1, 1) + timedelta(days=next(_DAYS))

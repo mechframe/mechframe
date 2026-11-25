@@ -8,7 +8,7 @@ A module that plays audio lists `audio-player` in `requires` and hands the playe
 
 - **One player for the app:** one audio element and one hidden SoundCloud widget, each made the first time it's needed. Starting anything pauses whatever else played, which keeps its place and resumes from it. Another kind of player takes turns through `useExclusive`: embeds' `VideoPlaylist` calls its `claim` as a video starts, and its `pause` is called when audio starts.
 - **The queue** is whatever the page hands it. Previous and Next wrap round it, keeping it playing or paused. At a track's end, with `autoplay_next` on, the next one plays; the last one stops. A track that can't load says "This track can't play right now" and moves on. A page move stops it all: the player plays only while a part of the page that started it is drawn.
-- **SoundCloud:** pressing Play on a SoundCloud item grants the consent category `media`, as an embed's Play does, then loads SoundCloud's Widget API and plays the widget behind the site's controls, over a made-up waveform. The item says "on SoundCloud", linked back, as SoundCloud's terms ask of a player that hides its widget. A browser that won't start a hidden widget gets the widget itself, for its own Play. A playlist plays as one item.
+- **SoundCloud:** pressing Play on a SoundCloud item grants the consent category `media`, as an embed's Play does, then loads SoundCloud's Widget API and plays the widget behind the site's controls, over a made-up waveform. The item says "on SoundCloud", linked back, as SoundCloud's terms ask of a player that hides its widget. A browser that won't start a hidden widget gets the widget itself, for its own Play. A playlist plays as one item on one timeline: its tracks' lengths add up, and a seek into another track skips to it.
 - **Counting:** an item's `count` is called once a play-through, after `count_after_seconds` really heard (seeking past doesn't count), or nearly all of a shorter track. The source module's route then calls `public.count`, which counts each listener once per item per UTC day. The listener is an HMAC of the visitor's address and browser name under that day's random salt, and both go the next day; only daily totals stay, for two years. No cookie is set and no consent is needed for it.
 - **For everyone:** the waveform and the dock's progress are sliders ("Seek", the arrows move 5 seconds, Home and End) read out as "1:12 of 3:40"; the lock screen gets the title, line, cover and its four buttons; a polite status line says "Now playing: …" once for the app; the row's equalizer stands still under reduced motion.
 
@@ -54,7 +54,7 @@ const claim = useExclusive(() => videos.current?.pause());
 
 - **No playback across pages,** no listener-built queue, shuffle, repeat or speed.
 - **Players inside posts and pages** (embeds' iframes) aren't paused: they have no API there.
-- **A SoundCloud playlist** shows the widget's current track's place, not the whole playlist's.
+- **A SoundCloud playlist** whose tracks' lengths the widget doesn't give all at once shows the playing track's place until it does.
 - **A day is a UTC day:** "Plays this week" counts seven of them.
 - **Each person counts once a track a day,** the team's own listening included.
 

@@ -14,6 +14,7 @@ export interface paths {
         /**
          * Read Settings
          * @description Whether the next track plays when one ends, and how long a play takes to count.
+         *     Built with `answer`, as a route that sets a header is (SPEC 7).
          */
         get: operations["read_settings_api_audio_player_settings_get"];
         put?: never;

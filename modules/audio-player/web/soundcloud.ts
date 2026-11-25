@@ -10,7 +10,10 @@ export type SoundCloudWidget = {
   load: (url: string, options: Record<string, boolean | (() => void)>) => void;
   play: () => void;
   pause: () => void;
+  /** Within the sound playing now. */
   seekTo: (ms: number) => void;
+  /** To another sound of a playlist, which then plays. */
+  skip: (index: number) => void;
   setVolume: (volume: number) => void;
   getDuration: (callback: (ms: number) => void) => void;
   getCurrentSoundIndex: (callback: (index: number) => void) => void;

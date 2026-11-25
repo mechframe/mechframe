@@ -201,7 +201,11 @@ async def test_add_daily_run_twice_leaves_the_same(db: AsyncSession) -> None:
         await public.add_daily(db, SOURCE, track, day, -1)
 
 
-@pytest.mark.parametrize("source", ["", "discography", "Discography.track", "a.b.c", "x" * 41])
+@pytest.mark.parametrize(
+    "source",
+    # The last: a regex `$` matches before a final newline (CodeRabbit on #149).
+    ["", "discography", "Discography.track", "a.b.c", "x" * 41, "discography.track\n"],
+)
 async def test_a_source_is_module_dot_type(db: AsyncSession, source: str) -> None:
     with pytest.raises(ValueError, match=r"<module>.<type>"):
         await public.count(db, visit(), source=source, item_id=item())

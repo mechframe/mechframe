@@ -92,8 +92,11 @@ export const SHOWN_CLASS = "mf-player-host-shown";
 
 /**
  * SoundCloud's widget, hidden behind the site's controls in a holder of its own
- * at the end of `<body>`. A playlist plays as one item: the widget runs through
- * its tracks, and the item ends after the last.
+ * at the end of `<body>`. A playlist plays as one item with one timeline: its
+ * tracks' lengths add up, the place is the tracks before plus where the playing
+ * one is, a seek into another track skips to it first, and the item ends after
+ * the last (CodeRabbit on #149). Each load counts up, and a getter's answer for
+ * an earlier load is dropped.
  */
 export const soundcloudOutput: OutputFactory = (events) => {
   let host: HTMLDivElement | null = null;
@@ -101,13 +104,22 @@ export const soundcloudOutput: OutputFactory = (events) => {
   let frame: HTMLIFrameElement | null = null;
   let ready = false;
   let wanted: "play" | "pause" = "pause";
-  let duration: number | null = null;
   let loadedUrl: string | null = null;
   /** The link whose widget is being made, while the Widget API loads. */
   let making: string | null = null;
   let watchdog: ReturnType<typeof setTimeout> | null = null;
   let volume = 1;
+  /** Counts each load: an answer that comes for an earlier one is dropped. */
+  let loads = 0;
+  /** Each track's length: one for a track, each of a playlist's; none until known. */
+  let lengths: number[] = [];
+  /** The track of a playlist that plays now. */
+  let sound = 0;
+  /** Where to go in a track skipped to, once it plays. */
+  let pendingSeek: number | null = null;
 
+  const before = (at: number) => lengths.slice(0, at).reduce((sum, each) => sum + each, 0);
+  const total = () => (lengths.length ? before(lengths.length) : null);
   const settle = () => {
     if (watchdog) clearTimeout(watchdog);
     watchdog = null;
@@ -134,12 +146,29 @@ export const soundcloudOutput: OutputFactory = (events) => {
       }
     }, BLOCKED_AFTER_MS);
   };
+  const lengthOf = (sound: unknown): number => {
+    const duration = typeof sound === "object" && sound !== null ? (sound as { duration?: unknown }).duration : undefined;
+    return typeof duration === "number" && duration > 0 ? duration : 0;
+  };
   const readied = () => {
     ready = true;
-    widget?.setVolume(Math.round(volume * 100));
-    widget?.getDuration((ms) => {
-      duration = ms > 0 ? ms : null;
-      events.time(0, duration);
+    const load = loads;
+    const current = widget;
+    current?.setVolume(Math.round(volume * 100));
+    current?.getSounds((sounds) => {
+      if (load !== loads) return;
+      const found = sounds.map(lengthOf);
+      if (found.length && found.every((length) => length > 0)) {
+        lengths = found;
+        events.time(0, total());
+        return;
+      }
+      // A playlist's tracks not all known yet: the track playing, as the widget gives it.
+      current.getDuration((ms) => {
+        if (load !== loads) return;
+        lengths = ms > 0 ? [ms] : [];
+        events.time(0, total());
+      });
     });
     if (wanted === "play") begin();
   };
@@ -159,30 +188,35 @@ export const soundcloudOutput: OutputFactory = (events) => {
         host.append(frame);
         document.body.append(host);
         hide();
-        widget = api.Widget(frame);
+        const made = api.Widget(frame);
+        widget = made;
         const on = api.Widget.Events;
-        widget.bind(on.READY, readied);
-        widget.bind(on.PLAY, () => {
+        made.bind(on.READY, readied);
+        made.bind(on.PLAY, () => {
           settle();
           hide();
+          const load = loads;
+          made.getCurrentSoundIndex((at) => {
+            if (load !== loads) return;
+            sound = at;
+            if (pendingSeek !== null) {
+              made.seekTo(pendingSeek);
+              pendingSeek = null;
+            }
+          });
           events.playing();
         });
-        widget.bind(on.PAUSE, () => {
+        made.bind(on.PAUSE, () => {
           if (wanted === "pause") events.paused();
         });
-        widget.bind(on.PLAY_PROGRESS, (event) => {
-          events.time(event?.currentPosition ?? 0, duration);
+        made.bind(on.PLAY_PROGRESS, (event) => {
+          events.time(before(sound) + (event?.currentPosition ?? 0), total());
         });
-        widget.bind(on.FINISH, () => {
-          const finished = widget;
-          if (!finished) return;
-          finished.getCurrentSoundIndex((index) => {
-            finished.getSounds((sounds) => {
-              if (index >= sounds.length - 1) events.ended();
-            });
-          });
+        // The widget moves itself on to a playlist's next track, and says PLAY.
+        made.bind(on.FINISH, () => {
+          if (sound >= lengths.length - 1) events.ended();
         });
-        widget.bind(on.ERROR, () => {
+        made.bind(on.ERROR, () => {
           settle();
           events.failed();
         });
@@ -200,15 +234,19 @@ export const soundcloudOutput: OutputFactory = (events) => {
       const url = item.soundcloud_url ?? "";
       wanted = "pause";
       settle();
-      duration = null;
-      // The same link again reuses the widget once there is one, or the one being made.
-      if (loadedUrl === url && (widget || making === url)) return;
+      loads += 1;
+      lengths = [];
+      sound = 0;
+      pendingSeek = null;
+      // Its widget is on its way: that one starts it.
+      if (loadedUrl === url && making === url) return;
       loadedUrl = url;
       ready = false;
       if (!widget) {
         make(url);
         return;
       }
+      // The same link again loads again too, so it starts from its start (CodeRabbit on #149).
       widget.load(url, {
         auto_play: false,
         visual: false,
@@ -227,7 +265,21 @@ export const soundcloudOutput: OutputFactory = (events) => {
       widget?.pause();
     },
     seek: (ms) => {
-      widget?.seekTo(ms);
+      if (!widget) return;
+      if (lengths.length < 2) {
+        widget.seekTo(ms);
+        return;
+      }
+      let at = 0;
+      while (at < lengths.length - 1 && ms >= before(at + 1)) at += 1;
+      const within = ms - before(at);
+      if (at === sound) {
+        widget.seekTo(within);
+        return;
+      }
+      pendingSeek = within;
+      sound = at;
+      widget.skip(at);
     },
     volume: (next) => {
       volume = next;

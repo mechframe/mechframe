@@ -282,22 +282,33 @@ describe("SoundCloud", () => {
 
   it("never loads SoundCloud without media consent: it waits, paused, then loads once allowed", () => {
     const { player, outputs } = setup();
-    let allowed = false;
-    player.configure({ soundcloudAllowed: () => allowed });
+    player.configure({ mediaGranted: false });
     player.play([CATALYST], 0, "/");
     expect(player.snapshot()).toMatchObject({ item: CATALYST, state: "paused" });
     const calls = () => outputs.made.soundcloud[0]?.calls.filter((call) => call !== "volume") ?? [];
     expect(calls()).toEqual([]);
     player.toggle();
     expect(calls()).toEqual([]);
-    allowed = true;
+    player.configure({ mediaGranted: true });
     player.toggle();
     expect(calls()).toEqual(["load", "play"]);
   });
 
+  it("stops the SoundCloud item playing when consent goes and Next moves to another (CodeRabbit on #149)", () => {
+    const { player, outputs } = setup();
+    const other = item("Unified (SoundCloud)", { stream_url: undefined, soundcloud_url: "https://soundcloud.com/petrodestroys/unified" });
+    player.play([CATALYST, other], 0, "/");
+    outputs.made.soundcloud[0]?.events.playing();
+    player.configure({ mediaGranted: false });
+    player.next();
+    expect(player.snapshot()).toMatchObject({ item: other, state: "paused" });
+    const calls = outputs.made.soundcloud[0]?.calls.filter((call) => call !== "volume") ?? [];
+    expect(calls).toEqual(["load", "play", "stop"]);
+  });
+
   it("doesn't load SoundCloud without consent when the queue reaches it on its own (Codex on #149)", () => {
     const { player, outputs, file } = setup();
-    player.configure({ soundcloudAllowed: () => false });
+    player.configure({ mediaGranted: false });
     player.play([A, CATALYST], 0, "/");
     file().events.ended();
     expect(player.snapshot()).toMatchObject({ index: 1, state: "paused" });

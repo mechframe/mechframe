@@ -80,7 +80,8 @@ export function createPlayer(options: PlayerOptions = {}) {
   const views = new Map<symbol, string>();
   let now: Snapshot = { ...IDLE, volume: readVolume(options.storage) };
   let settings: PlayerSettings = DEFAULT_SETTINGS;
-  let soundcloudAllowed: () => boolean = () => true;
+  /** Whether the visitor has granted `media`: one value for the app, set by every part and by a press. */
+  let mediaGranted = true;
   let heard = 0;
   let last: number | null = null;
   let counted = false;
@@ -202,10 +203,12 @@ export function createPlayer(options: PlayerOptions = {}) {
     const item = now.queue[index];
     if (!item) return;
     const output = outputFor(item);
-    if (current && current !== output) current.stop();
+    const allowed = !viaSoundCloud(item) || mediaGranted;
+    // What played stops: another output's, or this one's when the next can't
+    // load in its place (CodeRabbit on #149).
+    if (current && (current !== output || (!allowed && loaded !== null))) current.stop();
     current = output;
     rewind();
-    const allowed = !viaSoundCloud(item) || soundcloudAllowed();
     // SoundCloud is loaded only once media is granted: loading it is already
     // reaching SoundCloud (Codex on #149). It waits, paused, unloaded.
     loaded = null;
@@ -266,10 +269,11 @@ export function createPlayer(options: PlayerOptions = {}) {
       };
     },
     snapshot: (): Snapshot => now,
-    configure(next: Partial<PlayerSettings> & { soundcloudAllowed?: () => boolean }) {
-      const { soundcloudAllowed: allowed, ...rest } = next;
+    /** The settings the site's route gives, and whether the visitor has granted `media`. */
+    configure(next: Partial<PlayerSettings> & { mediaGranted?: boolean }) {
+      const { mediaGranted: granted, ...rest } = next;
       settings = { ...settings, ...rest };
-      if (allowed) soundcloudAllowed = allowed;
+      if (granted !== undefined) mediaGranted = granted;
     },
     /** A part of `page` that shows or plays the player: while one is left, it may keep playing. */
     attach(page: string): () => void {
@@ -297,7 +301,7 @@ export function createPlayer(options: PlayerOptions = {}) {
         start(now.index, true);
         return;
       }
-      if (viaSoundCloud(item) && !soundcloudAllowed()) return;
+      if (viaSoundCloud(item) && !mediaGranted) return;
       // An item that waited for consent is loaded now, from its start.
       if (loaded !== item.key) {
         current.load(item);

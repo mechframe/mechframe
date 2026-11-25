@@ -169,6 +169,20 @@ describe("the bar", () => {
     expect(made.soundcloud[0]?.calls.filter((call) => call !== "volume")).toEqual(["load", "play"]);
   });
 
+  it("plays SoundCloud on the first press whichever of two players is pressed (CodeRabbit on #149)", async () => {
+    routed(SETTINGS);
+    const { player, made } = testPlayer();
+    draw(
+      <>
+        <PlayButton queue={[CATALYST]} label="Catalyst, first" />
+        <PlayButton queue={[CATALYST]} label="Catalyst, second" />
+      </>,
+      player,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Play Catalyst, first" }));
+    expect(made.soundcloud[0]?.calls.filter((call) => call !== "volume")).toEqual(["load", "play"]);
+  });
+
   it("says when a track can't play", async () => {
     routed(SETTINGS);
     const { player, file } = testPlayer();
@@ -206,6 +220,28 @@ describe("the dock", () => {
     expect(within(list).getByRole("button", { name: "Play Vibrate" })).toHaveAttribute("aria-current", "true");
     await userEvent.keyboard("{Escape}");
     expect(screen.queryByRole("list", { name: "Queue" })).toBeNull();
+  });
+
+  it("gives focus back to Queue or Volume when Escape closes a panel holding it (CodeRabbit on #149)", async () => {
+    routed(SETTINGS);
+    const { player } = testPlayer();
+    draw(<PlayerDock queue={QUEUE} label="Player" />, player);
+    const queue = screen.getByRole("button", { name: "Queue" });
+    await userEvent.click(queue);
+    within(screen.getByRole("list", { name: "Queue" })).getByRole("button", { name: "Play Unified" }).focus();
+    await userEvent.keyboard("{Escape}");
+    expect(queue).toHaveFocus();
+    const volume = screen.getByRole("button", { name: "Volume" });
+    await userEvent.click(volume);
+    screen.getByRole("slider", { name: "Volume" }).focus();
+    await userEvent.keyboard("{Escape}");
+    expect(volume).toHaveFocus();
+    // With focus outside the panel, Escape closes it and leaves focus where it is.
+    await userEvent.click(queue);
+    screen.getByRole("button", { name: "Next track" }).focus();
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("list", { name: "Queue" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Next track" })).toHaveFocus();
   });
 
   it("sets the volume from its slider", async () => {

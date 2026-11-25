@@ -92,30 +92,55 @@ describe("a stream file", () => {
 
 type Bound = Record<string, (event?: { currentPosition?: number }) => void>;
 
-function fakeSoundCloud(sounds = 1) {
+/**
+ * The Widget API as SoundCloud documents it: each sound's `duration` from
+ * `getSounds`, the playing sound's index, `skip` to another, and a playlist
+ * moving on to its next sound after each FINISH. With `deferred`, the getters'
+ * answers wait for `flush()`, as the real ones arrive later by postMessage.
+ */
+function fakeSoundCloud({ lengths = [2_400_000], deferred = false }: { lengths?: number[]; deferred?: boolean } = {}) {
   const bound: Bound = {};
   const calls: string[] = [];
   const frames: HTMLIFrameElement[] = [];
+  const waiting: (() => void)[] = [];
+  let index = 0;
+  const answer = (reply: () => void) => {
+    if (deferred) waiting.push(reply);
+    else reply();
+  };
   const widget = {
     bind: (event: string, listener: (event?: { currentPosition?: number }) => void) => {
       bound[event] = listener;
     },
     load: (url: string, options: Record<string, unknown>) => {
       calls.push(`load ${url}`);
+      index = 0;
       (options.callback as () => void)();
     },
     play: () => calls.push("play"),
     pause: () => calls.push("pause"),
     seekTo: (ms: number) => calls.push(`seek ${String(ms)}`),
+    skip: (to: number) => {
+      calls.push(`skip ${String(to)}`);
+      index = to;
+    },
     setVolume: (volume: number) => calls.push(`volume ${String(volume)}`),
     getDuration: (callback: (ms: number) => void) => {
-      callback(2_400_000);
+      const at = index;
+      answer(() => {
+        callback(lengths[at] ?? 0);
+      });
     },
-    getCurrentSoundIndex: (callback: (index: number) => void) => {
-      callback(calls.filter((call) => call === "finish").length - 1);
+    getCurrentSoundIndex: (callback: (at: number) => void) => {
+      const at = index;
+      answer(() => {
+        callback(at);
+      });
     },
     getSounds: (callback: (list: readonly unknown[]) => void) => {
-      callback(Array.from({ length: sounds }));
+      answer(() => {
+        callback(lengths.map((duration) => ({ duration })));
+      });
     },
   };
   const Widget = Object.assign(
@@ -127,10 +152,14 @@ function fakeSoundCloud(sounds = 1) {
   );
   window.SC = { Widget };
   const say = (event: string, data?: { currentPosition?: number }) => {
-    if (event === "finish") calls.push("finish");
     bound[event]?.(data);
+    // A playlist moves on to its next sound after one finishes.
+    if (event === "finish" && index < lengths.length - 1) index += 1;
   };
-  return { calls, frames, say };
+  const flush = () => {
+    for (const reply of waiting.splice(0)) reply();
+  };
+  return { calls, frames, say, flush };
 }
 
 describe("SoundCloud's widget", () => {
@@ -146,8 +175,8 @@ describe("SoundCloud's widget", () => {
     });
   });
 
-  async function loaded(sounds = 1) {
-    const fake = fakeSoundCloud(sounds);
+  async function loaded(options: Parameters<typeof fakeSoundCloud>[0] = {}) {
+    const fake = fakeSoundCloud(options);
     const { events, said, times } = heard();
     const output = soundcloudOutput(events);
     output.load(SET);
@@ -179,12 +208,63 @@ describe("SoundCloud's widget", () => {
   });
 
   it("ends a playlist after its last track, not its first", async () => {
-    const { say, said } = await loaded(2);
+    const { say, said } = await loaded({ lengths: [60_000, 60_000] });
     say("ready");
+    say("play");
     say("finish");
-    expect(said).toEqual([]);
+    expect(said).toEqual(["playing"]);
+    say("play");
     say("finish");
-    expect(said).toEqual(["ended"]);
+    expect(said).toEqual(["playing", "playing", "ended"]);
+  });
+
+  it("gives a playlist one timeline across its tracks, and seeks within it (CodeRabbit on #149)", async () => {
+    const { calls, output, say, times } = await loaded({ lengths: [60_000, 60_000] });
+    say("ready");
+    expect(times.at(-1)).toEqual([0, 120_000]);
+    say("play");
+    say("progress", { currentPosition: 5_000 });
+    expect(times.at(-1)).toEqual([5_000, 120_000]);
+    say("finish");
+    say("play");
+    say("progress", { currentPosition: 5_000 });
+    expect(times.at(-1)).toEqual([65_000, 120_000]);
+    // Within the track playing: a seek in it.
+    output.seek(90_000);
+    expect(calls.at(-1)).toBe("seek 30000");
+    // In another track: skip to it, then seek once it plays.
+    output.seek(10_000);
+    expect(calls.at(-1)).toBe("skip 0");
+    say("play");
+    expect(calls.at(-1)).toBe("seek 10000");
+    say("progress", { currentPosition: 10_000 });
+    expect(times.at(-1)).toEqual([10_000, 120_000]);
+  });
+
+  it("drops a getter's answer that comes after another load (CodeRabbit on #149)", async () => {
+    const { calls, flush, output, say, times } = await loaded({ lengths: [60_000, 60_000], deferred: true });
+    say("ready");
+    flush();
+    output.seek(90_000);
+    expect(calls.at(-1)).toBe("skip 1");
+    say("play");
+    // The answer to "which sound?" (the second) is still on its way when another link loads.
+    output.load({ ...SET, key: "discography.track:e", soundcloud_url: "https://soundcloud.com/petrodestroys/other-set" });
+    flush();
+    expect(calls).not.toContain("seek 30000");
+    // The new link's place isn't counted from the old answer's track.
+    say("progress", { currentPosition: 1_000 });
+    expect(times.at(-1)).toEqual([1_000, 120_000]);
+  });
+
+  it("starts the same link over when it's loaded again (CodeRabbit on #149)", async () => {
+    const { calls, output, say, times } = await loaded();
+    say("ready");
+    say("play");
+    say("progress", { currentPosition: 61_000 });
+    output.load(SET);
+    expect(calls.filter((call) => call.startsWith("load "))).toEqual([`load ${String(SET.soundcloud_url)}`]);
+    expect(times.at(-1)).toEqual([0, 2_400_000]);
   });
 
   it("shows SoundCloud's own Play when the browser won't start a hidden one", async () => {

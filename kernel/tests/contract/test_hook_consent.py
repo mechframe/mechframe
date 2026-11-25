@@ -1,7 +1,8 @@
 """Hook 6, consent categories (decision 0052; `dev plans/contracts/hooks.md` §7,
 test 6), over HTTP only: `GET /api/kernel/site` lists `media` while any module
-with a `media` host is on (the probe's embed, and `embeds`' players), and none
-once they're all off; `probe-addon` names none. Its Vitest half,
+with a `media` host is on (the probe's embed, `embeds`' players and
+`audio-player`'s SoundCloud widget), and none once they're all off;
+`probe-addon` names none. Its Vitest half,
 `<ConsentGate>` holding its child until `grant()`, is
 `kernel/web/src/consent/consent.test.tsx`."""
 
@@ -17,7 +18,7 @@ pytestmark = pytest.mark.db
 
 SITE = "/api/kernel/site"
 #: The modules in the app with a host in `media`.
-MEDIA = ("probe", "embeds")
+MEDIA = ("probe", "embeds", "audio-player")
 
 
 async def _consent(api: Api) -> dict[str, Any]:
@@ -52,6 +53,9 @@ async def test_the_site_lists_media_while_a_module_with_a_media_host_is_on(api: 
         # embeds' players still wait for media.
         assert await _consent(api) == {"mode": "ask", "categories": ["media"]}
         await switch("embeds", False)
+        # audio-player's SoundCloud widget still waits for media.
+        assert await _consent(api) == {"mode": "ask", "categories": ["media"]}
+        await switch("audio-player", False)
         # probe-addon needs the probe, so it's off too; it named no category anyway.
         assert await _consent(api) == {"mode": "ask", "categories": []}
     finally:

@@ -56,7 +56,7 @@ def today() -> date:
 
 def checked_source(source: str) -> str:
     """`source` as given, refused unless it's `<module>.<type>`."""
-    if len(source) > MAX_SOURCE or not SOURCE.match(source):
+    if len(source) > MAX_SOURCE or not SOURCE.fullmatch(source):
         raise ValueError(f"A play's source is '<module>.<type>', not {source!r}.")
     return source
 

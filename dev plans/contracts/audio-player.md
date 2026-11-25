@@ -239,3 +239,15 @@ None yet.
 - **The hooks read the player from `PlayerContext`** when one is given (the tests' own, on fake outputs), else the app's one.
 - **The e2e page is the harness's `/player.html`.** Its axe check leaves out embeds' playlist, whose "Prev" is named "Previous video", which axe's `label-content-name-mismatch` refuses. That's embeds' to fix, and is reported in the PR.
 
+## Changes as built (the reviews of #149)
+
+- **SoundCloud waits for consent unloaded** (Codex). An item the queue reaches without `media` granted isn't loaded at all, since loading it already reaches SoundCloud. Play loads it, from its start, once allowed. The track that played stops when consent is gone and Next moves to another (CodeRabbit).
+- **The consent the player reads is one value for the app,** `configure({ mediaGranted })`. Every part sets it from the kernel's consent, and a press that grants it sets it at once, whichever part was pressed (CodeRabbit).
+- **A SoundCloud playlist has one timeline** (CodeRabbit), going beyond §2's "plays as one item, the widget running through its tracks":
+  - its tracks' lengths add up;
+  - the place is the tracks before plus where the playing one is;
+  - a seek into another track skips to it and seeks once it plays.
+- **The widget's answers:** a getter's answer for an earlier load is dropped, and FINISH reads the track it knows. The same link loaded again starts over. A Widget API that failed to load is asked for again (Codex).
+- **The dock's Escape gives focus back** to Queue or Volume when the panel held it (CodeRabbit).
+- **The settings route answers through `answer()`,** as SPEC 7 asks of a route that sets a header. A source is refused unless it `fullmatch`es `<module>.<type>` (CodeRabbit).
+
