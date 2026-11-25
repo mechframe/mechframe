@@ -1,7 +1,7 @@
 ---
 feature: The featured module, the homepage's players as staff choose them: named slots holding an ordered, schedulable list of another module's items or of YouTube links, read by the site's pages, with Admin › Homepage › Players and the Dashboard's "Now in the spotlight" (Vibrant Mindz step 2, the third of three; the side lane's M11)
-status: draft
-approved: —
+status: approved
+approved: 2026-11-25 (the owner: "Approve as recommended", the eight answers in §8 as recommended)
 plan: `docs/plans/vibrant-mindz-backend/backend-plan.md` (§2, 1) and `players-admin.md`; VM Website's boards `design/site/AdminPlayers.dc.html` (Players), `AdminDashboard.dc.html` (the card and the Needs-you item), `Main.dc.html` (the Spotlight bar, the hero's Play, the Releases deck, the Videos player) and `Videos.dc.html`
 pr: three, in order (§8, 1): the hook, then featured 0.1.0, then discography 0.1.2; decisions 0072 (the hook) and 0073 (featured); migration `featured_0001`
 ---
