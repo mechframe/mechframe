@@ -142,7 +142,7 @@ export function CoverDialog({ post, opener, onClose, onUse }: CoverDialogProps) 
     });
 
   const failure = problem ? (
-    <p className="mf-field-error mf-blog-cover-problem" role="alert">
+    <p className="mf-blog-cover-problem" role="alert">
       {problem}
     </p>
   ) : null;
@@ -220,7 +220,7 @@ export function CoverDialog({ post, opener, onClose, onUse }: CoverDialogProps) 
                 />
               </Field>
             ) : null}
-            <div className="mf-blog-panel">
+            <div className="mf-switch-rows">
               {custom ? (
                 <Switch
                   label="In the site's colours"

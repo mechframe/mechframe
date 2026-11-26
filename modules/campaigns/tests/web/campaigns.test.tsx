@@ -261,6 +261,12 @@ describe("the Newsletter page", () => {
     const row = (await screen.findByText("rae@example.com")).closest("tr") as HTMLElement;
     expect(row).toHaveTextContent("The contact form");
     expect(row).toHaveTextContent("Subscribed");
+    // Each button's name starts with the words it shows, so speech input can say them (WCAG 2.5.3,
+    // axe's label-content-name-mismatch).
+    for (const button of within(row).getAllByRole("button")) {
+      expect(button.getAttribute("aria-label")?.startsWith(button.textContent.trim())).toBe(true);
+    }
+    expect(within(row).getByRole("button", { name: "Set aside rae@example.com" })).toBeInTheDocument();
     await user.click(within(row).getByRole("button", { name: "Remove rae@example.com" }));
     await user.click(await screen.findByRole("button", { name: "Remove them" }));
     await waitFor(() => {

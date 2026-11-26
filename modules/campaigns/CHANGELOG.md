@@ -3,6 +3,7 @@
 ## 0.1.1 (2026-11-26)
 
 - The Newsletter section on Settings › Site spaces its parts 18px apart, as the kernel's form cards do (VM Website Dev 22's R3).
+- A subscriber's Set aside button is named "Set aside <address>", so its name starts with the words it shows (WCAG 2.5.3). "Set <address> aside" failed axe's `label-content-name-mismatch` whenever a subscriber was listed.
 
 ## 0.1.0 (2026-11-23)
 

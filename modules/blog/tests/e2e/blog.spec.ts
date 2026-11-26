@@ -149,6 +149,102 @@ test("an editor draws a cover with the AI, and the post's Cover field shows it",
   await expect(opener).toBeFocused();
 });
 
+// Draw a cover's parts as the AdminPost board draws them (canvas 116; VM Website Dev 22's C1 to
+// C3), at 1440 and 390 in both themes: Custom's two switch rows touching, one rule above each; the
+// failure line 14px at 400 in the font's own line; Change it level with What to change's bottom,
+// 10px from it.
+test("Draw a cover's switch rows, failure line and Change it, as the board draws them (C1 to C3)", async ({ page }) => {
+  const admin = await makeUser(page.request, "cover-parts", { totp: true, roles: ["member", "admin"] });
+  await signInTo(page, admin, "/admin/blog");
+  await keyed(page);
+  await page.route("**/api/blog/admin/covers", (route) =>
+    route.request().method() === "GET" ? route.fulfill({ json: { storage: true } }) : route.fallback(),
+  );
+  // The first draw fails, the next reaches the server's fake Anthropic.
+  let draws = 0;
+  await page.route("**/api/blog/admin/covers/draw", (route) => {
+    draws += 1;
+    if (draws > 1) return route.fallback();
+    return route.fulfill({
+      status: 502,
+      contentType: "application/problem+json",
+      body: JSON.stringify({ type: "urn:mechframe:problem:kernel.ai_failed", title: "Refused", status: 502, detail: "Refused.", code: "kernel.ai_failed" }),
+    });
+  });
+  const looks = async (check: (at: string) => Promise<void>): Promise<void> => {
+    for (const [name, canvas] of Object.entries(THEMES)) {
+      for (const width of [1440, 390]) {
+        await page.setViewportSize({ width, height: 900 });
+        await theme(page, name, canvas);
+        await check(`${name} at ${String(width)}`);
+      }
+    }
+  };
+  const small = (): Promise<string> =>
+    page.evaluate(() => {
+      const probe = document.createElement("span");
+      probe.style.font = "var(--mf-type-small)";
+      document.body.append(probe);
+      const size = getComputedStyle(probe).fontSize;
+      probe.remove();
+      return size;
+    });
+  const danger = (): Promise<string> =>
+    page.evaluate(() => {
+      const probe = document.createElement("span");
+      probe.style.color = "var(--mf-color-danger)";
+      document.body.append(probe);
+      const colour = getComputedStyle(probe).color;
+      probe.remove();
+      return colour;
+    });
+
+  await page.goto("/admin/blog/new");
+  await page.getByRole("textbox", { name: "Title", exact: true }).fill(`Ten years ${randomBytes(4).toString("hex")}`);
+  await page.getByRole("button", { name: "Draw a cover" }).click();
+  const dialog = page.getByRole("dialog", { name: "Draw a cover" });
+  await dialog.getByRole("combobox", { name: "Style" }).selectOption({ label: "Custom" });
+  const rows = dialog.locator(".mf-switch-row");
+  await expect(rows).toHaveCount(2);
+  await looks(async (at) => {
+    // C1: the two rows touch, a 1px rule above each.
+    const first = await rows.nth(0).boundingBox();
+    const second = await rows.nth(1).boundingBox();
+    if (!first || !second) throw new Error("a switch row isn't drawn");
+    expect.soft(second.y, at).toBeCloseTo(first.y + first.height, 0);
+    for (const row of [rows.nth(0), rows.nth(1)]) {
+      expect.soft(await row.evaluate((found) => getComputedStyle(found).borderTopWidth), at).toBe("1px");
+    }
+  });
+
+  await dialog.getByRole("textbox", { name: "What to draw" }).fill("A ring of fire on a dark ground");
+  await dialog.getByRole("button", { name: "Draw", exact: true }).click();
+  const failure = dialog.getByRole("alert").filter({ hasText: /\S/ });
+  await expect(failure).toBeVisible();
+  await looks(async (at) => {
+    // C2: the failure line 14px at 400, in the font's own line and the danger colour.
+    const style = await failure.evaluate((found) => {
+      const computed = getComputedStyle(found);
+      return { size: computed.fontSize, weight: computed.fontWeight, line: computed.lineHeight, colour: computed.color };
+    });
+    expect.soft(style, at).toEqual({ size: await small(), weight: "400", line: "normal", colour: await danger() });
+  });
+
+  await dialog.getByRole("button", { name: "Draw", exact: true }).click();
+  const change = dialog.getByRole("textbox", { name: "What to change" });
+  await expect(change).toBeVisible();
+  await change.fill("Warmer colours");
+  const button = dialog.getByRole("button", { name: "Change it" });
+  await looks(async (at) => {
+    // C3: Change it level with the box's bottom, 10px from it.
+    const box = await change.boundingBox();
+    const beside = await button.boundingBox();
+    if (!box || !beside) throw new Error("What to change or Change it isn't drawn");
+    expect.soft(beside.y + beside.height, at).toBeCloseTo(box.y + box.height, 0);
+    expect.soft(beside.x - (box.x + box.width), at).toBeCloseTo(10, 0);
+  });
+});
+
 // A first load of /blog doesn't move the footer as its list arrives (decision 0066: a page that
 // draws its heading first and its content once its read answers is the page's own to hold back).
 // Both reads are held back 400 ms and answered here, so the list has height whatever the database

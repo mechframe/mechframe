@@ -215,7 +215,7 @@ function Subscribers() {
       align: "end",
       cell: (row) => (
         <span className="mf-newsletter-actions">
-          <Button size="small" onClick={() => { setAsking({ kind: "set-aside", row }); }} aria-label={`Set ${row.email} aside`}>
+          <Button size="small" onClick={() => { setAsking({ kind: "set-aside", row }); }} aria-label={`Set aside ${row.email}`}>
             Set aside
           </Button>
           <Button size="small" onClick={() => { setAsking({ kind: "remove", row }); }} aria-label={`Remove ${row.email}`}>

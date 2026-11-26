@@ -1,5 +1,9 @@
 # Changelog: blog
 
+## 0.1.7
+
+- Draw a cover, as the AdminPost board draws it (VM Website Dev 22's C1 to C3): Custom's two switches sit in the kit's switch rows, touching with a rule above each, not 16px apart. A failed draw says so at the small size and 400, in the font's own line and the danger colour, as Write with AI's dialog does, not as a field's error. Change it sits level with What to change's bottom, 10px from it.
+
 ## 0.1.6
 
 - `/blog` holds back on a first load until its posts and its categories answer. `<main>` stays empty meanwhile, so the frame draws the footer under the list and doesn't move it as the list arrives (decision 0066). A phone measured 0.04 of layout shift before, and 0.06 at 1440. Choosing a category keeps the page and its chip's focus while that category's read runs.

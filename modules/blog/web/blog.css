@@ -345,10 +345,12 @@
   border-radius: 10px;
 }
 
+/* Change it level with What to change's bottom, 10px from it, as the AdminPost board draws it
+   (VM Website Dev 22's C3). */
 .mf-blog-cover-change {
   display: flex;
-  align-items: flex-start;
-  gap: var(--mf-space-2);
+  align-items: flex-end;
+  gap: 0.625rem;
 }
 
 .mf-blog-cover-change > :first-child {
@@ -356,8 +358,13 @@
   min-width: 0;
 }
 
+/* A failed draw in the small size at 400, in the font's own line, as the board draws it and as
+   Write with AI's dialog says its problem (C2); not a field's error. */
 .mf-blog-cover-problem {
   margin: 0;
+  font: var(--mf-type-small);
+  line-height: normal;
+  color: var(--mf-color-danger);
 }
 
 .mf-blog-delete {
