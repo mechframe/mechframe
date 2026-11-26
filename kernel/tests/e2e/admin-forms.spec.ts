@@ -318,13 +318,22 @@ test("A writing style's page: the Writing tab marked, and its delete dialog (S1,
   });
 });
 
-test("Settings › Site: contact's topics (T1, T2) and the form cards (B1)", async ({ page }) => {
+test("Settings › Site: contact's topics (T1, T2), the Player section and the form cards (B1)", async ({ page }) => {
   await signedInAdmin(page, "/admin/settings");
   const contact = page.locator(".mf-settings-card").filter({ has: page.getByRole("heading", { name: "Contact form" }) });
   const add = contact.getByRole("button", { name: "Add a topic" });
   await expect(add).toBeVisible();
+  const player = page.locator(".mf-settings-card").filter({ has: page.locator(".mf-player-settings") });
+  await expect(player.locator(".mf-player-settings")).toBeVisible();
   await eachLook(page, async (at, width) => {
     if (width === 1440) expect.soft((await boxOf(contact)).width, at).toBeCloseTo(760, 0);
+    // audio-player's Player section spans its card, as the board's form cards' parts do (VM Website, 2026-11-25).
+    if (width === 1440) expect.soft((await boxOf(player)).width, at).toBeCloseTo(760, 0);
+    const inside = await player.evaluate((card) => {
+      const style = getComputedStyle(card);
+      return card.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+    });
+    expect.soft((await boxOf(player.locator(".mf-player-settings"))).width, at).toBeCloseTo(inside, 0);
     // T1: Add a topic as wide as its words.
     expect.soft((await boxOf(add)).width, at).toBeLessThan(200);
     // T2: a topic's First as a field's label (13px in Vibrant Mindz), muted, at 400, with no rule above it.

@@ -7,7 +7,7 @@
     {
       "id": "audio-player",
       "name": "Audio player",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "status": "experimental",
       "category": "media",
       "summary": "One player for the site's own audio: waveforms, a queue, one thing at a time, and plays counted with no personal data.",

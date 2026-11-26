@@ -253,10 +253,10 @@
   }
 }
 
+/* It spans its card, as every settings form card's parts do: the card stops at 760px (VM Website, 2026-11-25). */
 .mf-player-settings {
   display: grid;
   gap: var(--mf-space-4);
-  max-width: 40rem;
 }
 
 /* SoundCloud's widget, off the page behind the site's controls; shown only when a browser wants its own Play. */
