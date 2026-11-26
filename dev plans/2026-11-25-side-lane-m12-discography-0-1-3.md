@@ -13,7 +13,7 @@ MechFrame (`CLAUDE.md`, `SPEC.md`). You're the **side lane** ("Two lanes" in `CL
 ## 2. Yours, and not yours
 
 - **Yours:** `modules/discography/`, plus audio-player and featured if a fix needs them. Decisions 0074 and up; migration `discography_0002`, though none is expected.
-- **Not yours:** the kit (`kernel/web/src/ui/`), `kernel/web/src/admin/` and `ai/`, step 1's modules, `docs/HANDOFF.md`, `CLAUDE.md`'s state, and the ledger.
+- **Not yours:** the kit (`kernel/web/src/ui/`), `kernel/web/src/admin/`, the AI's code (`kernel/web/src/ai/`, `kernel/backend/kernel/ai.py`, `ai_routes.py`), step 1's modules, `docs/HANDOFF.md`, `CLAUDE.md`'s state, and the ledger.
 
 ## 3. State (verify it)
 
@@ -35,8 +35,8 @@ The owner's order (2026-11-25): "Row names, then fixes".
    - a module-only downgrade test;
    - a replacement committed mid-job.
 
-   Find each in #145's threads (`gh api repos/mechframe/mechframe/pulls/145/comments`, the replies that defer it). Each fix gets a test seen failing first.
-4. **discography 0.1.3, as one PR:** `module.json`, CHANGELOG.md, MODULE.md if a surface changes, and the generated files (catalog, `docs/HOST-VARIABLES.md`, the OpenAPI spec). Add the PR to Step 2 in `docs/progress.json`, then run `python -m tools.progress`.
+   Find each in #145's threads (`gh api --paginate repos/mechframe/mechframe/pulls/145/comments`, the replies that defer it). Each fix gets a test seen failing first.
+4. **discography 0.1.3, as one PR:** `module.json`, CHANGELOG.md, MODULE.md if a surface changes, and the generated files: catalog, `docs/HOST-VARIABLES.md`, the OpenAPI spec and its `web/schema.ts` (`python -m tools.openapi`, then `npm run api:types`), and the event schemas if an event changes (`python -m tools.event_schemas`). Add the PR's number, read from GitHub just before the push, to Step 2's `prs` in `docs/progress.json`, then run `python -m tools.progress`. The row's status and the ledger stay the main lane's.
    - **To land it:** merge `main`, make the generated files again, read the PR number just before your one push, then fast-forward once "CI result" is green and the bots are clear.
 5. **Report** in §9 here and in the PR.
 

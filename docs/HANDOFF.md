@@ -8,7 +8,7 @@ Overwritten every session. This one: 2026-11-25, about 10:00 Eastern, to 2026-11
   - **#155:** Settings › AI's Model row drawn to its board (A1 to A4).
   - **#156:** the admin kit to the boards, the ask's 22 lines (B1 to B10, C1 to C5, W2 to W4, S1, C1 more, T1, T2). They apply in the admin only, under `.mf-admin-look`. Contact is 0.1.2. Decision 0040 is amended.
   - **#158:** VM Website's next asks: K3's 12px pills, K6's 12px column heads, and the StatCard's link and figure (P2, P3). The kit's `Table` gains `rowHeader="<column key>"`, which draws that column's cell as each row's `<th scope="row">` at 600. Decision 0040 is amended again.
-  - **The site's parity tools** (Dev 21): every site page is exact. The forms' 22 lines and the Dashboard card's P1 to P3 match. A short list still differs (card titles' line height, a few cases at 390); it's with its owner first.
+  - **The site's parity tools** (Dev 21): the forms' 22 lines and the Dashboard card's P1 to P3 match. A short list still differs (card titles' line height, a few cases at 390) and is with its owner first, so Step 1's board test hasn't passed.
 - **Small follow-ups landed:**
   - **#160:** embeds 0.1.1, the playlist's "Prev" reads "Previous" (WCAG 2.5.3), and audio-player's e2e axe covers the playlist again. audio-player 0.1.1 lets the Player section on Settings › Site span its card (VM Website's ask, on its owner's word).
   - **#161:** blog 0.1.6, `/blog` holds back on a first load until its posts and categories answer, so the footer doesn't move (decision 0066's consequence). Before, it shifted 0.04 on a phone and 0.06 at 1440.
