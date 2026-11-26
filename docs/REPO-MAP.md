@@ -20,12 +20,12 @@ Moved from CLAUDE.md on 2026-11-26, word for word, when it was leaned. CLAUDE.md
 | `tools/` | Repo tooling: `validate_schemas.py`, `link_skills.py`, `build_common_passwords.py` (rebuilds the bundled list; steps in NOTICE) |
 | `tests/` | Repo-level tests: schemas, migrations round trip, tools |
 | `conftest.py` | The test run's made-up secrets and the throwaway Postgres fixtures |
-| `catalog.json` | Generated index of every module (empty until the first module) |
+| `catalog.json` | Generated index of every built module; `mechframe catalog` makes it again (`--check` only reports) |
 | `docs/decisions/` | Decision records |
 | `docs/HANDOFF.md` | One page, overwritten each session |
 | `docs/progress.json`, `docs/PROGRESS.md` | Progress to v1.0 and after: the data, and the document `tools/progress.py` makes from it |
 | `docs/private/` | Not in git (the repo is public): the inventory of `C:\DEV` and the name of the client folder |
-| `docs/archive/` | Moved out of this file when it was leaned, word for word: the state to 2026-11-21, phase by phase |
+| `docs/archive/` | Moved out of CLAUDE.md when it was leaned, word for word: the state to 2026-11-21, phase by phase, then to 2026-11-26, PR by PR |
 | `docs/plans/` | Plans, such as the Vibrant Mindz module plan |
 | `docs/plans/module-roadmap.md` | The module roadmap after v1.0: five waves of Musts, after ten contract hooks (decision 0018) |
 | `docs/plans/vibrant-mindz-backend/` | The Vibrant Mindz backend plan: its kickoff (steps 0 to 7), specs, admin map, kernel additions and extraction briefs |

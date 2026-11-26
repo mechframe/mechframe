@@ -33,3 +33,4 @@ From the repo root, in PowerShell. Python commands use the `python -m` form.
 | The template's web package and lockfile, after a bump in the root's `package.json` | `python -m tools.site_template` (needs npm and the registry; `--check` only reports) |
 | A new site made and run from nothing: venv, pins, lint, migrations, tests, `npm ci`, the build, `railway.ts`'s types, Playwright, `mechframe check` (CI's E2E workflow runs it; never on a PR) | `python -m tools.site_smoke` with `TEST_DATABASE_URL` set and npm on the path (`--keep` keeps the folder); about 5 minutes once pip's cache is warm |
 | Brand check, before any PR that lifts code | `python -I "C:\DEV\VybeSite\vybesite\scripts\brand_check.py" "C:\DEV\AI-DevKit"` |
+| The bundled common-password list (SPEC 14.2), after a change to its sources | `python -m tools.build_common_passwords`, as `NOTICE` and the tool's docstring say: rebuilt their way, the bytes are identical |
