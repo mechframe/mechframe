@@ -86,11 +86,11 @@ def test_a_recorded_file_that_can_t_be_read_is_a_refusal(
     )
 
 
-#: Where the CLI's install is written down for people and agents.
+#: Where the CLI's install is written down for people and agents: the repo's
+#: commands live in docs/COMMANDS.md since CLAUDE.md and AGENTS.md were leaned (#164).
 INSTALL_DOCS = (
     "cli/README.md",
-    "CLAUDE.md",
-    "AGENTS.md",
+    "docs/COMMANDS.md",
     "pyproject.toml",
     "cli/mechframe/__init__.py",
 )
