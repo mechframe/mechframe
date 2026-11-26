@@ -163,8 +163,13 @@ const SHIFTS = `
   }).observe({ type: "layout-shift", buffered: true });
 `;
 
+/** A GET held back 400 ms and answered with `body`; any other method goes on to the server (cubic on #161). */
 function heldBack(body: unknown) {
   return async (route: Route) => {
+    if (route.request().method() !== "GET") {
+      await route.fallback();
+      return;
+    }
     await new Promise((resolve) => setTimeout(resolve, 400));
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
   };

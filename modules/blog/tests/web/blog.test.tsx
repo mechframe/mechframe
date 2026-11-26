@@ -3,7 +3,7 @@
  * the site, the admin's board with its Categories card, and the editor. Every
  * answer comes from a fetch that answers by method and path.
  */
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -163,48 +163,64 @@ describe("the blog", () => {
     expect(sent.some((each) => new URL(each.url).searchParams.get("category") === "poetry")).toBe(true);
   });
 
-  it("draws nothing until its posts and categories answer, then stays while a category's read runs (decision 0066)", async () => {
-    let answerCategories: () => void = () => undefined;
-    const categoriesIn = new Promise<void>((resolve) => {
-      answerCategories = resolve;
-    });
-    let answerPoetry: () => void = () => undefined;
-    const poetryIn = new Promise<void>((resolve) => {
-      answerPoetry = resolve;
-    });
-    const sent = routed({
-      "GET /api/blog/categories": async () => {
-        await categoriesIn;
-        return { status: 200, body: { items: [{ slug: "news", label: "News", posts: 1 }, { slug: "poetry", label: "Poetry", posts: 1 }] } };
-      },
-      "GET /api/blog/posts": async (request) => {
-        if (new URL(request.url).searchParams.get("category") !== "poetry") return { status: 200, body: { items: [card()], next_cursor: null } };
-        await poetryIn;
-        return { status: 200, body: { items: [card({ title: "Salt", slug: "salt", category: { slug: "poetry", label: "Poetry" } })], next_cursor: null } };
-      },
-    });
-    renderApp({ path: "/blog", modules: [blog] });
+  // Each read held back on its own and let go in turn, either one first (cubic and CodeRabbit on #161).
+  for (const first of ["posts", "categories"] as const) {
+    it(`draws nothing until its posts and categories answer, the ${first} first, then stays while a category's read runs (decision 0066)`, async () => {
+      const held = { posts: deferred(), categories: deferred(), poetry: deferred() };
+      routed({
+        "GET /api/blog/categories": async () => {
+          await held.categories.done;
+          return { status: 200, body: { items: [{ slug: "news", label: "News", posts: 1 }, { slug: "poetry", label: "Poetry", posts: 1 }] } };
+        },
+        "GET /api/blog/posts": async (request) => {
+          if (new URL(request.url).searchParams.get("category") === "poetry") {
+            await held.poetry.done;
+            return { status: 200, body: { items: [card({ title: "Salt", slug: "salt", category: { slug: "poetry", label: "Poetry" } })], next_cursor: null } };
+          }
+          await held.posts.done;
+          return { status: 200, body: { items: [card()], next_cursor: null } };
+        },
+      });
+      const { queryClient } = renderApp({ path: "/blog", modules: [blog] });
+      const answered = (path: string) =>
+        queryClient
+          .getQueryCache()
+          .findAll({ queryKey: ["get", path] })
+          .some((query) => query.state.status === "success");
 
-    // The posts are in and the chips aren't: nothing's drawn, so the frame holds its footer back.
-    await waitFor(() => {
-      expect(sent.some((each) => new URL(each.url).pathname === "/api/blog/posts")).toBe(true);
+      // One read is in and the other isn't: nothing's drawn, so the frame holds its footer back.
+      held[first].release();
+      await waitFor(() => {
+        expect(answered(`/api/blog/${first}`)).toBe(true);
+      });
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0)); // the query's news reaches the page
+      });
+      expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
+      expect(screen.queryByRole("heading", { level: 2, name: "Ten years" })).toBeNull();
+
+      held[first === "posts" ? "categories" : "posts"].release();
+      expect(await screen.findByRole("heading", { level: 2, name: "Ten years" })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { level: 1, name: "Blog" })).toBeInTheDocument();
+
+      // A category's read doesn't take the page away, nor the focus off its chip.
+      await userEvent.click(screen.getByRole("button", { name: "Poetry" }));
+      expect(screen.getByRole("heading", { level: 1, name: "Blog: Poetry" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Poetry", pressed: true })).toHaveFocus();
+      held.poetry.release();
+      expect(await screen.findByRole("heading", { level: 2, name: "Salt" })).toBeInTheDocument();
     });
-    await new Promise((resolve) => setTimeout(resolve, 50));
-    expect(screen.queryByRole("heading", { level: 1, name: "Blog" })).toBeNull();
-    expect(screen.queryByRole("heading", { level: 2, name: "Ten years" })).toBeNull();
-
-    answerCategories();
-    expect(await screen.findByRole("heading", { level: 2, name: "Ten years" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 1, name: "Blog" })).toBeInTheDocument();
-
-    // A category's read doesn't take the page away, nor the focus off its chip.
-    await userEvent.click(screen.getByRole("button", { name: "Poetry" }));
-    expect(screen.getByRole("heading", { level: 1, name: "Blog: Poetry" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Poetry", pressed: true })).toHaveFocus();
-    answerPoetry();
-    expect(await screen.findByRole("heading", { level: 2, name: "Salt" })).toBeInTheDocument();
-  });
+  }
 });
+
+/** A promise and the call that settles it, so a test lets each answer go when it chooses. */
+function deferred(): { done: Promise<void>; release: () => void } {
+  let release: () => void = () => undefined;
+  const done = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  return { done, release };
+}
 
 describe("a live post", () => {
   const live: LivePost = {
