@@ -332,6 +332,11 @@ def _shared(connection: Connection) -> dict[str, Any]:
         "searched": column("SELECT content_type FROM kernel_search_document"),
         "uses": column("SELECT owner FROM media_use"),
         "writer": column("SELECT permission FROM auth_role_permission WHERE role_id = 'writer'"),
+        # Every role's grant of discography's permissions, the built-in roles' too (cubic on #163).
+        "grants": column(
+            "SELECT role_id || ' ' || permission FROM auth_role_permission "
+            "WHERE permission LIKE 'discography.%'"
+        ),
         "posts": column("SELECT slug FROM blog_post"),
         "tables": column(
             "SELECT table_name FROM information_schema.tables "
@@ -359,6 +364,8 @@ async def test_discography_alone_steps_down_and_takes_its_rows_from_the_shared_t
     before = await _sync(empty_database_url, _shared)
     assert before["searched"] == ["blog.post", "discography.release"]
     assert "discography.release.manage" in before["writer"]
+    assert "writer discography.release.manage" in before["grants"]
+    assert any(each.endswith(" discography.settings.manage") for each in before["grants"])
 
     await asyncio.to_thread(downgrade, empty_database_url, "discography@base")
     after = await _sync(empty_database_url, _shared)
@@ -367,6 +374,7 @@ async def test_discography_alone_steps_down_and_takes_its_rows_from_the_shared_t
         "searched": ["blog.post"],
         "uses": ["blog.post:1"],
         "writer": ["blog.write"],
+        "grants": [],
         "posts": before["posts"],
         "tables": [],
     }

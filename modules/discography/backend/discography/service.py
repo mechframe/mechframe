@@ -31,7 +31,7 @@ import re
 import secrets
 import unicodedata
 import uuid
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from datetime import date, datetime, timedelta
 from typing import Any, BinaryIO, cast
 from urllib.parse import urlsplit
@@ -1339,18 +1339,24 @@ def probe(source: BinaryIO, size: int) -> audio.Probe:
 _TAKING_BACK: set[asyncio.Task[None]] = set()
 
 
-def _until_committed(db: AsyncSession, key: str) -> None:
-    """Takes the new master `key` back out of the private bucket unless the
-    session's outer transaction commits: a failed upload or replace leaves no
-    master that no track names (CodeRabbit on #145, 0.1.3). A rollback or a
-    close with none (the kernel's get_db) both count. A savepoint's release
-    fires after_commit too, so only the outer transaction's end decides, as
-    media's files do."""
+def _until_committed(db: AsyncSession, key: str) -> Callable[[], None]:
+    """Takes the new master `key` back out of the private bucket, unless a track
+    names it, when the session's outer transaction ends without a commit, or
+    commits after a rollback inside it: a failed upload or replace leaves no
+    master that no track names (CodeRabbit on #145, 0.1.3). A rollback, a close
+    with none (the kernel's get_db), a savepoint rolled back inside a commit
+    and a put that stored the file and then failed all count (cubic on #163).
+    A clean commit leaves it alone. A savepoint's release fires after_commit
+    too, so only the outer transaction's end decides, as media's files do.
+    Returns what to call when nothing was stored after all."""
     engine = db.bind
-    state = {"committed": False, "done": False}
+    state = {"committed": False, "rolled": False, "done": False}
 
     def committed(_: Any) -> None:
         state["committed"] = True
+
+    def rolled(_: Any, __: Any) -> None:
+        state["rolled"] = True  # any rollback after the put, a savepoint's too
 
     def ended(_: Any, transaction: Any) -> None:
         if state["done"]:
@@ -1359,13 +1365,18 @@ def _until_committed(db: AsyncSession, key: str) -> None:
             state["committed"] = False  # a savepoint's own release, not the commit
             return
         state["done"] = True
-        if not state["committed"]:
+        if state["rolled"] or not state["committed"]:
             task = asyncio.get_running_loop().create_task(_take_back(engine, key))
             _TAKING_BACK.add(task)
             task.add_done_callback(_TAKING_BACK.discard)
 
+    def nothing_stored() -> None:
+        state["done"] = True
+
     sa.event.listen(db.sync_session, "after_commit", committed)
+    sa.event.listen(db.sync_session, "after_soft_rollback", rolled)
     sa.event.listen(db.sync_session, "after_transaction_end", ended)
+    return nothing_stored
 
 
 async def _take_back(engine: Any, key: str) -> None:
@@ -1387,15 +1398,16 @@ async def _store_master(
 ) -> None:
     """The master into the private bucket, and the job queued to make its stream."""
     key = f"discography/masters/{track.id}/{secrets.token_hex(6)}{probed.extension}"
+    nothing_stored = _until_committed(db, key)  # before the put: it may store the file, then fail
     try:
         await storage.put(key, source, content_type=probed.content_type, filename=name)
     except storage.StorageNotConfigured:
+        nothing_stored()
         raise Problem(
             "discography.storage_off",
             503,
             "Uploads need the site's storage. Until it's set up, use a SoundCloud link.",
         ) from None
-    _until_committed(db, key)  # before anything else can fail
     old = [{"key": track.master_key, "public": False}] if track.master_key else []
     track.master_key, track.master_name, track.master_bytes = key, name, size
     track.audio_state, track.processing_percent, track.audio_error = "processing", 0, None

@@ -275,9 +275,14 @@
   border-radius: var(--mf-radius-md);
 }
 
-/* Every track's name is its row's header, at 600 (the kit's rowHeader, K6); the one open is 700, as the board draws it. */
 .mf-music-pick[aria-pressed="true"] {
   color: var(--mf-color-text-strong);
+  font-weight: 600;
+}
+
+/* On Tracks, every track's name is its row's header, at 600 (the kit's rowHeader, K6); the one open is
+   700, as the board draws it. A release page's Front and Back keep 600 (cubic on #163). */
+.mf-table .mf-music-pick[aria-pressed="true"] {
   font-weight: 700;
 }
 

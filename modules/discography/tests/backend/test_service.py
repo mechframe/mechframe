@@ -438,6 +438,53 @@ async def test_a_session_closed_without_a_commit_takes_its_master_back(
     assert store.keys(public=False) == []
 
 
+async def test_a_replace_whose_savepoint_rolls_back_takes_its_master_back_though_the_rest_commits(
+    db: AsyncSession, store: Store
+) -> None:
+    """cubic on #163: the transaction commits, but the savepoint the replace ran in
+    didn't, so no track names its master."""
+    release = await _release(db)
+    track = await _uploaded(db, release)
+    track_id, first = track.id, track.master_key
+    await _taken_back()
+    body = master(2.0)
+
+    async def step() -> None:
+        async with db.begin_nested():
+            await service.replace_audio(
+                db, track_id, io.BytesIO(body), len(body), "v2.wav", by=None
+            )
+            raise RuntimeError("the rest of the step failed")
+
+    with pytest.raises(RuntimeError):
+        await step()
+    await db.commit()
+    await _taken_back()
+
+    assert store.keys(public=False) == [first]
+
+
+async def test_a_master_whose_put_failed_after_it_was_stored_is_taken_back(
+    db: AsyncSession, store: Store, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """cubic on #163: the bucket took the file, then the answer was lost."""
+    kept = store.put
+
+    async def stored_then_failed(key: str, data: Any, **fields: Any) -> Any:
+        await kept(key, data, **fields)
+        raise kernel_storage.StorageError("the reply was lost")
+
+    monkeypatch.setattr(kernel_storage, "put", stored_then_failed)
+    release = await _release(db)
+    body = master()
+    with pytest.raises(kernel_storage.StorageError):
+        await service.upload_track(db, release.id, io.BytesIO(body), len(body), "a.wav", by=None)
+    await db.rollback()
+    await _taken_back()
+
+    assert store.keys(public=False) == []
+
+
 async def test_a_master_a_track_names_is_never_taken_back(
     database: Database, db: AsyncSession, store: Store
 ) -> None:

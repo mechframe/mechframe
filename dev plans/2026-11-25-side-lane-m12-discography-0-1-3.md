@@ -65,4 +65,21 @@ Anything that changes `dev plans/contracts/discography.md`. Already answered on 
 
 ## 9. Result
 
-(The side lane writes it here when the job is done.)
+Side lane M12, 2026-11-26, about 06:30 to 07:20 Eastern (11:30 to 12:20 UTC), then the review rounds.
+
+- **#163, discography 0.1.3**, pushed once, merged with `main` at 817bdc6. Step 2's `prs` gains 163; its status and the ledger are untouched. No migration, decision, route or contract change.
+  - **Row names:** `rowHeader` on Tracks' (`track`) and Credits' (`name`) tables. The picked track is 700, as the board draws it: in Vibrant Mindz the link colour is the strong text's, so weight alone marks it.
+  - **VM Website Dev 21's board check of 0.1.2, P1 to P6, all in:** P1 `.mf-music-row` `margin: 0`; P2 the switches in `.mf-switch-rows`; P3 a credit's row stacks wherever it's narrow, Role alone and then Name with Remove, always in Tracks' panel and under 640 px in the album editor (the shape was sent to Dev 21 for the redraw); P4 the panel's Save and Discard small; P5 and P6 the row names.
+  - **#145's five deferred items,** each with a test seen failing first, or against a mutant where the code was right: a master that never commits is taken back out (`_until_committed`, as media's, for the private bucket); a reindex page is three reads (`service.documents`); row keys and focus (`web/rows.ts`); a discography-only downgrade test; a replacement mid-job.
+- **Local before the push:** discography's Python 141 passed; `tests/`, `kernel/tests/contract/` and `test_app.py` 743 passed, 19 xfailed, 1 skipped (28 minutes with the PC shared); web 71 passed; ESLint, tsc, ruff, black and mypy clean; e2e (discography's spec, both themes) 2 passed, with the main lane told before and after.
+- **Review round 1** (Codex none; cubic 4; CodeRabbit 1), all fixed in one push with this Result:
+  - the take-back now runs when anything rolled back after the put, a savepoint's rollback too, or the transaction never committed, and its hook comes before the put, so a put that stored the file and then failed is covered (cubic, two findings);
+  - a clean commit starts no background work, as the first try did, which left a connection open when a test's engine closed;
+  - the downgrade test checks every role's grants of `discography.*` (cubic);
+  - the 700 weight is the Tracks table's alone, so a release page's Front and Back stay 600 (cubic);
+  - MODULE.md calls the take-back background and best effort (CodeRabbit).
+- **For the main lane's handoff:** the landing is in the message to the main lane, not here.
+- **Traps hit:**
+  - the e2e spec's `.first()` pick took the other theme's track of the same name: pick inside the release's own row;
+  - `openapi-typescript --check` fails on a worktree's CRLF copy of an unchanged `schema.ts`: regenerate it and git shows no diff;
+  - a rollback expires the ORM row, so a test reads the id before it.
