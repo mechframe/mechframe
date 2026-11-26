@@ -10,7 +10,7 @@ import { randomBytes } from "node:crypto";
 
 import { expect, test, type Page, type Route } from "@playwright/test";
 
-import { THEMES, axe, makeUser, signInTo, theme } from "../../../../kernel/tests/e2e/support";
+import { THEMES, axe, makeUser, saveAiKey, signInTo, theme } from "../../../../kernel/tests/e2e/support";
 
 const WORDS = ":is(h1, h2, h3, p)";
 
@@ -95,15 +95,10 @@ const KEY = `sk-ant-e2e-${"e".repeat(40)}`;
 /** A 1 × 1 PNG: the kept cover's file, stood in while the e2e server's storage is off. */
 const PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYGD4DwABBAEAwS2OUAAAAABJRU5ErkJggg==";
 
-/** The site's one key, saved in Settings → AI unless one is already (ai.spec.ts saves the same). */
+/** The site's one key, saved in Settings → AI unless one is already (ai.spec.ts saves the same).
+ * Both cover tests and ai.spec save it at once, so a crossed save is tried again (cubic on #165). */
 async function keyed(page: Page): Promise<void> {
-  await page.goto("/admin/settings/ai");
-  const field = page.getByLabel(/^(Save a key|Replace the saved key)$/);
-  await expect(field).toBeVisible();
-  if ((await page.getByLabel("Replace the saved key").count()) > 0) return;
-  await field.fill(KEY);
-  await page.getByRole("button", { name: "Save the key" }).click();
-  await expect(page.getByText("Key saved.")).toBeVisible();
+  await saveAiKey(page, KEY, false);
 }
 
 test("an editor draws a cover with the AI, and the post's Cover field shows it", async ({ page }) => {

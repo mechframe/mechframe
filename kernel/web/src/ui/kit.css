@@ -455,10 +455,11 @@
 
   /* A link that stands on its own beside a row's buttons, as the boards draw "Open the release"
      (VM Website's K11): the info colour at the small size, underlined only when hovered, in a box
-     24px tall for WCAG 2.5.8. */
+     at least 24px each way for WCAG 2.5.8, whatever its words (cubic on #165). */
   .mf-quiet-link {
     display: inline-flex;
     align-items: center;
+    min-width: 1.5rem;
     min-height: 1.5rem;
     font: var(--mf-type-small);
     line-height: normal;

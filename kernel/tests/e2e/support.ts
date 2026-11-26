@@ -63,6 +63,26 @@ export async function theme(page: Page, name: string, canvas: string): Promise<v
   expect(await page.evaluate(() => getComputedStyle(document.documentElement).backgroundColor)).toBe(canvas);
 }
 
+/** The site's one AI key, saved in Settings → AI from the page itself. Specs running at once share
+ * it, and the page saves it at the version it read, so a save that crosses another's is refused:
+ * then the page is read again and the key saved once more (cubic on #165). With `fresh` false, a
+ * key saved already is kept. */
+export async function saveAiKey(page: Page, key: string, fresh = true): Promise<void> {
+  for (let tries = 0; tries < 3; tries += 1) {
+    await page.goto("/admin/settings/ai");
+    const field = page.getByLabel(/^(Save a key|Replace the saved key)$/);
+    await expect(field).toBeVisible();
+    if (!fresh && (await page.getByLabel("Replace the saved key").count()) > 0) return;
+    await field.fill(key);
+    await page.getByRole("button", { name: "Save the key" }).click();
+    const saved = page.getByText("Key saved.");
+    const crossed = page.getByText("Someone else changed the key meanwhile. Reload the page to see it.");
+    await expect(saved.or(crossed)).toBeVisible();
+    if (await saved.isVisible()) return;
+  }
+  throw new Error("the AI key wasn't saved: each save crossed another");
+}
+
 export async function axe(page: Page): Promise<string[]> {
   const { violations } = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();
   return violations.filter((each) => each.impact === "serious" || each.impact === "critical").map((each) => `${each.id}: ${each.help}`);

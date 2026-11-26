@@ -6,7 +6,7 @@
 // call goes to the harness's fake Anthropic.
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
-import { THEMES, axe, makeUser, signInTo, theme } from "./support";
+import { THEMES, axe, makeUser, saveAiKey, signInTo, theme } from "./support";
 
 const KEY = `sk-ant-e2e-${"e".repeat(40)}`;
 
@@ -18,13 +18,10 @@ async function signedInAdmin(page: Page, next: string): Promise<void> {
   await signInTo(page, user, next);
 }
 
-/** A key saved in Settings → AI, from the page itself. */
+/** A key saved in Settings → AI, from the page itself, tried again if it crosses another spec's
+ * save of the site's one key (cubic on #165). */
 async function keyed(page: Page): Promise<void> {
-  await page.goto("/admin/settings/ai");
-  const field = page.getByLabel(/^(Save a key|Replace the saved key)$/);
-  await field.fill(KEY);
-  await page.getByRole("button", { name: "Save the key" }).click();
-  await expect(page.getByText("Key saved.")).toBeVisible();
+  await saveAiKey(page, KEY);
   await expect(page.getByRole("status").filter({ hasText: "uses the key saved here" })).toBeVisible();
 }
 
