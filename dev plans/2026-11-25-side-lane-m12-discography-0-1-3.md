@@ -67,7 +67,7 @@ Anything that changes `dev plans/contracts/discography.md`. Already answered on 
 
 Side lane M12, 2026-11-26, about 06:30 to 07:20 Eastern (11:30 to 12:20 UTC), then the review rounds.
 
-- **#163, discography 0.1.3**, pushed once, merged with `main` at 817bdc6. Step 2's `prs` gains 163; its status and the ledger are untouched. No migration, decision, route or contract change.
+- **#163, discography 0.1.3**, pushed once, merged with `main` at 817bdc6. Step 2's `prs` gains 163, and `python -m tools.progress` remade `docs/PROGRESS.md` and the ledger's `rows.json` with it. The row's status is unchanged, and republishing the ledger is the main lane's. No migration, decision, route or contract change.
   - **Row names:** `rowHeader` on Tracks' (`track`) and Credits' (`name`) tables. The picked track is 700, as the board draws it: in Vibrant Mindz the link colour is the strong text's, so weight alone marks it.
   - **VM Website Dev 21's board check of 0.1.2, P1 to P6, all in:** P1 `.mf-music-row` `margin: 0`; P2 the switches in `.mf-switch-rows`; P3 a credit's row stacks wherever it's narrow, Role alone and then Name with Remove, always in Tracks' panel and under 640 px in the album editor (the shape was sent to Dev 21 for the redraw); P4 the panel's Save and Discard small; P5 and P6 the row names.
   - **#145's five deferred items,** each with a test seen failing first, or against a mutant where the code was right: a master that never commits is taken back out (`_until_committed`, as media's, for the private bucket); a reindex page is three reads (`service.documents`); row keys and focus (`web/rows.ts`); a discography-only downgrade test; a replacement mid-job.
