@@ -485,28 +485,52 @@ async def test_a_master_whose_put_failed_after_it_was_stored_is_taken_back(
     assert store.keys(public=False) == []
 
 
-async def test_a_master_whose_commit_may_have_landed_stays(
-    db: AsyncSession, database: Database, store: Store
+@pytest.mark.parametrize(
+    ("when", "savepoint"),
+    [("before", False), ("after", False), ("before", True)],
+    ids=["refused-before-the-server", "landed-its-reply-lost", "sent-with-a-savepoint-open"],
+)
+async def test_a_master_whose_commit_raised_stays(
+    db: AsyncSession,
+    database: Database,
+    store: Store,
+    monkeypatch: pytest.MonkeyPatch,
+    when: str,
+    savepoint: bool,
 ) -> None:
-    """CodeRabbit on #163: a COMMIT that raised may still land on the server, its
-    reply lost, and a track name the master once it does: the master stays."""
+    """CodeRabbit and cubic on #163: once COMMIT raises, the client can't tell whether
+    the server took it, so the master stays, a savepoint open or not. Where the commit
+    landed, its reply lost, a track names the master; where it didn't, the master is
+    left unnamed and unreachable, by design."""
     release_id = (await _release(db)).id
-    body = master()
-    await service.upload_track(db, release_id, io.BytesIO(body), len(body), "a.wav", by=None)
+    dialect = database.engine.sync_engine.dialect
+    real = dialect.do_commit
 
-    def lost(_connection: Any) -> None:
+    def failing(dbapi_connection: Any) -> None:
+        if when == "after":
+            real(dbapi_connection)  # the server commits; the reply never comes
         raise ConnectionError("the reply to COMMIT was lost")
 
-    sa_event.listen(database.engine.sync_engine, "commit", lost)
+    if savepoint:
+        await db.begin_nested()  # still open when commit() is called
+    body = master()
+    track = await service.upload_track(
+        db, release_id, io.BytesIO(body), len(body), "a.wav", by=None
+    )
+    key = track.master_key
+    monkeypatch.setattr(dialect, "do_commit", failing)
     try:
         with pytest.raises(ConnectionError):
             await db.commit()
     finally:
-        sa_event.remove(database.engine.sync_engine, "commit", lost)
+        monkeypatch.setattr(dialect, "do_commit", real)
     await db.rollback()
     await _taken_back()
 
-    assert len(store.keys(public=False)) == 1
+    assert store.keys(public=False) == [key]
+    async with database.sessions() as other:
+        named = await other.scalar(select(Track.id).where(Track.master_key == key))
+    assert (named is not None) == (when == "after")
 
 
 async def test_a_master_a_track_names_is_never_taken_back(
