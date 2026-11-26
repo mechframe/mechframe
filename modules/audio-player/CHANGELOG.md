@@ -1,5 +1,9 @@
 # Changelog: audio-player
 
+## 0.1.1
+
+- The Settings section ("Player" on Settings › Site) spans its card, as the other sections do. Its 640px cap is gone, and the card itself stops at 760px. At 1440, its hint fits on one line, as the board draws it.
+
 ## 0.1.0
 
 - The player, built to its approved contract (`dev plans/contracts/audio-player.md`; decision 0071; migration `audio_player_0001`): one audio element and one hidden SoundCloud widget for the app, the queue, one thing playing at a time with `useExclusive` for embeds' YouTube player, and a page move stopping it.

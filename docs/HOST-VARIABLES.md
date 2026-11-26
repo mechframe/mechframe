@@ -203,7 +203,7 @@ The kernel's defaults suit a small site on one service. Change these only with a
 
 Each module's own host variables, from its `module.json`, and the settings its admin page holds. A planned module's are as its scaffold has them so far; they grow as it's built.
 
-### `audio-player` 0.1.0 (experimental)
+### `audio-player` 0.1.1 (experimental)
 
 One player for the site's own audio: waveforms, a queue, one thing at a time, and plays counted with no personal data.
 
@@ -278,7 +278,7 @@ Set in the site's admin (Admin → Settings), not on the host:
 | `show_explicit_badge` | bool | `true` | The Parental Advisory label on explicit releases and tracks |
 | `show_lyrics` | bool | `true` | Lyrics on a track's page, for tracks that have them |
 
-### `embeds` 0.1.0 (experimental)
+### `embeds` 0.1.1 (experimental)
 
 YouTube, SoundCloud, Spotify and Bandcamp players from a pasted link, loaded only once a visitor plays.
 

@@ -7,7 +7,7 @@
     {
       "id": "audio-player",
       "name": "Audio player",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "status": "experimental",
       "category": "media",
       "summary": "One player for the site's own audio: waveforms, a queue, one thing at a time, and plays counted with no personal data.",
@@ -127,7 +127,7 @@
     {
       "id": "embeds",
       "name": "Embeds",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "status": "experimental",
       "category": "media",
       "summary": "YouTube, SoundCloud, Spotify and Bandcamp players from a pasted link, loaded only once a visitor plays.",

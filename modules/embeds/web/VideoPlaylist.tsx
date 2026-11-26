@@ -11,7 +11,8 @@
  *   `youtube-nocookie.com`.
  * - **At a video's end,** with Autoplay on, the next one plays and the highlight
  *   moves; after the last, it stops.
- * - **Controls:** a row's click plays it, and Prev and Next wrap. Autoplay is a
+ * - **Controls:** a row's click plays it, and Previous and Next wrap, each
+ *   named for its video with its words first (WCAG 2.5.3). Autoplay is a
  *   switch that never restarts what's playing.
  * - `onPlay`, and the handle's `pause()`, are for `audio-player`'s
  *   one-thing-at-a-time store (step 2), so it can drive this one.
@@ -269,7 +270,7 @@ export function VideoPlaylist({ items, autoplay = true, onPlay, ref, label = "Vi
                 step(-1);
               }}
             >
-              Prev
+              Previous
             </Button>
             <Button
               size="small"

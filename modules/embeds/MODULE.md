@@ -16,7 +16,7 @@ The words sit under the player, linked to the original, which still works if a p
 - a 16:9 stage and its bar, the list beside it at the stage's height, stacked under 980px;
 - the facade first, with the site's poster, and YouTube's thumbnails only once `media` is granted (the owner, 2026-11-22);
 - the IFrame API on `youtube-nocookie.com`, rolling on to the next video with Autoplay on, and stopping after the last;
-- Prev and Next that wrap, and a row's click that plays it;
+- Previous and Next that wrap, and a row's click that plays it;
 - `onPlay`, and a handle's `pause()`, for `audio-player`'s one-thing-at-a-time store (step 2).
 
 ## Use when / avoid when
