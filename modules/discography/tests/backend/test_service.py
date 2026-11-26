@@ -23,6 +23,7 @@ from discography.models import Credit, Person, Release, Track
 from discography.schemas import Settings
 from discography.seed import _NAMESPACE, RELEASES
 from discography.server_copy import PAGES, iso_duration
+from sqlalchemy import event as sa_event
 from sqlalchemy import func, select, text
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -272,6 +273,51 @@ async def test_a_master_replaced_while_its_job_runs_throws_the_result_away(
     assert track.stream_key is None
 
 
+async def test_a_master_replaced_after_its_job_read_it_never_publishes_the_old_result(
+    db: AsyncSession,
+    database: Database,
+    store: Store,
+    said: list[tuple[str, Any]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """CodeRabbit on #145 (0.1.3): the old job has read its master and is encoding
+    when the replacement commits; it finishes, and the track never takes its result.
+    The test above covers a job that was still queued."""
+    release = await _release(db)
+    track = await _uploaded(db, release)
+    first = track.master_key
+    real = audio.make_stream
+    reading, resume = threading.Event(), threading.Event()
+
+    def paused(source: BinaryIO, into: BinaryIO, *, kbps: int, progress: Any) -> audio.Made:
+        reading.set()  # the master is read in, and the encoder has it
+        assert resume.wait(5)
+        return real(source, into, kbps=kbps, progress=progress)
+
+    monkeypatch.setattr(audio, "make_stream", paused)
+    ctx = SimpleNamespace(sessions=database.sessions, try_number=1)
+    old_job = asyncio.create_task(
+        jobs.process_track.run(ctx, {"track_id": str(track.id), "master_key": first})  # type: ignore[arg-type]
+    )
+    assert await asyncio.to_thread(reading.wait, 5)
+    body = master(2.0)
+    await service.replace_audio(db, track.id, io.BytesIO(body), len(body), "v2.wav", by=None)
+    await db.commit()
+    resume.set()
+    await old_job
+
+    await db.refresh(track)
+    assert track.master_key != first
+    assert (track.audio_state, track.stream_key) == ("processing", None)
+    assert "discography.track.processed" not in [name for name, _ in said]
+
+    monkeypatch.setattr(audio, "make_stream", real)
+    await _process(database, track)  # the new master's own job
+    await db.refresh(track)
+    assert track.audio_state == "ready"
+    assert track.stream_key is not None
+
+
 async def test_a_master_that_wont_read_to_its_end_fails_with_words_for_the_board(
     db: AsyncSession, database: Database, store: Store
 ) -> None:
@@ -314,6 +360,190 @@ async def test_an_upload_with_storage_off_says_what_to_do(db: AsyncSession, stor
         await service.upload_track(db, release.id, io.BytesIO(body), len(body), "a.wav", by=None)
     await db.rollback()
     assert (refused.value.status, refused.value.code) == (503, "discography.storage_off")
+
+
+async def _taken_back() -> None:
+    """Lets the masters a transaction gave up be taken back out of the bucket."""
+    for _ in range(5):
+        await asyncio.sleep(0)
+    while service._TAKING_BACK:
+        await asyncio.gather(*list(service._TAKING_BACK))
+
+
+async def test_an_upload_that_doesnt_commit_takes_its_master_back(
+    db: AsyncSession, store: Store
+) -> None:
+    """CodeRabbit on #145 (0.1.3): a master the request never committed stays in no bucket."""
+    release = await _release(db)
+    body = master()
+    await service.upload_track(db, release.id, io.BytesIO(body), len(body), "a.wav", by=None)
+    assert len(store.keys(public=False)) == 1
+    await db.rollback()
+    await _taken_back()
+
+    assert store.keys(public=False) == []
+
+
+async def test_a_replace_that_doesnt_commit_takes_its_new_master_back_and_keeps_the_old(
+    db: AsyncSession, store: Store
+) -> None:
+    release = await _release(db)
+    track = await _uploaded(db, release)
+    await _taken_back()
+    first = track.master_key
+    body = master(2.0)
+    await service.replace_audio(db, track.id, io.BytesIO(body), len(body), "v2.wav", by=None)
+    await db.rollback()
+    await _taken_back()
+
+    assert store.keys(public=False) == [first]
+
+
+async def test_two_uploads_in_one_transaction_go_with_it_whichever_way_it_ends(
+    db: AsyncSession, store: Store
+) -> None:
+    """Each upload's insert is a savepoint, whose release isn't the transaction's commit."""
+    release_id = (await _release(db)).id  # the rollback expires the row
+    for name in ("a.wav", "b.wav"):
+        body = master()
+        await service.upload_track(db, release_id, io.BytesIO(body), len(body), name, by=None)
+    await db.rollback()
+    await _taken_back()
+    assert store.keys(public=False) == []
+
+    kept = []
+    for name in ("a.wav", "b.wav"):
+        body = master()
+        track = await service.upload_track(
+            db, release_id, io.BytesIO(body), len(body), name, by=None
+        )
+        kept.append(track.master_key)
+    await db.commit()
+    await _taken_back()
+    assert store.keys(public=False) == sorted(kept)
+
+
+async def test_a_session_closed_without_a_commit_takes_its_master_back(
+    database: Database, db: AsyncSession, store: Store
+) -> None:
+    """The kernel's get_db closes the session; no rollback is called."""
+    release = await _release(db)
+    async with database.sessions() as session:
+        body = master()
+        await service.upload_track(
+            session, release.id, io.BytesIO(body), len(body), "a.wav", by=None
+        )
+    await _taken_back()
+
+    assert store.keys(public=False) == []
+
+
+async def test_a_replace_whose_savepoint_rolls_back_takes_its_master_back_though_the_rest_commits(
+    db: AsyncSession, store: Store
+) -> None:
+    """cubic on #163: the transaction commits, but the savepoint the replace ran in
+    didn't, so no track names its master."""
+    release = await _release(db)
+    track = await _uploaded(db, release)
+    track_id, first = track.id, track.master_key
+    await _taken_back()
+    body = master(2.0)
+
+    async def step() -> None:
+        async with db.begin_nested():
+            await service.replace_audio(
+                db, track_id, io.BytesIO(body), len(body), "v2.wav", by=None
+            )
+            raise RuntimeError("the rest of the step failed")
+
+    with pytest.raises(RuntimeError):
+        await step()
+    await db.commit()
+    await _taken_back()
+
+    assert store.keys(public=False) == [first]
+
+
+async def test_a_master_whose_put_failed_after_it_was_stored_is_taken_back(
+    db: AsyncSession, store: Store, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """cubic on #163: the bucket took the file, then the answer was lost."""
+    kept = store.put
+
+    async def stored_then_failed(key: str, data: Any, **fields: Any) -> Any:
+        await kept(key, data, **fields)
+        raise kernel_storage.StorageError("the reply was lost")
+
+    monkeypatch.setattr(kernel_storage, "put", stored_then_failed)
+    release = await _release(db)
+    body = master()
+    with pytest.raises(kernel_storage.StorageError):
+        await service.upload_track(db, release.id, io.BytesIO(body), len(body), "a.wav", by=None)
+    await db.rollback()
+    await _taken_back()
+
+    assert store.keys(public=False) == []
+
+
+@pytest.mark.parametrize(
+    ("when", "savepoint"),
+    [("before", False), ("after", False), ("before", True)],
+    ids=["refused-before-the-server", "landed-its-reply-lost", "sent-with-a-savepoint-open"],
+)
+async def test_a_master_whose_commit_raised_stays(
+    db: AsyncSession,
+    database: Database,
+    store: Store,
+    monkeypatch: pytest.MonkeyPatch,
+    when: str,
+    savepoint: bool,
+) -> None:
+    """CodeRabbit and cubic on #163: once COMMIT raises, the client can't tell whether
+    the server took it, so the master stays, a savepoint open or not. Where the commit
+    landed, its reply lost, a track names the master; where it didn't, the master is
+    left unnamed and unreachable, by design."""
+    release_id = (await _release(db)).id
+    dialect = database.engine.sync_engine.dialect
+    real = dialect.do_commit
+
+    def failing(dbapi_connection: Any) -> None:
+        if when == "after":
+            real(dbapi_connection)  # the server commits; the reply never comes
+        raise ConnectionError("the reply to COMMIT was lost")
+
+    if savepoint:
+        await db.begin_nested()  # still open when commit() is called
+    body = master()
+    track = await service.upload_track(
+        db, release_id, io.BytesIO(body), len(body), "a.wav", by=None
+    )
+    key = track.master_key
+    monkeypatch.setattr(dialect, "do_commit", failing)
+    try:
+        with pytest.raises(ConnectionError):
+            await db.commit()
+    finally:
+        monkeypatch.setattr(dialect, "do_commit", real)
+    await db.rollback()
+    await _taken_back()
+
+    assert store.keys(public=False) == [key]
+    async with database.sessions() as other:
+        named = await other.scalar(select(Track.id).where(Track.master_key == key))
+    assert (named is not None) == (when == "after")
+
+
+async def test_a_master_a_track_names_is_never_taken_back(
+    database: Database, db: AsyncSession, store: Store
+) -> None:
+    """A commit whose reply was lost may have landed: its master stays while a track names it."""
+    release = await _release(db)
+    track = await _uploaded(db, release)
+    assert track.master_key is not None
+
+    await service._take_back(database.engine, track.master_key)
+
+    assert store.keys(public=False) == [track.master_key]
 
 
 async def test_removing_a_track_renumbers_the_rest_and_lets_its_files_go(
@@ -506,6 +736,64 @@ async def test_search_finds_a_release_by_a_tracks_credit(db: AsyncSession) -> No
     )
     assert document is not None
     assert name in document.body
+
+
+async def _credited_release(db: AsyncSession, tag: str) -> Release:
+    """A live release with a playable track, a silent one and a credit on each."""
+    release = await _live(db)
+    track = await _linked(db, release, f"Lit {tag}")
+    silent = await service.create_track(db, release.id, f"Hush {tag}", None, by=None)
+    await db.commit()
+    role = await _role(db, "Featuring")
+    for each in (track, silent):
+        await service.change_track(
+            db,
+            each.id,
+            each.version,
+            {
+                "credits": [{"role_id": role, "name": f"{each.title} singer"}],
+                "lyrics": f"words {tag}",
+            },
+            by=None,
+        )
+        await db.commit()
+    return release
+
+
+async def test_a_reindex_reads_a_pages_tracks_credits_and_settings_once(
+    db: AsyncSession, database: Database, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """CodeRabbit on #145 (0.1.3): a page of releases is three reads, not three a release,
+    and each document is what one release's own read gives."""
+    from discography.search import Releases
+
+    monkeypatch.setattr("discography.search.PAGE", 100_000)  # every release in one page
+    said: list[str] = []
+
+    def heard(_conn: Any, _cursor: Any, statement: str, *_: Any) -> None:
+        said.append(statement)
+
+    async def reindexed() -> tuple[int, list[Any]]:
+        said.clear()
+        sa_event.listen(database.engine.sync_engine, "before_cursor_execute", heard)
+        try:
+            found = [each async for each in Releases().documents(db)]
+        finally:
+            sa_event.remove(database.engine.sync_engine, "before_cursor_execute", heard)
+        return len(said), found
+
+    await _credited_release(db, "one")
+    before, _ = await reindexed()
+    tag = uuid.uuid4().hex[:8]
+    made = [await _credited_release(db, f"{tag}{n}") for n in range(3)]
+    after, found = await reindexed()
+
+    assert after == before
+    by_id = {each.id: each for each in found}
+    for release in made:
+        assert by_id[release.id] == await service.document(db, release)
+        assert f"Lit {tag}" in by_id[release.id].body
+        assert f"Hush {tag}" not in by_id[release.id].body  # nor its credit: it can't play
 
 
 async def test_a_release_is_announced_once(

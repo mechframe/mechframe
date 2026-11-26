@@ -1,5 +1,16 @@
 # Changelog: discography
 
+## 0.1.3
+
+- Tracks' and Credits' tables name each row by its track or person, through the kit's `rowHeader` (#158; VM Website's K6): the name is the row's header, at 600, and the track that's open is 700, as the Tracks board draws it.
+- VM Website's board check of 0.1.2 (P1 to P6): a `<p>` laid out as a row keeps no margins, so the Publish card's status line and the panel's Audio line sit where the boards put them (P1); the Music settings' switches are the kit's switch rows, touching (P2); a credit's row stacks wherever it's narrow, its role on a line of its own and its name the row's width beside its remove button, on a phone and always in Tracks' panel (P3); the panel's Save and Discard are small (P4); P5 and P6 are the row names above.
+- #145's review items left for later (CodeRabbit), each with a test seen failing first, or against a mutant where the code was right:
+  - a master whose upload or replace doesn't commit is deleted from the private bucket in the background once the transaction ends, unless a track names it then: a rollback, a savepoint rolled back inside a commit, and a put that stored the file and then failed all count. A commit that raised keeps it, as the server may still have taken it, its reply lost. It's best effort;
+  - a reindex reads a page's tracks, credits and lyrics setting once, not once a release (`service.documents`);
+  - credit, streaming-link and role rows keep their own keys as the rows before them go, and a removal puts the focus in the row that took its place, or on Add (`web/rows.ts`);
+  - discography's downgrade alone, with the shared tables kept, takes its search documents, covers' uses and grants, and leaves blog's;
+  - a master replaced after its job has read it never takes that job's result.
+
 ## 0.1.2
 
 - `refs.py` (hook 11, decision 0072; `dev plans/contracts/featured.md` §2, "discography 0.1.2"): `discography.release` ("Albums") and `discography.track` ("Tracks"), drafts too, each `live` while the site plays it, with its line and its release's cover; picked by title, newest edit first, a page at a time. featured's players can hold them now.

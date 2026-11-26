@@ -1,10 +1,12 @@
 // Credit rows, a role and a name each, added and removed in place: the album
 // editor's for a release, the Tracks board's for a track (`dev plans/contracts/
-// discography.md` §8, 5e). A row left without a name isn't saved.
+// discography.md` §8, 5e). A row left without a name isn't saved. Each row
+// keeps its key and a removal moves the focus (`rows.ts`).
 import { Button, Field, Input, Select } from "@/kernel";
 
 import { MAX_NAME } from "../api";
 import type { CreditRow } from "../editing";
+import { useFocusAfterRemoval, useRowKeys } from "../rows";
 
 export function Credits({
   rows,
@@ -17,17 +19,20 @@ export function Credits({
   error?: string | undefined;
   onChange: (rows: CreditRow[]) => void;
 }) {
+  const { keys, added, removed } = useRowKeys(rows.length);
+  const { rowsRef, removedAt } = useFocusAfterRemoval<HTMLDivElement>();
   const put = (index: number, row: CreditRow) => {
     onChange(rows.map((each, at) => (at === index ? row : each)));
   };
   return (
-    <div className="mf-music-stack">
+    <div ref={rowsRef} className="mf-music-stack">
       {rows.length ? (
         <ul className="mf-music-list">
           {rows.map((row, index) => (
-            <li key={index} className="mf-music-credit mf-music-credit--role">
+            <li key={keys[index] ?? index} className="mf-music-credit mf-music-credit--role">
               <Field label="Role">
                 <Select
+                  data-row-first
                   value={row.role_id}
                   onChange={(event) => {
                     put(index, { ...row, role_id: event.target.value });
@@ -55,6 +60,8 @@ export function Credits({
                 icon="close"
                 aria-label={`Remove the credit ${row.name.trim() || String(index + 1)}`}
                 onClick={() => {
+                  removed(index);
+                  removedAt(index);
                   onChange(rows.filter((_, at) => at !== index));
                 }}
               />
@@ -69,7 +76,9 @@ export function Credits({
         <Button
           size="small"
           icon="plus"
+          data-row-add
           onClick={() => {
+            added();
             onChange([...rows, { role_id: roles[0]?.id ?? "", name: "" }]);
           }}
         >

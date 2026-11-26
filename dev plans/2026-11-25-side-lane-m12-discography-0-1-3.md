@@ -65,4 +65,26 @@ Anything that changes `dev plans/contracts/discography.md`. Already answered on 
 
 ## 9. Result
 
-(The side lane writes it here when the job is done.)
+Side lane M12, 2026-11-26, about 06:30 to 07:20 Eastern (11:30 to 12:20 UTC), then the review rounds.
+
+- **#163, discography 0.1.3**, its work pushed once (head d46d660), with `main` at 817bdc6 merged in by merge commit 1a152d0; then the review rounds' fixes, below. Step 2's `prs` gains 163, and `python -m tools.progress` remade `docs/PROGRESS.md` and the ledger's `rows.json` with it. The row's status is unchanged, and republishing the ledger is the main lane's. No migration, decision, route or contract change.
+  - **Row names:** `rowHeader` on Tracks' (`track`) and Credits' (`name`) tables. The picked track is 700, as the board draws it: in Vibrant Mindz the link colour is the strong text's, so weight alone marks it.
+  - **VM Website Dev 21's board check of 0.1.2, P1 to P6, all in:** P1 `.mf-music-row` `margin: 0`; P2 the switches in `.mf-switch-rows`; P3 a credit's row stacks wherever it's narrow, Role alone and then Name with Remove, always in Tracks' panel and under 640 px in the album editor (the shape was sent to Dev 21 for the redraw); P4 the panel's Save and Discard small; P5 and P6 the row names.
+  - **#145's five deferred items,** each with a test seen failing first, or against a mutant where the code was right: a master that never commits is taken back out (`_until_committed`, as media's, for the private bucket); a reindex page is three reads (`service.documents`); row keys and focus (`web/rows.ts`); a discography-only downgrade test; a replacement mid-job.
+- **Local before the push:** discography's Python 141 passed; `tests/`, `kernel/tests/contract/` and `test_app.py` 743 passed, 19 xfailed, 1 skipped (28 minutes with the PC shared); web 71 passed; ESLint, tsc, ruff, black and mypy clean; e2e (discography's spec, both themes) 2 passed, with the main lane told before and after.
+- **Review round 1** (Codex none; cubic 4; CodeRabbit 1), all fixed in one push with this Result:
+  - the take-back now runs when anything rolled back after the put, a savepoint's rollback too, or the transaction never committed, and its hook comes before the put, so a put that stored the file and then failed is covered (cubic, two findings);
+  - a clean commit starts no background work. The first try started one after every commit, which left a connection open when a test's engine closed;
+  - the downgrade test checks every role's grants of `discography.*` (cubic);
+  - the 700 weight is the Tracks table's alone, so a release page's Front and Back stay 600 (cubic);
+  - MODULE.md calls the take-back background and best effort (CodeRabbit).
+  - after it, discography's Python and `tests/test_migrations.py`: 161 passed. e2e wasn't run again (the main lane's run held `mechframe_e2e`); the one CSS change keeps 700 inside the Tracks table, which the spec's check reads.
+- **Review rounds 2 and 3** (cubic): this Result's wording, the ledger's rows and the merge commit, fixed.
+- **CI on baae419:** one failure that came from `main`, not from #163. #164 moved the CLI's install line out of `CLAUDE.md` and `AGENTS.md` into `docs/COMMANDS.md`, but `cli/tests/test_review_91.py` still read the two old files, and #164's docs-only CI skipped Python. With the main lane's OK, `INSTALL_DOCS` names `docs/COMMANDS.md`, and #163 merges `main` at 660f520. `cli/tests` and `tests -m "not db"`: 627 passed.
+- **Review round 4** (CodeRabbit, a Major): a COMMIT that raised may still land on the server, so the take-back no longer deletes a master then: an outer commit that was sent and never confirmed keeps it. Test `test_a_master_whose_commit_raised_stays`, seen failing first; a mutant that counts a savepoint's release as the commit fails the two-uploads test.
+- **Review round 5** (cubic): the test now has three cases. A COMMIT refused before the server, one that lands and then raises (a separate session sees the track name the master), and one sent with a savepoint open. That last case needed no code change, because `Session.commit()` closes the savepoint before the outer `before_commit` fires. A mutant that never marks the commit fails the first and third cases.
+- **For the main lane's handoff:** the landing is in the message to the main lane, not here.
+- **Traps hit:**
+  - the e2e spec's `.first()` pick took the other theme's track of the same name: pick inside the release's own row;
+  - `openapi-typescript --check` fails on a worktree's CRLF copy of an unchanged `schema.ts`: regenerate it and git shows no diff;
+  - a rollback expires the ORM row, so a test reads the id before it.

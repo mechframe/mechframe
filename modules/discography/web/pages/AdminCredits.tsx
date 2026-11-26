@@ -26,6 +26,7 @@ import {
 } from "@/kernel";
 
 import { MAX_NAME, MAX_ROLE, PEOPLE, PROFILE_WORDS, RELEASES, ROLES, TRACKS, api, useApiQuery, type AdminPerson, type AdminRole, type Profile } from "../api";
+import { useFocusAfterRemoval } from "../rows";
 import "../music.css";
 
 /** The states staff may set; `member` is roster's to set when it links a profile. */
@@ -129,12 +130,15 @@ function EditPerson({ person, onClose }: { person: AdminPerson; onClose: () => v
   );
 }
 
-type RoleRow = { id: string | null; name: string; credits: number };
+/** `key` is the row's own, kept as it moves and as rows before it go, and never sent (`rows.ts`). */
+type RoleRow = { key: string; id: string | null; name: string; credits: number };
 
 function EditRoles({ roles, onClose }: { roles: readonly AdminRole[]; onClose: () => void }) {
   const queryClient = useQueryClient();
   const toast = useToast();
-  const [rows, setRows] = useState<RoleRow[]>(roles.map((each) => ({ id: each.id, name: each.name, credits: each.credits })));
+  const [rows, setRows] = useState<RoleRow[]>(roles.map((each) => ({ key: each.id, id: each.id, name: each.name, credits: each.credits })));
+  const [made, setMade] = useState(0);
+  const { rowsRef, removedAt } = useFocusAfterRemoval<HTMLFormElement>();
   const [refused, setRefused] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
   const [tried, setTried] = useState(false);
@@ -173,6 +177,7 @@ function EditRoles({ roles, onClose }: { roles: readonly AdminRole[]; onClose: (
   return (
     <Dialog title="Edit the roles" onClose={onClose}>
       <form
+        ref={rowsRef}
         className="mf-music-stack"
         onSubmit={(event) => {
           event.preventDefault();
@@ -181,13 +186,14 @@ function EditRoles({ roles, onClose }: { roles: readonly AdminRole[]; onClose: (
       >
         <ol className="mf-music-list">
           {rows.map((row, index) => (
-            <li key={row.id ?? `new-${String(index)}`} className="mf-music-credit">
+            <li key={row.key} className="mf-music-credit">
               <Field
                 label={`Role ${String(index + 1)}`}
                 hint={row.credits ? (row.credits === 1 ? "1 credit names it" : `${String(row.credits)} credits name it`) : undefined}
                 error={tried && unnamed(row) ? "Credits name this role: give it a name." : undefined}
               >
                 <Input
+                  data-row-first
                   value={row.name}
                   maxLength={MAX_ROLE}
                   onChange={(event) => {
@@ -209,6 +215,7 @@ function EditRoles({ roles, onClose }: { roles: readonly AdminRole[]; onClose: (
                 aria-label={`Remove ${row.name || "this role"}`}
                 disabled={row.credits > 0}
                 onClick={() => {
+                  removedAt(index);
                   setRows((now) => now.filter((_, at) => at !== index));
                 }}
               />
@@ -220,8 +227,10 @@ function EditRoles({ roles, onClose }: { roles: readonly AdminRole[]; onClose: (
           <Button
             size="small"
             icon="plus"
+            data-row-add
             onClick={() => {
-              setRows((now) => [...now, { id: null, name: "", credits: 0 }]);
+              setRows((now) => [...now, { key: `new-${String(made)}`, id: null, name: "", credits: 0 }]);
+              setMade(made + 1);
             }}
           >
             Add a role
@@ -288,7 +297,7 @@ export default function AdminCredits() {
             <LoadError what="The credits" error={people.error} onRetry={() => void people.refetch()} />
           ) : people.data ? (
             <Card flush>
-              <Table caption="People credited" captionHidden columns={columns} rows={everyone} rowKey={(person) => person.id} empty="No one is credited yet." />
+              <Table caption="People credited" captionHidden columns={columns} rows={everyone} rowKey={(person) => person.id} rowHeader="name" empty="No one is credited yet." />
             </Card>
           ) : null}
         </div>
