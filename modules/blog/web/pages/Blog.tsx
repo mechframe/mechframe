@@ -2,6 +2,7 @@
 // latest post first and larger, then the rest as cards, filtered by category
 // (`?category=`), with Older posts for the next 12. The words are the server
 // copy's own, so a crawler reads what a person sees.
+import { useState } from "react";
 import { Link, useSearchParams } from "react-router";
 
 import { Button, Chip, LoadError, Seo, useSite } from "@/kernel";
@@ -52,11 +53,18 @@ export default function Blog() {
   const [latest, ...rest] = cards;
   const shown = (categories.data?.items ?? []).filter((each) => each.posts > 0);
   const named = shown.find((each) => each.slug === category);
+  // A first load holds back until the posts and the categories (the chips) answer, so <main> stays
+  // empty and the frame draws the footer under the list, not over it to move it (decision 0066).
+  // Once drawn, the page stays while a category's read runs, its chip keeping the focus.
+  const settled = !posts.isPending && !categories.isPending;
+  const [drawn, setDrawn] = useState(settled);
+  if (settled && !drawn) setDrawn(true);
 
   function choose(slug: string) {
     setSearch(slug ? { category: slug } : {}, { replace: true });
   }
 
+  if (!drawn) return null;
   return (
     <div className="mf-blog">
       <Seo

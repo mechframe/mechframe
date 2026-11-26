@@ -162,6 +162,48 @@ describe("the blog", () => {
     expect(router.state.location.search).toBe("?category=poetry");
     expect(sent.some((each) => new URL(each.url).searchParams.get("category") === "poetry")).toBe(true);
   });
+
+  it("draws nothing until its posts and categories answer, then stays while a category's read runs (decision 0066)", async () => {
+    let answerCategories: () => void = () => undefined;
+    const categoriesIn = new Promise<void>((resolve) => {
+      answerCategories = resolve;
+    });
+    let answerPoetry: () => void = () => undefined;
+    const poetryIn = new Promise<void>((resolve) => {
+      answerPoetry = resolve;
+    });
+    const sent = routed({
+      "GET /api/blog/categories": async () => {
+        await categoriesIn;
+        return { status: 200, body: { items: [{ slug: "news", label: "News", posts: 1 }, { slug: "poetry", label: "Poetry", posts: 1 }] } };
+      },
+      "GET /api/blog/posts": async (request) => {
+        if (new URL(request.url).searchParams.get("category") !== "poetry") return { status: 200, body: { items: [card()], next_cursor: null } };
+        await poetryIn;
+        return { status: 200, body: { items: [card({ title: "Salt", slug: "salt", category: { slug: "poetry", label: "Poetry" } })], next_cursor: null } };
+      },
+    });
+    renderApp({ path: "/blog", modules: [blog] });
+
+    // The posts are in and the chips aren't: nothing's drawn, so the frame holds its footer back.
+    await waitFor(() => {
+      expect(sent.some((each) => new URL(each.url).pathname === "/api/blog/posts")).toBe(true);
+    });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.queryByRole("heading", { level: 1, name: "Blog" })).toBeNull();
+    expect(screen.queryByRole("heading", { level: 2, name: "Ten years" })).toBeNull();
+
+    answerCategories();
+    expect(await screen.findByRole("heading", { level: 2, name: "Ten years" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Blog" })).toBeInTheDocument();
+
+    // A category's read doesn't take the page away, nor the focus off its chip.
+    await userEvent.click(screen.getByRole("button", { name: "Poetry" }));
+    expect(screen.getByRole("heading", { level: 1, name: "Blog: Poetry" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Poetry", pressed: true })).toHaveFocus();
+    answerPoetry();
+    expect(await screen.findByRole("heading", { level: 2, name: "Salt" })).toBeInTheDocument();
+  });
 });
 
 describe("a live post", () => {

@@ -15,5 +15,5 @@
   - **The site's own guard** (VM Website's way 2): the kernel's rule covers every site.
 - **Consequences:**
   - `frame.spec.ts` measures a first load at 412 × 823 and 1440 × 900 with every script held back 400 ms and a 327 px footer styled outside any layer: 0 on the kernel's home and its 404 page, against 0.13 and 0.14 at 412 before the rule. Without `!important`, all four fail.
-  - **A page that draws its heading first and its content once its read answers** still grows under the footer then. Blog's own `/blog` moves it 50 px as its list arrives (0.03 at 412, under 0.1). That's each page's own, closed by the page holding back until its first read.
+  - **A page that draws its heading first and its content once its read answers** still grows under the footer then. Blog's own `/blog` moves it 50 px as its list arrives (0.03 at 412, under 0.1). That's each page's own, closed by the page holding back until its first read. Blog 0.1.6 does so for `/blog`, holding back until its posts and categories answer.
   - A site takes the fix with `mechframe upgrade kernel`.
