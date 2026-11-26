@@ -309,6 +309,70 @@ async def test_upgrade_downgrade_upgrade_with_a_row_in_every_table(
     assert await _sync(empty_database_url, _catalog) == first
 
 
+_DISCOGRAPHY_SHARED = [
+    "INSERT INTO kernel_search_document (content_type, content_id, title, body, path, language, "
+    "updated_at) VALUES ('discography.release', '00000000-0000-0000-0000-00000000000c', "
+    "'Catalyst', 'petro and J Tone', '/music/catalyst', 'english', now())",
+    "INSERT INTO media_use (id, image_id, owner, label, link, created_at) VALUES "
+    "(gen_random_uuid(), '00000000-0000-0000-0000-000000000006', "
+    "'discography.release:00000000-0000-0000-0000-00000000000c', 'Catalyst', "
+    "'/admin/music/00000000-0000-0000-0000-00000000000c', now())",
+    "INSERT INTO auth_role_permission (role_id, permission) "
+    "VALUES ('writer', 'discography.release.manage')",
+]
+
+
+def _shared(connection: Connection) -> dict[str, Any]:
+    """What the shared tables hold, and which of discography's own tables are left."""
+
+    def column(query: str) -> list[str]:
+        return sorted(str(row[0]) for row in connection.execute(text(query)))
+
+    return {
+        "searched": column("SELECT content_type FROM kernel_search_document"),
+        "uses": column("SELECT owner FROM media_use"),
+        "writer": column("SELECT permission FROM auth_role_permission WHERE role_id = 'writer'"),
+        "posts": column("SELECT slug FROM blog_post"),
+        "tables": column(
+            "SELECT table_name FROM information_schema.tables "
+            "WHERE table_schema = 'public' AND table_name LIKE 'discography%'"
+        ),
+    }
+
+
+async def test_discography_alone_steps_down_and_takes_its_rows_from_the_shared_tables(
+    empty_database_url: str,
+) -> None:
+    """CodeRabbit on #145 (discography 0.1.3): the round trips go to base, which
+    drops the shared tables, so they'd pass whatever discography left in them.
+    Stepped down alone, its search documents, covers' uses and grants go, and
+    blog's stay."""
+    await asyncio.to_thread(upgrade, empty_database_url)
+    await _sync(empty_database_url, _seed)
+
+    def shared_rows(connection: Connection) -> None:
+        for statement in _DISCOGRAPHY_SHARED:
+            connection.execute(text(statement))
+        connection.commit()
+
+    await _sync(empty_database_url, shared_rows)
+    before = await _sync(empty_database_url, _shared)
+    assert before["searched"] == ["blog.post", "discography.release"]
+    assert "discography.release.manage" in before["writer"]
+
+    await asyncio.to_thread(downgrade, empty_database_url, "discography@base")
+    after = await _sync(empty_database_url, _shared)
+
+    assert after == {
+        "searched": ["blog.post"],
+        "uses": ["blog.post:1"],
+        "writer": ["blog.write"],
+        "posts": before["posts"],
+        "tables": [],
+    }
+    await asyncio.to_thread(upgrade, empty_database_url)  # and back up over the rest
+
+
 def _revisions() -> list[Any]:
     """Every revision, each after the ones it builds on."""
     return list(reversed(list(ScriptDirectory.from_config(config()).walk_revisions())))

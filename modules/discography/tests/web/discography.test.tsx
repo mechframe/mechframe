@@ -1132,3 +1132,121 @@ describe("the boards' words (0.1.2, VM Website's K3)", () => {
     expect(trackState(audio({ plays_from: null, state: "none" }))).toEqual({ label: "Can't play", tone: "danger" });
   });
 });
+
+describe("the boards' row names (0.1.3, the kit's rowHeader)", () => {
+  it("names each track's row by its title, with its release under it", async () => {
+    routed({ "GET /api/discography/admin/tracks": { status: 200, body: { items: [track(), track({ id: T2, number: 2, title: "Pray For You", slug: "pray-for-you" })], next_cursor: null, total: 2, releases: 1 } } });
+    renderApp({ path: "/admin/music/tracks", modules: [discography], session: editor });
+
+    const table = await screen.findByRole("table", { name: "Tracks" });
+    const names = within(table).getAllByRole("rowheader");
+    expect(names.map((each) => each.textContent)).toEqual(["Gather AroundUnified Vibration", "Pray For YouUnified Vibration"]);
+    for (const row of within(table).getAllByRole("row").slice(1)) expect(within(row).getAllByRole("rowheader")).toHaveLength(1);
+    expect(within(names[1] as HTMLElement).getByRole("button", { name: "Pray For You" })).toBeInTheDocument();
+  });
+
+  it("names each person's row on Credits by their name", async () => {
+    routed({
+      "GET /api/discography/admin/people": {
+        status: 200,
+        body: {
+          items: [
+            { id: "81111111-1111-4111-8111-111111111111", version: 1, name: "petro", profile: "unlinked", roster_profile_id: null, credited_for: "Artist, Catalyst", credits: 1 },
+            { id: "91111111-1111-4111-8111-111111111111", version: 1, name: "Vibrant Mindz", profile: "collective", roster_profile_id: null, credited_for: "Artist, Unified Vibration", credits: 2 },
+          ],
+          unlinked: 1,
+        },
+      },
+    });
+    renderApp({ path: "/admin/music/credits", modules: [discography], session: editor });
+
+    const table = await screen.findByRole("table", { name: "People credited" });
+    expect(within(table).getAllByRole("rowheader").map((each) => each.textContent)).toEqual(["petro", "Vibrant Mindz"]);
+  });
+});
+
+describe("the boards' row editors (0.1.3, CodeRabbit on #145)", () => {
+  const ALICE = { role_id: ARTIST, role: "Artist", person_id: "a1111111-1111-4111-8111-111111111111", name: "Alice", profile: "not_member" as const };
+  const BEN = { role_id: PRODUCER, role: "Produced by", person_id: "b1111111-1111-4111-8111-111111111111", name: "Ben", profile: "not_member" as const };
+
+  it("keeps a credit's own row as the one before it goes, and puts the focus in the row that took its place", async () => {
+    routed({ [`GET ${ONE}`]: { status: 200, body: full({ credits: [ALICE, BEN] }) } });
+    renderApp({ path: `/admin/music/${ID}`, modules: [discography], session: editor });
+
+    const bens = (await screen.findAllByRole("textbox", { name: "Name" }))[1] as HTMLElement;
+    expect(bens).toHaveValue("Ben");
+    screen.getByRole("button", { name: "Remove the credit Alice" }).focus();
+    await userEvent.keyboard("{Enter}");
+
+    const [left] = screen.getAllByRole("textbox", { name: "Name" });
+    expect(left).toBe(bens); // Ben's own row, not Alice's handed on
+    expect(screen.getByRole("combobox", { name: "Role" })).toHaveFocus();
+    expect(screen.queryByRole("button", { name: "Remove the credit Alice" })).not.toBeInTheDocument();
+
+    screen.getByRole("button", { name: "Remove the credit Ben" }).focus();
+    await userEvent.keyboard("{Enter}");
+    expect(screen.getByRole("button", { name: "Add a credit" })).toHaveFocus();
+  });
+
+  it("keeps a streaming link's own row as the one before it goes, and puts the focus in its place", async () => {
+    const links = [
+      { platform: "spotify" as const, label: "Spotify", url: "https://open.spotify.com/album/1" },
+      { platform: "bandcamp" as const, label: "Bandcamp", url: "https://band.bandcamp.com/album/one" },
+    ];
+    routed({ [`GET ${ONE}`]: { status: 200, body: full({ links }) } });
+    renderApp({ path: `/admin/music/${ID}`, modules: [discography], session: editor });
+
+    const second = await screen.findByLabelText("Link 2");
+    screen.getByRole("button", { name: "Remove link 1" }).focus();
+    await userEvent.keyboard("{Enter}");
+
+    const left = screen.getByLabelText("Link 1");
+    expect(left).toBe(second);
+    expect(left).toHaveValue("https://band.bandcamp.com/album/one");
+    expect(left).toHaveFocus();
+  });
+
+  it("keeps a new role's own row as a new one before it goes", async () => {
+    routed({ "GET /api/discography/admin/people": { status: 200, body: { items: [], unlinked: 0 } } });
+    renderApp({ path: "/admin/music/credits", modules: [discography], session: editor });
+
+    await userEvent.click(await screen.findByRole("button", { name: "Edit" }));
+    const dialog = within(await screen.findByRole("dialog", { name: "Edit the roles" }));
+    await userEvent.click(dialog.getByRole("button", { name: "Add a role" }));
+    await userEvent.click(dialog.getByRole("button", { name: "Add a role" }));
+    await userEvent.type(dialog.getByRole("textbox", { name: "Role 3" }), "Mixed by");
+    await userEvent.type(dialog.getByRole("textbox", { name: "Role 4" }), "Strings");
+    const strings = dialog.getByRole("textbox", { name: "Role 4" });
+    dialog.getByRole("button", { name: "Remove Mixed by" }).focus();
+    await userEvent.keyboard("{Enter}");
+
+    expect(dialog.getByRole("textbox", { name: "Role 3" })).toBe(strings);
+    expect(strings).toHaveValue("Strings");
+    expect(strings).toHaveFocus();
+  });
+});
+
+describe("the boards' parts (0.1.3, VM Website's P2 and P4)", () => {
+  it("draws the Music settings' switches as the kit's rows, touching (P2)", async () => {
+    routed({
+      "GET /api/discography/admin/releases": { status: 200, body: { items: [] } },
+      "GET /api/kernel/admin/settings/discography": { status: 200, body: { id: "discography", version: 1, values: { stream_bitrate_kbps: 256, show_explicit_badge: true, show_lyrics: true }, fields: [] } },
+    });
+    renderApp({ path: "/admin/music", modules: [discography], session: admin });
+
+    const lyrics = (await screen.findByRole("switch", { name: "Show lyrics on release pages" })).closest(".mf-switch-row");
+    const label = screen.getByRole("switch", { name: "Parental Advisory label" }).closest(".mf-switch-row");
+    expect(lyrics?.parentElement).toHaveClass("mf-switch-rows");
+    expect(label?.parentElement).toBe(lyrics?.parentElement);
+  });
+
+  it("draws the track panel's Save small, as the panel's other buttons (P4)", async () => {
+    routed({
+      "GET /api/discography/admin/tracks": { status: 200, body: { items: [track()], next_cursor: null, total: 1, releases: 1 } },
+      [`GET /api/discography/admin/tracks/${T1}`]: { status: 200, body: fullTrack({}) },
+    });
+    renderApp({ path: `/admin/music/tracks?track=${T1}`, modules: [discography], session: editor });
+
+    expect(await screen.findByRole("button", { name: "Save" })).toHaveClass("mf-button--small");
+  });
+});

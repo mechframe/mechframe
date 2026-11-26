@@ -53,11 +53,13 @@
   min-width: 0;
 }
 
+/* A line of parts; on a <p> too, so it keeps none of the browser's margins (0.1.3, VM Website's P1). */
 .mf-music-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--mf-space-2);
+  margin: 0;
 }
 
 .mf-music-row--end {
@@ -210,10 +212,34 @@
   align-items: end;
 }
 
-/* A credit's row (`Credits`): its role as wide as its words, "Produced by" whole, up to 11rem, and the
-   name the rest (D2). The release's link rows and the Roles list keep the grid above (cubic on #159). */
+/* A credit's row (`Credits`). Narrow (a phone, Tracks' 340 px panel), its role on a line of its own and
+   its name the row's width beside the remove button, in the order they're read (0.1.3, VM Website's P3).
+   Wider, its role as wide as its words, "Produced by" whole, up to 11rem, and the name the rest (D2).
+   The release's link rows and the Roles list keep the grid above (cubic on #159). */
 .mf-music-credit--role {
-  grid-template-columns: fit-content(11rem) minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.mf-music-credit--role > :first-child {
+  grid-column: 1 / -1;
+}
+
+@media (min-width: 40rem) {
+  .mf-music-credit--role {
+    grid-template-columns: fit-content(11rem) minmax(0, 1fr) auto;
+  }
+
+  .mf-music-credit--role > :first-child {
+    grid-column: auto;
+  }
+
+  .mf-music-side .mf-music-credit--role {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .mf-music-side .mf-music-credit--role > :first-child {
+    grid-column: 1 / -1;
+  }
 }
 
 .mf-music-list {
@@ -249,9 +275,10 @@
   border-radius: var(--mf-radius-md);
 }
 
+/* Every track's name is its row's header, at 600 (the kit's rowHeader, K6); the one open is 700, as the board draws it. */
 .mf-music-pick[aria-pressed="true"] {
   color: var(--mf-color-text-strong);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .mf-music-sub {

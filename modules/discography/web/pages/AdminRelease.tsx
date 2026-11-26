@@ -76,6 +76,7 @@ import {
   said,
   type ReleaseForm,
 } from "../editing";
+import { useFocusAfterRemoval, useRowKeys } from "../rows";
 import { Credits } from "../components/Credits";
 import "../music.css";
 
@@ -825,14 +826,17 @@ function Editor({ server, notice }: { server: FullRelease; notice: ReactNode }) 
 
 /** The release's streaming links: an address a row, its platform read from it. */
 function Links({ rows, error, onChange }: { rows: readonly string[]; error?: string | undefined; onChange: (rows: string[]) => void }) {
+  const { keys, added, removed } = useRowKeys(rows.length);
+  const { rowsRef, removedAt } = useFocusAfterRemoval<HTMLDivElement>();
   return (
-    <div className="mf-music-stack">
+    <div ref={rowsRef} className="mf-music-stack">
       {rows.length ? (
         <ul className="mf-music-list">
           {rows.map((row, index) => (
-            <li key={index} className="mf-music-credit">
+            <li key={keys[index] ?? index} className="mf-music-credit">
               <Field label={`Link ${String(index + 1)}`}>
                 <Input
+                  data-row-first
                   type="url"
                   value={row}
                   maxLength={MAX_URL}
@@ -848,6 +852,8 @@ function Links({ rows, error, onChange }: { rows: readonly string[]; error?: str
                 icon="close"
                 aria-label={`Remove link ${String(index + 1)}`}
                 onClick={() => {
+                  removed(index);
+                  removedAt(index);
                   onChange(rows.filter((_, at) => at !== index));
                 }}
               />
@@ -862,7 +868,9 @@ function Links({ rows, error, onChange }: { rows: readonly string[]; error?: str
         <Button
           size="small"
           icon="plus"
+          data-row-add
           onClick={() => {
+            added();
             onChange([...rows, ""]);
           }}
         >

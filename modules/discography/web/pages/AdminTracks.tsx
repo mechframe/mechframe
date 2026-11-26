@@ -207,6 +207,7 @@ export default function AdminTracks() {
                   columns={columns}
                   rows={tracks}
                   rowKey={(track) => track.id}
+                  rowHeader="track"
                   empty={words || show !== "all" ? "No tracks match. Try other words, or show all." : "No tracks yet. Upload them from a release's editor."}
                 />
               </Card>
@@ -679,11 +680,13 @@ function TrackEditor({ server, notice, onGone, settle: settleRef, asked, onGo, o
             }} />
         </fieldset>
         <div className="mf-music-row">
-          <Button ref={saveButton} variant="primary" disabled={busy || !dirty} onClick={() => void act(() => save(), "Saved.")}>
+          {/* Small, as the panel's other buttons (0.1.3, VM Website's P4). */}
+          <Button ref={saveButton} variant="primary" size="small" disabled={busy || !dirty} onClick={() => void act(() => save(), "Saved.")}>
             Save
           </Button>
           {dirty ? (
             <Button
+              size="small"
               disabled={busy}
               onClick={() => {
                 setForm(trackFormOf(saved));

@@ -539,24 +539,48 @@ async def links_of(
 async def document(db: AsyncSession, release: Release) -> search.Document:
     """A release's words: its lines, its tracks' titles, every credit and,
     while the site shows them, its lyrics."""
-    tracks = (await tracks_of(db, [release.id]))[release.id]
-    shown = [track for track in tracks if plays_from(track)]
-    credited = await credits_of(db, release_ids=[release.id], track_ids=[t.id for t in shown])
-    names = {each["name"] for found in credited.values() for each in found}
-    lyrics = (await settings_of(db)).show_lyrics
-    words = " ".join(
-        part
-        for part in (
-            release.artist_line,
-            release.credit_line,
-            release.summary,
-            *(track.title for track in shown),
-            *sorted(names),
-            *((track.lyrics or "") for track in shown if lyrics),
-        )
-        if part
+    return (await documents(db, [release]))[0]
+
+
+async def documents(db: AsyncSession, releases: Sequence[Release]) -> list[search.Document]:
+    """Each release's words, in the order given: the tracks, credits and the
+    lyrics setting read once for them all, so a reindex's page is three reads,
+    not three a release (CodeRabbit on #145, 0.1.3)."""
+    tracks = await tracks_of(db, [release.id for release in releases])
+    shown = {
+        release.id: [track for track in tracks[release.id] if plays_from(track)]
+        for release in releases
+    }
+    credited = await credits_of(
+        db,
+        release_ids=[release.id for release in releases],
+        track_ids=[track.id for each in shown.values() for track in each],
     )
-    return search.Document(CONTENT_TYPE, release.id, release.title, words, release_path(release))
+    lyrics = (await settings_of(db)).show_lyrics
+    found: list[search.Document] = []
+    for release in releases:
+        playing = shown[release.id]
+        names = {
+            each["name"]
+            for holder in (release.id, *(track.id for track in playing))
+            for each in credited[holder]
+        }
+        words = " ".join(
+            part
+            for part in (
+                release.artist_line,
+                release.credit_line,
+                release.summary,
+                *(track.title for track in playing),
+                *sorted(names),
+                *((track.lyrics or "") for track in playing if lyrics),
+            )
+            if part
+        )
+        found.append(
+            search.Document(CONTENT_TYPE, release.id, release.title, words, release_path(release))
+        )
+    return found
 
 
 async def _touched(db: AsyncSession, release: Release) -> None:
@@ -1311,6 +1335,53 @@ def probe(source: BinaryIO, size: int) -> audio.Probe:
         ) from None
 
 
+#: Masters being taken back out of the bucket, held so their tasks run to their end.
+_TAKING_BACK: set[asyncio.Task[None]] = set()
+
+
+def _until_committed(db: AsyncSession, key: str) -> None:
+    """Takes the new master `key` back out of the private bucket unless the
+    session's outer transaction commits: a failed upload or replace leaves no
+    master that no track names (CodeRabbit on #145, 0.1.3). A rollback or a
+    close with none (the kernel's get_db) both count. A savepoint's release
+    fires after_commit too, so only the outer transaction's end decides, as
+    media's files do."""
+    engine = db.bind
+    state = {"committed": False, "done": False}
+
+    def committed(_: Any) -> None:
+        state["committed"] = True
+
+    def ended(_: Any, transaction: Any) -> None:
+        if state["done"]:
+            return
+        if transaction.nested or transaction.parent is not None:
+            state["committed"] = False  # a savepoint's own release, not the commit
+            return
+        state["done"] = True
+        if not state["committed"]:
+            task = asyncio.get_running_loop().create_task(_take_back(engine, key))
+            _TAKING_BACK.add(task)
+            task.add_done_callback(_TAKING_BACK.discard)
+
+    sa.event.listen(db.sync_session, "after_commit", committed)
+    sa.event.listen(db.sync_session, "after_transaction_end", ended)
+
+
+async def _take_back(engine: Any, key: str) -> None:
+    """The master out of the bucket, unless a track names it after all: a commit
+    whose reply was lost may have landed, as the job's stream file may. Kept
+    when that can't be read: a master no track names is unreachable, and better
+    than a track naming one that's gone."""
+    try:
+        async with AsyncSession(engine) as db:
+            if await db.scalar(select(Track.id).where(Track.master_key == key)) is not None:
+                return
+        await storage.delete(key)
+    except Exception:
+        return
+
+
 async def _store_master(
     db: AsyncSession, track: Track, source: BinaryIO, size: int, name: str, probed: audio.Probe
 ) -> None:
@@ -1324,6 +1395,7 @@ async def _store_master(
             503,
             "Uploads need the site's storage. Until it's set up, use a SoundCloud link.",
         ) from None
+    _until_committed(db, key)  # before anything else can fail
     old = [{"key": track.master_key, "public": False}] if track.master_key else []
     track.master_key, track.master_name, track.master_bytes = key, name, size
     track.audio_state, track.processing_percent, track.audio_error = "processing", 0, None

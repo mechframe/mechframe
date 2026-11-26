@@ -179,22 +179,25 @@ function MusicSettings() {
   return (
     <div className="mf-music-stack">
       <p className="mf-music-hint">Tracks play from their uploaded file, or from their SoundCloud link where they have none.</p>
-      <Switch
-        label="Show lyrics on release pages"
-        hint="Only for tracks that have them."
-        checked={form.values.show_lyrics !== false}
-        onChange={(on) => {
-          form.set("show_lyrics", on);
-        }}
-      />
-      <Switch
-        label="Parental Advisory label"
-        hint="On releases and tracks marked explicit."
-        checked={form.values.show_explicit_badge !== false}
-        onChange={(on) => {
-          form.set("show_explicit_badge", on);
-        }}
-      />
+      {/* The kit's switch rows, which touch with a rule between (0.1.3, VM Website's P2). */}
+      <div className="mf-switch-rows">
+        <Switch
+          label="Show lyrics on release pages"
+          hint="Only for tracks that have them."
+          checked={form.values.show_lyrics !== false}
+          onChange={(on) => {
+            form.set("show_lyrics", on);
+          }}
+        />
+        <Switch
+          label="Parental Advisory label"
+          hint="On releases and tracks marked explicit."
+          checked={form.values.show_explicit_badge !== false}
+          onChange={(on) => {
+            form.set("show_explicit_badge", on);
+          }}
+        />
+      </div>
       <Field label="Stream quality" hint="New uploads' stream files are made at this. MP3, a constant rate." error={form.errors.stream_bitrate_kbps}>
         <Select
           value={String(bitrate)}

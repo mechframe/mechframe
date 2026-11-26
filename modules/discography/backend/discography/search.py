@@ -39,8 +39,8 @@ class Releases(search.Source):
             if after is not None:
                 statement = statement.where(Release.id > after)
             found = list(await db.scalars(statement))
-            for release in found:
-                yield await service.document(db, release)
+            for each in await service.documents(db, found):  # the page's reads at once
+                yield each
             if len(found) < PAGE:
                 return
             after = found[-1].id
