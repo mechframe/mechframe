@@ -33,6 +33,7 @@ from discography.schemas import (
     ReleaseCards,
     ReleaseChange,
     RolesPut,
+    TrackCards,
     TrackChange,
 )
 from kernel import Problem, clock, get_db, public, rate_limit, require_permission
@@ -61,10 +62,31 @@ async def list_releases(
     kind: Literal["album", "ep", "single"] | None = None,
     cursor: Annotated[str | None, Query(max_length=120)] = None,
     limit: Annotated[int, Query(ge=1, le=50)] = service.PER_PAGE,
+    ids: Annotated[list[uuid.UUID] | None, Query(max_length=service.MAX_IDS)] = None,
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
-    """The live releases, newest first, 12 a page."""
+    """The live releases, newest first, 12 a page; or with `ids` (50 at most),
+    the live ones among them in the order given, on one page (0.1.2)."""
+    if ids is not None:
+        if cursor is not None:
+            raise Problem(
+                "kernel.invalid_request",
+                422,
+                "A read by ids is one page: it takes no cursor.",
+                errors={"cursor": ["A read by ids takes no cursor."]},
+            )
+        return {"items": await service.releases_by_id(db, ids, kind=kind), "next_cursor": None}
     return await service.page_of(db, kind=kind, cursor=cursor, limit=limit)
+
+
+@router.get("/tracks", response_model=TrackCards, dependencies=[Depends(public)])
+async def read_tracks(
+    ids: Annotated[list[uuid.UUID], Query(min_length=1, max_length=service.MAX_IDS)],
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, Any]:
+    """The live tracks that play among `ids` (50 at most), in the order given,
+    each with its release: a homepage's Spotlight queue (0.1.2)."""
+    return {"items": await service.tracks_by_id(db, ids)}
 
 
 @router.get(

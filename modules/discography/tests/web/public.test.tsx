@@ -9,7 +9,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { renderWithKernel } from "@/kernel/testing";
-import { KIND_WORDS, clock, isMoved, pathOf, playerItem, playerQueue, releaseLine, useArtistLinks, useRelease, useReleases, type ReleaseCard } from "@/modules/discography/public";
+import { KIND_WORDS, clock, isMoved, pathOf, playerItem, playerQueue, releaseLine, useArtistLinks, useRelease, useReleases, useTracks, type ReleaseCard } from "@/modules/discography/public";
 
 import type { LiveRelease, TrackLine } from "../../web/api";
 
@@ -117,6 +117,54 @@ describe("discography's public surface", () => {
     );
     expect(await screen.findByText("Now at /music/catalyst")).toBeInTheDocument();
     expect(await screen.findByText("Spotify")).toBeInTheDocument();
+  });
+
+  it("reads releases and tracks by id, in the order featured chose them (0.1.2)", async () => {
+    const line = { title: "Hook It Up", slug: "hook-it-up", number: 2, duration_ms: 200_000, explicit: false, plays_from: "soundcloud", stream_url: null, soundcloud_url: "https://soundcloud.com/vm/hook-it-up", soundcloud_kind: "track", has_lyrics: false, path: "/music/uv/hook-it-up" };
+    const release = { title: "Unified Vibration", slug: "uv", artist_line: "Vibrant Mindz", cover: null, path: "/music/uv" };
+    const sent = routed({
+      "GET /api/discography/releases": { status: 200, body: { items: [card({ title: "Unified Vibration" }), card()], next_cursor: null } },
+      "GET /api/discography/tracks": { status: 200, body: { items: [{ ...line, id: "t-2", release }, { ...line, id: "t-1", title: "Gather Around", number: 1, release }] } },
+    });
+    function Players() {
+      const deck = useReleases({ ids: ["r-2", "r-1"] });
+      const spotlight = useTracks(["t-2", "t-1"]);
+      const queue = (spotlight.data?.items ?? []).map((each) => playerItem(each, each.release));
+      return (
+        <>
+          <p>{(deck.data?.pages.flatMap((page) => page.items) ?? []).map((each) => each.title).join(", ")}</p>
+          <p>{queue.map((each) => `${each.title} (${each.line})`).join("; ")}</p>
+        </>
+      );
+    }
+    renderWithKernel(<Players />);
+    expect(await screen.findByText("Unified Vibration, Catalyst")).toBeInTheDocument();
+    expect(await screen.findByText("Hook It Up (Unified Vibration, Vibrant Mindz); Gather Around (Unified Vibration, Vibrant Mindz)")).toBeInTheDocument();
+    const deckAsked = sent.find((each) => each.pathname === "/api/discography/releases");
+    const tracksAsked = sent.find((each) => each.pathname === "/api/discography/tracks");
+    expect(deckAsked?.searchParams.getAll("ids")).toEqual(["r-2", "r-1"]);
+    expect(tracksAsked?.searchParams.getAll("ids")).toEqual(["t-2", "t-1"]);
+  });
+
+  it("answers an empty selection as nothing, asking no one, so an empty deck shows no albums staff didn't choose (Codex on #159)", async () => {
+    const sent = routed({
+      "GET /api/discography/releases": { status: 200, body: { items: [card({ title: "Unified Vibration" }), card()], next_cursor: null } },
+    });
+    function Empty() {
+      const deck = useReleases({ ids: [] });
+      const spotlight = useTracks([]);
+      const albums = deck.data?.pages.flatMap((page) => page.items) ?? [];
+      return (
+        <>
+          <p>{`deck ${deck.status}, ${String(albums.length)} albums, more ${String(deck.hasNextPage)}`}</p>
+          <p>{`spotlight ${spotlight.status}, ${String(spotlight.data?.items.length)} tracks`}</p>
+        </>
+      );
+    }
+    renderWithKernel(<Empty />);
+    expect(await screen.findByText("deck success, 0 albums, more false")).toBeInTheDocument();
+    expect(screen.getByText("spotlight success, 0 tracks")).toBeInTheDocument();
+    expect(sent).toEqual([]);
   });
 
   it("gives the words and addresses a page needs", () => {

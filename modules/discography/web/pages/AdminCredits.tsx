@@ -274,18 +274,22 @@ export default function AdminCredits() {
   return (
     <AdminPage page="Credits" title="Credits" lead="Everyone credited on a release or a track. Credits are added in a release's editor and on the Tracks board.">
       {unlinked && people.data ? (
-        <Attention
-          tone="info"
-          what={people.data.unlinked === 1 ? `“${unlinked.name}” isn't linked to a profile` : `${String(people.data.unlinked)} names aren't linked to a profile`}
-          why={`${unlinked.name} is credited for ${unlinked.credited_for}. Mark the collective's own name, and anyone who isn't a member, so the list shows who's left to link.`}
-        />
+        <div className="mf-music-note">
+          <Attention
+            tone="warning"
+            what={people.data.unlinked === 1 ? `“${unlinked.name}” isn't linked to a profile` : `${String(people.data.unlinked)} names aren't linked to a profile`}
+            why={`${unlinked.name} is credited for ${unlinked.credited_for}. Mark the collective's own name, and anyone who isn't a member, so the list shows who's left to link.`}
+          />
+        </div>
       ) : null}
-      <div className="mf-music-board mf-music-board--panel">
+      <div className="mf-music-board mf-music-board--panel mf-music-board--roles">
         <div className="mf-music-main">
           {people.error ? (
             <LoadError what="The credits" error={people.error} onRetry={() => void people.refetch()} />
           ) : people.data ? (
-            <Table caption="People credited" captionHidden columns={columns} rows={everyone} rowKey={(person) => person.id} empty="No one is credited yet." />
+            <Card flush>
+              <Table caption="People credited" captionHidden columns={columns} rows={everyone} rowKey={(person) => person.id} empty="No one is credited yet." />
+            </Card>
           ) : null}
         </div>
         <div className="mf-music-side">

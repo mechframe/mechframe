@@ -156,6 +156,28 @@ class LiveTrack(TrackLine):
     credits: list[MusicCredit]
 
 
+class TrackRelease(Answer):
+    """A track's release, as a homepage's player names it under the track."""
+
+    title: str
+    slug: str
+    artist_line: str
+    cover: MusicCover | None
+    path: str
+
+
+class TrackCard(TrackLine):
+    """A live track that plays, read by its id, with its release (0.1.2)."""
+
+    release: TrackRelease
+
+
+class TrackCards(Answer):
+    """The live tracks that play among those asked for, in the order asked."""
+
+    items: list[TrackCard]
+
+
 class MusicMoved(Answer):
     """An address a live release or track left: where it is now."""
 

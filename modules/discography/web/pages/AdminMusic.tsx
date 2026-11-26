@@ -54,7 +54,7 @@ function Release({ release }: { release: AdminRelease }) {
         <span className="mf-music-release-line">{releaseLine(release)}</span>
         <span className="mf-music-row">
           <Pill tone={STATUS_TONE[release.status]}>{STATUS_WORDS[release.status]}</Pill>
-          {release.tracklist_to_come ? <Pill tone="info">Tracklist to come</Pill> : null}
+          {release.tracklist_to_come ? <Pill tone="warning">Tracklist to come</Pill> : null}
           {release.unplayable ? <Pill tone="danger">{release.unplayable === 1 ? "1 track can't play" : `${String(release.unplayable)} tracks can't play`}</Pill> : null}
         </span>
       </div>
@@ -78,7 +78,7 @@ function Notes({ releases }: { releases: readonly AdminRelease[] }) {
   if (silent) {
     return (
       <Attention
-        tone="warning"
+        tone="danger"
         what={silent.unplayable === 1 ? `A track on ${silent.title} can't play` : `${String(silent.unplayable)} tracks on ${silent.title} can't play`}
         why="Without an audio file or a link, a track is hidden from the release's page and the site's players skip it."
         action={{ label: "Add audio", to: `/admin/music/tracks?show=cant_play` }}
@@ -89,7 +89,7 @@ function Notes({ releases }: { releases: readonly AdminRelease[] }) {
   if (!waiting) return null;
   return (
     <Attention
-      tone="info"
+      tone="warning"
       what={`${waiting.title}'s tracklist isn't in yet`}
       why="Its page says the tracklist is to come, under the tracks it has so far, until its tracks are added."
       action={{ label: "Add tracks", to: `/admin/music/${waiting.id}` }}

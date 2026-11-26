@@ -1,5 +1,11 @@
 # Changelog: discography
 
+## 0.1.2
+
+- `refs.py` (hook 11, decision 0072; `dev plans/contracts/featured.md` §2, "discography 0.1.2"): `discography.release` ("Albums") and `discography.track` ("Tracks"), drafts too, each `live` while the site plays it, with its line and its release's cover; picked by title, newest edit first, a page at a time. featured's players can hold them now.
+- Reads by id for a homepage: `GET /api/discography/releases?ids=` and `GET /api/discography/tracks?ids=` (50 at most, the live ones in the order given), with `useReleases({ ids })` and `useTracks(ids)` in `@/modules/discography/public`; an empty `ids` is an empty answer, with no request (Codex on #159).
+- The admin drawn nearer its boards (VM Website's parity ask, its boards' items D1 to D4, K2, K3, K6 and K8): the Credits and When groups labelled as fields are, with no outline (D1); a credit's role as wide as its words (D2); 20 px under a page's note (D3); a release's track rows and covers whole at 390 (D4); a track that can't play is a red note everywhere and Credits' note amber (K2); a track that plays is "Live" and "Tracklist to come" amber (K3); Tracks' and Credits' tables in a card (K6); Tracks' panel 340 px and Credits' Roles 280 px (K8).
+
 ## 0.1.1
 
 - Plays through `audio-player`, which it now requires (`dev plans/contracts/audio-player.md` §2, "discography 0.1.1"; decision 0071): the Release page's Play album and each row's play, the three bars by the row that plays and the Player docked after the footer; the Track page's bar with its waveform. If the modules read says `audio-player` is off, both pages keep the browser's own player.

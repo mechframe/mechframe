@@ -163,14 +163,16 @@ export default function AdminTracks() {
   return (
     <AdminPage page="Tracks" title="Tracks" lead="Every track on every release. Pick one to change its audio, lyrics or credits.">
       {silent && silent.id !== picked ? (
-        <Attention
-          tone="warning"
-          what={`${silent.title} can't play`}
-          why="It has no audio file or link, so it's hidden from its release's page and the site's players skip it."
-          action={{ label: "Add audio", to: `/admin/music/tracks?track=${silent.id}` }}
-        />
+        <div className="mf-music-note">
+          <Attention
+            tone="danger"
+            what={`${silent.title} can't play`}
+            why="It has no audio file or link, so it's hidden from its release's page and the site's players skip it."
+            action={{ label: "Add audio", to: `/admin/music/tracks?track=${silent.id}` }}
+          />
+        </div>
       ) : null}
-      <div className="mf-music-board mf-music-board--panel">
+      <div className="mf-music-board mf-music-board--panel mf-music-board--tracks">
         <div className="mf-music-main">
           <div className="mf-music-row">
             <SearchBox
@@ -198,14 +200,16 @@ export default function AdminTracks() {
             <LoadError what="The tracks" error={listed.error} onRetry={() => void listed.refetch()} />
           ) : listed.data ? (
             <>
-              <Table
-                caption="Tracks"
-                captionHidden
-                columns={columns}
-                rows={tracks}
-                rowKey={(track) => track.id}
-                empty={words || show !== "all" ? "No tracks match. Try other words, or show all." : "No tracks yet. Upload them from a release's editor."}
-              />
+              <Card flush>
+                <Table
+                  caption="Tracks"
+                  captionHidden
+                  columns={columns}
+                  rows={tracks}
+                  rowKey={(track) => track.id}
+                  empty={words || show !== "all" ? "No tracks match. Try other words, or show all." : "No tracks yet. Upload them from a release's editor."}
+                />
+              </Card>
               {listed.hasNextPage ? (
                 <div>
                   <Button disabled={listed.isFetchingNextPage} onClick={() => void listed.fetchNextPage()}>
@@ -668,8 +672,8 @@ function TrackEditor({ server, notice, onGone, settle: settleRef, asked, onGo, o
             }}
           />
         </Field>
-        <fieldset className="mf-music-stack">
-          <legend>Credits</legend>
+        <fieldset className="mf-music-stack mf-music-group">
+          <legend className="mf-field-label">Credits</legend>
           <Credits rows={form.credits} roles={roles.data?.items ?? []} error={errorOf("credits")} onChange={(rows) => {
               set("credits", rows);
             }} />
