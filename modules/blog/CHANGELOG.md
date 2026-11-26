@@ -1,5 +1,9 @@
 # Changelog: blog
 
+## 0.1.6
+
+- `/blog` holds back on a first load until its posts and its categories answer. `<main>` stays empty meanwhile, so the frame draws the footer under the list and doesn't move it as the list arrives (decision 0066). A phone measured 0.04 of layout shift before, and 0.06 at 1440. Choosing a category keeps the page and its chip's focus while that category's read runs.
+
 ## 0.1.5
 
 - The post editor draws the kernel's `ShareParts` after After publishing (decision 0067): with `social` on, its Share card shares a live post to the site's channels through Buffer. Blog imports nothing of social, and draws nothing there without it.

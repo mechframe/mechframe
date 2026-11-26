@@ -8,7 +8,7 @@
 // cover it keeps is stood in at the browser, and the contract suite keeps a real one.
 import { randomBytes } from "node:crypto";
 
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page, type Route } from "@playwright/test";
 
 import { THEMES, axe, makeUser, signInTo, theme } from "../../../../kernel/tests/e2e/support";
 
@@ -148,3 +148,61 @@ test("an editor draws a cover with the AI, and the post's Cover field shows it",
   await expect(page.getByRole("img", { name: "A ring of fire on a dark ground" })).toBeVisible();
   await expect(opener).toBeFocused();
 });
+
+// A first load of /blog doesn't move the footer as its list arrives (decision 0066: a page that
+// draws its heading first and its content once its read answers is the page's own to hold back).
+// Both reads are held back 400 ms and answered here, so the list has height whatever the database
+// holds; a layout-shift observer sums the shifts that moved the footer (or anything after <main>).
+const SHIFTS = `
+  window.__shifts = 0;
+  const after = (node) => node instanceof Element && node.closest(".mf-site > #main ~ *") !== null;
+  new PerformanceObserver((list) => {
+    for (const entry of list.getEntries()) {
+      if (!entry.hadRecentInput && (entry.sources || []).some((source) => after(source.node))) window.__shifts += entry.value;
+    }
+  }).observe({ type: "layout-shift", buffered: true });
+`;
+
+/** A GET held back 400 ms and answered with `body`; any other method goes on to the server (cubic on #161). */
+function heldBack(body: unknown) {
+  return async (route: Route) => {
+    if (route.request().method() !== "GET") {
+      await route.fallback();
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
+  };
+}
+
+for (const [width, height] of [
+  [412, 823],
+  [1440, 900],
+] as const) {
+  test(`a first load of /blog at ${String(width)} doesn't move the footer as its posts and categories arrive`, async ({ page }) => {
+    await page.setViewportSize({ width, height });
+    await page.addInitScript(SHIFTS);
+    const cards = [1, 2, 3, 4].map((at) => ({
+      title: `Held post ${String(at)}`,
+      slug: `held-post-${String(at)}`,
+      summary: "A line about it, long enough to take a line or two on a phone.",
+      cover: null,
+      category: { slug: at === 4 ? "shows" : "news", label: at === 4 ? "Shows" : "News" },
+      author: "Ann Example",
+      published_at: "2026-11-20T12:00:00Z",
+      reading_minutes: 2,
+    }));
+    await page.route((url) => url.pathname === "/api/blog/posts", heldBack({ items: cards, next_cursor: null }));
+    await page.route(
+      (url) => url.pathname === "/api/blog/categories",
+      heldBack({ items: [{ slug: "news", label: "News", posts: 3 }, { slug: "shows", label: "Shows", posts: 1 }] }),
+    );
+    await page.goto("/blog");
+    await expect(page.getByRole("link", { name: "Held post 4" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Shows" })).toBeVisible();
+    await expect(page.locator(".mf-site > #main ~ footer").first()).toBeVisible();
+    // Two frames after the page is in, any shift it caused has been reported.
+    await page.evaluate(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))));
+    expect(await page.evaluate(() => (window as unknown as { __shifts: number }).__shifts)).toBeLessThanOrEqual(0.001);
+  });
+}
