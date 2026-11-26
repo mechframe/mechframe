@@ -1,7 +1,7 @@
 {
   "id": "campaigns",
   "name": "Newsletter",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "status": "experimental",
   "category": "comms",
   "summary": "The site's newsletter: sign-ups confirmed by email, emails sent with one-click unsubscribe, bounces set aside.",

@@ -30,6 +30,7 @@ import {
   Pill,
   Prose,
   QrCode,
+  QuietLink,
   SaveBar,
   ScrollMemory,
   SaveConflict,
@@ -154,6 +155,7 @@ function AdminLook() {
           Open a dialog
         </Button>
         <Toaster />
+        <QuietLink to="/kit.html#tabs">Open the release</QuietLink>
       </div>
       {dialog ? (
         <Dialog
@@ -243,6 +245,7 @@ function AdminLook() {
           action={{ label: "Write one", to: "/kit.html#fields" }}
         />
         <Attention tone="danger" what="Three jobs failed" why="Their mail wasn't sent." action={{ label: "See them", to: "/kit.html" }} />
+        <Attention tone="warning" what="Two names aren't linked to a profile" why="Mark the collective's own name, so the list shows who's left to link." />
       </div>
 
       <h3>Cards, sections and tabs</h3>
@@ -250,6 +253,12 @@ function AdminLook() {
         <Card title="Recent activity" actions={<LinkButton to="/kit.html" size="small">All activity</LinkButton>}>
           <p>Ann Example changed the site's name.</p>
         </Card>
+        <Card title="Model">
+          <Attention tone="warning" what="Anthropic doesn't list this model" why="Choose another, or use the host's model." />
+        </Card>
+        <Accordion id="kit-links" title="Streaming links" meta="Where else it plays: Spotify, Apple Music, YouTube, Amazon, SoundCloud, Bandcamp, Tidal or Deezer, one each.">
+          <p>One link for each service.</p>
+        </Accordion>
         <Accordion id="kit-mail" title="Mail" meta="SMTP, set">
           <p>Mail goes out through the site's SMTP server.</p>
         </Accordion>

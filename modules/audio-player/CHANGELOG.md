@@ -1,5 +1,10 @@
 # Changelog: audio-player
 
+## 0.1.2
+
+- The bar's and the dock's artist line, the dock's count, a track's note and the Player section's Loading line are the theme's small size, as the boards draw them. Their `font-size: var(--mf-type-small)` was invalid, since that token is a whole `font`, so they took the page's size (VM Website Dev 22's K12). The Loading line is in the font's own line in the admin, like the admin's hints.
+- The Player section spaces its parts 18px apart, as the kernel's form cards do (R3).
+
 ## 0.1.1
 
 - The Settings section ("Player" on Settings › Site) spans its card, as the other sections do. Its 640px cap is gone, and the card itself stops at 760px. At 1440, its hint fits on one line, as the board draws it.

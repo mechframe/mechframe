@@ -51,16 +51,23 @@
   font-weight: 600;
 }
 
+/* type.small is a whole `font`, so it's set as one: as a `font-size` it was invalid and the lines
+   took the page's size (VM Website Dev 22's K12). */
 .mf-player-line,
 .mf-player-count,
 .mf-player-hint {
   color: var(--mf-color-text-muted);
-  font-size: var(--mf-type-small);
+  font: var(--mf-type-small);
 }
 
 .mf-player-note {
   color: var(--mf-color-warning);
-  font-size: var(--mf-type-small);
+  font: var(--mf-type-small);
+}
+
+/* The Player section's Loading line in the font's own line, as the admin's hints are (B8). */
+.mf-admin-look .mf-player-hint {
+  line-height: normal;
 }
 
 .mf-player-credit {
@@ -254,9 +261,10 @@
 }
 
 /* It spans its card, as every settings form card's parts do: the card stops at 760px (VM Website, 2026-11-25). */
+/* Its parts 18px apart, as the kernel's form cards space theirs (VM Website Dev 22's R3). */
 .mf-player-settings {
   display: grid;
-  gap: var(--mf-space-4);
+  gap: 1.125rem;
 }
 
 /* SoundCloud's widget, off the page behind the site's controls; shown only when a browser wants its own Play. */

@@ -203,7 +203,7 @@ The kernel's defaults suit a small site on one service. Change these only with a
 
 Each module's own host variables, from its `module.json`, and the settings its admin page holds. A planned module's are as its scaffold has them so far; they grow as it's built.
 
-### `audio-player` 0.1.1 (experimental)
+### `audio-player` 0.1.2 (experimental)
 
 One player for the site's own audio: waveforms, a queue, one thing at a time, and plays counted with no personal data.
 
@@ -224,7 +224,7 @@ No host variables of its own.
 
 **From the kernel:** Covers come from media, so storage too; Write with AI needs `ANTHROPIC_API_KEY` or a key saved in Settings → AI.
 
-### `campaigns` 0.1.0 (experimental)
+### `campaigns` 0.1.1 (experimental)
 
 The site's newsletter: sign-ups confirmed by email, emails sent with one-click unsubscribe, bounces set aside.
 

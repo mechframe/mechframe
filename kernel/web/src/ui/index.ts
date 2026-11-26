@@ -39,6 +39,8 @@ export { TextPartsContext, useTextParts } from "./textParts";
 export type { EditorToolPart, ProseEmbedPart, TextParts } from "./textParts";
 export { QrCode } from "./QrCode";
 export type { QrCodeProps } from "./QrCode";
+export { QuietLink } from "./QuietLink";
+export type { QuietLinkProps } from "./QuietLink";
 export { RouteFocus } from "./RouteFocus";
 export { SaveBar } from "./SaveBar";
 export type { SaveBarProps } from "./SaveBar";

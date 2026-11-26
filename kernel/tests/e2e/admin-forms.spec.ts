@@ -5,7 +5,8 @@
 // `AdminWriting.dc.html`, `AdminStyle.dc.html` and `AdminSettings.dc.html` (canvas version 111),
 // drawn by its `admin_kit.py`. Reads whose state the shared database can't promise (no key, no
 // styles, one style) are answered by a route. Last, K3, K6, P2 and P3, the parts the admin's lists
-// and dashboard share (pills, tables, the stat card), on the kit's page.
+// and dashboard share (pills, tables, the stat card), on the kit's page. Then VM Website Dev 22's
+// ask (`2026-11-26-kit-r-items-ask.md`, against canvas 115): R1 to R3, R6 to R9 and K9 to K12.
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
 import { THEMES, makeUser, signInTo, theme } from "./support";
@@ -105,6 +106,14 @@ const LONG_STYLE = {
   description: "For the long announcements that need every word: tours, releases, collaborations and the stories behind them.",
 };
 
+/** A name as long as the board's "[Style name]", whose description stays beside it at 390 (R6). */
+const MID_STYLE = {
+  ...A_STYLE,
+  id: "00000000-0000-4000-8000-0000000000a4",
+  name: "Announcements",
+  description: "For tours, releases and news.",
+};
+
 /** Each width in each theme, the page laid out again for it. */
 async function eachLook(page: Page, check: (at: string, width: number) => Promise<void>): Promise<void> {
   for (const [name, canvas] of Object.entries(THEMES)) {
@@ -140,6 +149,8 @@ test("Settings › AI: the field's parts, the select, History and the warning (B
   await expect(warning).toBeVisible();
 
   await eachLook(page, async (at) => {
+    // R9: the page's title in the font's own line.
+    expect.soft(await styleOf(page.getByRole("heading", { level: 1, name: "Settings" }), ["line-height"]), at).toEqual({ "line-height": "normal" });
     // B2: the card's description 14px.
     expect.soft(await styleOf(card.locator(".mf-card-description"), ["font-size"]), at).toEqual({ "font-size": "14px" });
     // B3: a label at 400, in the theme's meta size (13px in Vibrant Mindz).
@@ -191,7 +202,7 @@ test("Settings › Writing: the card, its head, the rule rows, The brief and the
       ? route.fulfill({
           status: 200,
           contentType: "application/json",
-          body: JSON.stringify({ items: [A_STYLE, { ...A_STYLE, id: "00000000-0000-4000-8000-0000000000a2", name: "Plain" }, LONG_STYLE] }),
+          body: JSON.stringify({ items: [A_STYLE, { ...A_STYLE, id: "00000000-0000-4000-8000-0000000000a2", name: "Plain" }, LONG_STYLE, MID_STYLE] }),
         })
       : route.fallback(),
   );
@@ -269,6 +280,12 @@ test("Settings › Writing: the card, its head, the rule rows, The brief and the
     const hidden = await long.getByRole("link").evaluate((link) => link.scrollWidth - link.clientWidth);
     expect.soft(hidden, at).toBeLessThanOrEqual(0);
     expect.soft(name.height, at).toBeCloseTo(34, 0);
+    // R6: a name as long as the board's keeps its description beside it, at 390 too.
+    const mid = styles.locator("li").filter({ has: page.getByRole("link", { name: MID_STYLE.name }) });
+    const midName = await boxOf(mid.getByRole("link"));
+    const midWords = await boxOf(mid.getByText(MID_STYLE.description));
+    expect.soft(midWords.left, at).toBeGreaterThan(midName.right);
+    expect.soft(midWords.top, at).toBeLessThan(midName.bottom);
   });
 });
 
@@ -325,6 +342,8 @@ test("Settings › Site: contact's topics (T1, T2), the Player section and the f
   await expect(add).toBeVisible();
   const player = page.locator(".mf-settings-card").filter({ has: page.locator(".mf-player-settings") });
   await expect(player.locator(".mf-player-settings")).toBeVisible();
+  const newsletter = page.locator(".mf-newsletter-settings");
+  await expect(newsletter).toBeVisible();
   await eachLook(page, async (at, width) => {
     if (width === 1440) expect.soft((await boxOf(contact)).width, at).toBeCloseTo(760, 0);
     // audio-player's Player section spans its card, as the board's form cards' parts do (VM Website, 2026-11-25).
@@ -344,7 +363,33 @@ test("Settings › Site: contact's topics (T1, T2), the Player section and the f
       color: await tokenColor(page, "--mf-color-text-muted"),
     });
     expect.soft(await styleOf(first, ["border-top-width"]), at).toEqual({ "border-top-width": "0px" });
+    // R2: text a card's parts inherit is 16px, as contact's legend shows.
+    expect.soft(await styleOf(contact.locator("legend"), ["font-size"]), at).toEqual({ "font-size": "16px" });
+    // R3: a module's settings section spaces its parts 18px, as the kernel's form cards do
+    // (audio-player's Player, campaigns' Newsletter).
+    expect.soft(await styleOf(player.locator(".mf-player-settings"), ["row-gap"]), at).toEqual({ "row-gap": "18px" });
+    expect.soft(await styleOf(newsletter, ["row-gap"]), at).toEqual({ "row-gap": "18px" });
   });
+});
+
+test("Settings › Site while the Player's settings load: its Loading line at the small size (K12)", async ({ page }) => {
+  // The Player section's read held back until it's measured, GET only.
+  let release = (): void => undefined;
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/api/kernel/admin/settings/audio-player", async (route) => {
+    if (route.request().method() !== "GET") return route.fallback();
+    await held;
+    return route.fallback();
+  });
+  await signedInAdmin(page, "/admin/settings");
+  const loading = page.locator(".mf-player-hint").filter({ hasText: "Loading…" });
+  await expect(loading).toBeVisible();
+  await eachLook(page, async (at) => {
+    expect.soft(await styleOf(loading, ["font-size", "line-height"]), at).toEqual({ "font-size": await tokenSize(page, "--mf-type-small"), "line-height": "normal" });
+  });
+  release();
 });
 
 test("the kit's pills, a table's heads and rows' names, and a dashboard card (K3, K6, P2, P3)", async ({ page }) => {
@@ -384,5 +429,70 @@ test("the kit's pills, a table's heads and rows' names, and a dashboard card (K3
     // P3: the figure in the font's own line.
     expect.soft(await styleOf(figure, ["line-height"]), at).toEqual({ "line-height": "normal" });
     expect.soft((await boxOf(figure)).height, at).toBeCloseTo(await lineOf(figure), 0);
+  });
+});
+
+test("the kit's card title and text, its notes, a long accordion, a quiet link, a field's error and a dialog (R1, R2, R7, R8, K9 to K11)", async ({ page }) => {
+  await page.goto("/kit.html");
+  const admin = page.locator("section.mf-admin-look").filter({ has: page.getByRole("heading", { name: "The admin's look" }) });
+  await expect(admin).toBeVisible();
+  const card = admin.locator(".mf-card").filter({ has: page.getByRole("heading", { name: "Recent activity" }) });
+  const withAction = admin.locator(".mf-attention").filter({ hasText: "The site has no description" });
+  const onPage = admin.locator(".mf-attention").filter({ hasText: "Two names aren't linked to a profile" });
+  const inCard = admin.locator(".mf-card .mf-attention").filter({ hasText: "Anthropic doesn't list this model" });
+  const summary = admin.locator(".mf-accordion").filter({ hasText: "Streaming links" }).locator(".mf-accordion-summary");
+  const quiet = admin.getByRole("link", { name: "Open the release" });
+  const error = admin.getByText("That's not an email address.");
+
+  await eachLook(page, async (at) => {
+    // R1: a card's title in the theme's section size (16px in Vibrant Mindz), in the font's own line.
+    expect.soft(await styleOf(card.locator(".mf-card-title"), ["font-size", "line-height"]), at).toEqual({
+      "font-size": await tokenSize(page, "--mf-type-section-title"),
+      "line-height": "normal",
+    });
+    // R2: text a card's parts inherit is 16px.
+    expect.soft(await styleOf(card.getByText("Ann Example changed the site's name."), ["font-size"]), at).toEqual({ "font-size": "16px" });
+    // R8: a field's error in the font's own line.
+    expect.soft(await styleOf(error, ["line-height"]), at).toEqual({ "line-height": "normal" });
+    // K9: every note radius 12, its what 16px over its why 14px; on the page's ground in a card's
+    // colour, inside a card on the canvas's (B10).
+    for (const note of [withAction, onPage, inCard]) {
+      expect.soft(await styleOf(note, ["border-top-left-radius"]), at).toEqual({ "border-top-left-radius": "12px" });
+      expect.soft(await styleOf(note.locator(".mf-attention-what"), ["font-size"]), at).toEqual({ "font-size": "16px" });
+      expect.soft(await styleOf(note.locator(".mf-attention-why"), ["font-size"]), at).toEqual({ "font-size": "14px" });
+    }
+    expect.soft(await styleOf(onPage, ["background-color"]), at).toEqual({ "background-color": await tokenColor(page, "--mf-color-surface") });
+    expect.soft(await styleOf(inCard, ["background-color"]), at).toEqual({ "background-color": await tokenColor(page, "--mf-color-canvas") });
+    // K10: a long description wraps beside the title, which keeps its one line, and the chevron
+    // stays at the right, centred on the row.
+    const title = summary.locator(".mf-accordion-title");
+    const titleBox = await boxOf(title);
+    const meta = await boxOf(summary.locator(".mf-accordion-meta"));
+    const chevron = await boxOf(summary.locator(".mf-accordion-chevron"));
+    expect.soft(titleBox.height, at).toBeCloseTo(await lineOf(title), 0);
+    expect.soft(meta.left, at).toBeGreaterThan(titleBox.right);
+    expect.soft(chevron.left, at).toBeGreaterThan(meta.right);
+    expect.soft(chevron.middle, at).toBeCloseTo(meta.middle, 0);
+    // K11: a quiet link in the info colour at the small size, no underline, 24px of target.
+    expect.soft(await styleOf(quiet, ["color", "font-size", "text-decoration-line"]), at).toEqual({
+      color: await tokenColor(page, "--mf-color-info"),
+      "font-size": await tokenSize(page, "--mf-type-small"),
+      "text-decoration-line": "none",
+    });
+    expect.soft((await boxOf(quiet)).height, at).toBeGreaterThanOrEqual(24);
+  });
+
+  // R7: a dialog 16px from the window's edges at 390, and 512px wide at 1440.
+  await admin.getByRole("button", { name: "Open a dialog" }).click();
+  const dialog = page.getByRole("dialog", { name: "Delete this role?" });
+  await expect(dialog).toBeVisible();
+  await eachLook(page, async (at, width) => {
+    const box = await boxOf(dialog);
+    if (width === 1440) {
+      expect.soft(box.width, at).toBeCloseTo(512, 0);
+    } else {
+      expect.soft(box.left, at).toBeCloseTo(16, 0);
+      expect.soft(width - box.right, at).toBeCloseTo(16, 0);
+    }
   });
 });

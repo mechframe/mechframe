@@ -7,12 +7,13 @@ The behavior is ported from VybeSite; the look is drawn from the Vibrant Mindz a
 | Part | What it's for |
 | --- | --- |
 | `Button`, `LinkButton` | Secondary (outlined) by default, `primary` for the page's own action, `strong` for sign-in's passkey; `small` for the top bar and a Needs-you item, `large` for the sign-in screens' 54px. A `Button` is `type="button"` unless it says otherwise |
+| `QuietLink` | A link that stands on its own beside a row's buttons, as the boards draw "Open the release": the info colour at the small size, underlined only when hovered, 24px tall for its target. A link in running text keeps the page's look |
 | `Field` with `Input`, `TextArea`, `Select` | A labelled control with its hint and its error, wired to it (`aria-describedby`, `aria-invalid`); the field's `id` is the control's. `size="large"` is sign-in's 54px; `aside` sits beside the label ("Forgot password?") |
 | `Switch` | A setting that's on or off at once (`role="switch"`) |
 | `BotFields`, `useBotProof` | A public form's bot check (hook 5, `kernel.bot`): the hidden trap field and the time the form was open, sent as `bot: bot.proof()` for the server to judge. The trap is off the page, out of the tab order and `aria-hidden`; the form thanks a held sender as any other |
 | `Card` | A panel with an optional heading row, a `description` under its title, and actions; `flush` for a table that fills it |
 | `Pill`, `Chip` | A state in words over its tint (neutral, success, warning, danger, info); a filter that's pressed or not, with a check while pressed |
-| `Attention` | One "Needs you" item: what's wrong, why, and the action that fixes it; `info` for what's only worth knowing |
+| `Attention` | One "Needs you" item: what's wrong, why, and the action that fixes it; `info` for what's only worth knowing. In the admin, one with no action inside a card lies on the canvas's ground, and every other on a card's |
 | `StatCard` | A dashboard card (`admin.dashboard.widget`): what it counts, its state as a pill, the figure, a line, and a link to the detail |
 | `Accordion` | A collapsible section on `<details>`, remembering the reader's own choice, opening by itself when its first state is a problem (a later one keeps to its pill) |
 | `Tabs` | WAI-ARIA tabs: one tab stop, arrows, Home and End; every panel stays drawn |

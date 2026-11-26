@@ -101,6 +101,29 @@ for (const [name, canvas] of Object.entries(THEMES)) {
   });
 }
 
+test("the bar's and the dock's lines at the theme's small size, as the board draws them (K12)", async ({ page }) => {
+  // `font-size: var(--mf-type-small)` was invalid, the token being a whole `font`, so the lines
+  // took the page's size (VM Website Dev 22's K12).
+  await open(page);
+  const bar = page.getByRole("region", { name: "Spotlight single" });
+  const dock = page.getByRole("region", { name: "Player" });
+  await expect(dock.locator(".mf-player-count")).toBeVisible();
+  for (const [name, canvas] of Object.entries(THEMES)) {
+    await theme(page, name, canvas);
+    const small = await page.evaluate(() => {
+      const probe = document.createElement("span");
+      probe.style.font = "var(--mf-type-small)";
+      document.body.append(probe);
+      const size = getComputedStyle(probe).fontSize;
+      probe.remove();
+      return size;
+    });
+    for (const line of [bar.locator(".mf-player-line"), dock.locator(".mf-player-line"), dock.locator(".mf-player-count")]) {
+      expect.soft(await line.evaluate((found) => getComputedStyle(found).fontSize), name).toBe(small);
+    }
+  }
+});
+
 test("the dock hides its progress, queue and volume under 700px, as the board does", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await open(page);

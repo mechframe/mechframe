@@ -451,6 +451,26 @@
     text-decoration: underline;
   }
 
+  /* --- Quiet link (QuietLink.tsx) --------------------------------------- */
+
+  /* A link that stands on its own beside a row's buttons, as the boards draw "Open the release"
+     (VM Website's K11): the info colour at the small size, underlined only when hovered, in a box
+     24px tall for WCAG 2.5.8. */
+  .mf-quiet-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.5rem;
+    font: var(--mf-type-small);
+    line-height: normal;
+    color: var(--mf-color-info);
+    text-decoration: none;
+  }
+
+  .mf-quiet-link:hover {
+    color: var(--mf-color-info);
+    text-decoration: underline;
+  }
+
   /* --- Accordion and history -------------------------------------------- */
 
   .mf-accordion {
@@ -1474,9 +1494,10 @@
     font-size: 1rem;
   }
 
-  /* B10: a warning with nothing to click, above a row, on the canvas's ground, radius 12. */
-  .mf-admin-look .mf-attention--notice {
-    border-radius: 0.75rem;
+  /* B10: a warning with nothing to click, above a row inside a card, on the canvas's ground (the
+     boards' `notice`). On the page's own ground it keeps a card's colour, as their `attention`
+     draws it (K9, below). */
+  .mf-admin-look .mf-card .mf-attention--notice {
     background: var(--mf-color-canvas);
   }
 
@@ -1571,5 +1592,44 @@
 
   .mf-admin-look .mf-stat-value {
     line-height: normal;
+  }
+
+  /* --- The admin's last differences from the boards -------------------- */
+
+  /* VM Website Dev 22's ask of 2026-11-26 (`2026-11-26-kit-r-items-ask.md`, against canvas 115;
+     decision 0040, amended): the kit's items left after #156, #158 and #160. Admin only, as the
+     forms' and lists' above. The page's title (R9) is admin.css's. */
+
+  /* R1: a card's title in the font's own line. R8: a field's error too, as B8 did for a hint. */
+  .mf-admin-look :is(.mf-card-title, .mf-field-error) {
+    line-height: normal;
+  }
+
+  /* R2: text a card's parts inherit is 16px, as the boards' cards draw it, whatever the theme's
+     body size (Vibrant Mindz's type.body is 15px). Parts with a size of their own keep it. */
+  .mf-admin-look .mf-card {
+    font-size: 1rem;
+  }
+
+  /* R7: a dialog 16px from the window's edges at 390. The browser's own cap on a modal dialog
+     (100% less 6px and 2em) left 18px or more. */
+  .mf-admin-look .mf-dialog {
+    max-width: calc(100% - 2rem);
+  }
+
+  /* K9: every note radius 12, as the boards' `attention` and `notice` both draw it. */
+  .mf-admin-look .mf-attention {
+    border-radius: 0.75rem;
+  }
+
+  /* K10: a long description wraps beside its title, which keeps its line, and the chevron stays
+     at the right, centred on the row (the boards' `accordion`). */
+  .mf-admin-look .mf-accordion-summary {
+    flex-wrap: nowrap;
+  }
+
+  .mf-admin-look .mf-accordion-meta {
+    flex: 1 1 0;
+    min-width: 0;
   }
 }

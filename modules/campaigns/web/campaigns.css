@@ -163,8 +163,9 @@
   color: var(--mf-color-text-muted);
 }
 
-/* The Settings section. */
+/* The Settings section: its parts 18px apart, as the kernel's form cards space theirs (VM Website
+   Dev 22's R3). */
 .mf-newsletter-settings {
   display: grid;
-  gap: 1rem;
+  gap: 1.125rem;
 }
