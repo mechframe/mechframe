@@ -13,7 +13,7 @@ MechFrame (`CLAUDE.md`, `SPEC.md`). You're the **side lane** ("Two lanes" in `CL
 ## 2. Yours, and not yours
 
 - **Yours:** `modules/discography/`, plus audio-player and featured if a fix needs them. Decisions 0074 and up; migration `discography_0002`, though none is expected.
-- **Not yours:** the kit (`kernel/web/src/ui/`), `kernel/web/src/admin/`, the AI's code (`kernel/web/src/ai/`, `kernel/backend/kernel/ai.py`, `ai_routes.py`), step 1's modules, `docs/HANDOFF.md`, `CLAUDE.md`'s state, and the ledger.
+- **Not yours:** the kit (`kernel/web/src/ui/`), `kernel/web/src/admin/`, the AI's code and its tests (`kernel/web/src/ai/`, `kernel/backend/kernel/ai.py`, `kernel/backend/kernel/ai_routes.py`, `kernel/tests/test_ai.py`, `kernel/tests/contract/test_ai_contract.py`, `kernel/tests/e2e/ai.spec.ts`), step 1's modules, `docs/HANDOFF.md`, `CLAUDE.md`'s state, and the ledger.
 
 ## 3. State (verify it)
 

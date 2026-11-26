@@ -9,7 +9,7 @@ MechFrame (`CLAUDE.md`, `SPEC.md`), public at mechframe/mechframe. Vibrant Mindz
 ## 2. Rules not in a CLAUDE.md
 
 - **You're the main lane** ("Two lanes" in `CLAUDE.md`). Tell the side lane, on discography 0.1.3, before and after every e2e run.
-- **Yours:** the kit (`kernel/web/src/ui/`), `kernel/web/src/admin/`, the AI's code (`kernel/web/src/ai/`, `kernel/backend/kernel/ai.py`, `ai_routes.py`), and step 1's modules. **Not yours:** `modules/discography/`, `featured/`, `audio-player/` (ask the side lane first) and `kernel/refs.py`.
+- **Yours:** the kit (`kernel/web/src/ui/`), `kernel/web/src/admin/`, the AI's code and its tests (`kernel/web/src/ai/`, `kernel/backend/kernel/ai.py`, `kernel/backend/kernel/ai_routes.py`, `kernel/tests/test_ai.py`, `kernel/tests/contract/test_ai_contract.py`, `kernel/tests/e2e/ai.spec.ts`), and step 1's modules. **Not yours:** `modules/discography/`, `featured/`, `audio-player/` (ask the side lane first) and `kernel/refs.py`.
 - **The site's session** is the newest VM Website Dev session. Send it each PR number as it's pushed and as it lands. Never edit `C:\DEV\VM Website`.
 - **The owner's call:** Railway, CI's security gates, any third-party account or key, and a new module's contract.
 
