@@ -278,7 +278,7 @@ Set in the site's admin (Admin → Settings), not on the host:
 | `show_explicit_badge` | bool | `true` | The Parental Advisory label on explicit releases and tracks |
 | `show_lyrics` | bool | `true` | Lyrics on a track's page, for tracks that have them |
 
-### `embeds` 0.1.0 (experimental)
+### `embeds` 0.1.1 (experimental)
 
 YouTube, SoundCloud, Spotify and Bandcamp players from a pasted link, loaded only once a visitor plays.
 

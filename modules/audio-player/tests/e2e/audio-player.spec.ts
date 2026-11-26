@@ -2,22 +2,12 @@
 // harness's /player.html: a WAV this spec makes really plays from the bar, its
 // Seek slider moving; starting the YouTube playlist pauses it, and starting it
 // again pauses the video; the dock rides the window's foot; each player is one
-// named region; axe finds nothing serious, in both themes. Nothing reaches
-// YouTube: its API is answered here with a fake.
-import AxeBuilder from "@axe-core/playwright";
+// named region; axe finds nothing serious, embeds' playlist included (its
+// Previous button's words are in its name since embeds 0.1.1), in both themes.
+// Nothing reaches YouTube: its API is answered here with a fake.
 import { expect, test, type Page } from "@playwright/test";
 
-import { THEMES, theme } from "../../../../kernel/tests/e2e/support";
-
-/** The kernel's axe check (support.ts) over the page but embeds' playlist, which is embeds' own to answer for:
- * its "Prev" is named "Previous video", which axe's label-content-name-mismatch refuses (a fix for embeds). */
-async function axe(page: Page): Promise<string[]> {
-  const { violations } = await new AxeBuilder({ page })
-    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
-    .exclude(".mf-playlist")
-    .analyze();
-  return violations.filter((each) => each.impact === "serious" || each.impact === "critical").map((each) => `${each.id}: ${each.help}`);
-}
+import { THEMES, axe, theme } from "../../../../kernel/tests/e2e/support";
 
 /** A mono 16-bit WAV of a soft tone, `seconds` long. */
 function wav(seconds: number, hertz: number): Buffer {

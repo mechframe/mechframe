@@ -1,6 +1,6 @@
 // The YouTube playlist player (videos-player.md; embeds.md §2 and §7), with
 // YouTube's IFrame API stubbed: the facade first, no thumbnail before media is
-// granted, rolling through the list, Prev and Next wrapping, the switch, and
+// granted, rolling through the list, Previous and Next wrapping, the switch, and
 // the hand-off `audio-player` will use.
 import { act, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -195,8 +195,11 @@ describe("VideoPlaylist", () => {
     expect(screen.getByRole("button", { name: "Autoplay" })).toHaveAttribute("aria-pressed", "false");
   });
 
-  it("plays a row's video on its click, and Prev and Next wrap around", async () => {
+  it("plays a row's video on its click, and Previous and Next wrap around", async () => {
     renderWithKernel(<VideoPlaylist items={ITEMS} />);
+    // Each button's name starts with its words, so a voice user can say what they see (WCAG 2.5.3).
+    expect(screen.getByRole("button", { name: "Previous video" })).toHaveTextContent(/^Previous$/);
+    expect(screen.getByRole("button", { name: "Next video" })).toHaveTextContent(/^Next$/);
     await userEvent.click(screen.getByRole("button", { name: "Previous video" }));
     expect(player().options.videoId).toBe("ccccccccccc");
     expect(row("Third")).toHaveAttribute("aria-current", "true");
