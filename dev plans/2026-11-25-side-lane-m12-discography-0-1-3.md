@@ -81,6 +81,7 @@ Side lane M12, 2026-11-26, about 06:30 to 07:20 Eastern (11:30 to 12:20 UTC), th
   - after it, discography's Python and `tests/test_migrations.py`: 161 passed. e2e wasn't run again (the main lane's run held `mechframe_e2e`); the one CSS change keeps 700 inside the Tracks table, which the spec's check reads.
 - **Review rounds 2 and 3** (cubic): this Result's wording, the ledger's rows and the merge commit, fixed.
 - **CI on baae419:** one failure that came from `main`, not from #163. #164 moved the CLI's install line out of `CLAUDE.md` and `AGENTS.md` into `docs/COMMANDS.md`, but `cli/tests/test_review_91.py` still read the two old files, and #164's docs-only CI skipped Python. With the main lane's OK, `INSTALL_DOCS` names `docs/COMMANDS.md`, and #163 merges `main` at 660f520. `cli/tests` and `tests -m "not db"`: 627 passed.
+- **Review round 4** (CodeRabbit, a Major): a COMMIT that raised may still land on the server, so the take-back no longer deletes a master then: an outer commit that was sent and never confirmed keeps it. Test `test_a_master_whose_commit_may_have_landed_stays`, seen failing first; a mutant that counts a savepoint's release as the commit fails the two-uploads test.
 - **For the main lane's handoff:** the landing is in the message to the main lane, not here.
 - **Traps hit:**
   - the e2e spec's `.first()` pick took the other theme's track of the same name: pick inside the release's own row;

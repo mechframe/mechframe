@@ -1346,11 +1346,18 @@ def _until_committed(db: AsyncSession, key: str) -> Callable[[], None]:
     master that no track names (CodeRabbit on #145, 0.1.3). A rollback, a close
     with none (the kernel's get_db), a savepoint rolled back inside a commit
     and a put that stored the file and then failed all count (cubic on #163).
-    A clean commit leaves it alone. A savepoint's release fires after_commit
-    too, so only the outer transaction's end decides, as media's files do.
-    Returns what to call when nothing was stored after all."""
+    A clean commit leaves it alone, and so does a commit that raised: the
+    server may still finish it, its reply lost, and a track name the master
+    then, so the outcome isn't known and the master stays (CodeRabbit on
+    #163). A savepoint's release fires before_commit and after_commit too, so
+    only the outer transaction's decides, as media's files do. Returns what
+    to call when nothing was stored after all."""
     engine = db.bind
-    state = {"committed": False, "rolled": False, "done": False}
+    state = {"committing": False, "committed": False, "rolled": False, "done": False}
+
+    def committing(session: Any) -> None:
+        if not session.in_nested_transaction():
+            state["committing"] = True  # the outer COMMIT is about to be sent
 
     def committed(_: Any) -> None:
         state["committed"] = True
@@ -1365,6 +1372,8 @@ def _until_committed(db: AsyncSession, key: str) -> Callable[[], None]:
             state["committed"] = False  # a savepoint's own release, not the commit
             return
         state["done"] = True
+        if state["committing"] and not state["committed"]:
+            return  # it may have landed, its reply lost: a master no track names is unreachable
         if state["rolled"] or not state["committed"]:
             task = asyncio.get_running_loop().create_task(_take_back(engine, key))
             _TAKING_BACK.add(task)
@@ -1373,6 +1382,7 @@ def _until_committed(db: AsyncSession, key: str) -> Callable[[], None]:
     def nothing_stored() -> None:
         state["done"] = True
 
+    sa.event.listen(db.sync_session, "before_commit", committing)
     sa.event.listen(db.sync_session, "after_commit", committed)
     sa.event.listen(db.sync_session, "after_soft_rollback", rolled)
     sa.event.listen(db.sync_session, "after_transaction_end", ended)

@@ -485,6 +485,30 @@ async def test_a_master_whose_put_failed_after_it_was_stored_is_taken_back(
     assert store.keys(public=False) == []
 
 
+async def test_a_master_whose_commit_may_have_landed_stays(
+    db: AsyncSession, database: Database, store: Store
+) -> None:
+    """CodeRabbit on #163: a COMMIT that raised may still land on the server, its
+    reply lost, and a track name the master once it does: the master stays."""
+    release_id = (await _release(db)).id
+    body = master()
+    await service.upload_track(db, release_id, io.BytesIO(body), len(body), "a.wav", by=None)
+
+    def lost(_connection: Any) -> None:
+        raise ConnectionError("the reply to COMMIT was lost")
+
+    sa_event.listen(database.engine.sync_engine, "commit", lost)
+    try:
+        with pytest.raises(ConnectionError):
+            await db.commit()
+    finally:
+        sa_event.remove(database.engine.sync_engine, "commit", lost)
+    await db.rollback()
+    await _taken_back()
+
+    assert len(store.keys(public=False)) == 1
+
+
 async def test_a_master_a_track_names_is_never_taken_back(
     database: Database, db: AsyncSession, store: Store
 ) -> None:
