@@ -1624,11 +1624,10 @@
   }
 
   /* K10: a long description wraps beside its title, which keeps its line, and the chevron stays
-     at the right, centred on the row (the boards' `accordion`). */
-  .mf-admin-look .mf-accordion-summary {
-    flex-wrap: nowrap;
-  }
-
+     at the right, centred on the row (the boards' `accordion`). The description starts from no
+     width, so it always fits on the title's line and fills what's left; the summary still wraps,
+     so a title that can't break leaves its pill and chevron the next line, not outside the box
+     (CodeRabbit on #165). */
   .mf-admin-look .mf-accordion-meta {
     flex: 1 1 0;
     min-width: 0;

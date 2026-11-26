@@ -473,6 +473,13 @@ test("the kit's card title and text, its notes, a long accordion, a quiet link, 
     expect.soft(meta.left, at).toBeGreaterThan(titleBox.right);
     expect.soft(chevron.left, at).toBeGreaterThan(meta.right);
     expect.soft(chevron.middle, at).toBeCloseTo(meta.middle, 0);
+    // A long title that can't break, with a state's pill: the pill and the chevron wrap under it
+    // rather than running out of the summary, at 390 too (CodeRabbit on #165).
+    const long = admin.locator(".mf-accordion").filter({ hasText: "TransactionalMailSettings" }).locator(".mf-accordion-summary");
+    const longBox = await boxOf(long);
+    for (const part of [long.locator(".mf-pill"), long.locator(".mf-accordion-chevron")]) {
+      expect.soft((await boxOf(part)).right, at).toBeLessThanOrEqual(longBox.right + 0.5);
+    }
     // K11: a quiet link in the info colour at the small size, no underline, 24px of target.
     expect.soft(await styleOf(quiet, ["color", "font-size", "text-decoration-line"]), at).toEqual({
       color: await tokenColor(page, "--mf-color-info"),

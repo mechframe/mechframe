@@ -259,6 +259,9 @@ function AdminLook() {
         <Accordion id="kit-links" title="Streaming links" meta="Where else it plays: Spotify, Apple Music, YouTube, Amazon, SoundCloud, Bandcamp, Tidal or Deezer, one each.">
           <p>One link for each service.</p>
         </Accordion>
+        <Accordion id="kit-transactional" title="TransactionalMailSettings" state={{ tone: "info", label: "Requires configuration" }}>
+          <p>Mail goes out once the server is set.</p>
+        </Accordion>
         <Accordion id="kit-mail" title="Mail" meta="SMTP, set">
           <p>Mail goes out through the site's SMTP server.</p>
         </Accordion>
