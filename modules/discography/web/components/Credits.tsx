@@ -25,7 +25,7 @@ export function Credits({
       {rows.length ? (
         <ul className="mf-music-list">
           {rows.map((row, index) => (
-            <li key={index} className="mf-music-credit">
+            <li key={index} className="mf-music-credit mf-music-credit--role">
               <Field label="Role">
                 <Select
                   value={row.role_id}

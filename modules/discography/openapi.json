@@ -2,13 +2,13 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Discography",
-    "version": "0.1.1"
+    "version": "0.1.2"
   },
   "paths": {
     "/api/discography/releases": {
       "get": {
         "summary": "List Releases",
-        "description": "The live releases, newest first, 12 a page.",
+        "description": "The live releases, newest first, 12 a page; or with `ids` (50 at most),\nthe live ones among them in the order given, on one page (0.1.2).",
         "operationId": "list_releases_api_discography_releases_get",
         "parameters": [
           {
@@ -60,6 +60,27 @@
               "default": 12,
               "title": "Limit"
             }
+          },
+          {
+            "name": "ids",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "maxItems": 50
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ids"
+            }
           }
         ],
         "responses": {
@@ -69,6 +90,62 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ReleaseCards"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected`",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A problem (RFC 9457)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/discography/tracks": {
+      "get": {
+        "summary": "Read Tracks",
+        "description": "The live tracks that play among `ids` (50 at most), in the order given,\neach with its release: a homepage's Spotlight queue (0.1.2).",
+        "operationId": "read_tracks_api_discography_tracks_get",
+        "parameters": [
+          {
+            "name": "ids",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "minItems": 1,
+              "maxItems": 50,
+              "title": "Ids"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrackCards"
                 }
               }
             }
@@ -3491,6 +3568,135 @@
         "title": "TrackAudio",
         "description": "Where a track's sound is, and what it can do now."
       },
+      "TrackCard": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "number": {
+            "type": "integer",
+            "title": "Number"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "explicit": {
+            "type": "boolean",
+            "title": "Explicit"
+          },
+          "plays_from": {
+            "type": "string",
+            "enum": [
+              "upload",
+              "soundcloud"
+            ],
+            "title": "Plays From"
+          },
+          "stream_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stream Url"
+          },
+          "soundcloud_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Soundcloud Url"
+          },
+          "soundcloud_kind": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "track",
+                  "set"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Soundcloud Kind"
+          },
+          "has_lyrics": {
+            "type": "boolean",
+            "title": "Has Lyrics"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "release": {
+            "$ref": "#/components/schemas/TrackRelease"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "slug",
+          "number",
+          "duration_ms",
+          "explicit",
+          "plays_from",
+          "stream_url",
+          "soundcloud_url",
+          "soundcloud_kind",
+          "has_lyrics",
+          "path",
+          "release"
+        ],
+        "title": "TrackCard",
+        "description": "A live track that plays, read by its id, with its release (0.1.2)."
+      },
+      "TrackCards": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TrackCard"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "TrackCards",
+        "description": "The live tracks that play among those asked for, in the order asked."
+      },
       "TrackChange": {
         "properties": {
           "version": {
@@ -3701,6 +3907,47 @@
         ],
         "title": "TrackLine",
         "description": "A track as a release's tracklist shows it: only tracks that play."
+      },
+      "TrackRelease": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "artist_line": {
+            "type": "string",
+            "title": "Artist Line"
+          },
+          "cover": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MusicCover"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title",
+          "slug",
+          "artist_line",
+          "cover",
+          "path"
+        ],
+        "title": "TrackRelease",
+        "description": "A track's release, as a homepage's player names it under the track."
       }
     }
   }

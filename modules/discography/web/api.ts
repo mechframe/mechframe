@@ -13,6 +13,8 @@ export type ReleaseCards = Schemas["ReleaseCards"];
 export type LiveRelease = Schemas["LiveRelease"];
 export type LiveTrack = Schemas["LiveTrack"];
 export type TrackLine = Schemas["TrackLine"];
+export type TrackCard = Schemas["TrackCard"];
+export type TrackRelease = Schemas["TrackRelease"];
 export type MusicMoved = Schemas["MusicMoved"];
 export type MusicCover = Schemas["MusicCover"];
 export type MusicCredit = Schemas["MusicCredit"];
@@ -43,6 +45,7 @@ export const ROLES = "/api/discography/admin/roles";
 export const LINKS = "/api/discography/admin/links";
 export const PUBLIC_RELEASES = "/api/discography/releases";
 export const PLAYS = "/api/discography/admin/plays";
+export const PUBLIC_TRACKS = "/api/discography/tracks";
 
 /** Who may manage the library, and who may change the Music settings (the kernel's settings routes). */
 export const MANAGE = "discography.release.manage";
@@ -114,7 +117,7 @@ export function audioWords(audio: TrackAudio): string {
 
 /** A track's state as its Status column says it. */
 export function trackState(audio: TrackAudio): { label: string; tone: "success" | "info" | "danger" } {
-  if (audio.plays_from) return { label: "Plays", tone: "success" };
+  if (audio.plays_from) return { label: "Live", tone: "success" };
   if (audio.state === "processing") return { label: "Processing", tone: "info" };
   return { label: "Can't play", tone: "danger" };
 }

@@ -5,11 +5,16 @@
 // replaces them (`public.ts`, decision 0057).
 import { useInfiniteQuery } from "@tanstack/react-query";
 
-import { PUBLIC_RELEASES, api, useApiQuery, type Kind, type LiveRelease, type LiveTrack, type MusicMoved } from "./api";
+import { PUBLIC_RELEASES, PUBLIC_TRACKS, api, useApiQuery, type Kind, type LiveRelease, type LiveTrack, type MusicMoved } from "./api";
 
-/** The live releases, newest first, 12 a page, of one kind when it's named: `fetchNextPage()` for older ones. */
-export function useReleases({ kind }: { kind?: Kind } = {}) {
-  const query = kind ? { kind } : {};
+/**
+ * The live releases, newest first, 12 a page, of one kind when it's named: `fetchNextPage()` for older ones.
+ * With `ids` (50 at most, such as a homepage deck's from featured), the live ones among them in the order given, on one page (0.1.2).
+ * An empty `ids` is an empty deck, answered here with no request: sent, it would be no `ids` at all, and the newest releases.
+ */
+export function useReleases({ kind, ids }: { kind?: Kind; ids?: readonly string[] } = {}) {
+  const query = { ...(kind ? { kind } : {}), ...(ids ? { ids: [...ids] } : {}) };
+  const none = ids?.length === 0;
   return useInfiniteQuery({
     queryKey: ["get", PUBLIC_RELEASES, { params: { query } }, "pages"],
     initialPageParam: null as string | null,
@@ -19,6 +24,8 @@ export function useReleases({ kind }: { kind?: Kind } = {}) {
       return data;
     },
     getNextPageParam: (last) => last.next_cursor,
+    enabled: !none,
+    ...(none ? { placeholderData: { pages: [{ items: [], next_cursor: null }], pageParams: [null] } } : {}),
   });
 }
 
@@ -30,6 +37,16 @@ export function useRelease(slug: string) {
 /** A live track that plays, or where it is now; any other is 404 `discography.track_not_found`. */
 export function useTrack(release: string, track: string) {
   return useApiQuery("get", "/api/discography/releases/{slug}/tracks/{track}", { params: { path: { slug: release, track } } });
+}
+
+/**
+ * The live tracks that play among `ids` (50 at most), in the order given, each with its release (0.1.2): a
+ * homepage's Spotlight, after featured chose them. Its queue is `data.items.map((each) => playerItem(each, each.release))`.
+ * No ids is no tracks, answered here with no request, so a page waiting on the read doesn't wait for ever.
+ */
+export function useTracks(ids: readonly string[]) {
+  const none = ids.length === 0;
+  return useApiQuery("get", PUBLIC_TRACKS, { params: { query: { ids: [...ids] } } }, { enabled: !none, ...(none ? { placeholderData: { items: [] } } : {}) });
 }
 
 /** The artist's own links: the Music page's "Listen everywhere". */

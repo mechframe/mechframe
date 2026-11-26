@@ -13,9 +13,31 @@ export interface paths {
         };
         /**
          * List Releases
-         * @description The live releases, newest first, 12 a page.
+         * @description The live releases, newest first, 12 a page; or with `ids` (50 at most),
+         *     the live ones among them in the order given, on one page (0.1.2).
          */
         get: operations["list_releases_api_discography_releases_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/discography/tracks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Tracks
+         * @description The live tracks that play among `ids` (50 at most), in the order given,
+         *     each with its release: a homepage's Spotlight queue (0.1.2).
+         */
+        get: operations["read_tracks_api_discography_tracks_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1104,6 +1126,51 @@ export interface components {
             stream_url: string | null;
         };
         /**
+         * TrackCard
+         * @description A live track that plays, read by its id, with its release (0.1.2).
+         */
+        TrackCard: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Title */
+            title: string;
+            /** Slug */
+            slug: string;
+            /** Number */
+            number: number;
+            /** Duration Ms */
+            duration_ms: number | null;
+            /** Explicit */
+            explicit: boolean;
+            /**
+             * Plays From
+             * @enum {string}
+             */
+            plays_from: "upload" | "soundcloud";
+            /** Stream Url */
+            stream_url: string | null;
+            /** Soundcloud Url */
+            soundcloud_url: string | null;
+            /** Soundcloud Kind */
+            soundcloud_kind: ("track" | "set") | null;
+            /** Has Lyrics */
+            has_lyrics: boolean;
+            /** Path */
+            path: string;
+            release: components["schemas"]["TrackRelease"];
+        };
+        /**
+         * TrackCards
+         * @description The live tracks that play among those asked for, in the order asked.
+         */
+        TrackCards: {
+            /** Items */
+            items: components["schemas"]["TrackCard"][];
+        };
+        /**
          * TrackChange
          * @description What a save changes, with the `version` it read. `soundcloud_url`,
          *     `lyrics` and `duration_ms` sent as null clear them; `duration_ms` is for a
@@ -1163,6 +1230,21 @@ export interface components {
             /** Path */
             path: string;
         };
+        /**
+         * TrackRelease
+         * @description A track's release, as a homepage's player names it under the track.
+         */
+        TrackRelease: {
+            /** Title */
+            title: string;
+            /** Slug */
+            slug: string;
+            /** Artist Line */
+            artist_line: string;
+            cover: components["schemas"]["MusicCover"] | null;
+            /** Path */
+            path: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -1178,6 +1260,7 @@ export interface operations {
                 kind?: ("album" | "ep" | "single") | null;
                 cursor?: string | null;
                 limit?: number;
+                ids?: string[] | null;
             };
             header?: never;
             path?: never;
@@ -1192,6 +1275,46 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReleaseCards"];
+                };
+            };
+            /** @description What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description A problem (RFC 9457) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    read_tracks_api_discography_tracks_get: {
+        parameters: {
+            query: {
+                ids: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrackCards"];
                 };
             };
             /** @description What was sent isn't valid (`kernel.invalid_request`), or the route refused it with its own code, such as `auth.password_rejected` */

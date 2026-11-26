@@ -11,7 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderApp, testUser } from "@/kernel/testing";
 
 import type { AdminRelease, AdminTrack, FullRelease, FullTrack, LiveRelease, LiveTrack, ReleaseCard, TrackAudio } from "../../web/api";
-import { clock, msOf } from "../../web/api";
+import { clock, msOf, trackState } from "../../web/api";
 import { changed, mineOf, movedTrack, releaseBody, releaseFormOf, same } from "../../web/editing";
 import discography from "../../web/module.web";
 import { playsWords } from "../../web/widgets/PlaysCard";
@@ -1109,5 +1109,26 @@ describe("CodeRabbit on #145", () => {
     });
     renderApp({ path: "/music", modules: [discography] });
     expect(await screen.findByText("The artist's links couldn't be loaded.")).toBeInTheDocument();
+  });
+});
+
+describe("the boards' grids (0.1.2, VM Website's D2)", () => {
+  it("draws a credit's role as wide as its words, and leaves the link rows their own grid (cubic on #159)", async () => {
+    routed({ [`GET ${ONE}`]: { status: 200, body: full({ links: [{ platform: "spotify", label: "Spotify", url: "https://open.spotify.com/album/1" }] }) } });
+    renderApp({ path: `/admin/music/${ID}`, modules: [discography], session: editor });
+
+    const link = (await screen.findByLabelText("Link 1")).closest("li");
+    const credit = screen.getByLabelText("Role").closest("li");
+    expect(credit).toHaveClass("mf-music-credit", "mf-music-credit--role");
+    expect(link).toHaveClass("mf-music-credit");
+    expect(link).not.toHaveClass("mf-music-credit--role");
+  });
+});
+
+describe("the boards' words (0.1.2, VM Website's K3)", () => {
+  it("calls a track that plays Live, as the boards do", () => {
+    expect(trackState(audio({ plays_from: "soundcloud", state: "none" }))).toEqual({ label: "Live", tone: "success" });
+    expect(trackState(audio({ plays_from: null, state: "processing" }))).toEqual({ label: "Processing", tone: "info" });
+    expect(trackState(audio({ plays_from: null, state: "none" }))).toEqual({ label: "Can't play", tone: "danger" });
   });
 });

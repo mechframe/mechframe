@@ -762,3 +762,53 @@ async def test_the_61st_play_in_an_hour_from_one_address_is_429(browser: Browser
     sixty_first = await browser.http.post(f"{API}/tracks/{NOBODY}/plays")
     assert sixty_first.status_code == 429, sixty_first.text
     assert sixty_first.json()["code"] == "kernel.rate_limited"
+
+
+# --- reads by id (0.1.2, `dev plans/contracts/featured.md` §2) --------------------------------
+
+
+async def test_the_reads_by_id_answer_live_ones_in_the_order_given(browser: Browser) -> None:
+    await browser.as_new("editor")
+    first = await _release(browser, title="Catalyst")
+    second = await _release(browser, title="Unified Vibration")
+    draft = await _release(browser, title="A draft")
+    one = await _linked(browser, first["id"], "Catalyst (full album)")
+    two = await _linked(browser, second["id"], "Gather Around")
+    three = await _linked(browser, second["id"], "Hook It Up")
+    hidden = await _linked(browser, draft["id"], "Not yet")
+    await _publish(browser, first["id"])
+    await _publish(browser, second["id"])
+    browser.forget()
+    releases = await browser.http.get(
+        f"{API}/releases",
+        params=[("ids", second["id"]), ("ids", draft["id"]), ("ids", first["id"])],
+    )
+    assert releases.status_code == 200, releases.text
+    assert [each["title"] for each in releases.json()["items"]] == ["Unified Vibration", "Catalyst"]
+    assert releases.json()["next_cursor"] is None
+    tracks = await browser.http.get(
+        f"{API}/tracks",
+        params=[
+            ("ids", three["id"]),
+            ("ids", hidden["id"]),
+            ("ids", one["id"]),
+            ("ids", two["id"]),
+        ],
+    )
+    assert tracks.status_code == 200, tracks.text
+    items = tracks.json()["items"]
+    assert [(each["title"], each["number"]) for each in items] == [
+        ("Hook It Up", 2),
+        ("Catalyst (full album)", 1),
+        ("Gather Around", 1),
+    ]
+    assert items[0]["release"]["path"] == f"/music/{second['slug']}"
+    assert set(items[0]["release"]) == {"title", "slug", "artist_line", "cover", "path"}
+    many = await browser.http.get(f"{API}/tracks", params=[("ids", NOBODY)] * 51)
+    assert (many.status_code, many.json()["code"]) == (422, "kernel.invalid_request")
+    none = await browser.http.get(f"{API}/tracks")
+    assert none.status_code == 422
+    paged = await browser.http.get(
+        f"{API}/releases", params=[("ids", first["id"]), ("cursor", "x")]
+    )
+    assert (paged.status_code, paged.json()["code"]) == (422, "kernel.invalid_request")
