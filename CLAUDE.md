@@ -10,25 +10,16 @@ The binding directives are in `C:\DEV\CLAUDE.md` and `C:\DEV\DIRECTIVES.md`, whi
 - **Path:** `C:\DEV\AI-DevKit`. **Remote:** `https://github.com/mechframe/mechframe` (decision 0034), **public** (decision 0011). Never commit secrets, client material or private notes; private notes go in `docs/private/` (gitignored).
 - **The contract:** `SPEC.md`. Every module, the kernel and the CLI follow it. Read the sections you touch before every change.
 
-## Current state (2026-11-26; the kernel closed, #96; hooks 1 to 8, #97 to #110; media, #116; the kernel's Markdown, #118; pages, #121 and #138; blog, #123; contact, #125; embeds, #127; a site's mypy, #132; the AI's writing help, #135; campaigns, #134; the account's name, #139; the shell, #140; the signed-out session read, #141; blog 0.1.3, #143; the AI's model, #144; discography, #145, #151 and #159; generated covers, #147; the footer's shift, #148 and #161; audio-player, #149; social, #152; item references, #153; the admin kit to the boards, #155, #156 and #158; featured, #157; embeds and audio-player 0.1.1, #160)
+## Current state (2026-11-26)
 
-- **The kernel is done**, K0 to K5 (#1 to #96), with K2's steps 9 to 11 waiting until the site needs them (decision 0029). **Hooks 1 to 8** of the ten are in (#97 to #110, decision 0052); entitlements and profile tabs wait until just before Vibrant Mindz's step 5 and wave 2b. **Hook 11, item references** (`kernel/backend/kernel/refs.py`, #153, decision 0072), lets a module show another's items without its code. `mechframe upgrade kernel` is in (#111, #114; decision 0053).
-- **Modules:** `media` (#116; drawn to its board, #119, #126 and #131; 0.1.4, #147, `public.store` for another module's image), `pages` (#121: Markdown pages, moves that never chain, the header's and footer's menus through link slots and `nav.footer`, decision 0056; 0.1.1, #138, its page read in `public.ts` and an Updated line), `blog` (#123: posts with categories, covers from media, related posts; 0.1.1, #128, its public surface; 0.1.2, #135, its fields handed to Write with AI; 0.1.3, #143, the summary in `blog.post.published` v2 and the editor's crossed saves; 0.1.4, #147, generated covers; 0.1.6, #161, `/blog` holding back on a first load, so the footer stays put), `contact` (#125: the form, the Inbox, decision 0059's `notify_holders`; 0.1.1, #129, its reads and send in `public.ts`; 0.1.2, #156) and `embeds` (#127: players behind a consent facade, the kit's text slots `editor.tools` and `prose.embed`, decision 0060; 0.1.1, #160, the playlist's Previous) and `campaigns` (#134: the newsletter, double opt-in sign-ups, sends at a pace and bounces read back, decision 0062), `discography` (#145, the side lane: releases, tracks, credits and links, an upload or a SoundCloud link as each track's audio, decision 0070; 0.1.1, #151, audio-player's first source; 0.1.2, #159, its tracks and albums for featured through `refs.py`), `audio-player` (#149: the player modules hand items to, one thing at a time, plays counted under a daily salt, decision 0071; 0.1.1, #160, the Player section spans its card), `featured` (#157, the side lane: the homepage's players, slots made on Players and filled with other modules' items or YouTube links, the Dashboard's card, decision 0073) and `social` (#152: a published post shared to the site's channels through Buffer from its editor's Share card, decision 0067; blog 0.1.5 draws it). A module shares another's public thing by content type and id through the kernel's `server_copy.preview` and the props slot `content.share` (`ShareParts`). A module's web reaches another's `public.ts` as `@/modules/<id>/public` (decision 0057), and a site's own code a module's `public.py`, which the site's mypy follows (#132).
-- **The AI's writing help** (#135, decision 0058): `await ai.client(db)`. The key is `ANTHROPIC_API_KEY` or one saved in Settings → AI, and a saved key wins. Settings → Writing holds the site's rules and its styles (`kernel_0016`). Every editor has Write with AI through `editor.tools`. The model is picked in Settings → AI from Anthropic's newest Opus, Sonnet and Haiku, read each time, and saved only through its own route (#144, decision 0064, settings' `own_route`). No suite calls Anthropic: the harness has a fake. **Generated covers** (#147, decision 0065): Draw a cover in blog's editor; `kernel.svg` cleans Claude's SVG to an allowlist and renders it with the bundled Inter, and media keeps only the PNG.
-- **The account and the session:**
-  - a Name on Profile, and in People for staff (#139, decision 0061);
-  - `GET /api/auth/session` answers a signed-out visitor 200 `{"user": null}`, never cached (#141, decision 0063);
-  - the admin sidebar takes a section's page order from `AdminSection.pages` (#140, decision 0044 amended);
-  - the site frame draws nothing after an empty `<main>`, so a first load never moves the footer (#148, decision 0066).
-- **Next, main lane** (`dev plans/2026-11-25-next-session-m4l-step-closes.md`): lean this file and `AGENTS.md`, as their own docs PR (the owner: "Lean it soon"); VM Website's asks as they come; then step 1's close (its boards' test waits on the site's short list), step 2's close (all four tests, after the owner's iPhone Safari check), the flaky axe test diagnosed, and step 3's order and lanes, the owner's call.
-- **Side lane:** discography 0.1.3 (`dev plans/2026-11-25-side-lane-m12-discography-0-1-3.md`), in its worktree: the kit's `rowHeader` on its tables, then VM Website's board-check fixes, then #145's review items. Two lanes run at once ("Two lanes", below).
-- **The kernel's Markdown** (#118, decision 0055): `kernel.markdown` (`render`, `plain`, `excerpt`) and the kit's `MarkdownEditor`, `Prose` and `SearchFields`. #119 added the kit's `SearchBox`, an action's icon before its words, the required token `opacity.55`, the session's `name` on the person card and the boards' admin sections by default (decisions 0042 and 0044, amended).
-- **Progress** is one record, `docs/progress.json`, made into `docs/PROGRESS.md` and the owner's visual ledger (#61). v1.0: 80% (49 of 61 steps).
+- **v1.0 is at 80%** (49 of 61 steps). Nothing is deployed. **The kernel is done**, K0 to K5 (#1 to #96), with K2's steps 9 to 11 waiting until the site needs them (decision 0029); `mechframe upgrade kernel` is in (#111, #114; decision 0053).
+- **Hooks:** 1 to 8 (#97 to #110, decision 0052) and 11, item references (`kernel/backend/kernel/refs.py`, #153, decision 0072). Entitlements and profile tabs wait until just before Vibrant Mindz's step 5 and wave 2b.
+- **Modules built:** media 0.1.4, pages 0.1.1, blog 0.1.6, contact 0.1.2, embeds 0.1.1, campaigns 0.1.0, discography 0.1.2, audio-player 0.1.1, featured 0.1.0 and social 0.1.0. Each one's `MODULE.md` and `CHANGELOG.md` say what it does, and `catalog.json` indexes them. The Vibrant Mindz scaffolds wait as `modules/_<id>/`.
 - **The first real site** is the new Vibrant Mindz site (`docs/plans/vibrant-mindz-module-plan.md`). It's built in its own session (`C:\DEV\VM Website`) from MechFrame's `main`. Its checks against the boards send items here, with the owner's calls relayed.
-- **The project is MechFrame** (decision 0034, #76); it was AI DevKit until K3. The repo is `mechframe/mechframe`, the CLI `mechframe` (also `mf`), the cookies `__Host-mf_*`, the variables `MECHFRAME_*`; the Python import stays `kernel`. Decision records and other history keep the old name as written.
-- **The admin shell** is built to the Vibrant Mindz canvas Admin design, styled by tokens, for every site: only its generic parts are in the kernel, checked in the site's dark theme and in Machined Light (decision 0040, amending 0008). Its forms, lists and dashboard are drawn to the boards under `.mf-admin-look` (#155, #156 and #158; decision 0040 amended twice), and the kit's `Table` names each row by its `rowHeader` column.
+- **Next, main lane** (`dev plans/2026-11-25-next-session-m4l-step-closes.md`): VM Website's asks as they come (now Dev 22's kit items, R1 to R3, R6 to R9 and K9 to K12); step 1's close (its boards' test waits on the site's short list); step 2's close (all four tests, after the owner's iPhone Safari check); the flaky axe test diagnosed; and step 3's order and lanes, the owner's call.
+- **Side lane:** discography 0.1.3 (`dev plans/2026-11-25-side-lane-m12-discography-0-1-3.md`), in its worktree. Two lanes run at once ("Two lanes", below).
 - **After v1.0:** the module roadmap and ten contract hooks (decision 0018, `docs/plans/module-roadmap.md`), and VybeSite's page builder for `pages` (the owner, 2026-11-21).
-- The state as it stood to 2026-11-21, phase by phase, is in `docs/archive/claude-state-to-2026-11-21.md`. Next steps, blockers and warnings live in `docs/HANDOFF.md`.
+- The state PR by PR is in `docs/archive/` (to 2026-11-21, then to 2026-11-26). Next steps, blockers and warnings live in `docs/HANDOFF.md`.
 
 ## Last Completed Task
 
@@ -50,38 +41,30 @@ The binding directives are in `C:\DEV\CLAUDE.md` and `C:\DEV\DIRECTIVES.md`, whi
 
 Python 3.12+, FastAPI, Pydantic v2 (strict), async SQLAlchemy 2 + asyncpg, Postgres 16+, Alembic with one branch per module; auth by argon2-cffi, pyotp and webauthn (passkeys, decision 0028); nh3 for HTML cleaned to an allowlist (decision 0041); python-markdown for what people write in Markdown, made HTML on the server (decision 0055); React 19, Vite, TypeScript strict, React Router 7 (library mode), TanStack Query; design tokens as CSS custom properties with Tailwind v4 mapped to them; openapi-typescript + openapi-fetch for the typed client, with openapi-react-query for its TanStack Query hooks (decision 0042); uqr for the authenticator app's QR code (decision 0043); Anthropic's `anthropic` SDK for the AI's writing help, called from the server only (decision 0058); resvg-py to make a model's SVG, cleaned to an allowlist by `kernel.svg`, a PNG on the server (decision 0065); Postgres-backed job queue; S3-compatible storage (Cloudflare R2) through boto3 (decision 0032); Docker on Railway. Tests: pytest (moto for storage), Vitest + React Testing Library (jsQR reads a drawn QR code back), Playwright.
 
+## Architecture (brief)
+
+- **Copied in, not installed:** a site is the kernel plus the modules it needs, copied into its repo by the `mechframe` CLI (decision 0002). Each module has its own manifest, Alembic branch, routes and web.
+- **Seams:** a module's web reaches another's `public.ts` as `@/modules/<id>/public` (decision 0057), and a site's own code a module's `public.py`, which the site's mypy follows (#132). A module shows another's items through `kernel.refs` (hook 11), and shares another's public thing by content type and id through the kernel's `server_copy.preview` and the props slot `content.share` (`ShareParts`).
+- **The admin shell** is built to the Vibrant Mindz canvas Admin design, styled by tokens, for every site: only its generic parts are in the kernel, checked in the site's dark theme and in Machined Light (decision 0040, amending 0008). Its forms, lists and dashboard are drawn to the boards under `.mf-admin-look` (#155, #156 and #158; decision 0040 amended twice), and the kit's `Table` names each row by its `rowHeader` column.
+- **The AI's writing help** (#135, decision 0058): `await ai.client(db)`. The key is `ANTHROPIC_API_KEY` or one saved in Settings → AI, and a saved key wins; the model is picked there too (decision 0064). No suite calls Anthropic or Buffer: the harness has fakes.
+- **The name:** the project is MechFrame (decision 0034, #76); it was AI DevKit until K3. The repo is `mechframe/mechframe`, the CLI `mechframe` (also `mf`), the cookies `__Host-mf_*`, the variables `MECHFRAME_*`; the Python import stays `kernel`. Decision records and other history keep the old name as written.
+
 ## Commands
 
-From the repo root, in PowerShell. Python commands use the `python -m` form.
+From the repo root, in PowerShell. Python commands use the `python -m` form. Every other command, the generators among them and when to run each, is in `docs/COMMANDS.md`.
 
 | What | Command |
 | --- | --- |
 | Python environment, first time | `py -3.12 -m venv .venv`, then `.venv\Scripts\Activate.ps1` |
 | Install Python dependencies | `python -m pip install --require-hashes -r requirements.txt -r requirements-dev.txt` |
-| Re-pin after editing a `.in` file | `python -m uv pip compile requirements.in --generate-hashes --universal --python-version 3.12 -o requirements.txt`, and the same for `requirements-dev.in` into `requirements-dev.txt` |
 | Test Postgres | `docker compose up -d db`; or any local Postgres 16+ with a role that has CREATEDB and `TEST_DATABASE_URL` pointing at it (compose and CI call it `mechframe`; the owner's machine keeps its `devkit` role on port 55432) |
 | Python tests | `python -m pytest` (add `-m "not db"` to run without Postgres) |
 | Lint, format, types | `python -m ruff check .`, `python -m black .`, `python -m mypy` |
-| Manifests against the schemas | `python -m tools.validate_schemas` |
-| Migrations | `python -m harness.migrations upgrade` (also `downgrade`, `heads`, `history`, `current`), with `DATABASE_URL` set |
-| Jobs worker, a process of its own | `python -m harness.worker`, with `JOBS_IN_WEB=false` on the web app (by default the web app runs one; decision 0035) |
-| Audit Python dependencies | `python -m pip_audit --strict --require-hashes --disable-pip -r requirements.txt -r requirements-dev.txt` |
-| Audit web dependencies, with the expiring allowlist (`tools/npm_audit_allow.json`, decision 0015) | `python -m tools.npm_audit` |
 | Web install | `npm ci` |
 | Web tests, lint, types, build | `npm test`, `npm run lint`, `npm run typecheck`, `npm run build` |
-| Web coverage (85 % of lines, the contract's floor; CI's Web job runs it) | `npm run test:coverage` |
 | End-to-end tests (Playwright 1.64.1, Chromium build 1248, axe), locally before each push | once on a new machine, `npx playwright install chromium` (`npm ci` doesn't fetch the browser); then `npm run build`, and `npm run e2e` with `TEST_DATABASE_URL` set; it starts its own `python -m harness.e2e` on a `mechframe_e2e` database made fresh each run, never one already running, and reads no `.env`. CI runs them on main's pushes, weekly and by hand (`e2e.yml`), never on a PR |
-| Link the project skills for Claude Code | `python -m tools.link_skills` |
 | Progress document and ledger rows, after editing `docs/progress.json` | `python -m tools.progress` (`--check` only reports) |
-| Each theme's `tokens.css` and `tailwind.css`, after editing a `tokens.json` | `python -m tools.themes` (`--check` only reports) |
-| Event payloads as JSON Schema, after declaring or changing one | `python -m tools.event_schemas` (`--check` only reports) |
-| Every variable a site's host may set, `docs/HOST-VARIABLES.md`, after changing a kernel setting in `config.py`, a `module.json`'s env, settings or version, or `railway.ts` | `python -m tools.host_variables` (`--check` only reports; `tests/test_host_variables.py` fails while it's stale) |
-| The committed OpenAPI specs and the web's API types, after changing a route or its answer | `python -m tools.openapi`, then `npm run api:types` (`--check` and `npm run api:check` only report; decision 0042) |
-| The CLI: a new site, its modules, its edits, versions and advisories; the catalog (decisions 0047 and 0050) | After the pinned requirements, `python -m pip install --no-deps --no-build-isolation -e .` once, then `mechframe new <dir> [--recipe <id>]`, `mechframe add <id> --site <dir>`, `mechframe remove <id> --site <dir>`, `mechframe check --site <dir>` and `mechframe catalog` (`--check` only reports); or `python -m mechframe` with `$env:PYTHONPATH = "cli"` |
-| A new site, kernel only (decision 0048) | `python -m mechframe new <dir> --name "<site name>" [--theme <name>]` with `cli` on the path; the folder must be empty or not there yet |
-| The site's first owner, from its server (decision 0051) | `mechframe create-owner <email> --site <dir>`: runs the site's `python -m app.owner <email>` with its `.venv` and prints a one-time link to set the password; with an owner already, only an owner's own address gets one |
-| The template's web package and lockfile, after a bump in the root's `package.json` | `python -m tools.site_template` (needs npm and the registry; `--check` only reports) |
-| A new site made and run from nothing: venv, pins, lint, migrations, tests, `npm ci`, the build, `railway.ts`'s types, Playwright, `mechframe check` (CI's E2E workflow runs it; never on a PR) | `python -m tools.site_smoke` with `TEST_DATABASE_URL` set and npm on the path (`--keep` keeps the folder); about 5 minutes once pip's cache is warm |
+| The generated files: OpenAPI specs and API types, themes, event schemas, host variables, the catalog, the template's lockfile | Each has its `python -m tools.<name>`, and `--check` only reports; a test or CI fails while one is stale. Which to run after which change: `docs/COMMANDS.md` |
 | Brand check, before any PR that lifts code | `python -I "C:\DEV\VybeSite\vybesite\scripts\brand_check.py" "C:\DEV\AI-DevKit"` |
 
 ## Rules
@@ -97,51 +80,6 @@ From the repo root, in PowerShell. Python commands use the `python -m` form.
 - **Progress is kept in one file,** `docs/progress.json`: every phase and step to v1.0 and after, with its status and PRs. A PR that starts, finishes or adds a step updates it and runs `python -m tools.progress`, which rewrites `docs/PROGRESS.md` and the ledger's rows; `tests/test_progress.py` fails when they're stale. The owner follows the [visual progress ledger](https://claude.ai/artifact/48auLkb7Ajmyn2SNAni9rm), made from the same rows.
 - **Skills:** don't build new skills as you go. Add every idea to `docs/SKILL-BACKLOG.md`; the owner builds them all in one batch later. Build one early only if the work can't continue without it, and say so.
 
-## Project skills (`skills/`, linked into `.claude/skills/` by `python -m tools.link_skills`)
-
-| Skill | Use it when |
-| --- | --- |
-| `mechframe-module-extractor` | Lifting a feature from another project into `modules/` |
-| `mechframe-site-picker` | Turning a site brief into a module list and build commands |
-| `beat-license-generator` | Building the `licensing` module |
-| `printful-v2-adapter` | Building the `print-on-demand` module |
-| `alembic-multi-module-migrations` | Adding a module's migrations, merging heads, the round-trip tests |
-| `module-contract-lint` | Reviewing a module (or the kernel) against the contract before it merges |
-| `mechframe-hook-designer` | Adding a cross-module hook to the contract (search index, consent, entitlements and the rest of the 2026-11-13 roadmap hooks) |
-
-## Project map
-
-| Path | What |
-| --- | --- |
-| `SPEC.md` | The contract (v0.1) |
-| `KICKOFF.md` | The first build sessions' prompt: phases K0 to K5 |
-| `AGENT-GUIDE.md` | Front door for an agent building a site with MechFrame |
-| `schema/` | JSON Schemas: module manifest, recipe, lock file; event payload schemas land in `schema/events/` |
-| `kernel/` | The always-installed core: `backend/kernel/` (Python), `migrations/`, `tests/`, `web/`, and `openapi.json` (generated) |
-| `modules/` | One folder per module; `modules/_template/` is the starting point, and the Vibrant Mindz scaffolds wait as `modules/_<id>/` until built |
-| `recipes/` | Preset module bundles per kind of site |
-| `themes/` | Token sets, one folder each: `machined-light` (the default) and `vibrant-mindz`; `README.md` lists the kernel's required tokens |
-| `templates/site/` | The empty site `mechframe new` starts every project from (#92; `templates/README.md`): the harness made into a site, its own pages in `backend/app/site/` and `web/src/site/`, Railway as code in `.railway/railway.ts` |
-| `cli/` | The `mechframe` CLI: `cli/mechframe/` and its tests in `cli/tests/` (`cli/README.md`; built in K5) |
-| `harness/` | Dev app that mounts the kernel and modules for tests and local runs; `harness/alembic/` is the one Alembic environment, `harness/migrations.py` drives it |
-| `tools/` | Repo tooling: `validate_schemas.py`, `link_skills.py`, `build_common_passwords.py` (rebuilds the bundled list; steps in NOTICE) |
-| `tests/` | Repo-level tests: schemas, migrations round trip, tools |
-| `conftest.py` | The test run's made-up secrets and the throwaway Postgres fixtures |
-| `catalog.json` | Generated index of every module (empty until the first module) |
-| `docs/decisions/` | Decision records |
-| `docs/HANDOFF.md` | One page, overwritten each session |
-| `docs/progress.json`, `docs/PROGRESS.md` | Progress to v1.0 and after: the data, and the document `tools/progress.py` makes from it |
-| `docs/private/` | Not in git (the repo is public): the inventory of `C:\DEV` and the name of the client folder |
-| `docs/archive/` | Moved out of this file when it was leaned, word for word: the state to 2026-11-21, phase by phase |
-| `docs/plans/` | Plans, such as the Vibrant Mindz module plan |
-| `docs/plans/module-roadmap.md` | The module roadmap after v1.0: five waves of Musts, after ten contract hooks (decision 0018) |
-| `docs/plans/vibrant-mindz-backend/` | The Vibrant Mindz backend plan: its kickoff (steps 0 to 7), specs, admin map, kernel additions and extraction briefs |
-| `docs/contracts/` | HTTP contracts the contract suites check, starting with `auth-api.md` |
-| `docs/SKILL-BACKLOG.md` | Skill ideas waiting to be built |
-| `skills/` | Project skills, the source copies; K0 links them into `.claude/skills/` |
-| `dev plans\` | Session prompts and working plans (the owner's convention) |
-| `dev plans\contracts\` | Each feature's and module's one-page contract, written first and approved by the owner (`pages.md`, `blog.md`, `media.md`, the hooks' and the kernel's) |
-
 ## Gotchas
 
 - Windows: the owner's terminal is PowerShell. Python commands use the `python -m` form (`python -m pip`, `python -m pytest`). PowerShell blocks scripts by default, `Activate.ps1` and `npm.ps1` included: use `.venv\Scripts\python.exe -m ...` and `npm.cmd`, unless the owner has run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
@@ -150,6 +88,25 @@ From the repo root, in PowerShell. Python commands use the `python -m` form.
 - React Router stays on 7.x (the spec) though 8.x is out; TypeScript stays on 6.0.x for typescript-eslint.
 - VybeSite's code is React 18.3; lifted components move to React 19 (ref as a prop, no `forwardRef`).
 - VybeSite uses JWT sessions and separate staff and member tables. MechFrame uses opaque cookie sessions and one `auth_user` table (spec 14.1 and 14.5, decision 0003). Port the behavior, not the shape.
+
+## Project map
+
+| Path | What |
+| --- | --- |
+| `SPEC.md` | The contract (v0.1) |
+| `AGENT-GUIDE.md` | Front door for an agent building a site with MechFrame |
+| `kernel/` | The always-installed core: `backend/kernel/` (Python), `migrations/`, `tests/`, `web/` (the kit is `web/src/ui/`) |
+| `modules/` | One folder per module; `modules/_template/` is the starting point |
+| `harness/` | Dev app that mounts the kernel and modules for tests and local runs; `harness/alembic/` is the one Alembic environment |
+| `templates/site/`, `cli/` | The empty site `mechframe new` starts every project from, and the `mechframe` CLI |
+| `docs/decisions/` | Decision records |
+| `docs/HANDOFF.md` | One page, overwritten each session |
+| `docs/progress.json` | Progress to v1.0 and after; `docs/PROGRESS.md` and the ledger's rows are made from it |
+| `docs/plans/` | Plans: the Vibrant Mindz module and backend plans, the module roadmap |
+| `dev plans\`, `dev plans\contracts\` | Session prompts and working plans; each feature's one-page contract, written first and approved by the owner |
+| `docs/COMMANDS.md` | Every command, and which generator to run after which change |
+| `docs/REPO-MAP.md` | The whole repo, folder by folder, and when to use each project skill (`skills/`, linked into `.claude/skills/` by `python -m tools.link_skills`) |
+| `docs/archive/` | Moved out of this file when it was leaned, word for word: the state PR by PR |
 
 ## Session end
 

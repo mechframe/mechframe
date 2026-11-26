@@ -14,7 +14,7 @@ The repo's `docs/PROGRESS.md` and this ledger's rows are made from the same `doc
 1. Update `docs/progress.json` and run `python -m tools.progress` (in the PR that changes the status).
 2. Upload `rows.json` to the ledger: the `Artifact` tool, `url` the ledger, `file_path` this `rows.json`, `asset: true`. It answers with a new `/_blob/<id>`.
 3. Point the ledger's `steps` dataset at it: `ArtifactData` `update` on collection `datasets`, doc `steps`, pinned to its version, with `source.url` the new `/_blob/<id>` and `updated` `{at, by}` saying when and from which `main`.
-4. Read `data/users/me` `check` on the ledger: `passed` means the page drew the new rows.
+4. Read `data/users/me` on the ledger. The page writes its `check` only after a page file changes (its `index.html`) or on a fault, so after a rows-only republish an empty list is normal: nothing reported a fault. A `runs` doc there is a fault to fix.
 5. Delete the previous asset once nothing points at it.
 
-The page itself changes only when this `index.html` does: write it to `files/index.html` (pinned to its version), then read `check` the same way. Its milestone labels ("MechFrame v1.0", "Everything") are text in the page, so renaming a milestone in `docs/progress.json` means changing them here too.
+The page itself changes only when this `index.html` does: write it to `files/index.html` (pinned to its version), then read `data/users/me` `check`: after a page change, `passed` means the page drew. Its milestone labels ("MechFrame v1.0", "Everything") are text in the page, so renaming a milestone in `docs/progress.json` means changing them here too.

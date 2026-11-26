@@ -20,7 +20,7 @@ Overwritten every session. This one: 2026-11-25, about 10:00 Eastern, to 2026-11
 
 ## Next
 
-1. **Lean `CLAUDE.md`** (the owner: "Lean it soon"), as its own docs PR, with `AGENTS.md` beside it.
+1. **`CLAUDE.md` and `AGENTS.md`, leaned** (session M4l's docs PR): 133 lines from 176. The whole commands table is in `docs/COMMANDS.md`, the whole map and the project skills in `docs/REPO-MAP.md`, and the state PR by PR in `docs/archive/claude-state-to-2026-11-26.md`, each word for word.
 2. **VM Website's asks as they come:** the short list, once its owner has decided, and whether to fix `.mf-player-hint`. That rule sets `font-size` to a whole font shorthand, so the size is invalid and the Loading line inherits.
 3. **Step 1's close,** once the site says the boards hold: set the row to done.
 4. **Step 2's close** (the owner: "All four, like Step 1"): schemas, tests on `main`, `mechframe check` on a fresh site with step 2's modules, and the boards by VM Website's parity check. The owner does the iPhone Safari check before it closes.
@@ -59,7 +59,7 @@ Overwritten every session. This one: 2026-11-25, about 10:00 Eastern, to 2026-11
   - Commit with `git commit -F <file>`, and check `git branch --show-current` first.
   - Never `prettier --write` an existing file.
   - On Windows, `npm run api:check` reports some `schema.ts` files stale over line endings. CI on Linux is fine.
-- **`CLAUDE.md` is about 176 lines.** The owner said to lean it soon: Next 1.
+- **A new command** goes in `docs/COMMANDS.md`; only one used every session goes in `CLAUDE.md`'s Commands too.
 
 ## Warnings
 
