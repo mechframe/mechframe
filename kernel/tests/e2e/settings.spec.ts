@@ -1,11 +1,16 @@
 // The admin's Settings, as Chromium draws them (K4 contract §7, K4.8): a save on the Site tab
-// reaches llms.txt; on Features, switching the probe off asks first, takes its add-on with it, and
-// comes back; on System, a failed job is retried and one that can't run again is discarded; axe
+// reaches llms.txt; on System, a failed job is retried and one that can't run again is discarded;
+// on Features, switching the probe off asks first, takes its add-on with it, and comes back; axe
 // finds nothing serious with the switch's question open, in either theme. The probe modules are
 // the harness's test support's (harness/probe.py); no other test switches them.
 import { expect, test, type Page } from "@playwright/test";
 
 import { THEMES, axe, makeUser, signInTo, theme } from "./support";
+
+// One after another, in one worker: while Probe is off, the worker claims none of its jobs, so a
+// probe.fail run in another worker then waits instead of failing for good (e2e on 89ed7e2). The
+// jobs test goes first, so a switch test that fails with Probe off can't take it down too.
+test.describe.configure({ mode: "default" });
 
 async function signedInAdmin(page: Page, next: string): Promise<void> {
   const user = await makeUser(page.request, "settings", { totp: true, roles: ["member", "admin"] });
@@ -24,29 +29,6 @@ test("a save on the Site tab reaches llms.txt", async ({ page }) => {
   expect(await llms.text()).toContain(summary);
   await page.reload();
   await expect(page.getByRole("textbox", { name: "Summary for AI tools" })).toHaveValue(summary);
-});
-
-test("switching the probe off asks first, takes its add-on with it, and comes back", async ({ page }) => {
-  await signedInAdmin(page, "/admin/settings/features");
-  const probe = page.getByRole("switch", { name: "Probe", exact: true });
-  const addon = page.getByRole("switch", { name: "Probe add-on" });
-  await expect(probe).toBeChecked();
-  await probe.click();
-  const dialog = page.getByRole("dialog", { name: "Switch off Probe?" });
-  await expect(dialog).toContainText("Probe add-on needs Probe, so it goes off too.");
-  for (const [name, canvas] of Object.entries(THEMES)) {
-    await theme(page, name, canvas);
-    expect(await axe(page), `the switch's question in ${name}`).toEqual([]);
-  }
-  await dialog.getByRole("button", { name: "Switch off 2" }).click();
-  await expect(page.getByText("Probe is switched off.")).toBeVisible();
-  await expect(probe).not.toBeChecked();
-  await expect(addon).toBeChecked();
-  await expect(addon).toHaveAccessibleDescription(/Off while Probe is off\./);
-  expect((await page.request.get("/api/probe/ping")).status()).toBe(404);
-  await probe.click();
-  await expect(page.getByText("Probe is switched on.")).toBeVisible();
-  expect((await page.request.get("/api/probe/ping")).status()).toBe(200);
 });
 
 test("a failed job is retried, and one that can't run again is discarded", async ({ page }) => {
@@ -82,4 +64,27 @@ test("a failed job is retried, and one that can't run again is discarded", async
   await page.getByRole("dialog", { name: "Discard probe.fail?" }).getByRole("button", { name: "Discard" }).click();
   await expect(page.getByText("probe.fail is discarded.")).toBeVisible();
   expect((await dead()).map((item) => item.id)).not.toContain(wiped);
+});
+
+test("switching the probe off asks first, takes its add-on with it, and comes back", async ({ page }) => {
+  await signedInAdmin(page, "/admin/settings/features");
+  const probe = page.getByRole("switch", { name: "Probe", exact: true });
+  const addon = page.getByRole("switch", { name: "Probe add-on" });
+  await expect(probe).toBeChecked();
+  await probe.click();
+  const dialog = page.getByRole("dialog", { name: "Switch off Probe?" });
+  await expect(dialog).toContainText("Probe add-on needs Probe, so it goes off too.");
+  for (const [name, canvas] of Object.entries(THEMES)) {
+    await theme(page, name, canvas);
+    expect(await axe(page), `the switch's question in ${name}`).toEqual([]);
+  }
+  await dialog.getByRole("button", { name: "Switch off 2" }).click();
+  await expect(page.getByText("Probe is switched off.")).toBeVisible();
+  await expect(probe).not.toBeChecked();
+  await expect(addon).toBeChecked();
+  await expect(addon).toHaveAccessibleDescription(/Off while Probe is off\./);
+  expect((await page.request.get("/api/probe/ping")).status()).toBe(404);
+  await probe.click();
+  await expect(page.getByText("Probe is switched on.")).toBeVisible();
+  expect((await page.request.get("/api/probe/ping")).status()).toBe(200);
 });
