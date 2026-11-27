@@ -1249,4 +1249,16 @@ describe("the boards' parts (0.1.3, VM Website's P2 and P4)", () => {
 
     expect(await screen.findByRole("button", { name: "Save" })).toHaveClass("mf-button--small");
   });
+
+  it("draws the track panel's Open the release as the kit's quiet link (0.1.4, VM Website's K11)", async () => {
+    routed({
+      "GET /api/discography/admin/tracks": { status: 200, body: { items: [track()], next_cursor: null, total: 1, releases: 1 } },
+      [`GET /api/discography/admin/tracks/${T1}`]: { status: 200, body: fullTrack({}) },
+    });
+    renderApp({ path: `/admin/music/tracks?track=${T1}`, modules: [discography], session: editor });
+
+    const open = await screen.findByRole("link", { name: "Open the release" });
+    expect(open).toHaveClass("mf-quiet-link");
+    expect(open).toHaveAttribute("href", `/admin/music/${ID}`);
+  });
 });

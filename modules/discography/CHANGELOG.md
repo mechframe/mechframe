@@ -1,5 +1,10 @@
 # Changelog: discography
 
+## 0.1.4
+
+- Tracks' panel's "Open the release" is the kit's `QuietLink` (#165; VM Website's K11): the info colour at the small size, underlined only when hovered, at least 24 px each way beside the panel's buttons.
+- The end-to-end spec is three tests run in order for each theme, the editor's release, the Tracks and Credits boards, and the visitor's pages, so each ends within its 30 seconds at the end of a full run. One test took 34 to 35 seconds there once 0.1.3 checked axe at each width. The Tracks and Credits boards are now checked in the theme, as a page loaded afresh starts in the default one.
+
 ## 0.1.3
 
 - Tracks' and Credits' tables name each row by its track or person, through the kit's `rowHeader` (#158; VM Website's K6): the name is the row's header, at 600, and the track that's open is 700, as the Tracks board draws it.
