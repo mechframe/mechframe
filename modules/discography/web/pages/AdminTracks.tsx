@@ -6,7 +6,7 @@
 // a filter, so the album editor and the dashboard can send someone straight there.
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
-import { Link, useSearchParams } from "react-router";
+import { useSearchParams } from "react-router";
 
 import {
   AdminPage,
@@ -20,6 +20,7 @@ import {
   Input,
   LoadError,
   Pill,
+  QuietLink,
   SaveConflict,
   SearchBox,
   Switch,
@@ -697,7 +698,8 @@ function TrackEditor({ server, notice, onGone, settle: settleRef, asked, onGo, o
               Discard
             </Button>
           ) : null}
-          <Link to={`/admin/music/${saved.release_id}`}>Open the release</Link>
+          {/* The kit's quiet link, as the board draws it (0.1.4, VM Website's K11). */}
+          <QuietLink to={`/admin/music/${saved.release_id}`}>Open the release</QuietLink>
         </div>
         <div>
           <Button
