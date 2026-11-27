@@ -54,4 +54,17 @@ Anything that would change discography's contract.
 
 ## 9. Result
 
-(Filled in by the side lane.)
+Side lane M13, 2026-11-27, about 14:00 to 15:05 Eastern (19:00 to 20:05 UTC), then the review rounds.
+
+- **#167, discography 0.1.4**, from `main` at f11ac93 (#166), pushed once. Step 2's `prs` gains 167, and `python -m tools.progress` remade `docs/PROGRESS.md` and the ledger's `rows.json`. The row's status is unchanged; republishing the ledger is the main lane's. No migration, decision, route or contract change.
+  - **K11:** Tracks' panel's "Open the release" is the kit's `QuietLink` (`AdminTracks.tsx`). A unit test checks its class and its address, and failed first.
+  - **The long test:** `discography.spec.ts` is three tests run in order per theme (`mode: "serial"`, one release shared): the editor publishes a release; the Tracks and Credits boards show it, with an editor of its own so no app code is used twice; a visitor plays it. Every assertion is kept (33 `expect`s, 5 soft, 8 `cleanAtEachWidth`), and no timeout is raised.
+  - **Found on the way:** a page loaded afresh starts in the default theme, so the Tracks and Credits boards had only been checked in Machined Light. The split sets the theme after each load, and both boards pass axe in Vibrant Mindz.
+  - **Job 3:** VM Website hasn't taken #165 yet (its `NEXT_SESSION_PROMPT.md`), so it sent no Admin › Music differences. Its 0.1.3 record lists K11 as discography's one item left; the rest are the kit's.
+- **Local before the push:**
+  - e2e, the whole suite with one worker, as section 4 measured it, with discography's spec in a second project so it ran last: 151 passed in 8.7 minutes. Discography's six took 10.1, 8.2 and 8.2 seconds (Machined Light) and 9.5, 8.3 and 8.1 (Vibrant Mindz). The main lane was told before and after.
+  - Python, discography's suites, `tests/` and `kernel/tests/contract/`: 858 passed, 1 skipped, 19 xfailed (18 minutes).
+  - Web, discography's: 72 passed. ESLint and tsc clean. No Python changed.
+- **Traps hit:**
+  - the worktree guard refused a heredoc'd Python script: write the file whole with the Write tool;
+  - this prompt sat in the main checkout and on `main`, not in the worktree's old detached commit: read it from the main checkout first.
