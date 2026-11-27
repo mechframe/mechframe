@@ -10,7 +10,7 @@ The binding directives are in `C:\DEV\CLAUDE.md` and `C:\DEV\DIRECTIVES.md`, whi
 - **Path:** `C:\DEV\AI-DevKit`. **Remote:** `https://github.com/mechframe/mechframe` (decision 0034), **public** (decision 0011). Never commit secrets, client material or private notes; private notes go in `docs/private/` (gitignored).
 - **The contract:** `SPEC.md`. Every module, the kernel and the CLI follow it. Read the sections you touch before every change.
 
-## Current state (2026-11-26)
+## Current state (2026-11-27)
 
 - **v1.0 is at 80%** (49 of 61 steps). Nothing is deployed. **The kernel is done**, K0 to K5 (#1 to #96), with K2's steps 9 to 11 waiting until the site needs them (decision 0029); `mechframe upgrade kernel` is in (#111, #114; decision 0053).
 - **Hooks:** 1 to 8 (#97 to #110, decision 0052) and 11, item references (`kernel/backend/kernel/refs.py`, #153, decision 0072). Entitlements and profile tabs wait until just before Vibrant Mindz's step 5 and wave 2b.
@@ -25,7 +25,7 @@ The binding directives are in `C:\DEV\CLAUDE.md` and `C:\DEV\DIRECTIVES.md`, whi
 
 2026-11-26, about 07:00 Eastern, to 2026-11-27, about 13:40 (Claude Code, the owner's machine, the owner on Remote Control at times): session M4l, the main lane.
 
-- **#164:** this file and `AGENTS.md` leaned, 176 lines to 133, word for word into `docs/COMMANDS.md`, `docs/REPO-MAP.md` and `docs/archive/`; the ledger README's check step.
+- **#164:** `CLAUDE.md` and `AGENTS.md` leaned, 176 lines to 133, word for word into `docs/COMMANDS.md`, `docs/REPO-MAP.md` and `docs/archive/`; the ledger README's check step.
 - **#165, VM Website Dev 22's ask:** the kit's last differences from the boards (R1 to R3, R6 to R9, K9 to K12, and the new `QuietLink`); blog 0.1.7's Draw a cover (C1 to C3); audio-player 0.1.2; campaigns 0.1.1, with Set aside named by its words. Decision 0040 amended a third time.
 - **The side lane** landed #163 (discography 0.1.3), with the fix for the test #164 broke.
 

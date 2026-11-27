@@ -2,7 +2,7 @@
 
 Session prompts and working plans, the owner's convention across `C:\DEV`. Each session ends with two starting prompts saved here (`CLAUDE.md`, "Two lanes", since 2026-11-22): `<date>-next-session-<topic>.md` for the main lane and `<date>-side-lane-<topic>.md` for the side lane, in a worktree. When a prompt's session is done, it moves to `done/`, so the ones left here are the jobs. Durable decisions go in `docs/decisions/`, not here.
 
-`CLAUDE.md` leaned (#164) and VM Website Dev 22's kit items with blog's Draw a cover (#165) are done, and M4l's prompt is in `done/`, with the earlier ones; the side lane's discography 0.1.3 (#163) is done too, M12's prompt in `done/` with its Result. The main lane's job now is `2026-11-27-next-session-m4m-board-check.md` (the site's board check of #165, then steps 1 and 2's closes). The side lane works from `2026-11-27-side-lane-m13-discography-0-1-4.md` in its worktree (discography 0.1.4).
+`CLAUDE.md` leaned (#164) and VM Website Dev 22's kit items with blog's Draw a cover (#165) are done, and M4l's prompt is in `done/`, with the earlier ones; the side lane's discography 0.1.3 (#163) is done too, M12's prompt in `done/` with its Result. The main lane's job now is `2026-11-27-next-session-m4m-board-check.md` (the site's board check of #165, then steps 1 and 2's closes, the flaky axe test, and step 3's order and lanes, the owner's call). The side lane works from `2026-11-27-side-lane-m13-discography-0-1-4.md` in its worktree (discography 0.1.4).
 
 `progress-ledger/` is the source of the visual progress ledger, https://claude.ai/artifact/48auLkb7Ajmyn2SNAni9rm: its page (`index.html`) and the rows `python -m tools.progress` makes from `docs/progress.json` (`rows.json`); its README says how to republish it.
 

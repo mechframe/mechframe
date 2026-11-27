@@ -13,7 +13,7 @@ MechFrame: website modules on a FastAPI and Postgres kernel (`CLAUDE.md`, `SPEC.
 ## 2. Yours, and not yours
 
 - **Yours:** `modules/discography/`, decisions 0074 and up, migration `discography_0002` (none expected).
-- **Not yours:** the kit (`kernel/web/src/ui/`), `kernel/web/src/admin/`, the AI's code, `kernel/tests/e2e/support.ts`, audio-player, step 1's modules, `docs/HANDOFF.md`, `CLAUDE.md`'s state and the ledger.
+- **Not yours:** the kit (`kernel/web/src/ui/`), `kernel/web/src/admin/`, the AI's code, `kernel/tests/e2e/support.ts`, audio-player, step 1's modules, `docs/HANDOFF.md`, `CLAUDE.md`'s state and the published ledger. Adding your PR to Step 2's `prs` in `docs/progress.json` is yours, as #163 did. The main lane republishes the ledger.
 
 ## 3. State (verified 2026-11-27, about 13:40 Eastern, 18:40 UTC)
 
@@ -25,10 +25,10 @@ MechFrame: website modules on a FastAPI and Postgres kernel (`CLAUDE.md`, `SPEC.
 1. **K11** (VM Website Dev 22, `C:\DEV\VM Website\dev plans\2026-11-26-discography-012-parity.md`, "The kit's"): Tracks' panel's "Open the release" becomes a `QuietLink`. It's `modules/discography/web/pages/AdminTracks.tsx:700`: `<Link to={...}>Open the release</Link>` becomes `<QuietLink to={...}>Open the release</QuietLink>`. Add a check to discography's spec or its unit test.
 2. **`discography.spec.ts:81`,** "an editor publishes a release, and a visitor plays it", within its 30 seconds at the end of a full local e2e run.
    - **The numbers:** 34.2s and 34.9s with one worker, though 18 to 19s alone. Before #163 it took 25 to 29s in full runs. #163's extra axe passes at each width (`cleanAtEachWidth`) push it over once the database holds the whole suite's data. CI's e2e on `main` passed it.
-   - **The fix:** split the test, or mark the long part `test.slow()`. Show it inside its time at the end of a full run: ask the main lane for a quiet window, since that run is the PC's one e2e run.
+   - **The fix:** split the test, or cut what it repeats (fewer axe passes per width, say), so each test ends within 30 seconds at the end of a full run. Don't raise the timeout: `test.slow()` hides the length instead of fixing it (CodeRabbit on #166). Show it inside its time at the end of a full run: ask the main lane for a quiet window, since that run is the PC's one e2e run.
 3. **VM Website's differences for Admin › Music,** if its board check of #165 sends any for discography.
 
-Docs: MODULE.md if behaviour changes, CHANGELOG.md, `module.json` 0.1.4, then the generated files (`docs/COMMANDS.md`, "The generated files"). Step 2's row gains the PR. **Landing:** merge `main`, make the generated files again, read the PR number just before the one push, and fast-forward on a green "CI result" with the bots clear.
+Docs: MODULE.md if behaviour changes, CHANGELOG.md, `module.json` 0.1.4, then the generated files (`docs/COMMANDS.md`, "The generated files"). Step 2's `prs` gains the PR, then run `python -m tools.progress`. **Landing:** merge `main`, make the generated files again, read the PR number just before the one push, and fast-forward on a green "CI result" with the bots clear.
 
 ## 5. Ask the owner, don't decide
 

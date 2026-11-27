@@ -11,7 +11,7 @@ MechFrame (`CLAUDE.md`, `SPEC.md`), public at mechframe/mechframe. Vibrant Mindz
 - **You're the main lane** ("Two lanes" in `CLAUDE.md`). Tell the side lane, on discography 0.1.4, before and after every e2e run.
 - **Yours:**
   - the kit (`kernel/web/src/ui/`) and `kernel/web/src/admin/`;
-  - the AI's code and tests (`kernel/web/src/ai/`, `kernel/backend/kernel/ai.py`, `kernel/backend/kernel/ai_routes.py`, `kernel/tests/e2e/ai.spec.ts`);
+  - the AI's code and tests (`kernel/web/src/ai/`, `kernel/backend/kernel/ai.py`, `ai_routes.py` and `writing.py`, `kernel/tests/test_ai.py`, `kernel/tests/test_writing.py`, `kernel/tests/contract/test_ai_contract.py`, `kernel/tests/e2e/ai.spec.ts`);
   - `kernel/tests/e2e/support.ts`;
   - step 1's modules, and audio-player.
 - **Not yours:** `modules/discography/`, `modules/featured/` and `kernel/backend/kernel/refs.py`. Ask the side lane first.
