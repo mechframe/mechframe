@@ -28,7 +28,7 @@ MechFrame: website modules on a FastAPI and Postgres kernel (`CLAUDE.md`, `SPEC.
    - **The fix:** split the test, or cut what it repeats (fewer axe passes per width, say), so each test ends within 30 seconds at the end of a full run. Don't raise the timeout: `test.slow()` hides the length instead of fixing it (CodeRabbit on #166). Show it inside its time at the end of a full run: ask the main lane for a quiet window, since that run is the PC's one e2e run.
 3. **VM Website's differences for Admin › Music,** if its board check of #165 sends any for discography.
 
-Docs: MODULE.md if behaviour changes, CHANGELOG.md, `module.json` 0.1.4, then the generated files (`docs/COMMANDS.md`, "The generated files"). Step 2's `prs` gains the PR, then run `python -m tools.progress`. **Landing:** merge `main`, make the generated files again, read the PR number just before the one push, and fast-forward on a green "CI result" with the bots clear.
+Docs: MODULE.md if behaviour changes, CHANGELOG.md, `module.json` 0.1.4. Then the generated files a version bump touches: `python -m tools.openapi` (the module's `openapi.json` carries its version), `python -m tools.host_variables` and `mechframe catalog`. Step 2's `prs` gains the PR, then run `python -m tools.progress`. **Landing:** merge `main`, run those generators again, read the PR number just before the one push, and fast-forward on a green "CI result" with the bots clear.
 
 ## 5. Ask the owner, don't decide
 
