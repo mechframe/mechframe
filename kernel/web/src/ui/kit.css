@@ -1601,8 +1601,9 @@
      decision 0040, amended): the kit's items left after #156, #158 and #160. Admin only, as the
      forms' and lists' above. The page's title (R9) is admin.css's. */
 
-  /* R1: a card's title in the font's own line. R8: a field's error too, as B8 did for a hint. */
-  .mf-admin-look :is(.mf-card-title, .mf-field-error) {
+  /* R1: a card's title in the font's own line. R8: a field's error too, as B8 did for a hint. D1
+     (VM Website Dev 25, on #165): a dialog's title, R1's other half. */
+  .mf-admin-look :is(.mf-card-title, .mf-field-error, .mf-dialog-title) {
     line-height: normal;
   }
 

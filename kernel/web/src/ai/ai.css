@@ -51,9 +51,12 @@
   align-items: center;
 }
 
+/* The small size in the font's own line, as the boards draw Write with AI's problem and a style's
+   "has that name" (R8, VM Website Dev 25, on #165): `font` alone would set the token's 1.5. */
 .mf-ai-problem {
   margin: 0;
   font: var(--mf-type-small);
+  line-height: normal;
   color: var(--mf-color-danger);
 }
 

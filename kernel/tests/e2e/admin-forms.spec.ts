@@ -6,7 +6,8 @@
 // drawn by its `admin_kit.py`. Reads whose state the shared database can't promise (no key, no
 // styles, one style) are answered by a route. Last, K3, K6, P2 and P3, the parts the admin's lists
 // and dashboard share (pills, tables, the stat card), on the kit's page. Then VM Website Dev 22's
-// ask (`2026-11-26-kit-r-items-ask.md`, against canvas 115): R1 to R3, R6 to R9 and K9 to K12.
+// ask (`2026-11-26-kit-r-items-ask.md`, against canvas 115): R1 to R3, R6 to R9 and K9 to K12;
+// and Dev 25's on #165 (`2026-11-27-kit-165-parity.md`, canvas 121): D1, a dialog's title.
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
 import { THEMES, makeUser, signInTo, theme } from "./support";
@@ -432,7 +433,7 @@ test("the kit's pills, a table's heads and rows' names, and a dashboard card (K3
   });
 });
 
-test("the kit's card title and text, its notes, a long accordion, a quiet link, a field's error and a dialog (R1, R2, R7, R8, K9 to K11)", async ({ page }) => {
+test("the kit's card title and text, its notes, a long accordion, a quiet link, a field's error and a dialog (R1, R2, R7, R8, K9 to K11, D1)", async ({ page }) => {
   await page.goto("/kit.html");
   const admin = page.locator("section.mf-admin-look").filter({ has: page.getByRole("heading", { name: "The admin's look" }) });
   await expect(admin).toBeVisible();
@@ -489,11 +490,13 @@ test("the kit's card title and text, its notes, a long accordion, a quiet link, 
     expect.soft((await boxOf(quiet)).height, at).toBeGreaterThanOrEqual(24);
   });
 
-  // R7: a dialog 16px from the window's edges at 390, and 512px wide at 1440.
+  // R7: a dialog 16px from the window's edges at 390, and 512px wide at 1440. D1 (VM Website Dev
+  // 25, on #165): its title in the font's own line, as R1's card title.
   await admin.getByRole("button", { name: "Open a dialog" }).click();
   const dialog = page.getByRole("dialog", { name: "Delete this role?" });
   await expect(dialog).toBeVisible();
   await eachLook(page, async (at, width) => {
+    expect.soft(await styleOf(dialog.locator(".mf-dialog-title"), ["line-height"]), at).toEqual({ "line-height": "normal" });
     const box = await boxOf(dialog);
     if (width === 1440) {
       expect.soft(box.width, at).toBeCloseTo(512, 0);

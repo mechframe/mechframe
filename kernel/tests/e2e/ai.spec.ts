@@ -133,6 +133,24 @@ test("the writing rules and a style are kept in Settings → Writing", async ({ 
     await theme(page, name, canvas);
     expect(await axe(page), `a writing style in ${name}`).toEqual([]);
   }
+
+  // R8 (VM Website Dev 25, on #165): a second style of that name is refused, and the problem is
+  // drawn at the small size in the font's own line, as a field's error is.
+  await page.goto("/admin/settings/writing");
+  await page.getByRole("link", { name: "New style" }).click();
+  await page.getByRole("textbox", { name: "Name", exact: true }).fill(named);
+  await page.getByRole("textbox", { name: "Sample 1" }).fill("The same name, a second time.");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  const taken = page.getByRole("alert").filter({ hasText: "Another writing style has that name. Choose another." });
+  await expect(taken).toBeVisible();
+  for (const [name, canvas] of Object.entries(THEMES)) {
+    await theme(page, name, canvas);
+    const drawn = await taken.evaluate((found) => {
+      const style = getComputedStyle(found);
+      return { size: style.fontSize, line: style.lineHeight };
+    });
+    expect.soft(drawn, `the problem in ${name}`).toEqual({ size: "14px", line: "normal" });
+  }
 });
 
 test("a writer drafts a post with Write with AI, and Ctrl Z takes it back", async ({ page }) => {
