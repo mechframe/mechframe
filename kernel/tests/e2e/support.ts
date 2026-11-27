@@ -83,7 +83,16 @@ export async function saveAiKey(page: Page, key: string, fresh = true): Promise<
   throw new Error("the AI key wasn't saved: each save crossed another");
 }
 
+/** axe's serious and critical findings, once every fade running has landed: a button just enabled
+ * fades to its colour, and axe measured it halfway (campaigns' Save draft at 1.7 to 1, 10 of 41 CI
+ * runs). An animation that never ends or is paused would never finish, so it isn't waited for. */
 export async function axe(page: Page): Promise<string[]> {
+  await page.evaluate(async () => {
+    const landing = document
+      .getAnimations()
+      .filter((animation) => animation.playState === "running" && animation.effect?.getComputedTiming().endTime !== Infinity);
+    await Promise.all(landing.map((animation) => animation.finished.catch(() => undefined)));
+  });
   const { violations } = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();
   return violations.filter((each) => each.impact === "serious" || each.impact === "critical").map((each) => `${each.id}: ${each.help}`);
 }
