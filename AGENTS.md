@@ -14,20 +14,20 @@ The binding directives are in `C:\DEV\CLAUDE.md` and `C:\DEV\DIRECTIVES.md`, whi
 
 - **v1.0 is at 80%** (49 of 61 steps). Nothing is deployed. **The kernel is done**, K0 to K5 (#1 to #96), with K2's steps 9 to 11 waiting until the site needs them (decision 0029); `mechframe upgrade kernel` is in (#111, #114; decision 0053).
 - **Hooks:** 1 to 8 (#97 to #110, decision 0052) and 11, item references (`kernel/backend/kernel/refs.py`, #153, decision 0072). Entitlements and profile tabs wait until just before Vibrant Mindz's step 5 and wave 2b.
-- **Modules built:** media 0.1.4, pages 0.1.1, blog 0.1.6, contact 0.1.2, embeds 0.1.1, campaigns 0.1.0, discography 0.1.2, audio-player 0.1.1, featured 0.1.0 and social 0.1.0. Each one's `MODULE.md` and `CHANGELOG.md` say what it does, and `catalog.json` indexes them. The Vibrant Mindz scaffolds wait as `modules/_<id>/`.
+- **Modules built:** media 0.1.4, pages 0.1.1, blog 0.1.7, contact 0.1.2, embeds 0.1.1, campaigns 0.1.1, discography 0.1.3, audio-player 0.1.2, featured 0.1.0 and social 0.1.0. Each one's `MODULE.md` and `CHANGELOG.md` say what it does, and `catalog.json` indexes them. The Vibrant Mindz scaffolds wait as `modules/_<id>/`.
 - **The first real site** is the new Vibrant Mindz site (`docs/plans/vibrant-mindz-module-plan.md`). It's built in its own session (`C:\DEV\VM Website`) from MechFrame's `main`. Its checks against the boards send items here, with the owner's calls relayed.
-- **Next, main lane** (`dev plans/2026-11-25-next-session-m4l-step-closes.md`): VM Website's asks as they come (now its short list, sent as Dev 22's kit items R1 to R3, R6 to R9 and K9 to K12, `.mf-player-hint` among them); step 1's close (its boards' test waits on the site's short list); step 2's close (all four tests, after the owner's iPhone Safari check); the flaky axe test diagnosed; and step 3's order and lanes, the owner's call.
-- **Side lane:** discography 0.1.3 (`dev plans/2026-11-25-side-lane-m12-discography-0-1-3.md`), in its worktree. Two lanes run at once ("Two lanes", below).
+- **Next, main lane** (`dev plans/2026-11-27-next-session-m4m-board-check.md`): VM Website's board check of #165, then step 1's close; step 2's close (all four tests, after the owner's iPhone Safari check); the flaky axe test diagnosed; and step 3's order and lanes, the owner's call.
+- **Side lane:** discography 0.1.4 (`dev plans/2026-11-27-side-lane-m13-discography-0-1-4.md`), in a worktree: K11's `QuietLink`, its long e2e test within 30 seconds, and the site's Admin › Music differences. Two lanes run at once ("Two lanes", below).
 - **After v1.0:** the module roadmap and ten contract hooks (decision 0018, `docs/plans/module-roadmap.md`), and VybeSite's page builder for `pages` (the owner, 2026-11-21).
 - The state PR by PR is in `docs/archive/` (to 2026-11-21, then to 2026-11-26). Next steps, blockers and warnings live in `docs/HANDOFF.md`.
 
 ## Last Completed Task
 
-2026-11-25, about 10:00 Eastern, to 2026-11-26, about 07:00 (Claude Code, the owner's machine, the owner on Remote Control at times): session M4k, the main lane.
+2026-11-26, about 07:00 Eastern, to 2026-11-27, about 13:40 (Claude Code, the owner's machine, the owner on Remote Control at times): session M4l, the main lane.
 
-- **VM Website Dev 17's queued asks, landed:** #155 (Settings › AI's Model row, A1 to A4), #156 (the admin's form parts, the ask's 22 lines; contact 0.1.2) and #158 (12px pills and column heads, the kit's `Table` `rowHeader`, the StatCard's link and figure). The site's parity tools find them exact, apart from a short list its owner reviews first.
-- **Follow-ups, landed:** #160 (embeds 0.1.1 "Previous", WCAG 2.5.3; audio-player 0.1.1, the Player section spans its card) and #161 (blog 0.1.6, `/blog` holds back on a first load, so the footer doesn't move).
-- **The side lane** landed #157 (featured 0.1.0) and #159 (discography 0.1.2).
+- **#164:** this file and `AGENTS.md` leaned, 176 lines to 133, word for word into `docs/COMMANDS.md`, `docs/REPO-MAP.md` and `docs/archive/`; the ledger README's check step.
+- **#165, VM Website Dev 22's ask:** the kit's last differences from the boards (R1 to R3, R6 to R9, K9 to K12, and the new `QuietLink`); blog 0.1.7's Draw a cover (C1 to C3); audio-player 0.1.2; campaigns 0.1.1, with Set aside named by its words. Decision 0040 amended a third time.
+- **The side lane** landed #163 (discography 0.1.3), with the fix for the test #164 broke.
 
 ## Read order
 
@@ -45,7 +45,7 @@ Python 3.12+, FastAPI, Pydantic v2 (strict), async SQLAlchemy 2 + asyncpg, Postg
 
 - **Copied in, not installed:** a site is the kernel plus the modules it needs, copied into its repo by the `mechframe` CLI (decision 0002). Each module has its own manifest, Alembic branch, routes and web.
 - **Seams:** a module's web reaches another's `public.ts` as `@/modules/<id>/public` (decision 0057), and a site's own code a module's `public.py`, which the site's mypy follows (#132). A module shows another's items through `kernel.refs` (hook 11), and shares another's public thing by content type and id through the kernel's `server_copy.preview` and the props slot `content.share` (`ShareParts`).
-- **The admin shell** is built to the Vibrant Mindz canvas Admin design, styled by tokens, for every site: only its generic parts are in the kernel, checked in the site's dark theme and in Machined Light (decision 0040, amending 0008). Its forms, lists and dashboard are drawn to the boards under `.mf-admin-look` (#155, #156 and #158; decision 0040 amended twice), and the kit's `Table` names each row by its `rowHeader` column.
+- **The admin shell** is built to the Vibrant Mindz canvas Admin design, styled by tokens, for every site: only its generic parts are in the kernel, checked in the site's dark theme and in Machined Light (decision 0040, amending 0008). Its forms, lists, notes, dialogs and dashboard are drawn to the boards under `.mf-admin-look` (#155, #156, #158 and #165; decision 0040 amended three times). The kit's `Table` names each row by its `rowHeader` column, and its `QuietLink` is a link that stands alone beside a row's buttons.
 - **The AI's writing help** (#135, decision 0058): `await ai.client(db)`. The key is `ANTHROPIC_API_KEY` or one saved in Settings → AI, and a saved key wins; the model is picked there too (decision 0064). No suite calls Anthropic or Buffer: the harness has fakes.
 - **The name:** the project is MechFrame (decision 0034, #76); it was AI DevKit until K3. The repo is `mechframe/mechframe`, the CLI `mechframe` (also `mf`), the cookies `__Host-mf_*`, the variables `MECHFRAME_*`; the Python import stays `kernel`. Decision records and other history keep the old name as written.
 

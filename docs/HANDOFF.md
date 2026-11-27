@@ -1,65 +1,59 @@
 # Handoff
 
-Overwritten every session. This one: 2026-11-25, about 10:00 Eastern, to 2026-11-26, about 07:00 (Claude Code, the owner's machine, the owner on Remote Control at times), session M4k, the main lane. Landed: #155, #156, #158, #160 and #161. The side lane landed #157 (featured 0.1.0) and #159 (discography 0.1.2). `main` is 2e3b155 (#161), and this handoff is its own docs PR, #162.
+Overwritten every session. This one: 2026-11-26, about 07:00 Eastern, to 2026-11-27, about 13:40 (Claude Code, the owner's machine, the owner on Remote Control at times), session M4l, the main lane. Landed: #164 and #165. The side lane landed #163 (discography 0.1.3). `main` is 89ed7e2 (#165), and this handoff is its own docs PR.
 
 ## State
 
-- **VM Website Dev 17's queued asks are done:**
-  - **#155:** Settings › AI's Model row drawn to its board (A1 to A4).
-  - **#156:** the admin kit to the boards, the ask's 22 lines (B1 to B10, C1 to C5, W2 to W4, S1, C1 more, T1, T2). They apply in the admin only, under `.mf-admin-look`. Contact is 0.1.2. Decision 0040 is amended.
-  - **#158:** VM Website's next asks: K3's 12px pills, K6's 12px column heads, and the StatCard's link and figure (P2, P3). The kit's `Table` gains `rowHeader="<column key>"`, which draws that column's cell as each row's `<th scope="row">` at 600. Decision 0040 is amended again.
-  - **The site's parity tools** (Dev 21): the forms' 22 lines and the Dashboard card's P1 to P3 match. A short list still differs (card titles' line height, a few cases at 390) and is with its owner first, so Step 1's board test hasn't passed.
-- **Small follow-ups landed:**
-  - **#160:** embeds 0.1.1, the playlist's "Prev" reads "Previous" (WCAG 2.5.3), and audio-player's e2e axe covers the playlist again. audio-player 0.1.1 lets the Player section on Settings › Site span its card (VM Website's ask, on its owner's word).
-  - **#161:** blog 0.1.6, `/blog` holds back on a first load until its posts and categories answer, so the footer doesn't move (decision 0066's consequence). Before, it shifted 0.04 on a phone and 0.06 at 1440.
-- **The side lane** (M11; Result in `dev plans/done/2026-11-25-side-lane-m11-featured.md` §9):
-  - #157, featured 0.1.0 (decision 0073, `featured_0001`): Players at `/admin/featured`, the Dashboard's card. The kit's `SaveBar` gains `what`.
-  - #159, discography 0.1.2: `refs.py`'s two sources, reads by id, and VM Website's D1 to D4, K2, K3's words, K6's card and K8.
-- **Step 1** stays "next": its board test waits on the site's short list. **Step 2's** modules are all built; its close checks haven't run.
-- **The ledger** shows the rows from this handoff's `main`.
+- **#164, `CLAUDE.md` and `AGENTS.md` leaned:** 133 lines from 176, word for word into `docs/COMMANDS.md`, `docs/REPO-MAP.md` and `docs/archive/claude-state-to-2026-11-26.md`. The ledger README's step 4 says the ledger writes its `check` only after a page file changes, or on a fault.
+  - It broke `cli/tests/test_review_91.py`, whose `INSTALL_DOCS` still named `CLAUDE.md`. Its docs-only CI skipped Python. The side lane fixed the test in #163.
+- **#165, VM Website Dev 22's ask** (`C:\DEV\VM Website\dev plans\2026-11-26-kit-r-items-ask.md`, against canvas 115 and 116). Decision 0040 is amended a third time.
+  - **Kit, admin only:** R1, R2, R6 to R9, K9 (every note radius 12; a note with nothing to click on the canvas only inside a card) and K10 (a long description beside its title; the summary still wraps).
+  - **New in the kit:** `QuietLink` (K11), at least 24px each way.
+  - **Modules:**
+    - audio-player 0.1.2: K12's invalid `font-size: var(--mf-type-small)` and R3's 18px.
+    - campaigns 0.1.1: R3, and Set aside named "Set aside <address>" for WCAG 2.5.3, which made `campaigns.spec` fail at random.
+    - blog 0.1.7: Draw a cover's C1 to C3.
+  - **Tests:** `saveAiKey` in `kernel/tests/e2e/support.ts` saves the site's one AI key again when parallel specs' saves cross.
+  - **K9's 15px words** didn't reproduce: a note's what is 16px and its why 14px. VM Website Dev 24 was asked which part it measured.
+- **The side lane** landed #163, discography 0.1.3 (Result in `dev plans/done/2026-11-25-side-lane-m12-discography-0-1-3.md` §9): row names, VM Website's P1 to P6 and #145's last items. A master whose COMMIT raised is kept, and a clean commit starts no background work.
+- **Local results for #165:**
+  - Full Python suite 3,896 passed; its one failure was #164's break.
+  - Full e2e 147 of 147 before merging #163. After it, 145 of 147 with one worker: discography's long test times out locally (Next 2).
+  - CI's e2e on `main` after #163 passed.
+- **Steps 1 and 2** are "next". **The ledger** shows the rows from this handoff's `main`.
 
 ## Next
 
-1. **`CLAUDE.md` and `AGENTS.md`, leaned** (session M4l's docs PR): 133 lines from 176. The whole commands table is in `docs/COMMANDS.md`, the whole map and the project skills in `docs/REPO-MAP.md`, and the state PR by PR in `docs/archive/claude-state-to-2026-11-26.md`, each word for word.
-2. **VM Website's asks as they come:** the short list, once its owner has decided, and whether to fix `.mf-player-hint`. Its owner decided on 2026-11-26 ("Send all of them"): Dev 22 sent both as `C:\DEV\VM Website\dev plans\2026-11-26-kit-r-items-ask.md` (R1 to R3, R6 to R9, K9 to K12). That rule sets `font-size` to a whole font shorthand, so the size is invalid and the Loading line inherits.
-3. **Step 1's close,** once the site says the boards hold: set the row to done.
-4. **Step 2's close** (the owner: "All four, like Step 1"): schemas, tests on `main`, `mechframe check` on a fresh site with step 2's modules, and the boards by VM Website's parity check. The owner does the iPhone Safari check before it closes.
-5. **Diagnose the flaky axe test** at `kernel/tests/e2e/sign-in.spec.ts:389` (the owner: "Diagnose it").
-6. **Step 3:** its order and lanes are the owner's call. The recommendation is reactions first, since comments use it. Each module's contract goes first.
-7. **The side lane:** discography 0.1.3, under way since 2026-11-26 on `feat/discography-0-1-3` (`dev plans/2026-11-25-side-lane-m12-discography-0-1-3.md`). The owner's order: row names (`rowHeader`), then VM Website's board-check fixes, then #145's review items.
+1. **VM Website's board check of #165** (Dev 24 was told it landed): send any differences back as asks. Step 1 closes once the boards hold: set its row to done.
+2. **The side lane, discography 0.1.4:**
+   - K11, "Open the release" as a `QuietLink` (`AdminTracks.tsx:700`);
+   - `discography.spec.ts:81` within its 30 seconds at the end of a full local run (34s now);
+   - VM Website's Admin › Music differences, if any.
+3. **Step 2's close** (all four tests, like Step 1): schemas, tests on `main`, `mechframe check` on a fresh site with step 2's modules, VM Website's board check. The owner's iPhone Safari check of the player comes first.
+4. **Diagnose the flaky axe test** at `kernel/tests/e2e/sign-in.spec.ts:389`, the `DEBUG_PROTOCOL.md` way. Under load it also timed out this session.
+5. **Step 3:** its order and lanes are the owner's call. The recommendation is reactions first, since comments use it. Each contract goes first.
 
 ## Open questions for the owner
 
-- **Step 3's order and lanes:** reactions, comments, portfolio and roster.
-- **The Player section's gap:** 16px, where the board's form cards space their parts 18px apart. Campaigns' Newsletter section does the same three times. VM Website raised it, and its owner hasn't decided.
-- **Still open from before:** the Vibrant Mindz content.
-
-## Owner's answers (2026-11-25, relayed by the side lane)
-
-- Step 2 closes on all four tests, like Step 1; the owner does the iPhone Safari check first.
-- Discography's settings stay admin-only (`kernel.settings.manage`).
-- The Share card stays as built until VM Website's board check sends differences.
-- Hooks 6 to 8's changes after approval are accepted as built.
-- The flaky axe test is to be diagnosed.
-- The owner types the newsletter's postal address and IMAP login when the site goes live.
-- The owner deletes `mechframe-iac-probe` in Railway.
-- `CLAUDE.md` is leaned soon, as its own docs PR.
-- Vibrant Mindz's three slots are made with Players' New slot (`spotlight`: tracks, `releases`: albums, `videos`: YouTube links), on the site's dev copy now and at launch. Only Spotlight shows on the Dashboard.
+- Step 3's order and lanes: reactions, comments, portfolio and roster.
+- The Vibrant Mindz content.
+- Removing the five old standby worktrees under `.claude/worktrees/` (the side lane's `discography-0-1-0` stays), and the two memory notes marked "can be deleted".
 
 ## Notes
 
 - **IDs:** the main lane used none this session. It still has 0068, 0069, `kernel_0017`, `kernel_0018` and `blog_0002`. The side lane has 0074 and up and `discography_0002`.
 - **Traps met:**
-  - `git switch -c` cuts the new branch from the one you're on: switch to `main` first.
-  - In PowerShell, `gh api --jq` breaks on its quotes, and piping a here-string to `git commit -F -` fails. Use the Bash tool, or a message file.
-  - A unit test that waits a fixed time after a request left proves nothing: wait on the query cache's answer, and test each half of a two-read gate with its own mutant.
-  - A Playwright route that fakes a read should answer GET only.
+  - **This PC is shared:** Synkopate's Remotion renders took about 7 of its 16 threads at times, and every e2e spec then timed out at 30s. Check `Get-Process` before diagnosing a timeout. `--workers=1` held, with 145 of 147.
+  - **A docs-only PR's CI runs no Python,** but tests read docs: grep tests for a file's name before moving text out of it.
+  - **Kit class names:** the kit already had `.mf-text-link` (the auth screens'). Grep the built CSS for a class name before choosing one.
+  - **`docs/progress.json`:** `json.dumps` rewrites its whole layout. Edit a step's one line in place.
+  - **A type token is a whole `font`:** `font-size: var(--mf-type-*)` is invalid. Use `font:`, then set `line-height` after it.
+  - **Modal dialogs:** the browser caps a modal `<dialog>` at 100% less 6px and 2em, so set `max-width` to keep 16px.
 - **Still true:**
-  - The full Python suite takes about 21 minutes now (3,897 tests); the e2e suite, about 3 minutes (141).
-  - Commit with `git commit -F <file>`, and check `git branch --show-current` first.
-  - Never `prettier --write` an existing file.
-  - On Windows, `npm run api:check` reports some `schema.ts` files stale over line endings. CI on Linux is fine.
-- **A new command** goes in `docs/COMMANDS.md`; commands used every session go in `CLAUDE.md`'s Commands too.
+  - The full Python suite takes about 40 minutes with the PC shared (3,896 tests). The e2e suite takes about 3 minutes (147) on a quiet PC, and 22 minutes with one worker.
+  - Commit with `git commit -F <file>` after `git branch --show-current`. Never `prettier --write` an existing file.
+  - On Windows, the generators rewrite some `schema.ts` files with CRLF only: `git checkout` them.
+  - A new command goes in `docs/COMMANDS.md`, and one used every session in `CLAUDE.md` too.
 
 ## Warnings
 
