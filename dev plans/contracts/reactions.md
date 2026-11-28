@@ -183,3 +183,4 @@ No row-level security: each route checks the person and the thing itself. One pe
     - a read that fails again hides the row, though TanStack Query keeps the last answer;
     - the counts and the reader's own come from one statement, so one snapshot;
     - `ReactionParts` keys each part by the thing too, so another thing gets a fresh part.
+    - each write, its answer and its putting back are the presser's: none goes out or lands once someone else is signed in, or no one, or the row has gone.

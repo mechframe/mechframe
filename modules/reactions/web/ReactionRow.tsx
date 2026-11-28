@@ -5,7 +5,7 @@
 // an unverified member is told to verify their address first. A thing the site
 // doesn't show now, or a read that fails, draws nothing: the page goes on without it.
 import { useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 
 import { ApiProblem, failureWords, signInFor, useSession, useToast, type ReactionPartProps } from "@/kernel";
@@ -42,6 +42,21 @@ export default function ReactionRow({ type, id }: ReactionPartProps) {
   // no press is queued after it, since it can't hold that one yet (Codex on #170).
   const queue = useRef<Promise<void>>(Promise.resolve());
   const queued = useRef(0);
+  // Who's signed in now, and whether the row is still drawn: a write, its answer and its
+  // putting back are the presser's alone, so none goes out or lands once someone else is
+  // signed in, or no one, or the row has gone (CodeRabbit on #170).
+  const signedIn = session.status === "signed-in" ? session.user.id : null;
+  const who = useRef(signedIn);
+  const drawn = useRef(true);
+  useEffect(() => {
+    who.current = signedIn;
+  }, [signedIn]);
+  useEffect(() => {
+    drawn.current = true;
+    return () => {
+      drawn.current = false;
+    };
+  }, []);
 
   const item = found.data?.items[0];
   // A read that fails draws nothing, a refetch's too, though the last answer is kept (cubic on #170).
@@ -71,15 +86,19 @@ export default function ReactionRow({ type, id }: ReactionPartProps) {
       setUnverified(true);
       return;
     }
+    const by = session.user.id;
+    const still = () => drawn.current && who.current === by;
     sending.current.add(key);
     queued.current += 1;
     set((row) => toggled(row, key, on, order));
     const write = async () => {
       try {
+        if (!still()) return;
         const at = { params: { path: { type, id, key } } };
         const { data } = on ? await api.DELETE(PRESS, at) : await api.PUT(PRESS, at);
-        if (data && queued.current === 1) set(() => data);
+        if (data && queued.current === 1 && still()) set(() => data);
       } catch (error) {
+        if (!still()) return;
         set((row) => toggled(row, key, !on, order));
         if (error instanceof ApiProblem && error.code === UNVERIFIED) setUnverified(true);
         else toast({ tone: "danger", text: failureWords(error) || "That reaction wasn't saved. Try again." });
