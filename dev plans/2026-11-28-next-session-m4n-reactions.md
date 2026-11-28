@@ -29,15 +29,15 @@ Checked 2026-11-28, about 06:00 Eastern (11:00 UTC):
    - Sources: `docs/plans/vibrant-mindz-backend/extraction/reactions.md` (VybeMindz's reactions and custom emojis), the module plan's §8 and §9 (shared by comments and community), and `docs/private/inventory.md` for where to lift from.
    - Ask the site's session which boards draw reactions, if any.
    - It goes to the owner before any code. Use the `mechframe-module-extractor` skill.
-2. **Build reactions** in one PR, linted with `module-contract-lint`. Before the push, run `tests/` and `kernel/tests/contract/` too (the memory note "New module: hidden tests").
+2. **Build reactions** in one PR, linted with `module-contract-lint`. Before the push, run `tests/` and `kernel/tests/contract/` too (the memory note "New module: hidden tests"), and the brand check on lifted code (`CLAUDE.md`, Commands).
 3. **Comments' contract, then the module,** from its scaffold `modules/_comments/`: threads on any module's item (module plan §9). The kernel's notifications and moderation are done.
-4. **Roster comes last,** after portfolio, with the profile-tabs hook (`dev plans/contracts/hooks.md`).
+4. **Roster comes last,** after portfolio. If it needs the profile-tabs hook (`dev plans/contracts/hooks.md`), which waits until just before wave 2b, ask the owner first (§5).
 
 Close out at a natural break past ~400K tokens. Both lanes' prompts are yours.
 
 ## 5. Ask the owner, don't decide
 
-- Each contract.
+- Each contract; and for roster, whether the profile-tabs hook comes forward.
 - VM Website's asks for its players' sources: stage B (Bandcamp's player) and stage C (uploaded video, Media's Video tab, straight-to-bucket uploads), on its owner's OK. Which lane takes them, and when.
 - Removing the five old standby worktrees under `.claude/worktrees/` (the side lane's `discography-0-1-0` stays), and the two memory notes marked "can be deleted".
 - The Vibrant Mindz content.
@@ -56,8 +56,4 @@ Close out at a natural break past ~400K tokens. Both lanes' prompts are yours.
 
 ## 8. Candidates for `knowledge/`
 
-1. A spec that switches a module off races other specs' jobs of it: run it serially.
-2. axe measures colour mid-transition: wait for running, finite animations first.
-3. A site's CSP blocks `page.addStyleTag`: a diagnostic spec needs `bypassCSP`.
-4. Tests read docs, and a docs-only PR runs none: grep before moving text.
-5. Before an e2e timeout hunt on a shared PC, measure CPU by process.
+`docs/HANDOFF.md`'s "Traps met": the module switch's job race, axe mid-transition and the CSP's `bypassCSP`. Also: tests read docs while a docs-only PR runs none, and on a shared PC measure CPU by process before an e2e timeout hunt.

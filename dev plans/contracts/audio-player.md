@@ -224,7 +224,7 @@ No user ids, addresses or browser names anywhere: `data_hooks` stay false.
 
 ## Changes after approval
 
-- **2026-11-28, the owner: the live check moves to the site's deploy.** §7's check in Safari on an iPhone no longer comes before step 2's close. An upload can't be made yet: discography answers 503 `discography.storage_off` while storage is off, and no bucket is set up. The phone also needs an HTTPS address for the `__Host-mf_consent` cookie that SoundCloud's widget waits on. The check runs on the site's deploy (VM Website's staging) once its audio uploads are set up. If Safari won't start the hidden widget, §8's fallback is a fix here: the widget shows itself in the bar for that track.
+- **2026-11-28, the owner: the live check moves to the site's deploy.** §7's check in Safari on an iPhone no longer comes before step 2's close. An upload can't be made yet: discography answers 503 `discography.storage_off` while storage is off, and no bucket is set up. The phone also needs an HTTPS address: the site's media consent gate needs its `__Host-mf_consent` cookie, a secure one, before it loads SoundCloud's widget. The check runs on the site's deploy (VM Website's staging) once its audio uploads are set up. If Safari won't start the hidden widget, §8's fallback is a fix here: the widget shows itself in the bar for that track.
 
 ## Changes as built (audio-player 0.1.0, `feat/audio-player`)
 

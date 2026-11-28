@@ -23,7 +23,7 @@ Overwritten every session. This one: 2026-11-27, about 14:00 Eastern, to 2026-11
 
 ## Next
 
-1. **Main lane, step 3 in the owner's order** (2026-11-28): reactions' contract, then the module, then comments' contract and module. Each contract goes to the owner first. Roster comes last, with the profile-tabs hook.
+1. **Main lane, step 3 in the owner's order** (2026-11-28): reactions' contract, then the module, then comments' contract and module. Each contract goes to the owner first. Roster comes last; whether it brings the profile-tabs hook forward from wave 2b is the owner's call.
 2. **Side lane, portfolio:** its contract, then the module, in a worktree.
 3. **VM Website's asks for its players' sources** stage B (Bandcamp's player) and stage C (uploaded video, Media's Video tab, straight-to-bucket uploads) will come on its owner's OK. Which lane takes them, and when, is the owner's call.
 

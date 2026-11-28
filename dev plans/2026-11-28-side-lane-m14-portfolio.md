@@ -14,7 +14,7 @@ MechFrame (`CLAUDE.md`, `SPEC.md`), public at mechframe/mechframe: modules copie
   - `modules/reactions/` and `modules/comments/`;
   - `docs/HANDOFF.md`, `CLAUDE.md`'s state sections and the progress ledger.
   Ask the main lane (the newest "AI DevKit Development" session in the main checkout) first.
-- **Generated files** are taken from `main` and made again after merging it, never merged by hand. They include `docs/progress.json` (then `python -m tools.progress`), `catalog.json`, the committed OpenAPI specs and `schema.ts` files, `package.json`'s `api:*` scripts, and SPEC's change log.
+- **Generated files:** the PR makes and commits portfolio's own: `python -m tools.openapi` (its `openapi.json`), its entries in `package.json`'s `api:*` scripts then `npm run api:types`, `mechframe catalog`, and its `docs/progress.json` line then `python -m tools.progress` (`docs/COMMANDS.md`). After merging `main`, take main's copies and make them again, never merged by hand. SPEC's change log is hand-written: keep main's and add your line.
 
 ## 3. State (verify it)
 
