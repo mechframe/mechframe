@@ -538,6 +538,7 @@ async def shown(db: AsyncSession, post: Post) -> dict[str, Any]:
     (card,) = await cards(db, [post])
     return {
         **card,
+        "id": str(post.id),
         "html": markdown.render(post.body),
         "updated_at": post.updated_at.isoformat(),
         "search_title": search_title(post, site.name),

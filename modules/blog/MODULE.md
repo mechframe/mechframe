@@ -54,6 +54,8 @@ None of its own. Draw a cover (0.1.4) shows while the AI has a key, the host's `
 
 `blog.post.published`, for a module that posts or mails a new post.
 
+**Its posts as item references** (0.1.8, hook 11): `refs.py` gives `blog.post` ("Posts"), drafts too, each live while the site shows it, with its category and published day as its line and its cover's smallest copy as its picture; the picker matches the title, newest edit first. Reactions asks it whether a post takes a reaction now, and a featured slot may hold posts. The post page draws the kernel's `<ReactionParts type="blog.post" id />` after the body, so with `reactions` on its row sits there (decision 0068), and `LivePost` carries the post's `id`.
+
 **Its public surface** (0.1.1), for a site whose own Blog and Post pages replace blog's at `/blog` and `/blog/:slug` (the same rank, which `server_copy.build` allows) and draw blog's posts:
 
 - **Web, `@/modules/blog/public`** (decision 0057): `usePosts({ category })` (an infinite query, 12 a page), `usePost(slug)` (a `LivePost`, or a `PostMoved` that `isMoved` tells apart; any other slug a 404 `blog.post_not_found`) and `useCategories()`; the types `PostCard`, `PostCards`, `PostCover`, `LivePost`, `PostMoved`, `BlogCategory` and `BlogCategoryCount`; and `pathOf(slug)` and `day(at)`.
@@ -62,7 +64,7 @@ None of its own. Draw a cover (0.1.4) shows while the AI has a key, the host's `
 ## Known limits
 
 - One category a post: no tags, series or categories under categories.
-- No comments, reactions, community posts or newsletter sends here: the switches wait for those modules.
+- No comments, community posts or newsletter sends here: the switches wait for those modules. Reactions come from the `reactions` module, under the body.
 - No embeds in a body (`embeds`, M5): an image in the body is Markdown's `![alt](address)`.
 - A generated cover is a vector drawing in Inter, made a PNG: no photograph, no image model, and no logo file inside it (the site's name is set in Inter). It's drawn when asked, never on publishing, and only for posts. The AI reads the theme's colours where the editor is drawn, so a token that isn't `#rrggbb` leaves the default theme's.
 - No social posting yet: it comes as a `social` module any module can share through, blog first, its Buffer token on the host or in Settings (the owner, 2026-11-24; `dev plans/contracts/blog.md` §8, 7).

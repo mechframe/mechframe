@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Blog",
-    "version": "0.1.7"
+    "version": "0.1.8"
   },
   "paths": {
     "/api/blog/posts": {
@@ -1513,6 +1513,11 @@
             "type": "integer",
             "title": "Reading Minutes"
           },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
           "html": {
             "type": "string",
             "title": "Html"
@@ -1553,6 +1558,7 @@
           "author",
           "published_at",
           "reading_minutes",
+          "id",
           "html",
           "updated_at",
           "search_title",

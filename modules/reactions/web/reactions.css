@@ -1,0 +1,54 @@
+/* reactions' row (`dev plans/contracts/reactions.md` §2), drawn as VM Website's Post
+   board draws it, on the theme's tokens only: pills at least 48px high, the accent
+   ring and the accent at 14% behind a pressed one. The board's sizes are fixed here
+   at its values, as the kit's are. */
+
+.mf-reactions {
+  display: grid;
+  gap: var(--mf-space-2);
+  padding-top: 8px;
+}
+
+.mf-reactions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.mf-reaction {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 20px;
+  border: 1px solid var(--mf-color-border-strong);
+  border-radius: var(--mf-radius-pill);
+  background: transparent;
+  color: var(--mf-color-text-strong);
+  font: var(--mf-type-section-title);
+  cursor: pointer;
+}
+
+.mf-reaction:hover {
+  border-color: var(--mf-color-border-control);
+}
+
+.mf-reaction[aria-pressed="true"] {
+  border-color: var(--mf-color-accent);
+  background: color-mix(in srgb, var(--mf-color-accent) 14%, transparent);
+}
+
+.mf-reaction-icon {
+  display: block;
+  flex: none;
+}
+
+.mf-reaction-count {
+  font-variant-numeric: tabular-nums;
+}
+
+.mf-reactions-note {
+  margin: 0;
+  font: var(--mf-type-small);
+  color: var(--mf-color-text-muted);
+}

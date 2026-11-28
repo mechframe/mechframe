@@ -29,7 +29,7 @@
     {
       "id": "blog",
       "name": "Blog",
-      "version": "0.1.7",
+      "version": "0.1.8",
       "status": "experimental",
       "category": "content",
       "summary": "Dated posts in Markdown, with categories, scheduling, related posts and a cover from media or the AI.",
@@ -209,6 +209,27 @@
         "The page is dated news or a story with an author and comments: that's a blog post",
         "The page is laid out from designed sections and blocks: VybeSite's builder comes as pages' next version",
         "The page is drawn from the site's own code and never changes: put it in the site's own pages"
+      ],
+      "requires": {
+        "kernel": "^0.1",
+        "modules": {}
+      },
+      "conflicts": []
+    },
+    {
+      "id": "reactions",
+      "name": "Reactions",
+      "version": "0.1.0",
+      "status": "experimental",
+      "category": "community",
+      "summary": "Fire, Love and Mind blown under any module's live things: a count of each, and your own pressed.",
+      "use_when": [
+        "Readers should react to posts, tracks or artwork with one press, without writing a comment",
+        "Several kinds of content need the same row of reactions and counts"
+      ],
+      "avoid_when": [
+        "Readers should say something in words; use comments",
+        "The site has no accounts for its readers: a reaction needs a signed-in member"
       ],
       "requires": {
         "kernel": "^0.1",

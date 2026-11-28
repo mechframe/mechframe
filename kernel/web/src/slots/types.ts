@@ -36,6 +36,15 @@ export type SharePartProps = { type: string; id: string; live: boolean; adminPat
 /** A card on an admin page for sharing what it's about (`content.share`). `id` names it within its module. */
 export type ContentShareEntry = { id: string; lazy: LazyOf<SharePartProps>; permission?: string };
 
+/**
+ * What a `content.reactions` part is given (decision 0068): the thing a public
+ * page draws, by its content type (`blog.post`) and id, as item references name it.
+ */
+export type ReactionPartProps = { type: string; id: string };
+
+/** A row of reactions under a thing on a public page (`content.reactions`). `id` names it within its module. */
+export type ContentReactionsEntry = { id: string; lazy: LazyOf<ReactionPartProps> };
+
 /** A link in a menu. `to` is a path on this site. */
 export type LinkEntry = {
   label: string;
@@ -66,6 +75,8 @@ export type Slots = {
   "prose.embed"?: ProseEmbedEntry[];
   /** The share cards a module's admin page draws for its content with `ShareParts` (decision 0067). */
   "content.share"?: ContentShareEntry[];
+  /** The reactions a module's public page draws under its things with `ReactionParts` (decision 0068). */
+  "content.reactions"?: ContentReactionsEntry[];
 };
 
 export type SlotName = keyof Slots;
@@ -85,13 +96,17 @@ export const SLOT_NAMES = [
   "editor.tools",
   "prose.embed",
   "content.share",
+  "content.reactions",
 ] as const satisfies readonly SlotName[];
 
 /** The slots the kit draws in its text, their parts given props: never a `SlotOutlet`. */
 export const TEXT_SLOTS = ["editor.tools", "prose.embed"] as const satisfies readonly SlotName[];
 
-/** The slots whose parts are given props, each drawn by its own outlet: the text slots and `content.share` (`ShareParts`). */
-export const GIVEN_SLOTS = [...TEXT_SLOTS, "content.share"] as const satisfies readonly SlotName[];
+/**
+ * The slots whose parts are given props, each drawn by its own outlet: the text
+ * slots, `content.share` (`ShareParts`) and `content.reactions` (`ReactionParts`).
+ */
+export const GIVEN_SLOTS = [...TEXT_SLOTS, "content.share", "content.reactions"] as const satisfies readonly SlotName[];
 
 export type LinkSlotName = (typeof LINK_SLOTS)[number];
 export type TextSlotName = (typeof TEXT_SLOTS)[number];

@@ -1,5 +1,9 @@
 # Changelog: blog
 
+## 0.1.8
+
+- Its posts as item references (hook 11, `refs.py`): `blog.post` ("Posts"), drafts too, each with whether the site shows it now, so `reactions` can ask whether a post takes a reaction and a featured slot may hold posts. The post page draws the kernel's `ReactionParts` after the body, where the Post board draws the row (decision 0068), and `LivePost` carries the post's `id`. With `reactions` off it draws nothing there.
+
 ## 0.1.7
 
 - Draw a cover, as the AdminPost board draws it (VM Website Dev 22's C1 to C3): Custom's two switches sit in the kit's switch rows, touching with a rule above each, not 16px apart. A failed draw says so at the small size and 400, in the font's own line and the danger colour, as Write with AI's dialog does, not as a field's error. Change it sits level with What to change's bottom, 10px from it.

@@ -66,6 +66,7 @@ function card(overrides: Partial<PostCard> = {}): PostCard {
 
 const LIVE: LivePost = {
   ...card(),
+  id: "00000000-0000-4000-8000-0000000000b1",
   html: "<p>A room.</p>",
   updated_at: "2026-11-21T12:00:00+00:00",
   search_title: "Ten years · Test Site",

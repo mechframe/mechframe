@@ -275,6 +275,8 @@ _SEED = [
     "'00000000-0000-0000-0000-00000000000d', NULL, NULL, NULL, NULL, now(), NULL, now(), now()), "
     "(gen_random_uuid(), 'spotlight', 1, NULL, NULL, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', "
     "'dQw4w9WgXcQ', 'Hook It Up', 'music-video', NULL, NULL, now(), now())",
+    "INSERT INTO reactions_reaction (id, target_type, target_id, user_id, key) VALUES "
+    "(gen_random_uuid(), 'blog.post', '00000000-0000-0000-0000-00000000000f', :user, 'fire')",
 ]
 
 

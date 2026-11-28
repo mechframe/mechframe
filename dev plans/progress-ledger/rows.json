@@ -822,9 +822,9 @@
    "step": "Step 3: roster, portfolio, reactions, comments",
    "status": "next",
    "status_label": "Next",
-   "prs": "",
-   "decisions": "",
-   "note": "The owner's order (2026-11-28): reactions then comments in the main lane, portfolio in the side lane, roster last; each contract first, for the owner"
+   "prs": "#170",
+   "decisions": "0068",
+   "note": "The owner's order (2026-11-28): reactions then comments in the main lane, portfolio in the side lane, roster last; each contract first, for the owner. reactions 0.1.0 (#170, decision 0068): Fire, Love and Mind blown under any module's live thing through item references and the kernel's content.reactions slot, blog's posts first (blog 0.1.8)"
   },
   {
    "milestone": "MechFrame v1.0",
