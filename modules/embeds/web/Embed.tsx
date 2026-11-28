@@ -9,6 +9,11 @@
  * Play is clicked, which grants `media` for the site. The iframe never plays
  * by itself (WCAG 1.4.2), except a YouTube player just after that click.
  * Its shape is a class, never a style, for the CSP.
+ *
+ * `EmbedFrame` (0.1.2, `dev plans/contracts/bandcamp-player.md`) is the same
+ * iframe alone, for a page that draws its own facade, such as a site's Listen
+ * in place of its player's controls: it draws nothing until `media` is
+ * granted, so the page's Listen grants it.
  */
 import { Button, ConsentGate, useConsent } from "@/kernel";
 import { useState } from "react";
@@ -48,6 +53,49 @@ function Facade({ found, words, onPlay }: { found: Found; words: string; onPlay:
   );
 }
 
+/** The provider's player: one sandbox, title and loading for `Embed` and `EmbedFrame`. */
+function Frame({ className, found, words, src }: { className: string; found: Found; words: string; src: string }) {
+  return (
+    <iframe
+      className={className}
+      src={src}
+      title={`${found.name} player: ${words}`}
+      loading="lazy"
+      referrerPolicy="strict-origin-when-cross-origin"
+      sandbox={SANDBOX}
+      allow={found.allow || undefined}
+      allowFullScreen={found.allow.includes("fullscreen") || undefined}
+    />
+  );
+}
+
+export type EmbedFrameProps = {
+  /** The link, as `Embed` takes it: Bandcamp's with its player's id in the fragment. */
+  link: string;
+  /** Its words for the frame's title; the kind's own ("A track on Bandcamp") when blank. */
+  words?: string;
+};
+
+/**
+ * The provider's iframe alone: no figure, no facade, no caption. Nothing at
+ * all until `media` is granted, and nothing for a link that isn't a player.
+ * It never plays by itself: the visitor presses the provider's own play.
+ * Unmounting it stops it, which is how a page takes turns with it.
+ */
+export function EmbedFrame({ link, words = "" }: EmbedFrameProps) {
+  const { granted } = useConsent("media");
+  const found = recognise(link);
+  if (!granted || !found) return null;
+  return (
+    <Frame
+      className={`mf-embed-frame mf-embed-frame--${found.shape}`}
+      found={found}
+      words={wordsFor(found, words)}
+      src={found.player}
+    />
+  );
+}
+
 export function Embed({ link, words = "" }: EmbedProps) {
   // The link the visitor played: a link put in its place doesn't play by itself (CodeRabbit on #127).
   const [asked, setAsked] = useState<string | null>(null);
@@ -82,16 +130,7 @@ export function Embed({ link, words = "" }: EmbedProps) {
           />
         )}
       >
-        <iframe
-          className="mf-embed-player"
-          src={playing(found, asked === link)}
-          title={`${found.name} player: ${said}`}
-          loading="lazy"
-          referrerPolicy="strict-origin-when-cross-origin"
-          sandbox={SANDBOX}
-          allow={found.allow || undefined}
-          allowFullScreen={found.allow.includes("fullscreen") || undefined}
-        />
+        <Frame className="mf-embed-player" found={found} words={said} src={playing(found, asked === link)} />
       </ConsentGate>
       <figcaption className="mf-embed-caption">
         <a href={link}>{said}</a>

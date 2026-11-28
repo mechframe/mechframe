@@ -8,6 +8,7 @@ import cases from "../providers.cases.json";
 
 type Recognised = { href: string; provider: string; kind: string; player: string; shape: string };
 type Words = { href: string; text: string; words: string };
+type Code = { name: string; code: string; href: string | null; words?: string };
 
 describe("recognise", () => {
   it.each(cases.recognised as Recognised[])("takes $href as its provider's player", (each) => {
@@ -87,6 +88,15 @@ describe("fromBandcampCode", () => {
       href: "https://exampleband.bandcamp.com/album/weightless#bandcamp-album=1234567",
       words: "Weightless by Example Band & Friends",
     });
+  });
+
+  it.each(cases.bandcamp_codes as Code[])("reads $name as the server does (0.1.2)", (each) => {
+    expect(fromBandcampCode(each.code)).toEqual(each.href ? { href: each.href, words: each.words } : null);
+  });
+
+  it("counts a paste's length in UTF-16, as the server does", () => {
+    expect(fromBandcampCode(code + " ".repeat(4096 - code.length))).not.toBeNull();
+    expect(fromBandcampCode(code + String.fromCodePoint(0x1f3b5).repeat(Math.floor((4096 - code.length) / 2) + 1))).toBeNull();
   });
 
   it("refuses a code whose player and page disagree, anything else, and a paste too long to be a code", () => {

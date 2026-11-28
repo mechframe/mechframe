@@ -224,3 +224,67 @@ def words_for(embed: Embed, text: str) -> str:
     # str.strip, not a regex: a long run of spaces inside costs no quadratic scan (CodeRabbit on #127).
     words = (text or "").strip(_SPACE)
     return embed.default if not words or _AN_ADDRESS.fullmatch(words) else words
+
+
+# --- Bandcamp's own embed code ---------------------------------------------------------------
+# The web's `fromBandcampCode`, pattern for pattern: both read the cases'
+# `bandcamp_codes`. JavaScript's \s is `_SPACE`, its [^]*? is DOTALL's .*?,
+# and its `i` folds ASCII alone, as re.ASCII does here.
+_S = f"[{re.escape(_SPACE)}]"
+_IFRAME = re.compile(r"<iframe\b([^>]*)>(.*?)</iframe>", re.ASCII | re.IGNORECASE | re.DOTALL)
+_BANDCAMP_PLAYER = re.compile(
+    rf"\bsrc{_S}*={_S}*[\"']https://bandcamp\.com/EmbeddedPlayer/(?:[^\"'/]+/)*?"
+    rf"(album|track)=([0-9]{{1,12}})(?:/[^\"']*)?[\"']",
+    re.ASCII | re.IGNORECASE,
+)
+_BANDCAMP_LINK = re.compile(
+    rf"<a{_S}[^>]*?\bhref{_S}*={_S}*[\"'](https://[a-z0-9-]+\.bandcamp\.com/(album|track)/[A-Za-z0-9_-]+)"
+    rf"/?[\"'][^>]*>([^<]*)</a>",
+    re.ASCII | re.IGNORECASE,
+)
+_ENTITY = re.compile(r"&(#x[0-9a-f]+|#[0-9]+|[a-z]+);", re.ASCII | re.IGNORECASE)
+_ENTITIES = {"amp": "&", "lt": "<", "gt": ">", "quot": '"', "apos": "'", "nbsp": chr(0xA0)}
+#: More than any embed code is long (Bandcamp's is about 400 characters): read no further.
+MOST_CODE = 4096
+
+
+def _utf16_length(text: str) -> int:
+    """`text.length` as JavaScript counts it: a character past U+FFFF is two."""
+    return len(text) + sum(1 for each in text if ord(each) > 0xFFFF)
+
+
+def _decoded(text: str) -> str:
+    """The text of an embed code's link, its few entities decoded."""
+
+    def entity(found: re.Match[str]) -> str:
+        name = found[1]
+        if name.startswith("#"):
+            digits, base = (name[2:], 16) if name[1] in "xX" else (name[1:], 10)
+            # Leading zeros count for nothing; past seven digits it's past U+10FFFF either way.
+            digits = digits.lstrip("0") or "0"
+            code = int(digits, base) if len(digits) <= 7 else 0x110000
+            return chr(code) if 0 < code <= 0x10FFFF else found[0]
+        return _ENTITIES.get(name.lower(), found[0])
+
+    return _ENTITY.sub(entity, text)
+
+
+def from_bandcamp_code(code: str) -> tuple[str, str] | None:
+    """What Bandcamp's own embed code (Share, Embed) names: its album's or
+    track's page with the player's id in the fragment, and the words its
+    link says; or None for anything else. Read by pattern, never parsed as
+    HTML, so nothing in a pasted code ever runs or loads; the id and the
+    page from the same `<iframe>`, so two codes pasted together never mix;
+    and nothing longer than a code is."""
+    if len(code) > MOST_CODE or _utf16_length(code) > MOST_CODE:
+        return None
+    frame = _IFRAME.search(code)
+    if frame is None:
+        return None
+    player = _BANDCAMP_PLAYER.search(frame[1])
+    link = _BANDCAMP_LINK.search(frame[2])
+    if player is None or link is None or player[1].lower() != link[2].lower():
+        return None
+    href = f"{link[1]}#bandcamp-{player[1].lower()}={player[2]}"
+    found = recognise(href)
+    return (href, words_for(found, _decoded(link[3]))) if found else None

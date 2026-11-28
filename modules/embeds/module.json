@@ -1,7 +1,7 @@
 {
   "id": "embeds",
   "name": "Embeds",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "status": "experimental",
   "category": "media",
   "summary": "YouTube, SoundCloud, Spotify and Bandcamp players from a pasted link, loaded only once a visitor plays.",

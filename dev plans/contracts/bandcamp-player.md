@@ -1,7 +1,7 @@
 ---
 feature: Bandcamp's own player for a track, or its album, in discography, drawn through a frame embeds gives a page (VM Website's ask B; the side lane's M15)
-status: draft
-approved: —
+status: approved
+approved: 2026-11-28 (the owner: "Approve as recommended", the three answers in §8 as recommended)
 plan: `dev plans/2026-11-28-side-lane-m15-bandcamp.md`; VM Website's ask `C:\DEV\VM Website\dev plans\2026-11-28-ask-b-bandcamp-player.md`, its approved `dev plans/contracts/player-sources.md` (§2 B, §8, 3 and 4) and the boards on canvas 123 (`design/site/Main`, `Release`, `Track`, `AdminTracks`, `AdminAlbum` and `AdminMusic.dc.html`; shared parts in `design/generators/player_sources.py`)
 pr: one, discography 0.1.5 and embeds 0.1.2, its number read from GitHub just before the push; decision 0075; migration `discography_0002`
 ---
