@@ -184,3 +184,4 @@ No row-level security: each route checks the person and the thing itself. One pe
     - the counts and the reader's own come from one statement, so one snapshot;
     - `ReactionParts` keys each part by the thing too, so another thing gets a fresh part.
     - each write, its answer and its putting back are the presser's: none goes out or lands once someone else is signed in, or no one, or the row has gone, asked from the query cache at that moment through the kernel's newly exported `SESSION_KEY`; a write dropped leaves the row to be read again.
+  - **The module's line** (`summary`, which Settings › Modules draws under its switch) is "Reactions on posts, comments and messages", the AdminSettings board's words (VM Website Dev 27, the owner's word, 2026-11-28).

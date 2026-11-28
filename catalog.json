@@ -222,7 +222,7 @@
       "version": "0.1.0",
       "status": "experimental",
       "category": "community",
-      "summary": "Fire, Love and Mind blown under any module's live things: a count of each, and your own pressed.",
+      "summary": "Reactions on posts, comments and messages",
       "use_when": [
         "Readers should react to posts, tracks or artwork with one press, without writing a comment",
         "Several kinds of content need the same row of reactions and counts"

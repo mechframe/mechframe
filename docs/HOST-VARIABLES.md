@@ -314,7 +314,7 @@ No host variables of its own.
 
 ### `reactions` 0.1.0 (experimental)
 
-Fire, Love and Mind blown under any module's live things: a count of each, and your own pressed.
+Reactions on posts, comments and messages
 
 | Variable | Needed | On Railway | What it's for |
 | --- | --- | --- | --- |
