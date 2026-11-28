@@ -694,6 +694,8 @@ export interface components {
             credit_line: string;
             /** Summary */
             summary: string;
+            /** Bandcamp Url */
+            bandcamp_url: string | null;
             back_cover: components["schemas"]["MusicCover"] | null;
             /** Tracks */
             tracks: components["schemas"]["AdminTrack"][];
@@ -822,13 +824,15 @@ export interface components {
              * Plays From
              * @enum {string}
              */
-            plays_from: "upload" | "soundcloud";
+            plays_from: "upload" | "soundcloud" | "bandcamp";
             /** Stream Url */
             stream_url: string | null;
             /** Soundcloud Url */
             soundcloud_url: string | null;
             /** Soundcloud Kind */
             soundcloud_kind: ("track" | "set") | null;
+            /** Bandcamp Url */
+            bandcamp_url: string | null;
             /** Has Lyrics */
             has_lyrics: boolean;
             /** Path */
@@ -1058,6 +1062,8 @@ export interface components {
             back_cover_id?: string | null;
             /** Tracklist To Come */
             tracklist_to_come?: boolean | null;
+            /** Bandcamp Url */
+            bandcamp_url?: string | null;
             /** Credits */
             credits?: components["schemas"]["CreditIn"][] | null;
             /** Links */
@@ -1105,7 +1111,7 @@ export interface components {
              */
             state: "none" | "processing" | "ready" | "failed";
             /** Plays From */
-            plays_from: ("upload" | "soundcloud") | null;
+            plays_from: ("upload" | "soundcloud" | "bandcamp") | null;
             /** Percent */
             percent: number | null;
             /** Error */
@@ -1120,6 +1126,8 @@ export interface components {
             soundcloud_url: string | null;
             /** Soundcloud Kind */
             soundcloud_kind: ("track" | "set") | null;
+            /** Bandcamp Url */
+            bandcamp_url: string | null;
             /** Duration Ms */
             duration_ms: number | null;
             /** Stream Url */
@@ -1149,13 +1157,15 @@ export interface components {
              * Plays From
              * @enum {string}
              */
-            plays_from: "upload" | "soundcloud";
+            plays_from: "upload" | "soundcloud" | "bandcamp";
             /** Stream Url */
             stream_url: string | null;
             /** Soundcloud Url */
             soundcloud_url: string | null;
             /** Soundcloud Kind */
             soundcloud_kind: ("track" | "set") | null;
+            /** Bandcamp Url */
+            bandcamp_url: string | null;
             /** Has Lyrics */
             has_lyrics: boolean;
             /** Path */
@@ -1173,8 +1183,10 @@ export interface components {
         /**
          * TrackChange
          * @description What a save changes, with the `version` it read. `soundcloud_url`,
-         *     `lyrics` and `duration_ms` sent as null clear them; `duration_ms` is for a
-         *     track that plays from its link alone.
+         *     `bandcamp_url`, `lyrics` and `duration_ms` sent as null clear them;
+         *     `duration_ms` is for a track that plays from its link or Bandcamp's
+         *     player alone. `bandcamp_url` takes Bandcamp's embed code as pasted, or
+         *     the link its field shows back.
          */
         TrackChange: {
             /** Version */
@@ -1189,6 +1201,8 @@ export interface components {
             lyrics?: string | null;
             /** Soundcloud Url */
             soundcloud_url?: string | null;
+            /** Bandcamp Url */
+            bandcamp_url?: string | null;
             /** Duration Ms */
             duration_ms?: number | null;
             /** Credits */
@@ -1218,13 +1232,15 @@ export interface components {
              * Plays From
              * @enum {string}
              */
-            plays_from: "upload" | "soundcloud";
+            plays_from: "upload" | "soundcloud" | "bandcamp";
             /** Stream Url */
             stream_url: string | null;
             /** Soundcloud Url */
             soundcloud_url: string | null;
             /** Soundcloud Kind */
             soundcloud_kind: ("track" | "set") | null;
+            /** Bandcamp Url */
+            bandcamp_url: string | null;
             /** Has Lyrics */
             has_lyrics: boolean;
             /** Path */

@@ -178,7 +178,7 @@ function MusicSettings() {
   const bitrate = typeof form.values.stream_bitrate_kbps === "number" ? form.values.stream_bitrate_kbps : 256;
   return (
     <div className="mf-music-stack">
-      <p className="mf-music-hint">Tracks play from their uploaded file, or from their SoundCloud link where they have none.</p>
+      <p className="mf-music-hint">Tracks play from their uploaded file, or from their SoundCloud link where they have none, else in Bandcamp's own player.</p>
       {/* The kit's switch rows, which touch with a rule between (0.1.3, VM Website's P2). */}
       <div className="mf-switch-rows">
         <Switch

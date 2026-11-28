@@ -41,6 +41,7 @@ import {
   KIND_WORDS,
   MAX_ARTIST,
   MAX_LINE,
+  MAX_PASTE,
   MAX_SLUG,
   MAX_TITLE,
   MAX_URL,
@@ -551,6 +552,21 @@ function Editor({ server, notice }: { server: FullRelease; notice: ReactNode }) 
                 />
               </Field>
               <Field
+                label="Bandcamp player"
+                hint="Paste the album's embed code from Bandcamp (Share, then Embed). Its tracks with no upload or SoundCloud link play in Bandcamp's own player."
+                error={errorOf("bandcamp_url")}
+              >
+                <Input
+                  value={form.bandcamp_url}
+                  maxLength={MAX_PASTE}
+                  spellCheck={false}
+                  autoComplete="off"
+                  onChange={(event) => {
+                    set("bandcamp_url", event.target.value);
+                  }}
+                />
+              </Field>
+              <Field
                 label="Address"
                 error={errorOf("slug")}
                 hint={live && form.slug !== saved.slug ? `${pathOf(saved.slug)} will send visitors here.` : `The release is at ${pathOf(form.slug || "…")}.`}
@@ -579,7 +595,7 @@ function Editor({ server, notice }: { server: FullRelease; notice: ReactNode }) 
           <Card
             title="Tracks"
             level={2}
-            description="Each track plays from an uploaded file or a SoundCloud link; an upload gets a stream file and a waveform made from it."
+            description="Each track plays from an uploaded file or a SoundCloud link, else Bandcamp's own player; an upload gets a stream file and a waveform made from it."
             actions={
               <div className="mf-music-row">
                 <Button

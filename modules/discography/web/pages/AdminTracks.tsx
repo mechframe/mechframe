@@ -38,6 +38,7 @@ import {
 import {
   ACCEPT,
   MAX_LYRICS,
+  MAX_PASTE,
   MAX_SLUG,
   MAX_TITLE,
   MAX_URL,
@@ -405,7 +406,7 @@ function TrackEditor({ server, notice, onGone, settle: settleRef, asked, onGo, o
     // read at, the SoundCloud link among them though it rides in `audio`, so a
     // save that passes the choice by, from the form or after Back to the form,
     // is refused and asks again (CodeRabbit on #145).
-    const link = { soundcloud_url: held.audio.soundcloud_url, soundcloud_kind: held.audio.soundcloud_kind };
+    const link = { soundcloud_url: held.audio.soundcloud_url, soundcloud_kind: held.audio.soundcloud_kind, bandcamp_url: held.audio.bandcamp_url };
     keep({ ...held, audio: { ...track.audio, ...link }, peaks: track.peaks });
     setConflict({ said: crossed, theirs: track, mine: latest, fields });
   }
@@ -649,6 +650,21 @@ function TrackEditor({ server, notice, onGone, settle: settleRef, asked, onGo, o
             spellCheck={false}
             onChange={(event) => {
               set("soundcloud_url", event.target.value);
+            }}
+          />
+        </Field>
+        <Field
+          label="Bandcamp player"
+          hint="Paste the embed code from its Bandcamp page (Share, then Embed). It plays in Bandcamp's own player when the track has no upload or SoundCloud link."
+          error={errorOf("bandcamp_url")}
+        >
+          <Input
+            value={form.bandcamp_url}
+            maxLength={MAX_PASTE}
+            spellCheck={false}
+            autoComplete="off"
+            onChange={(event) => {
+              set("bandcamp_url", event.target.value);
             }}
           />
         </Field>

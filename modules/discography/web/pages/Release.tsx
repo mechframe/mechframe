@@ -4,7 +4,8 @@
 // plays, then the tracks that play, and the credits. With audio-player on (0.1.1),
 // Play album and each row's play start the release's tracks, the row that plays
 // shows the three bars, and the Player docks after the footer; with it off, each
-// track plays in the browser's own player or as a SoundCloud link. The words are
+// track plays in the browser's own player or as a SoundCloud link. A track in
+// Bandcamp's own player shows it behind a Listen either way (0.1.5). The words are
 // the server copy's own. An address the release left moves on; any other is the
 // 404 page.
 import { useMemo, useState } from "react";
@@ -14,10 +15,11 @@ import { ApiProblem, LoadError, NotFound, Seo, useModuleEnabled } from "@/kernel
 import { Picture } from "@/modules/media/public";
 
 import { KIND_WORDS, clock } from "../api";
+import { BandcampPlayer } from "../components/BandcampPlayer";
 import { PlayAlbum, PlayTrack, ReleaseDock } from "../components/Listen";
 import { Plays } from "../components/Plays";
 import "../music.css";
-import { playerQueue } from "../player";
+import { SOURCE, bandcampPlayer, playerQueue } from "../player";
 import { isMoved, useRelease } from "../reads";
 
 export default function Release() {
@@ -114,20 +116,27 @@ export default function Release() {
         {release.tracks.length ? (
           <>
             <p className="mf-music-lead">{release.tracklist_to_come ? `${count} for now. The full tracklist is to come.` : count}</p>
-            {player ? <PlayAlbum queue={queue} /> : null}
+            {player && queue.length ? <PlayAlbum queue={queue} /> : null}
             <ol className="mf-music-tracklist">
-              {release.tracks.map((track, index) => {
+              {release.tracks.map((track) => {
                 const number = String(track.number).padStart(2, "0");
+                const bandcamp = bandcampPlayer(track);
+                // Its place in the queue, which leaves Bandcamp's tracks out.
+                const index = queue.findIndex((item) => item.key === `${SOURCE}:${track.id}`);
                 return (
                   <li key={track.slug} className="mf-music-track">
                     <div className="mf-music-track-head">
-                      {player ? <PlayTrack queue={queue} index={index} label={`${number} ${track.title}`} /> : null}
+                      {player && index >= 0 ? <PlayTrack queue={queue} index={index} label={`${number} ${track.title}`} /> : null}
                       <span className="mf-music-number">{number}</span>
                       <Link to={track.path}>{track.title}</Link>
                       {track.explicit ? <span className="mf-music-advisory">Explicit</span> : null}
                       <span className="mf-music-number">{track.duration_ms ? clock(track.duration_ms) : ""}</span>
                     </div>
-                    {player ? null : <Plays track={track} label={track.title} />}
+                    {bandcamp ? (
+                      <BandcampPlayer link={bandcamp} label={`${number} ${track.title}`} />
+                    ) : player ? null : (
+                      <Plays track={track} label={track.title} />
+                    )}
                   </li>
                 );
               })}

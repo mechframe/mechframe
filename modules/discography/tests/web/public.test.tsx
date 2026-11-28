@@ -9,7 +9,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { renderWithKernel } from "@/kernel/testing";
-import { KIND_WORDS, clock, isMoved, pathOf, playerItem, playerQueue, releaseLine, useArtistLinks, useRelease, useReleases, useTracks, type ReleaseCard } from "@/modules/discography/public";
+import { KIND_WORDS, bandcampPlayer, clock, isMoved, pathOf, playerItem, playerQueue, releaseLine, useArtistLinks, useRelease, useReleases, useTracks, type ReleaseCard } from "@/modules/discography/public";
 
 import type { LiveRelease, TrackLine } from "../../web/api";
 
@@ -129,7 +129,7 @@ describe("discography's public surface", () => {
     function Players() {
       const deck = useReleases({ ids: ["r-2", "r-1"] });
       const spotlight = useTracks(["t-2", "t-1"]);
-      const queue = (spotlight.data?.items ?? []).map((each) => playerItem(each, each.release));
+      const queue = (spotlight.data?.items ?? []).flatMap((each) => playerItem(each, each.release) ?? []);
       return (
         <>
           <p>{(deck.data?.pages.flatMap((page) => page.items) ?? []).map((each) => each.title).join(", ")}</p>
@@ -190,6 +190,7 @@ function line(overrides: Partial<TrackLine> = {}): TrackLine {
     stream_url: "https://files.mechframe.test/discography/stream/a.mp3",
     soundcloud_url: "https://soundcloud.com/petrodestroys/night-drive",
     soundcloud_kind: "track",
+    bandcamp_url: null,
     has_lyrics: false,
     path: "/music/catalyst/night-drive",
     ...overrides,
@@ -225,18 +226,18 @@ describe("discography's tracks as the player's items (0.1.1)", () => {
   it("takes a track page's peaks, and a decorative cover without words", () => {
     const peaks = [0, 128, 255];
     const item = playerItem({ ...line(), peaks }, { ...card(), cover: { ...COVER, decorative: true } });
-    expect(item.peaks).toEqual(peaks);
-    expect(item.cover?.alt).toBe("");
+    expect(item?.peaks).toEqual(peaks);
+    expect(item?.cover?.alt).toBe("");
   });
 
   it("counts a play through discography's route, and lets a failure go", async () => {
     const sent = routed({ [`POST /api/discography/tracks/${UPLOAD}/plays`]: { status: 204 } });
-    playerItem(line(), card()).count?.();
+    playerItem(line(), card())?.count?.();
     await waitFor(() => {
       expect(sent.map((each) => each.pathname)).toEqual([`/api/discography/tracks/${UPLOAD}/plays`]);
     });
     routed({});
-    expect(() => playerItem(line(), card()).count?.()).not.toThrow(); // a network failure says nothing
+    expect(() => playerItem(line(), card())?.count?.()).not.toThrow(); // a network failure says nothing
   });
 
   it("makes a release's playable tracks its queue, in order", () => {
@@ -252,5 +253,32 @@ describe("discography's tracks as the player's items (0.1.1)", () => {
       [`discography.track:${UPLOAD}`, "Night Drive"],
       [`discography.track:${LINKED}`, "Catalyst"],
     ]);
+  });
+});
+
+const BANDCAMP = "https://exampleband.bandcamp.com/track/one-hunned-thousand#bandcamp-track=987654321";
+const ON_BANDCAMP = "a1111111-1111-4111-8111-111111111111";
+
+describe("a track in Bandcamp's own player (0.1.5)", () => {
+  const bandcamp = line({ id: ON_BANDCAMP, title: "One Hunned Thousand", plays_from: "bandcamp", stream_url: null, soundcloud_url: null, soundcloud_kind: null, bandcamp_url: BANDCAMP });
+
+  it("is no item for audio-player, and names its player for embeds' frame", () => {
+    expect(playerItem(bandcamp, card())).toBeNull();
+    expect(bandcampPlayer(bandcamp)).toBe(BANDCAMP);
+    expect(bandcampPlayer(line())).toBeNull();
+    // A link left over on a track that plays otherwise is never its player.
+    expect(bandcampPlayer(line({ plays_from: "soundcloud", bandcamp_url: BANDCAMP }))).toBeNull();
+  });
+
+  it("is left out of its release's queue, which goes on without it", () => {
+    const release: LiveRelease = {
+      ...card(),
+      back_cover: null,
+      updated_at: "2026-11-21T12:00:00+00:00",
+      tracks: [line(), bandcamp, line({ id: LINKED, title: "Catalyst", slug: "catalyst", number: 3, plays_from: "soundcloud", stream_url: null })],
+      credits: [],
+      links: [],
+    };
+    expect(playerQueue(release).map((each) => each.key)).toEqual([`discography.track:${UPLOAD}`, `discography.track:${LINKED}`]);
   });
 });
