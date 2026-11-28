@@ -2,7 +2,7 @@
 
 Session prompts and working plans, the owner's convention across `C:\DEV`. Each session ends with two starting prompts saved here (`CLAUDE.md`, "Two lanes", since 2026-11-22): `<date>-next-session-<topic>.md` for the main lane and `<date>-side-lane-<topic>.md` for the side lane, in a worktree. When a prompt's session is done, it moves to `done/`, so the ones left here are the jobs. Durable decisions go in `docs/decisions/`, not here.
 
-Steps 1 and 2 are closed (#168 and M4m's handoff), and M4m's prompt is in `done/`, with the earlier ones; the side lane's discography 0.1.4 (#167) is done too, M13's prompt in `done/` with its Result. The main lane's job now is `2026-11-28-next-session-m4n-reactions.md` (step 3 in the owner's order: reactions, then comments, each contract first). The side lane works from `2026-11-28-side-lane-m14-portfolio.md` in its worktree (portfolio, contract first).
+Step 3 is under way: reactions 0.1.0 (#170, M4n) and portfolio 0.1.0 (#171, the side lane's M14) are built, and both prompts are in `done/`, M14's with its Result. The main lane's job now is `2026-11-28-next-session-m4o-comments.md` (reactions 0.1.1, then comments, then VM Website's ask C, uploaded video, each contract first; roster last). The side lane works from `2026-11-28-side-lane-m15-bandcamp.md` in a worktree (ask B, Bandcamp's own player, contract first).
 
 `progress-ledger/` is the source of the visual progress ledger, https://claude.ai/artifact/48auLkb7Ajmyn2SNAni9rm: its page (`index.html`) and the rows `python -m tools.progress` makes from `docs/progress.json` (`rows.json`); its README says how to republish it.
 

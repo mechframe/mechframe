@@ -824,7 +824,7 @@
    "status_label": "Next",
    "prs": "#170 #171",
    "decisions": "0068 0074",
-   "note": "The owner's order (2026-11-28): reactions then comments in the main lane, portfolio in the side lane, roster last; each contract first, for the owner. reactions 0.1.0 (#170, decision 0068): Fire, Love and Mind blown under any module's live thing through item references and the kernel's content.reactions slot, blog's posts first (blog 0.1.8); portfolio 0.1.0 (#171, decision 0074): pieces by discipline with one picture, an account they're credited to and an address of their own, the Art page and Collective › Portfolio, `portfolio.piece.add` for an artist's own pieces and `portfolio.piece.manage` for every piece"
+   "note": "The owner's order (2026-11-28): reactions then comments in the main lane, portfolio in the side lane, roster last; each contract first, for the owner. reactions 0.1.0 (#170, decision 0068): Fire, Love and Mind blown under any module's live thing through item references and the kernel's content.reactions slot, blog's posts first (blog 0.1.8); portfolio 0.1.0 (#171, decision 0074): pieces by discipline with one picture, an account they're credited to and an address of their own, the Art page and Collective › Portfolio, `portfolio.piece.add` for an artist's own pieces and `portfolio.piece.manage` for every piece. The owner's call on VM Website's asks (2026-11-28): B, Bandcamp's own player in discography and embeds, in the side lane; C, uploaded video, in the main lane after comments; each contract first"
   },
   {
    "milestone": "MechFrame v1.0",
@@ -2118,7 +2118,7 @@
   },
   {
    "label": "main",
-   "value": "de279f9"
+   "value": "8e48530"
   }
  ]
 }

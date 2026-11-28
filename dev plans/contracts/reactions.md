@@ -2,7 +2,7 @@
 feature: Reactions, the `reactions` module (decision 0068; module plan §2, §8 and §9; step 3's first)
 status: approved
 approved: 2026-11-28, as recommended ("Approve as recommended"): §8's five answers
-plan: `dev plans/2026-11-28-next-session-m4n-reactions.md` §4, 1 and 2
+plan: `dev plans/done/2026-11-28-next-session-m4n-reactions.md` §4, 1 and 2
 pr: — (read from GitHub just before the push)
 ---
 
