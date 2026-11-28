@@ -37,6 +37,12 @@ for (const [name, canvas] of Object.entries(THEMES)) {
     await expect(row.getByRole("button", { name: "Fire, 0" })).toHaveAttribute("aria-pressed", "false");
     await expect(row.getByRole("button", { name: "Love, 0" })).toBeVisible();
     await expect(row.getByRole("button", { name: "Mind blown, 0" })).toBeVisible();
+    // The Post board's figures and line (VM Website Dev 28's X1 and X2): the font's own
+    // figures in a count, and a pill's line height normal, not its type token's 1.3.
+    for (const pill of await row.getByRole("button").all()) {
+      await expect(pill).toHaveCSS("line-height", "normal");
+      await expect(pill.locator(".mf-reaction-count")).toHaveCSS("font-variant-numeric", "normal");
+    }
     expect(await axe(page)).toEqual([]);
 
     await row.getByRole("button", { name: "Fire, 0" }).click();

@@ -1,7 +1,7 @@
 {
   "id": "reactions",
   "name": "Reactions",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "status": "experimental",
   "category": "community",
   "summary": "Reactions on posts, comments and messages",
