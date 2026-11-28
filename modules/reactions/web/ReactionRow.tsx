@@ -37,6 +37,11 @@ export default function ReactionRow({ type, id }: ReactionPartProps) {
   const [unverified, setUnverified] = useState(false);
   // The keys whose press is on its way: another press of one waits for its answer.
   const sending = useRef(new Set<string>());
+  // The row's writes go one after the other, each after the last one's answer, so the
+  // server counts each with the ones before it saved; and the answer is drawn only when
+  // no press is queued after it, since it can't hold that one yet (Codex on #170).
+  const queue = useRef<Promise<void>>(Promise.resolve());
+  const queued = useRef(0);
 
   const item = found.data?.items[0];
   if (!found.data || !item) return null;
@@ -63,19 +68,25 @@ export default function ReactionRow({ type, id }: ReactionPartProps) {
     const shown = queryClient.getQueryData<Reactions>(queryKey)?.items.find((each) => each.id === id) ?? item;
     const on = shown.mine.includes(key);
     sending.current.add(key);
+    queued.current += 1;
     set((row) => toggled(row, key, on, order));
-    try {
-      const at = { params: { path: { type, id, key } } };
-      const { data } = on ? await api.DELETE(PRESS, at) : await api.PUT(PRESS, at);
-      if (data) set(() => data);
-    } catch (error) {
-      set((row) => toggled(row, key, !on, order));
-      if (error instanceof ApiProblem && error.code === UNVERIFIED) setUnverified(true);
-      else toast({ tone: "danger", text: failureWords(error) || "That reaction wasn't saved. Try again." });
-      void queryClient.invalidateQueries({ queryKey });
-    } finally {
-      sending.current.delete(key);
-    }
+    const write = async () => {
+      try {
+        const at = { params: { path: { type, id, key } } };
+        const { data } = on ? await api.DELETE(PRESS, at) : await api.PUT(PRESS, at);
+        if (data && queued.current === 1) set(() => data);
+      } catch (error) {
+        set((row) => toggled(row, key, !on, order));
+        if (error instanceof ApiProblem && error.code === UNVERIFIED) setUnverified(true);
+        else toast({ tone: "danger", text: failureWords(error) || "That reaction wasn't saved. Try again." });
+        void queryClient.invalidateQueries({ queryKey });
+      } finally {
+        queued.current -= 1;
+        sending.current.delete(key);
+      }
+    };
+    queue.current = queue.current.then(write);
+    await queue.current;
   };
 
   return (

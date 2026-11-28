@@ -140,6 +140,31 @@ describe("pressing", () => {
     expect(sent.filter((request) => request.method === "PUT")).toHaveLength(1);
   });
 
+  it("sends two presses one after the other, and keeps both (Codex on #170)", async () => {
+    let fire: (value: Answer) => void = () => undefined;
+    const sent = routed({
+      "GET /api/reactions": read(counted()),
+      // The first answer is the row as its own write saw it, before the second.
+      [`PUT ${PRESS("fire")}`]: () =>
+        new Promise<Answer>((resolve) => {
+          fire = resolve;
+        }),
+      [`PUT ${PRESS("love")}`]: { status: 200, body: counted({ fire: 1, love: 1 }, ["fire", "love"]) },
+    });
+    draw();
+    await userEvent.click(await button(/Fire, 0/));
+    await userEvent.click(await button(/Love, 0/));
+    expect(screen.getByRole("button", { name: "Love, 1" })).toHaveAttribute("aria-pressed", "true");
+    // Love's write waits for Fire's answer.
+    expect(sent.filter((request) => request.method === "PUT")).toHaveLength(1);
+    fire({ status: 200, body: counted({ fire: 1 }, ["fire"]) });
+    await waitFor(() => {
+      expect(sent.filter((request) => request.method === "PUT")).toHaveLength(2);
+    });
+    expect(await button(/Love, 1/)).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Fire, 1" })).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("takes the reader's own back", async () => {
     const sent = routed({
       "GET /api/reactions": read(counted({ love: 2 }, ["love"])),

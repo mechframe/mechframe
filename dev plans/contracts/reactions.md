@@ -176,3 +176,4 @@ No row-level security: each route checks the person and the thing itself. One pe
   - **Refusal order on `PUT`:** an unverified address first, then the type and the thing, then the key.
   - **No `docs/TESTING.md`** exists to change: each module's tests are in its `MODULE.md`, "Its tests".
   - **Comments on the Post board** draw a heart and a count under each comment: comments' contract takes that up.
+  - **A row's writes go one after the other** (Codex on #170): two presses before the first answer could each answer a count that missed the other, and the last to arrive cleared a saved reaction. Each waits for the one before it, and an answer is drawn only when no press is queued after it.
