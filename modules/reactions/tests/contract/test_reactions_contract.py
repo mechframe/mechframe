@@ -151,7 +151,7 @@ async def test_a_draft_or_a_gone_post_takes_no_reaction_and_isnt_answered(
         assert refused.json()["code"] == "reactions.not_found"
     assert (await _read(browser, post))["items"] == []
     gone = await browser.http.put(_press(NOBODY))
-    assert gone.json()["code"] == "reactions.not_found"
+    assert (gone.status_code, gone.json()["code"]) == (404, "reactions.not_found")
 
 
 async def test_a_type_no_module_gives_and_a_key_thats_no_reaction_are_refused(
@@ -163,13 +163,13 @@ async def test_a_type_no_module_gives_and_a_key_thats_no_reaction_are_refused(
     assert unknown.status_code == 404, unknown.text
     assert unknown.json()["code"] == "reactions.unknown_type"
     pressed = await browser.http.put(f"{API}/shop.product/{post}/fire")
-    assert pressed.json()["code"] == "reactions.unknown_type"
+    assert (pressed.status_code, pressed.json()["code"]) == (404, "reactions.unknown_type")
 
     for key in ("clap", "Fire"):
         refused = await browser.http.put(_press(post, key))
         assert refused.status_code == 422, refused.text
     clap = await browser.http.put(_press(post, "clap"))
-    assert clap.json()["code"] == "reactions.unknown_key"
+    assert (clap.status_code, clap.json()["code"]) == (422, "reactions.unknown_key")
 
 
 async def test_a_read_takes_one_to_fifty_things(browser: Browser) -> None:
@@ -211,7 +211,7 @@ async def test_the_palette_is_saved_through_the_kernels_settings(browser: Browse
         assert [each["key"] for each in found["palette"]] == ["love", "fire"]
         await browser.as_new()
         refused = await browser.http.put(_press(post, "mind_blown"))
-        assert refused.json()["code"] == "reactions.unknown_key"
+        assert (refused.status_code, refused.json()["code"]) == (422, "reactions.unknown_key")
         taken = await browser.http.delete(_press(post, "mind_blown"))
         assert taken.status_code == 200, taken.text
     finally:
@@ -235,3 +235,8 @@ async def test_pressing_spends_the_limit(browser: Browser, monkeypatch: pytest.M
         assert answer.status_code == 200, answer.text
     limited = await browser.http.put(_press(post, "mind_blown"))
     assert limited.status_code == 429, limited.text
+    # The budget is the account's: another member still presses (cubic on #170).
+    other = browser.stranger()
+    await other.as_new()
+    pressed = await other.http.put(_press(post))
+    assert pressed.status_code == 200, pressed.text

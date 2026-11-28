@@ -26,6 +26,7 @@
   background: transparent;
   color: var(--mf-color-text-strong);
   font: var(--mf-type-section-title);
+  letter-spacing: var(--mf-type-section-title-tracking);
   cursor: pointer;
 }
 

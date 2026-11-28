@@ -54,7 +54,7 @@ None of its own. Draw a cover (0.1.4) shows while the AI has a key, the host's `
 
 `blog.post.published`, for a module that posts or mails a new post.
 
-**Its posts as item references** (0.1.8, hook 11): `refs.py` gives `blog.post` ("Posts"), drafts too, each live while the site shows it, with its category and published day as its line and its cover's smallest copy as its picture; the picker matches the title, newest edit first. Reactions asks it whether a post takes a reaction now, and a featured slot may hold posts. The post page draws the kernel's `<ReactionParts type="blog.post" id />` after the body, so with `reactions` on its row sits there (decision 0068), and `LivePost` carries the post's `id`.
+**Its posts as item references** (0.1.8, hook 11): `refs.py` gives `blog.post` ("Posts"), drafts too, each live while the site shows it, with its category and published day as its line ("Not published" in the day's place while the site doesn't show it) and its cover's smallest copy as its picture; the picker matches the title, newest edit first. Reactions asks it whether a post takes a reaction now, and a featured slot may hold posts. The post page draws the kernel's `<ReactionParts type="blog.post" id />` after the body, so with `reactions` on its row sits there (decision 0068), and `LivePost` carries the post's `id`.
 
 **Its public surface** (0.1.1), for a site whose own Blog and Post pages replace blog's at `/blog` and `/blog/:slug` (the same rank, which `server_copy.build` allows) and draw blog's posts:
 

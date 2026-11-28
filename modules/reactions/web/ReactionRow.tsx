@@ -44,7 +44,8 @@ export default function ReactionRow({ type, id }: ReactionPartProps) {
   const queued = useRef(0);
 
   const item = found.data?.items[0];
-  if (!found.data || !item) return null;
+  // A read that fails draws nothing, a refetch's too, though the last answer is kept (cubic on #170).
+  if (found.error || !found.data || !item) return null;
   const palette = found.data.palette;
   const order = palette.map((choice) => choice.key);
   const queryKey = ["get", READ, init];
@@ -56,17 +57,20 @@ export default function ReactionRow({ type, id }: ReactionPartProps) {
   };
 
   const press = async (key: string) => {
-    if (session.status !== "signed-in") {
+    if (session.status === "signed-out") {
       void navigate(signInFor(`${pathname}${search}${hash}`));
       return;
     }
-    if (!session.user.verified) {
-      setUnverified(true);
-      return;
-    }
+    // Not read yet, or not reachable: nothing to do until it's known (cubic on #170).
+    if (session.status !== "signed-in") return;
     if (sending.current.has(key)) return;
     const shown = queryClient.getQueryData<Reactions>(queryKey)?.items.find((each) => each.id === id) ?? item;
     const on = shown.mine.includes(key);
+    // Adding needs a verified address; taking one's own back never does (CodeRabbit on #170).
+    if (!on && !session.user.verified) {
+      setUnverified(true);
+      return;
+    }
     sending.current.add(key);
     queued.current += 1;
     set((row) => toggled(row, key, on, order));

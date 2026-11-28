@@ -106,19 +106,31 @@ describe("the row", () => {
   });
 
   it("draws nothing for a thing the site doesn't show, or a read that fails", async () => {
+    // Each waits for its read to have answered before it looks (cubic on #170).
     routed({ "GET /api/reactions": read(null) });
-    const { container, unmount } = draw();
+    const { container, queryClient, unmount } = draw();
     await waitFor(() => {
-      expect(vi.mocked(fetch)).toHaveBeenCalled();
+      expect(queryClient.getQueryCache().findAll({ queryKey: ["get", "/api/reactions"] })[0]?.state.status).toBe("success");
     });
     expect(container).toBeEmptyDOMElement();
     unmount();
     routed({ "GET /api/reactions": problem(404, "reactions.unknown_type", "Nothing on this site is a blog.post.") });
     const failed = draw();
     await waitFor(() => {
-      expect(vi.mocked(fetch)).toHaveBeenCalled();
+      expect(failed.queryClient.getQueryCache().findAll({ queryKey: ["get", "/api/reactions"] })[0]?.state.status).toBe("error");
     });
     expect(failed.container).toBeEmptyDOMElement();
+  });
+
+  it("goes when a read again fails, though the last answer is kept (cubic on #170)", async () => {
+    routed({ "GET /api/reactions": read(counted({ fire: 2 })) });
+    const { queryClient } = draw();
+    await button(/Fire, 2/);
+    routed({ "GET /api/reactions": problem(503, "kernel.unavailable", "The site is busy.") });
+    await queryClient.invalidateQueries({ queryKey: ["get", "/api/reactions"] });
+    await waitFor(() => {
+      expect(screen.queryByRole("group", { name: "Reactions" })).not.toBeInTheDocument();
+    });
   });
 });
 
@@ -193,6 +205,29 @@ describe("pressing", () => {
     await userEvent.click(await button(/Fire, 3/));
     expect(router.state.location.pathname).toBe("/sign-in");
     expect(new URLSearchParams(router.state.location.search).get("next")).toBe("/blog/ten-years?from=home");
+    expect(sent.some((request) => request.method !== "GET")).toBe(false);
+  });
+
+  it("lets an unverified member take their own back (CodeRabbit on #170)", async () => {
+    const sent = routed({
+      "GET /api/reactions": read(counted({ love: 1 }, ["love"])),
+      [`DELETE ${PRESS("love")}`]: { status: 200, body: counted() },
+    });
+    draw({ session: testUser({ verified: false }) });
+    await userEvent.click(await button(/Love, 1/));
+    expect(await button(/Love, 0/)).toHaveAttribute("aria-pressed", "false");
+    expect(sent.some((request) => request.method === "DELETE")).toBe(true);
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("does nothing while who's signed in isn't known yet (cubic on #170)", async () => {
+    const sent = routed({ "GET /api/reactions": read(counted({ fire: 3 })) });
+    const { router } = renderWithKernel(<ReactionRow type="blog.post" id={ID} />, {
+      session: "loading",
+      path: "/blog/ten-years",
+    });
+    await userEvent.click(await button(/Fire, 3/));
+    expect(router.state.location.pathname).toBe("/blog/ten-years");
     expect(sent.some((request) => request.method !== "GET")).toBe(false);
   });
 

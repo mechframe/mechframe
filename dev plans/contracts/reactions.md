@@ -44,7 +44,7 @@ Any module can put the same row under its own things, with no code of reactions'
 - **Two presses at once** make one row: `INSERT … ON CONFLICT (target_type, target_id, user_id, key) DO NOTHING`, on a full unique constraint, never a partial index.
 
 **The service,** `backend/reactions/service.py`, the routes thin over it:
-- `async def counted(db: AsyncSession, type: str, ids: Sequence[uuid.UUID], user: User | None) -> list[Counted]`;
+- `async def counted(db: AsyncSession, type: str, ids: Sequence[uuid.UUID], user: User | None) -> dict[str, Any]`: the whole `Reactions` answer, the palette and the items;
 - `async def react(db: AsyncSession, user: User, type: str, id: uuid.UUID, key: str) -> Counted`;
 - `async def unreact(db: AsyncSession, user: User, type: str, id: uuid.UUID, key: str) -> Counted`.
 - `public.py` holds nothing in 0.1.0. Comments' contract decides whether it asks through the routes or through `public.py`.
@@ -54,10 +54,10 @@ Any module can put the same row under its own things, with no code of reactions'
 - **The setting:** `Settings.palette: list[str]`, by default `["fire", "love", "mind_blown"]`. Each must be built in, with no repeats, 1 to 3 of them. Its order is the row's order. It's saved through the kernel's `PUT /api/kernel/admin/settings/reactions`, under `kernel.settings.manage`, with no screen of its own in 0.1.0 (§8, 5).
 
 **The web:** reactions' `module.web.ts` fills `content.reactions` with `ReactionRow`:
-- **The row:** `role="group"`, `aria-label="Reactions"`. One button per palette key: its icon, its count and its label hidden but read, with `aria-pressed`. Each is a pill at least 48px high. Pressed, it gets the accent ring and the accent at 14% behind it, from tokens (`--mf-color-accent`, `--mf-color-border`, `--mf-radius-pill`).
+- **The row:** `role="group"`, `aria-label="Reactions"`. One button per palette key: its icon, its count and its label hidden but read, with `aria-pressed`. Each is a pill at least 48px high. Pressed, it gets the accent ring and the accent at 14% behind it, from tokens (`--mf-color-accent`, `--mf-color-border-strong`, the board's `#2A3457`, and `--mf-radius-pill`).
 - **Pressing** updates the count at once and puts it back if the server refuses, with the refusal's sentence in a toast.
 - **Signed out,** the counts show, and pressing one goes to `/sign-in?next=<this page's path>`. An unverified member gets the sentence and a link to `/account`.
-- **The data:** one `GET` per row through the generated client and TanStack Query, under the key `["reactions", type, id]`.
+- **The data:** one `GET` per row through the generated client and TanStack Query, under the client's own key for `GET /api/reactions` with the thing's type and id (`["get", "/api/reactions", {params: {query: {type, id: [id]}}}]`).
 
 **Blog 0.1.8:**
 - **`backend/blog/refs.py`:** `Posts(refs.Source)`, `type = "blog.post"`, `label = "Posts"`, copied from discography's pattern.
@@ -103,7 +103,7 @@ No row-level security: each route checks the person and the thing itself. One pe
 - **Changed:**
   - `kernel/web/src/slots/types.ts` and `modules.ts` (`content.reactions`), and `ReactionParts.tsx` beside `ShareParts.tsx`;
   - blog: `refs.py` (new), `schemas.py` (`LivePost.id`), `web/pages/Post.tsx`, `module.json` (0.1.8, its kernel range), `MODULE.md` and `CHANGELOG.md`;
-  - `SPEC.md` (8's slot table and its paragraph, and the change log) and `docs/TESTING.md`;
+  - `SPEC.md` (6's `signInFor`, 8's slot table and its paragraph, and the change log);
   - the generated files: `catalog.json`, `docs/HOST-VARIABLES.md`, the OpenAPI specs, `schema.ts` and `docs/progress.json`.
 - **The source,** read only: VybeMindz's `backend/app/routers/messages.py` (`add_reaction`, `remove_reaction`, `_build_reactions`) and `models/__init__.py` (`Reaction`). What's lifted: the unique row per person, thing and reaction, and a duplicate press as a no-op. The icons come from VM Website's `design/site/Post.dc.html`. VybeMindz isn't VybeSite, so no brand check applies. It's run anyway before the push, as on every PR that lifts code.
 
@@ -177,3 +177,9 @@ No row-level security: each route checks the person and the thing itself. One pe
   - **No `docs/TESTING.md`** exists to change: each module's tests are in its `MODULE.md`, "Its tests".
   - **Comments on the Post board** draw a heart and a count under each comment: comments' contract takes that up.
   - **A row's writes go one after the other** (Codex on #170): two presses before the first answer could each answer a count that missed the other, and the last to arrive cleared a saved reaction. Each waits for the one before it, and an answer is drawn only when no press is queued after it.
+  - **From CodeRabbit and cubic on #170:**
+    - an unverified member can still take their own back; only adding asks for a verified address;
+    - a press while who's signed in isn't known yet does nothing, rather than going to sign-in;
+    - a read that fails again hides the row, though TanStack Query keeps the last answer;
+    - the counts and the reader's own come from one statement, so one snapshot;
+    - `ReactionParts` keys each part by the thing too, so another thing gets a fresh part.

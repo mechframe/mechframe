@@ -31,7 +31,12 @@ class Things(refs.Source):
     def add(self, *, live: bool = True) -> uuid.UUID:
         ident = uuid.uuid4()
         self.items[ident] = refs.Ref(
-            ident, "Catalyst", "petro and J Tone", None, f"/music/{ident.hex[:8]}", live
+            ident,
+            "Catalyst",
+            "petro and J Tone",
+            None,
+            f"/music/{ident.hex[:8]}" if live else None,
+            live,
         )
         return ident
 

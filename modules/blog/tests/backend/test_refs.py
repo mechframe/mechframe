@@ -75,3 +75,8 @@ async def test_pick_takes_percent_and_underscore_as_typed(db: AsyncSession) -> N
     await _new(db, title=f"{word} 100 off")
     page = await Posts().pick(db, f"{word} 100%", cursor=None, limit=10)
     assert [each.title for each in page["items"]] == [f"{word} 100% off"]
+    # An underscore is itself, never any one character (cubic on #170).
+    await _new(db, title=f"{word} a_b")
+    await _new(db, title=f"{word} axb")
+    page = await Posts().pick(db, f"{word} a_b", cursor=None, limit=10)
+    assert [each.title for each in page["items"]] == [f"{word} a_b"]

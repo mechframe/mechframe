@@ -35,6 +35,15 @@ Use it when readers should react to posts, tracks or artwork with one press, and
 - **Settings:** the section `reactions`, its one field `palette`.
 - **Variables:** `REACTIONS_RATE_LIMIT` (`docs/HOST-VARIABLES.md`).
 
+## Settings and env vars
+
+- **The settings section `reactions`:** `palette`, the reactions offered in the row's order, built-in keys only (`fire`, `love`, `mind_blown`), each once; all three by default. Saved through the kernel's `PUT /api/kernel/admin/settings/reactions` under `kernel.settings.manage`, with no screen of its own in 0.1.0.
+- **`REACTIONS_RATE_LIMIT`** (optional): how many reactions one account may add or take back, as count/period; `60/1m` by default (`docs/HOST-VARIABLES.md`).
+
+## Install notes
+
+`mechframe add reactions`, then `mechframe upgrade kernel` if the site's kernel predates the `content.reactions` slot. It requires no module. A thing takes reactions once its module gives it through `refs.py` and its public page draws `<ReactionParts type id />`: blog 0.1.8's posts do. Nothing is drawn until then, and nothing needs a key, a host or a third-party account.
+
 ## Extension points
 
 - A module's things take reactions once it gives them through `refs.py` and its page draws `<ReactionParts type id />` from `@/kernel`.
@@ -49,6 +58,6 @@ Use it when readers should react to posts, tracks or artwork with one press, and
 
 `tests/backend` holds the rules on the database against a made-up refs source, the race of two presses and the sweep; `tests/contract` every route over HTTP, with blog's posts as the things; `tests/web` the row; `tests/e2e` a member pressing Fire on a live post in the browser.
 
-## From
+## Source and license
 
-VybeMindz's `backend/app/routers/messages.py` (`add_reaction`, `remove_reaction`, `_build_reactions`) and `models/__init__.py` (`Reaction`), commit `7315225`, reshaped: any module's thing named by type and id in place of a message, a palette in place of any emoji, the kernel's checks in place of the channel's. What's kept: one row each per person, thing and reaction, a duplicate press a no-op. Its encrypted channels' blind index and its custom emojis aren't lifted. The icons are VM Website's Post board's.
+VybeMindz's `backend/app/routers/messages.py` (`add_reaction`, `remove_reaction`, `_build_reactions`) and `models/__init__.py` (`Reaction`), commit `7315225`, reshaped: any module's thing named by type and id in place of a message, a palette in place of any emoji, the kernel's checks in place of the channel's. What's kept: one row each per person, thing and reaction, a duplicate press a no-op. Its encrypted channels' blind index and its custom emojis aren't lifted. The icons are VM Website's Post board's. The owner's code, proprietary.

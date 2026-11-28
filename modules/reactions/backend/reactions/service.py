@@ -15,6 +15,7 @@ from collections.abc import Sequence
 from datetime import datetime
 from typing import Any, Protocol, cast
 
+import sqlalchemy as sa
 from sqlalchemy import delete, func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -71,8 +72,11 @@ async def _counted(
     """Each thing's count of each key, 0 included, and the person's own."""
     if not ids:
         return []
+    # One statement, so the counts and the reader's own come from one snapshot
+    # (CodeRabbit on #170): two would each take their own under READ COMMITTED.
+    theirs = func.bool_or(Reaction.user_id == person.id) if person is not None else sa.false()
     rows = await db.execute(
-        select(Reaction.target_id, Reaction.key, func.count())
+        select(Reaction.target_id, Reaction.key, func.count(), theirs)
         .where(
             Reaction.target_type == kind,
             Reaction.target_id.in_(ids),
@@ -80,17 +84,12 @@ async def _counted(
         )
         .group_by(Reaction.target_id, Reaction.key)
     )
-    counts = {(target, key): int(n) for target, key, n in rows}
+    counts: dict[tuple[uuid.UUID, str], int] = {}
     mine: set[tuple[uuid.UUID, str]] = set()
-    if person is not None:
-        theirs = await db.execute(
-            select(Reaction.target_id, Reaction.key).where(
-                Reaction.target_type == kind,
-                Reaction.target_id.in_(ids),
-                Reaction.user_id == person.id,
-            )
-        )
-        mine = {(target, key) for target, key in theirs}
+    for target, key, n, own in rows:
+        counts[(target, key)] = int(n)
+        if own:
+            mine.add((target, key))
     return [
         {
             "id": str(each),

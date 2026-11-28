@@ -31,7 +31,9 @@ export function ReactionParts({ type, id }: ReactionProps) {
       {entries.map((entry) => {
         const Part = lazyPart(entry.lazy);
         return (
-          <ErrorBoundary key={entry.key} where={`${entry.module}'s part of content.reactions`} onRetry={again}>
+          // Keyed by the thing too, so a part is made afresh for another thing, never
+          // carrying one post's state to the next (cubic on #170).
+          <ErrorBoundary key={`${entry.key}:${type}:${id}`} where={`${entry.module}'s part of content.reactions`} onRetry={again}>
             <Suspense fallback={null}>
               <Part type={type} id={id} />
             </Suspense>
