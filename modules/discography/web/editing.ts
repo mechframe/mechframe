@@ -19,6 +19,8 @@ export type ReleaseForm = {
   artist_line: string;
   credit_line: string;
   summary: string;
+  /** The album's Bandcamp player: its embed code as pasted, or the link it's kept as. */
+  bandcamp_url: string;
   cover: MusicCover | null;
   back_cover: MusicCover | null;
   tracklist_to_come: boolean;
@@ -35,6 +37,8 @@ export type TrackForm = {
   explicit: boolean;
   lyrics: string;
   soundcloud_url: string;
+  /** Its own Bandcamp player: its embed code as pasted, or the link it's kept as. */
+  bandcamp_url: string;
   /** A length typed for a track that plays from its link alone: "3:42". */
   length: string;
   credits: CreditRow[];
@@ -50,6 +54,7 @@ export const RELEASE_LABELS: Record<keyof ReleaseForm, string> = {
   artist_line: "Artist line",
   credit_line: "Credit",
   summary: "Summary",
+  bandcamp_url: "Bandcamp player",
   cover: "Front cover",
   back_cover: "Back cover",
   tracklist_to_come: "Tracklist to come",
@@ -64,6 +69,7 @@ export const TRACK_LABELS: Record<keyof TrackForm, string> = {
   explicit: "Explicit",
   lyrics: "Lyrics",
   soundcloud_url: "SoundCloud link",
+  bandcamp_url: "Bandcamp player",
   length: "Length",
   credits: "Credits",
 };
@@ -71,7 +77,8 @@ export const TRACK_LABELS: Record<keyof TrackForm, string> = {
 const creditsOf = (credits: readonly { role_id: string; name: string }[]): CreditRow[] => credits.map(({ role_id, name }) => ({ role_id, name }));
 
 function lengthOf(track: FullTrack): string {
-  const ms = track.audio.plays_from === "soundcloud" && track.audio.state !== "ready" ? track.audio.duration_ms : null;
+  const typed = track.audio.plays_from === "soundcloud" || track.audio.plays_from === "bandcamp";
+  const ms = typed && track.audio.state !== "ready" ? track.audio.duration_ms : null;
   return ms === null ? "" : clock(ms);
 }
 
@@ -84,6 +91,7 @@ export function releaseFormOf(release: FullRelease): ReleaseForm {
     artist_line: release.artist_line,
     credit_line: release.credit_line,
     summary: release.summary,
+    bandcamp_url: release.bandcamp_url ?? "",
     cover: release.cover ?? null,
     back_cover: release.back_cover ?? null,
     tracklist_to_come: release.tracklist_to_come,
@@ -100,6 +108,7 @@ export function trackFormOf(track: FullTrack): TrackForm {
     explicit: track.explicit,
     lyrics: track.lyrics ?? "",
     soundcloud_url: track.audio.soundcloud_url ?? "",
+    bandcamp_url: track.audio.bandcamp_url ?? "",
     length: lengthOf(track),
     credits: creditsOf(track.credits),
   };
@@ -200,6 +209,7 @@ export function releaseBody(form: ReleaseForm, fields: readonly (keyof ReleaseFo
     else if (field === "year") sent.year = form.year.trim() ? Number(form.year) : null;
     else if (field === "credits") sent.credits = rowsOf(form.credits);
     else if (field === "links") sent.links = form.links.map((each) => each.trim()).filter(Boolean);
+    else if (field === "bandcamp_url") sent.bandcamp_url = form.bandcamp_url.trim() || null;
     else if (field === "track_ids" || field === "kind" || field === "tracklist_to_come") sent[field] = form[field];
     else sent[field] = form[field].trim();
   }
@@ -213,6 +223,7 @@ export function trackBody(form: TrackForm, fields: readonly (keyof TrackForm)[])
     if (field === "credits") sent.credits = rowsOf(form.credits);
     else if (field === "length") sent.duration_ms = form.length.trim() ? msOf(form.length) : null;
     else if (field === "soundcloud_url") sent.soundcloud_url = form.soundcloud_url.trim() || null;
+    else if (field === "bandcamp_url") sent.bandcamp_url = form.bandcamp_url.trim() || null;
     else if (field === "lyrics") sent.lyrics = form.lyrics.trim() ? form.lyrics : null;
     else if (field === "explicit") sent.explicit = form.explicit;
     else sent[field] = form[field].trim();

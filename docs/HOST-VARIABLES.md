@@ -262,9 +262,9 @@ Set in the site's admin (Admin → Settings), not on the host:
 | `intro` | string | `Send a message and we'll reply by email.` | The line under the Contact page's heading |
 | `topics` | json | a list (see the module's MODULE.md) | What a message can be about, in the form's order; a first topic's new messages come first in the Inbox |
 
-### `discography` 0.1.4 (experimental)
+### `discography` 0.1.5 (experimental)
 
-Albums, EPs and singles with tracks, credits and streaming links; tracks play from an upload or a SoundCloud link.
+Albums, EPs and singles with tracks, credits and streaming links; tracks play from an upload, SoundCloud or Bandcamp.
 
 No host variables of its own.
 
@@ -278,7 +278,7 @@ Set in the site's admin (Admin → Settings), not on the host:
 | `show_explicit_badge` | bool | `true` | The Parental Advisory label on explicit releases and tracks |
 | `show_lyrics` | bool | `true` | Lyrics on a track's page, for tracks that have them |
 
-### `embeds` 0.1.1 (experimental)
+### `embeds` 0.1.2 (experimental)
 
 YouTube, SoundCloud, Spotify and Bandcamp players from a pasted link, loaded only once a visitor plays.
 

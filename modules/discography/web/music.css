@@ -477,3 +477,35 @@
 .mf-music-up svg {
   transform: rotate(180deg);
 }
+
+/* Bandcamp's own player (0.1.5): its Listen, whose player it is and the cookie
+   note, then embeds' frame in its place, as wide as the row. */
+.mf-music-bandcamp-ask {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mf-space-4);
+  min-width: 0;
+}
+
+.mf-music-bandcamp-words {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-1);
+  min-width: 0;
+}
+
+.mf-music-bandcamp-from {
+  font-weight: 600;
+}
+
+.mf-music-bandcamp {
+  width: 100%;
+  min-width: 0;
+  border-radius: var(--mf-radius-card);
+}
+
+.mf-music-bandcamp:focus-visible {
+  outline: 2px solid var(--mf-color-focus);
+  outline-offset: 2px;
+}

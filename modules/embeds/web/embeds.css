@@ -2,12 +2,14 @@
    (`dev plans/contracts/embeds.md`), on the theme's tokens only. A player's
    shape is a class, never a style, for the CSP. */
 
-/* A link as its provider's player: the facade or the iframe, then the words. */
+/* A link as its provider's player: the facade or the iframe, then the words;
+   or the iframe alone (`EmbedFrame`), sized by the same shapes. */
 .mf-embed {
   margin: var(--mf-space-6) 0;
 }
 
 .mf-embed-player,
+.mf-embed-frame,
 .mf-embed-facade {
   display: block;
   width: 100%;
@@ -17,29 +19,36 @@
 }
 
 .mf-embed--video .mf-embed-player,
-.mf-embed--video .mf-embed-facade {
+.mf-embed--video .mf-embed-facade,
+.mf-embed-frame--video {
   aspect-ratio: 16 / 9;
 }
 
 .mf-embed--short .mf-embed-player,
-.mf-embed--short .mf-embed-facade {
+.mf-embed--short .mf-embed-facade,
+.mf-embed-frame--short {
   aspect-ratio: 9 / 16;
   max-width: 22rem;
 }
 
-.mf-embed--strip-120 .mf-embed-player {
+.mf-embed--strip-120 .mf-embed-player,
+.mf-embed-frame--strip-120 {
   height: 120px;
 }
-.mf-embed--strip-152 .mf-embed-player {
+.mf-embed--strip-152 .mf-embed-player,
+.mf-embed-frame--strip-152 {
   height: 152px;
 }
-.mf-embed--strip-166 .mf-embed-player {
+.mf-embed--strip-166 .mf-embed-player,
+.mf-embed-frame--strip-166 {
   height: 166px;
 }
-.mf-embed--strip-352 .mf-embed-player {
+.mf-embed--strip-352 .mf-embed-player,
+.mf-embed-frame--strip-352 {
   height: 352px;
 }
-.mf-embed--strip-450 .mf-embed-player {
+.mf-embed--strip-450 .mf-embed-player,
+.mf-embed-frame--strip-450 {
   height: 450px;
 }
 

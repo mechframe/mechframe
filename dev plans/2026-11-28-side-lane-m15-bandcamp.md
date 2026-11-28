@@ -49,4 +49,35 @@ Checked 2026-11-28, about 10:45 Eastern: `main` was 8e48530 (#171), and the main
 
 ## 9. Result
 
-(Written by the side lane when its PR lands.)
+Side lane M15, 2026-11-28, about 11:00 to 12:10 Eastern (16:00 to 17:10 UTC).
+
+- **The contract** (`dev plans/contracts/bandcamp-player.md`) went to the owner first. They approved it as recommended, with its three answers in §8:
+  - the queue skips a Bandcamp-only track;
+  - the site's Listen takes turns through `useExclusive`;
+  - a track falls back to its album's player.
+  - Its "Changes as built" adds `SOURCE` and five smaller things; none changes what was approved.
+- **#174, discography 0.1.5 and embeds 0.1.2,** from `main` at ad1702f (#172). It uses decision 0075 and migration `discography_0002`; 0076 to 0079 and `embeds_0001` are still free. Step 3's `prs` gains 174, and `python -m tools.progress` remade `docs/PROGRESS.md` and the ledger's rows. Republishing the ledger is the main lane's.
+  - **Built:**
+    - a "Bandcamp player" field on a track and an album takes the embed code;
+    - the server reads it (embeds' new `from_bandcamp_code`, the web's twin, both held to 17 shared cases) and keeps only the link;
+    - the source order: upload, SoundCloud, the track's own player, then its album's;
+    - `bandcamp_url` beside `soundcloud_url` in every read, and Live everywhere;
+    - `playerItem` null for a Bandcamp track, `playerQueue` without it, and `bandcampPlayer(track)`;
+    - embeds' `EmbedFrame`, the iframe alone, drawn only once `media` is granted;
+    - discography's own Release and Track pages draw a Listen, then the frame, taking turns with audio-player.
+  - **For VM Website:** `playerItem` now returns `PlayerItem | null`, so the site's typecheck flags its Spotlight and deck builders until they leave Bandcamp tracks out and draw `bandcampPlayer(track)` through `EmbedFrame`. That's the wiring `NO_BANDCAMP` waits for. Then the boards' Bandcamp states at 1440 and 390 are VM Website's check.
+- **Local before the push:**
+  - discography's Python suites (backend and HTTP contract): 169 passed, 23 of them new (the two tests the new shape broke were updated);
+  - `tests/`, `kernel/tests/contract/` and embeds' backend: 843 passed, 1 skipped, 19 xfailed. Three failures were stale generated files (`progress.json`'s PR number not yet set, discography's `openapi.json` version line), remade and passing (49 passed);
+  - web: discography's and embeds' Vitest tests passed (263); ESLint and tsc are clean, and mypy is clean across the project;
+  - a mutant (the Listen without `claim()`) fails the turn-taking test;
+  - e2e: `discography.spec.ts` and `embeds.spec.ts` passed, 8 of 8, both themes, from a throwaway config in the worktree, with the main lane told before and after;
+  - on a fresh site, `mechframe add` media, embeds, audio-player and discography, then `mechframe check`: passed. `tools.validate_schemas` is clean. The brand check doesn't apply: nothing was lifted.
+- **Traps hit:**
+  - a manifest's `summary` is 120 characters at most (again);
+  - `docs/HOST-VARIABLES.md` lists each module's version and summary: run `python -m tools.host_variables` after a version bump;
+  - `npm run api:types` rewrites every module's `schema.ts` with LF endings in a CRLF checkout, so restore the unchanged ones. `api:check` fails here on line endings alone: check one module with `openapi-typescript … --check`;
+  - a `bash` heredoc with many apostrophes broke twice: write a long edit script with the Write tool and run it.
+- **Candidates for `knowledge/`:**
+  - a player that can't be paused from outside takes turns by being unmounted: claim the turn on Listen, and let the other player's start put it back (decision 0075);
+  - when a public helper's return type widens to `| null`, a site's type checker is the cheapest way to say "this case needs handling now".

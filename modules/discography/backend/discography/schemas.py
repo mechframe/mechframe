@@ -28,7 +28,9 @@ Kind = Literal["album", "ep", "single"]
 Status = Literal["draft", "scheduled", "published"]
 Profile = Literal["unlinked", "collective", "member", "not_member"]
 AudioState = Literal["none", "processing", "ready", "failed"]
-PlaysFrom = Literal["upload", "soundcloud"]
+PlaysFrom = Literal["upload", "soundcloud", "bandcamp"]
+#: Bandcamp's embed code is about 400 characters; embeds reads none longer.
+MAX_PASTE = 4096
 Platform = Literal[
     "spotify",
     "apple-music",
@@ -117,11 +119,16 @@ class TrackLine(Answer):
     number: int
     duration_ms: int | None
     explicit: bool
-    #: The stream file once it's made; else the SoundCloud link.
+    #: The stream file once it's made; else the SoundCloud link; else
+    #: Bandcamp's own player (0.1.5).
     plays_from: PlaysFrom
     stream_url: str | None
     soundcloud_url: str | None
     soundcloud_kind: Literal["track", "set"] | None
+    #: The Bandcamp player it plays in, when `plays_from` is `bandcamp`: its
+    #: own, else its release's, as the page's link with the player's id in its
+    #: fragment (`…/track/slug#bandcamp-track=123`), for embeds' `EmbedFrame`.
+    bandcamp_url: str | None
     has_lyrics: bool
     path: str
 
@@ -222,7 +229,8 @@ class TrackAudio(Answer):
     """Where a track's sound is, and what it can do now."""
 
     state: AudioState
-    #: What plays: the stream file, else the link; null when nothing does.
+    #: What plays: the stream file, else the link, else Bandcamp's player
+    #: (the track's own or its release's); null when nothing does.
     plays_from: PlaysFrom | None
     percent: int | None
     #: Why the last processing failed: a problem code, with words for it.
@@ -232,6 +240,8 @@ class TrackAudio(Answer):
     master_bytes: int | None
     soundcloud_url: str | None
     soundcloud_kind: Literal["track", "set"] | None
+    #: The track's own Bandcamp player, as its field shows it.
+    bandcamp_url: str | None
     duration_ms: int | None
     #: The stream file, for staff to hear even before release day.
     stream_url: str | None
@@ -295,6 +305,8 @@ class AdminReleaseList(Answer):
 class FullRelease(AdminRelease):
     credit_line: str
     summary: str
+    #: The album's own Bandcamp player, for its tracks with no upload or SoundCloud link.
+    bandcamp_url: str | None
     back_cover: MusicCover | None
     tracks: list[AdminTrack]
     credits: list[AdminCredit]
@@ -409,6 +421,9 @@ class ReleaseChange(_ReleaseFields):
     cover_id: str | None = Field(default=None, max_length=36)
     back_cover_id: str | None = Field(default=None, max_length=36)
     tracklist_to_come: bool | None = None
+    #: Bandcamp's embed code for the album as pasted, or the link its field
+    #: shows back; null or blank clears it.
+    bandcamp_url: str | None = Field(default=None, max_length=MAX_PASTE)
     credits: list[CreditIn] | None = Field(default=None, max_length=MAX_CREDITS)
     links: list[str] | None = Field(default=None, max_length=MAX_LINKS)
     #: Every track's id, in the order they play.
@@ -436,8 +451,10 @@ class NewTrack(_Strict):
 
 class TrackChange(_Strict):
     """What a save changes, with the `version` it read. `soundcloud_url`,
-    `lyrics` and `duration_ms` sent as null clear them; `duration_ms` is for a
-    track that plays from its link alone."""
+    `bandcamp_url`, `lyrics` and `duration_ms` sent as null clear them;
+    `duration_ms` is for a track that plays from its link or Bandcamp's
+    player alone. `bandcamp_url` takes Bandcamp's embed code as pasted, or
+    the link its field shows back."""
 
     version: int = Field(ge=1)
     title: str | None = Field(default=None, max_length=MAX_TITLE)
@@ -445,6 +462,7 @@ class TrackChange(_Strict):
     explicit: bool | None = None
     lyrics: str | None = Field(default=None, max_length=MAX_LYRICS)
     soundcloud_url: str | None = Field(default=None, max_length=MAX_URL)
+    bandcamp_url: str | None = Field(default=None, max_length=MAX_PASTE)
     duration_ms: int | None = Field(default=None, ge=0, le=6 * 60 * 60 * 1000)
     credits: list[CreditIn] | None = Field(default=None, max_length=MAX_CREDITS)
 

@@ -290,7 +290,7 @@ class Music(server_copy.Pages):
                     service.track_path(release, track), modified=track.updated_at, title=track.title
                 )
                 for track in tracks[release.id]
-                if service.plays_from(track)
+                if service.plays_from(track, release)
             )
         return entries
 

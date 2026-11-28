@@ -37,10 +37,13 @@ Use it when writers put videos and tracks from those four providers in pages and
 
 **For a site's own pages** (`@/modules/embeds/public`, decision 0057):
 - `Embed` (`{link, words?}`): the player above;
+- `EmbedFrame` (`{link, words?}`, 0.1.2): the provider's iframe alone, the same sandbox and title, sized by the same shapes, for a page that draws its own facade (a site's Listen in place of its player's controls). It draws nothing until `media` is granted, so the page's facade grants it, and nothing for a link that isn't a player. It never plays by itself, and unmounting it stops it, which is how a page takes turns with `audio-player` (`useExclusive`);
 - `VideoPlaylist` (`{items, autoplay?, onPlay?, ref?, label?}`), each item `{url, title, poster?}`, any YouTube link or a bare id;
 - `recognise(link)`, `wordsFor(embed, words)` and `youtubeId(link)`.
 
-**For another module's backend** (`embeds.public`, with `embeds` in its `requires.modules`): `recognise(link)` and `words_for(embed, words)`, the same reading of a link, for a place that can't hold a player, such as `campaigns`' emails.
+**For another module's backend** (`embeds.public`, with `embeds` in its `requires.modules`):
+- `recognise(link)` and `words_for(embed, words)`, the same reading of a link, for a place that can't hold a player, such as `campaigns`' emails;
+- `from_bandcamp_code(code)` (0.1.2): Bandcamp's embed code as its page's link, with the player's id in the fragment, and its words; or None. It's the web's `fromBandcampCode`, held to the same cases, for a module that keeps a Bandcamp player from what an admin pasted (`discography`).
 
 ## Settings and env vars
 
@@ -65,6 +68,7 @@ A new provider takes four changes, each on both sides:
 - A player in text can't be paused from outside, so "one thing plays at a time" covers only `VideoPlaylist`, through `onPlay` and `pause()`, once `audio-player` arrives (step 2).
 - An email can't hold a player: `public.py` gives `campaigns` the link and its words for a card instead.
 - Bandcamp needs its embed code, since it has no public way to look a link up.
+- `EmbedFrame` can't be paused from outside either: a page stops it by unmounting it.
 
 ## Source and license
 

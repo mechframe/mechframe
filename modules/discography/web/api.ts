@@ -66,6 +66,8 @@ export const MAX_LYRICS = 20_000;
 export const MAX_NAME = 120;
 export const MAX_ROLE = 60;
 export const MAX_URL = 500;
+/** Bandcamp's embed code as pasted: embeds reads none longer (0.1.5). */
+export const MAX_PASTE = 4096;
 /** A slug: lowercase letters and digits, single hyphens between (the server's rule). */
 export const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -106,12 +108,18 @@ export function releaseLine(release: { kind: Kind; year: number | null; track_co
   return `${kind}. ${release.tracklist_to_come ? `${count} for now` : count}`;
 }
 
-/** How a track's audio reads in a table: "Upload", "SoundCloud", "Making the stream file 64%". */
+/** The words for where a track plays from, after a failed upload or not. */
+const FROM_WORDS = { soundcloud: "SoundCloud", bandcamp: "Bandcamp" } as const;
+
+/** How a track's audio reads in a table: "Upload", "SoundCloud", "Bandcamp", "Making the stream file 64%". */
 export function audioWords(audio: TrackAudio): string {
   if (audio.state === "processing") return audio.percent ? `Making the stream file ${String(audio.percent)}%` : "Making the stream file";
-  if (audio.state === "failed") return audio.plays_from === "soundcloud" ? "SoundCloud (the upload failed)" : "The upload failed";
+  if (audio.state === "failed") {
+    return audio.plays_from === "soundcloud" || audio.plays_from === "bandcamp" ? `${FROM_WORDS[audio.plays_from]} (the upload failed)` : "The upload failed";
+  }
   if (audio.plays_from === "upload") return "Upload";
   if (audio.plays_from === "soundcloud") return audio.soundcloud_kind === "set" ? "SoundCloud playlist" : "SoundCloud";
+  if (audio.plays_from === "bandcamp") return "Bandcamp";
   return "No audio yet";
 }
 

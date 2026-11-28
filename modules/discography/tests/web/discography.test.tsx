@@ -1,17 +1,19 @@
 /**
  * discography's web (`dev plans/contracts/discography.md`): the library, a
  * release and a track on the site, and the admin's Albums, album editor, Tracks
- * and Credits boards. Every answer comes from a fetch that answers by method and
+ * and Credits boards; and Bandcamp's own player on them (0.1.5,
+ * `dev plans/contracts/bandcamp-player.md` §7). Every answer comes from a fetch that answers by method and
  * path.
  */
 import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { CONSENT_COOKIE } from "@/kernel";
 import { renderApp, testUser } from "@/kernel/testing";
 
 import type { AdminRelease, AdminTrack, FullRelease, FullTrack, LiveRelease, LiveTrack, ReleaseCard, TrackAudio } from "../../web/api";
-import { clock, msOf, trackState } from "../../web/api";
+import { audioWords, clock, msOf, trackState } from "../../web/api";
 import { changed, mineOf, movedTrack, releaseBody, releaseFormOf, same } from "../../web/editing";
 import discography from "../../web/module.web";
 import { playsWords } from "../../web/widgets/PlaysCard";
@@ -77,6 +79,7 @@ function audio(overrides: Partial<TrackAudio> = {}): TrackAudio {
     master_bytes: 1000,
     soundcloud_url: null,
     soundcloud_kind: null,
+    bandcamp_url: null,
     duration_ms: 222_000,
     stream_url: `${FILES}/abc.mp3`,
     ...overrides,
@@ -123,6 +126,7 @@ function full(overrides: Partial<FullRelease> = {}): FullRelease {
     updated_at: "2026-11-22T12:00:00+00:00",
     credit_line: "Produced by Vibrant Mindz.",
     summary: "",
+    bandcamp_url: null,
     back_cover: null,
     tracks: [track(), track({ id: T2, number: 2, title: "Pray For You", slug: "pray-for-you", audio: audio({ state: "none", plays_from: null, stream_url: null, duration_ms: null, master_name: null }) })],
     credits: [{ role_id: ARTIST, role: "Artist", person_id: "61111111-1111-4111-8111-111111111111", name: "Vibrant Mindz", profile: "collective" }],
@@ -173,6 +177,7 @@ const LIVE: LiveRelease = {
       stream_url: `${FILES}/abc.mp3`,
       soundcloud_url: null,
       soundcloud_kind: null,
+      bandcamp_url: null,
       has_lyrics: true,
       path: "/music/unified-vibration/gather-around",
     },
@@ -187,6 +192,7 @@ const LIVE: LiveRelease = {
       stream_url: null,
       soundcloud_url: "https://soundcloud.com/vibrantmindz/boom-bap-piff",
       soundcloud_kind: "track",
+      bandcamp_url: null,
       has_lyrics: false,
       path: "/music/unified-vibration/boom-bap-piff",
     },
@@ -1260,5 +1266,152 @@ describe("the boards' parts (0.1.3, VM Website's P2 and P4)", () => {
     const open = await screen.findByRole("link", { name: "Open the release" });
     expect(open).toHaveClass("mf-quiet-link");
     expect(open).toHaveAttribute("href", `/admin/music/${ID}`);
+  });
+});
+
+describe("Bandcamp's own player (0.1.5)", () => {
+  const PLAYER = { "GET /api/audio-player/settings": { status: 200, body: { autoplay_next: true, count_after_seconds: 30 } } };
+  const ON = ["discography", "audio-player"];
+  const BANDCAMP = "https://exampleband.bandcamp.com/track/boom-bap-piff#bandcamp-track=987654321";
+  const ALBUM = "https://exampleband.bandcamp.com/album/unified-vibration#bandcamp-album=1234567";
+  const CODE =
+    '<iframe style="border: 0; width: 100%; height: 120px;" src="https://bandcamp.com/EmbeddedPlayer/track=987654321/size=large/bgcol=ffffff/linkcol=0687f5/tracklist=false/artwork=small/transparent=true/" seamless><a href="https://exampleband.bandcamp.com/track/boom-bap-piff">Boom Bap Piff</a></iframe>';
+  const [UPLOADED, OTHER] = LIVE.tracks as [LiveRelease["tracks"][number], LiveRelease["tracks"][number]];
+  const ON_BANDCAMP = { ...OTHER, plays_from: "bandcamp" as const, stream_url: null, soundcloud_url: null, soundcloud_kind: null, bandcamp_url: BANDCAMP, duration_ms: 229_000 };
+  const RELEASE: LiveRelease = { ...LIVE, tracks: [UPLOADED, ON_BANDCAMP] };
+  const bandcampAudio = audio({ state: "none", plays_from: "bandcamp", stream_url: null, master_name: null, master_bytes: null, bandcamp_url: BANDCAMP, duration_ms: 229_000 });
+
+  beforeEach(() => {
+    vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue(undefined);
+    vi.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(() => undefined);
+    vi.spyOn(HTMLMediaElement.prototype, "load").mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.cookie = `${CONSENT_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax; Secure`;
+  });
+
+  it("gives a Bandcamp track's row its Listen, then Bandcamp's frame, and takes turns with the album", async () => {
+    routed({ ...PLAYER, "GET /api/discography/releases/unified-vibration": { status: 200, body: RELEASE } });
+    const user = userEvent.setup();
+    renderApp({ path: "/music/unified-vibration", modules: [discography], on: ON });
+
+    expect(await screen.findByRole("heading", { level: 1, name: "Unified Vibration" })).toBeInTheDocument();
+    const [first, second] = screen.getAllByRole("listitem").filter((row) => row.classList.contains("mf-music-track")) as [HTMLElement, HTMLElement];
+    expect(within(second).queryByRole("button", { name: /^Play 02/ })).toBeNull(); // audio-player can't play it
+    expect(within(second).getByText("Plays from Bandcamp, which may set cookies.")).toBeInTheDocument();
+    expect(document.querySelector("iframe")).toBeNull(); // nothing from Bandcamp until Listen
+    // The dock's queue goes on without it.
+    expect(within(screen.getByRole("region", { name: "Player" })).getByText("Gather Around")).toBeInTheDocument();
+
+    await user.click(within(first).getByRole("button", { name: "Play 01 Gather Around" }));
+    expect(await within(first).findByRole("button", { name: "Pause 01 Gather Around" })).toBeInTheDocument();
+    await user.click(within(second).getByRole("button", { name: "Listen: 02 Boom Bap Piff" }));
+    const frame = await within(second).findByTitle("Bandcamp player: 02 Boom Bap Piff");
+    expect(frame.getAttribute("src")).toContain("https://bandcamp.com/EmbeddedPlayer/track=987654321/");
+    expect(document.activeElement).toBe(frame.parentElement); // the focus goes on from the frame
+    expect(document.cookie).toContain(`${CONSENT_COOKIE}=media`);
+    // Listen took the turn: the album paused.
+    expect(await within(first).findByRole("button", { name: "Play 01 Gather Around" })).toBeInTheDocument();
+
+    // The album starting takes it back: the frame goes, and with it Bandcamp's sound.
+    await user.click(within(first).getByRole("button", { name: "Play 01 Gather Around" }));
+    expect(await within(second).findByRole("button", { name: "Listen: 02 Boom Bap Piff" })).toBeInTheDocument();
+    expect(document.querySelector("iframe")).toBeNull();
+  });
+
+  it("gives a Bandcamp track's page its Listen in place of the player's bar", async () => {
+    const shown: LiveTrack = {
+      ...ON_BANDCAMP,
+      release: { title: "Unified Vibration", slug: "unified-vibration", kind: "album", path: "/music/unified-vibration" },
+      artist_line: "Vibrant Mindz",
+      cover: null,
+      peaks: null,
+      lyrics: null,
+      credits: [],
+    };
+    routed({ ...PLAYER, "GET /api/discography/releases/unified-vibration/tracks/boom-bap-piff": { status: 200, body: shown } });
+    renderApp({ path: "/music/unified-vibration/boom-bap-piff", modules: [discography], on: ON });
+
+    expect(await screen.findByRole("heading", { level: 1, name: "Boom Bap Piff" })).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Player" })).toBeNull();
+    expect(screen.getByText("3:49")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Listen: Boom Bap Piff" }));
+    expect(await screen.findByTitle("Bandcamp player: Boom Bap Piff")).toBeInTheDocument();
+  });
+
+  it("shows it the same with audio-player off", async () => {
+    routed({ "GET /api/discography/releases/unified-vibration": { status: 200, body: RELEASE } });
+    renderApp({ path: "/music/unified-vibration", modules: [discography] });
+    expect(await screen.findByRole("button", { name: "Listen: 02 Boom Bap Piff" })).toBeInTheDocument();
+    expect(document.querySelectorAll("audio")).toHaveLength(1); // the upload's own, in the browser's player
+  });
+
+  it("calls a Bandcamp track Bandcamp, and Live", () => {
+    expect(audioWords(bandcampAudio)).toBe("Bandcamp");
+    expect(audioWords({ ...bandcampAudio, state: "failed" })).toBe("Bandcamp (the upload failed)");
+    expect(trackState(bandcampAudio)).toEqual({ label: "Live", tone: "success" });
+  });
+
+  it("pastes a track's embed code, sends it as pasted, and says under the field why one is refused", async () => {
+    const TRACK = `/api/discography/admin/tracks/${T2}`;
+    const picked = fullTrack({ id: T2, number: 2, title: "Boom Bap Piff", slug: "boom-bap-piff", audio: audio({ state: "none", plays_from: null, stream_url: null, duration_ms: null, master_name: null }) });
+    const words = "That isn't a Bandcamp track's embed code. On the track's Bandcamp page, choose Share, then Embed, and copy the code.";
+    let tries = 0;
+    const sent = routed({
+      "GET /api/discography/admin/tracks": { status: 200, body: { items: [track(), picked], next_cursor: null, total: 2, releases: 1 } },
+      [`GET ${TRACK}`]: { status: 200, body: picked },
+      [`PATCH ${TRACK}`]: () => {
+        tries += 1;
+        return tries === 1
+          ? problem(422, "discography.not_bandcamp", { errors: { bandcamp_url: [words] } })
+          : { status: 200, body: fullTrack({ ...picked, version: 2, audio: bandcampAudio }) };
+      },
+    });
+    const user = userEvent.setup();
+    renderApp({ path: `/admin/music/tracks?track=${T2}`, modules: [discography], session: editor });
+
+    const field = await screen.findByRole("textbox", { name: "Bandcamp player" });
+    expect(field).toHaveAccessibleDescription(
+      "Paste the embed code from its Bandcamp page (Share, then Embed). It plays in Bandcamp's own player when the track has no upload or SoundCloud link.",
+    );
+    await user.click(field);
+    await user.paste(CODE);
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByText(words)).toBeInTheDocument();
+    expect(await json(sent.find((each) => each.method === "PATCH") as Request)).toEqual({ version: 1, bandcamp_url: CODE });
+
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => {
+      expect(screen.getByRole("textbox", { name: "Bandcamp player" })).toHaveValue(BANDCAMP); // kept as its link
+    });
+    expect(screen.getByRole("textbox", { name: "Length" })).toHaveValue("3:49");
+  });
+
+  it("pastes the album's player beside its words, and says its tracks play from Bandcamp", async () => {
+    const tracks = [track(), track({ id: T2, number: 2, title: "Boom Bap Piff", slug: "boom-bap-piff", audio: bandcampAudio })];
+    const sent = routed({
+      [`GET ${ONE}`]: { status: 200, body: full({ tracks }) },
+      [`PATCH ${ONE}`]: { status: 200, body: full({ version: 2, tracks, bandcamp_url: ALBUM }) },
+    });
+    const user = userEvent.setup();
+    renderApp({ path: `/admin/music/${ID}`, modules: [discography], session: editor });
+
+    const field = await screen.findByRole("textbox", { name: "Bandcamp player" });
+    expect(field).toHaveAccessibleDescription(
+      "Paste the album's embed code from Bandcamp (Share, then Embed). Its tracks with no upload or SoundCloud link play in Bandcamp's own player.",
+    );
+    expect(
+      screen.getByText("Each track plays from an uploaded file or a SoundCloud link, else Bandcamp's own player; an upload gets a stream file and a waveform made from it."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Bandcamp · 3:49")).toBeInTheDocument();
+    await user.click(field);
+    await user.paste(ALBUM);
+    await user.click(screen.getAllByRole("button", { name: "Save" })[0] as HTMLElement);
+    await waitFor(() => {
+      expect(sent.some((each) => each.method === "PATCH")).toBe(true);
+    });
+    expect(await json(sent.find((each) => each.method === "PATCH") as Request)).toEqual({ version: 1, bandcamp_url: ALBUM });
   });
 });

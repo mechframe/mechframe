@@ -1,5 +1,12 @@
 # Changelog: discography
 
+## 0.1.5
+
+- Bandcamp's own player (`dev plans/contracts/bandcamp-player.md`, approved 2026-11-28; decision 0075; migration `discography_0002`): a track's and an album's "Bandcamp player" field takes Bandcamp's embed code, read on the server through embeds 0.1.2's `from_bandcamp_code` and kept as the page's link with the player's id in its fragment; anything else is 422 `discography.not_bandcamp` on the field.
+- A track with no upload or SoundCloud link plays in its own Bandcamp player, else its album's, and counts as playing everywhere: `plays_from` is `"bandcamp"` and takes the release, and every read with `soundcloud_url` carries `bandcamp_url` beside it (`TrackLine`, so the release, track and by-id reads; `public.Card`; the admin's `TrackAudio` and `FullRelease`).
+- `playerItem` is null for such a track and `playerQueue` leaves it out (§8, 1); `bandcampPlayer(track)` and `SOURCE` are in `public.ts`. A site's code that maps tracks to items now has to say what a Bandcamp track does.
+- The Release and Track pages draw its Listen, then embeds' `EmbedFrame`, taking turns with audio-player through `useExclusive` (§8, 2). Tracks' list says "Bandcamp", and the admin's notes name Bandcamp's player, in the boards' words.
+
 ## 0.1.4
 
 - Tracks' panel's "Open the release" is the kit's `QuietLink` (#165; VM Website's K11): the info colour at the small size, underlined only when hovered, at least 24 px each way beside the panel's buttons.

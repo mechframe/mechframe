@@ -181,7 +181,7 @@ async def test_an_upload_is_processed_into_a_stream_that_plays_first(
     assert stream.endswith(".mp3")
     assert stream.startswith("discography/stream/")
     assert str(track.id) not in stream
-    assert service.plays_from(track) == "upload"  # the upload first, the link behind it
+    assert service.plays_from(track, release) == "upload"  # the upload first, the link behind it
     assert ("discography.track.processed", track.id) in [
         (name, getattr(payload, "track_id", None)) for name, payload in said
     ]

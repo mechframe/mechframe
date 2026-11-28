@@ -71,7 +71,7 @@ SETUP: tuple[Any, ...] = (
         title="Turn on storage for uploaded tracks",
         why=(
             "Uploads keep the master private and play a stream file from the public bucket. "
-            "Until both buckets are set, tracks play from SoundCloud links only."
+            "Until both buckets are set, tracks play from SoundCloud links and Bandcamp players only."
         ),
         link="/admin/settings/system",
         permission=MANAGE,

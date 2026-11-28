@@ -117,6 +117,32 @@ def test_every_kind_has_its_shape_words_and_player() -> None:
             assert "{id}" in spec["player"]
 
 
+@pytest.mark.parametrize("case", CASES["bandcamp_codes"], ids=lambda c: c["name"])
+def test_bandcamps_own_code_reads_as_the_web_reads_it(case: dict[str, str | None]) -> None:
+    """0.1.2: the twin of the web's `fromBandcampCode`, held to the same cases."""
+    found = providers.from_bandcamp_code(str(case["code"]))
+    assert found == ((case["href"], case["words"]) if case["href"] else None)
+
+
+def test_a_paste_longer_than_any_code_is_not_read() -> None:
+    """Counted as the web counts: a character past U+FFFF is two."""
+    [album] = [c for c in CASES["bandcamp_codes"] if c["name"] == "an album's code"]
+    code = str(album["code"])
+    assert providers.from_bandcamp_code(code + " " * (providers.MOST_CODE - len(code))) is not None
+    assert providers.from_bandcamp_code(code + " " * (providers.MOST_CODE - len(code) + 1)) is None
+    astral = chr(0x1F3B5) * ((providers.MOST_CODE - len(code)) // 2 + 1)
+    assert providers.from_bandcamp_code(code + astral) is None
+    started = time.perf_counter()
+    assert providers.from_bandcamp_code(code + " " * 5_000_000) is None
+    assert time.perf_counter() - started < 0.2
+
+
+def test_public_reads_bandcamps_code() -> None:
+    """`discography` reads a pasted player through `embeds.public` alone (SPEC 7)."""
+    [album] = [c for c in CASES["bandcamp_codes"] if c["name"] == "an album's code"]
+    assert public.from_bandcamp_code(str(album["code"])) == (album["href"], album["words"])
+
+
 def test_long_words_are_trimmed_in_linear_time() -> None:
     """A long run of spaces inside the words is kept, and costs no quadratic scan (CodeRabbit on #127)."""
     embed = providers.recognise("https://youtu.be/aBcDeFgHiJk")

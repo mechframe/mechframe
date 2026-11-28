@@ -177,6 +177,7 @@ async def test_an_editor_makes_saves_publishes_unpublishes_and_deletes_a_release
         "updated_at",
         "credit_line",
         "summary",
+        "bandcamp_url",
         "back_cover",
         "tracks",
         "credits",
@@ -413,6 +414,74 @@ async def test_a_track_that_cant_play_is_missing_from_every_public_answer(
     assert card["track_count"] == 1
     sitemap = await browser.http.get("/sitemap.xml", extensions=UNCHECKED)
     assert f"/music/{release['slug']}/{silent.json()['slug']}</loc>" not in sitemap.text
+
+
+BANDCAMP_TRACK = "https://exampleband.bandcamp.com/track/one-more-time#bandcamp-track=987654321"
+BANDCAMP_ALBUM = "https://exampleband.bandcamp.com/album/weightless#bandcamp-album=1234567"
+BANDCAMP_CODE = (
+    '<iframe style="border: 0; width: 100%; height: 120px;" '
+    'src="https://bandcamp.com/EmbeddedPlayer/track=987654321/size=large/bgcol=ffffff/'
+    'linkcol=0687f5/tracklist=false/artwork=small/transparent=true/" seamless>'
+    '<a href="https://exampleband.bandcamp.com/track/one-more-time">One More Time</a></iframe>'
+)
+
+
+async def test_a_track_plays_in_bandcamps_player_its_own_else_its_albums(
+    browser: Browser,
+) -> None:
+    """0.1.5 (`dev plans/contracts/bandcamp-player.md` §7): the embed code
+    pasted, only its link kept, and the track live in every public answer."""
+    await browser.as_new("member", "editor")
+    release = await _release(browser)
+    own = (await browser.http.post(f"{ADMIN}/{release['id']}/tracks", json={"title": "Own"})).json()
+    fallback = (
+        await browser.http.post(f"{ADMIN}/{release['id']}/tracks", json={"title": "Album's"})
+    ).json()
+    saved = await browser.http.patch(
+        f"{API}/admin/tracks/{own['id']}",
+        json={"version": own["version"], "bandcamp_url": BANDCAMP_CODE, "duration_ms": 229_000},
+    )
+    assert saved.status_code == 200, saved.text
+    assert (saved.json()["audio"]["plays_from"], saved.json()["audio"]["bandcamp_url"]) == (
+        "bandcamp",
+        BANDCAMP_TRACK,
+    )
+    version = (await browser.http.get(f"{ADMIN}/{release['id']}")).json()["version"]
+    refused = await browser.http.patch(
+        f"{ADMIN}/{release['id']}", json={"version": version, "bandcamp_url": BANDCAMP_CODE}
+    )
+    assert (refused.status_code, refused.json()["code"]) == (422, "discography.not_bandcamp")
+    assert "bandcamp_url" in refused.json()["errors"]
+    album = await browser.http.patch(
+        f"{ADMIN}/{release['id']}", json={"version": version, "bandcamp_url": BANDCAMP_ALBUM}
+    )
+    assert album.status_code == 200, album.text
+    assert album.json()["bandcamp_url"] == BANDCAMP_ALBUM
+    assert album.json()["unplayable"] == 0
+    await _publish(browser, release["id"])
+    browser.forget()
+
+    status, shown = await _read(browser, release["slug"])
+    assert status == 200
+    lines = {line["title"]: line for line in shown["tracks"]}
+    assert {
+        title: (
+            line["plays_from"],
+            line["bandcamp_url"],
+            line["stream_url"],
+            line["soundcloud_url"],
+        )
+        for title, line in lines.items()
+    } == {
+        "Own": ("bandcamp", BANDCAMP_TRACK, None, None),
+        "Album's": ("bandcamp", BANDCAMP_ALBUM, None, None),
+    }
+    page = await browser.http.get(f"{API}/releases/{release['slug']}/tracks/{own['slug']}")
+    assert (page.status_code, page.json()["bandcamp_url"]) == (200, BANDCAMP_TRACK)
+    cards = await browser.http.get(f"{API}/tracks", params={"ids": fallback["id"]})
+    assert [each["bandcamp_url"] for each in cards.json()["items"]] == [BANDCAMP_ALBUM]
+    sitemap = await browser.http.get("/sitemap.xml", extensions=UNCHECKED)
+    assert f"/music/{release['slug']}/{own['slug']}</loc>" in sitemap.text
 
 
 # --- the refusals and the body limits ------------------------------------------------------

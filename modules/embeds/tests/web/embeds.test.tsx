@@ -1,6 +1,7 @@
 // embeds' players and its Embed button (dev plans/contracts/embeds.md §7): the
 // facade until `media` is granted, the sandboxed iframe after, a lone link in
-// Prose drawn as its player, and the editor's dialog.
+// Prose drawn as its player, the frame alone behind a page's own Listen
+// (0.1.2, dev plans/contracts/bandcamp-player.md §7), and the editor's dialog.
 import { fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
@@ -8,7 +9,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { CONSENT_COOKIE, MarkdownEditor, Prose, useConsent } from "@/kernel";
 import { renderWithKernel } from "@/kernel/testing";
-import { Embed } from "@/modules/embeds/public";
+import { Embed, EmbedFrame } from "@/modules/embeds/public";
 
 import embeds from "../../web/module.web";
 
@@ -115,6 +116,78 @@ describe("Embed", () => {
     renderWithKernel(<Embed link="https://example.net/watch" words="Elsewhere" />);
     expect(screen.getByRole("link", { name: "Elsewhere" })).toHaveAttribute("href", "https://example.net/watch");
     expect(screen.queryByRole("button")).toBeNull();
+  });
+});
+
+describe("EmbedFrame", () => {
+  const TRACK = "https://exampleband.bandcamp.com/track/one-more-time#bandcamp-track=987654321";
+
+  /** A page's own Listen: it grants media, and the frame shows. */
+  function Listen({ link }: { link: string }) {
+    const media = useConsent("media");
+    return (
+      <>
+        <button type="button" onClick={media.grant}>
+          Listen
+        </button>
+        <EmbedFrame link={link} words="One More Time" />
+      </>
+    );
+  }
+
+  it("draws nothing until media is granted, then the sandboxed frame alone, sized by its shape", async () => {
+    renderWithKernel(<Listen link={TRACK} />);
+    expect(document.querySelector("iframe")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Listen" }));
+    const frame = screen.getByTitle("Bandcamp player: One More Time");
+    expect(frame).toHaveAttribute(
+      "src",
+      "https://bandcamp.com/EmbeddedPlayer/track=987654321/size=large/bgcol=ffffff/linkcol=0687f5/tracklist=false/artwork=small/transparent=true/",
+    );
+    expect(frame).toHaveClass("mf-embed-frame", "mf-embed-frame--strip-120");
+    expect(frame).not.toHaveAttribute("style");
+    expect(frame).toHaveAttribute("loading", "lazy");
+    expect(frame).toHaveAttribute("referrerpolicy", "strict-origin-when-cross-origin");
+    expect(frame.getAttribute("sandbox")).toBe(
+      "allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-presentation",
+    );
+    expect(frame).not.toHaveAttribute("allow");
+    // No figure, facade or caption: the page draws its own.
+    expect(document.querySelector("figure, figcaption, .mf-embed-facade")).toBeNull();
+  });
+
+  it("never plays by itself, even a YouTube video, and takes the kind's words when given none", () => {
+    document.cookie = `${CONSENT_COOKIE}=media; Path=/; SameSite=Lax; Secure`;
+    renderWithKernel(<EmbedFrame link={VIDEO} />);
+    const frame = screen.getByTitle("YouTube player: A video on YouTube");
+    expect(frame.getAttribute("src")).not.toContain("autoplay");
+    expect(frame).toHaveClass("mf-embed-frame--video");
+  });
+
+  it("draws nothing for a link that isn't a player, granted or not", () => {
+    document.cookie = `${CONSENT_COOKIE}=media; Path=/; SameSite=Lax; Secure`;
+    renderWithKernel(<EmbedFrame link="https://exampleband.bandcamp.com/track/one-more-time" />);
+    expect(document.querySelector("iframe")).toBeNull();
+    expect(document.body.textContent).toBe("");
+  });
+
+  it("goes when media is withdrawn", async () => {
+    function Withdraw() {
+      const media = useConsent("media");
+      return (
+        <>
+          <button type="button" onClick={media.withdraw}>
+            Withdraw
+          </button>
+          <EmbedFrame link={TRACK} />
+        </>
+      );
+    }
+    document.cookie = `${CONSENT_COOKIE}=media; Path=/; SameSite=Lax; Secure`;
+    renderWithKernel(<Withdraw />);
+    expect(screen.getByTitle("Bandcamp player: A track on Bandcamp")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Withdraw" }));
+    expect(document.querySelector("iframe")).toBeNull();
   });
 });
 

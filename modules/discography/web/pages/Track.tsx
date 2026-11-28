@@ -1,8 +1,9 @@
 // A track that plays, at /music/:release/:track (`dev plans/contracts/discography.md`
 // §2): its title, its release, audio-player's bar with its waveform (0.1.1; with
 // audio-player off, the browser's own player for an upload or a link to
-// SoundCloud), its credits, and its lyrics while the site shows them. The words
-// are the server copy's own. An address it left moves on; any other is the 404 page.
+// SoundCloud), or Bandcamp's own player behind a Listen (0.1.5), its credits, and
+// its lyrics while the site shows them. The words are the server copy's own. An
+// address it left moves on; any other is the 404 page.
 import { useMemo } from "react";
 import { Link, Navigate, useLocation, useParams } from "react-router";
 
@@ -11,9 +12,10 @@ import { PlayerBar } from "@/modules/audio-player/public";
 import { Picture } from "@/modules/media/public";
 
 import { clock } from "../api";
+import { BandcampPlayer } from "../components/BandcampPlayer";
 import { Plays } from "../components/Plays";
 import "../music.css";
-import { playerItem } from "../player";
+import { bandcampPlayer, playerItem } from "../player";
 import { isMoved, useTrack } from "../reads";
 
 export default function Track() {
@@ -25,7 +27,8 @@ export default function Track() {
   const queue = useMemo(() => {
     const shown = found.data;
     if (!shown || isMoved(shown)) return [];
-    return [playerItem(shown, { title: shown.release.title, artist_line: shown.artist_line, cover: shown.cover })];
+    const item = playerItem(shown, { title: shown.release.title, artist_line: shown.artist_line, cover: shown.cover });
+    return item ? [item] : [];
   }, [found.data]);
   if (found.isPending) return null;
   if (found.error) {
@@ -35,6 +38,7 @@ export default function Track() {
   const track = found.data;
   if (isMoved(track)) return <Navigate to={`${track.moved}${search}${hash}`} replace />;
   const said = `${track.title}, track ${String(track.number)} of ${track.release.title}`;
+  const bandcamp = bandcampPlayer(track);
   return (
     <article className="mf-music">
       <Seo
@@ -62,10 +66,10 @@ export default function Track() {
             {track.duration_ms ? <span>{clock(track.duration_ms)}</span> : null}
             {track.explicit ? <span className="mf-music-advisory">Parental Advisory</span> : null}
           </p>
-          {player ? null : <Plays track={track} label={track.title} />}
+          {bandcamp ? <BandcampPlayer link={bandcamp} label={track.title} /> : player ? null : <Plays track={track} label={track.title} />}
         </div>
       </section>
-      {player ? <PlayerBar queue={queue} label="Player" /> : null}
+      {player && !bandcamp ? <PlayerBar queue={queue} label="Player" /> : null}
       {track.credits.length ? (
         <section aria-labelledby="mf-music-credits" className="mf-music-words">
           <h2 id="mf-music-credits">Credits</h2>

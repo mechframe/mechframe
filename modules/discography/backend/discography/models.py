@@ -5,7 +5,8 @@ under /music (its slug), its lines, its front and back covers (media's image
 ids, no foreign key across modules), drafted, scheduled and published through
 the kernel's lifecycle. `discography_track` is one track on one release, in
 order, playing from its stream file once a job has made it from the uploaded
-master, else from its SoundCloud link, else not at all.
+master, else from its SoundCloud link, else in Bandcamp's own player (its
+own, else its release's; `discography_0002`), else not at all.
 
 `discography_person` is a name credited anywhere, once; `discography_role` is
 the list of roles a credit names (Artist, Featuring, Produced by and the
@@ -85,6 +86,11 @@ def slug_rule(column: str) -> str:
     return f"{column} ~ '{SLUG_PATTERN}'"
 
 
+def bandcamp_rule(kind: str) -> str:
+    """A Bandcamp player's link ends in its kind's id: `#bandcamp-track=123`."""
+    return f"bandcamp_url IS NULL OR bandcamp_url ~ '#bandcamp-{kind}=[0-9]{{1,12}}$'"
+
+
 def one_of(column: str, values: tuple[str, ...]) -> str:
     listed = ", ".join(f"'{value}'" for value in values)
     return f"{column} IN ({listed})"
@@ -99,6 +105,7 @@ class Release(lifecycle.Publishable, Base):
         CheckConstraint(one_of("kind", KINDS), name="kind_known"),
         CheckConstraint("year IS NULL OR (year >= 1900 AND year <= 2100)", name="year_range"),
         CheckConstraint("version >= 1", name="version_positive"),
+        CheckConstraint(bandcamp_rule("album"), name="bandcamp_is_album"),
         Index("ix_discography_release_updated_at", "updated_at"),
         Index("ix_discography_release_published_at", "published_at"),
         *lifecycle.table_args("discography_release"),
@@ -123,6 +130,9 @@ class Release(lifecycle.Publishable, Base):
     back_cover_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     #: "Tracklist to come": its tracks so far stand in for the rest.
     tracklist_to_come: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    #: The album's Bandcamp player, for its tracks with no upload or SoundCloud
+    #: link: its page's link with the player's id in the fragment (0.1.5).
+    bandcamp_url: Mapped[str | None] = mapped_column(String(MAX_URL))
     #: When `discography.release.published` went out: once a release, on its first publish.
     announced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
@@ -143,6 +153,7 @@ class Track(Base):
         CheckConstraint(
             "(soundcloud_url IS NULL) = (soundcloud_kind IS NULL)", name="soundcloud_paired"
         ),
+        CheckConstraint(bandcamp_rule("track"), name="bandcamp_is_track"),
         CheckConstraint(
             "processing_percent IS NULL OR (processing_percent >= 0 AND processing_percent <= 100)",
             name="percent_range",
@@ -171,6 +182,8 @@ class Track(Base):
     #: The link in its plain form, and whether it's a track or a playlist.
     soundcloud_url: Mapped[str | None] = mapped_column(String(MAX_URL))
     soundcloud_kind: Mapped[str | None] = mapped_column(String(10))
+    #: Its own Bandcamp player, as the release's is kept (0.1.5).
+    bandcamp_url: Mapped[str | None] = mapped_column(String(MAX_URL))
     #: The uploaded master, in the private bucket; its name a label only.
     master_key: Mapped[str | None] = mapped_column(String(512))
     master_name: Mapped[str | None] = mapped_column(String(MAX_FILENAME))
