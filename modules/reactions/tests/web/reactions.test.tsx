@@ -205,6 +205,37 @@ describe("pressing", () => {
     expect(screen.getByRole("button", { name: "Love, 1" })).toHaveAttribute("aria-pressed", "true");
   });
 
+  it("lets no read begun while a press is queued draw over its saved answer (CodeRabbit on #170)", async () => {
+    let reads = 0;
+    let refuse: (value: Answer) => void = () => undefined;
+    let late: (value: Answer) => void = () => undefined;
+    routed({
+      "GET /api/reactions": () => {
+        reads += 1;
+        if (reads === 1) return read(counted());
+        return new Promise<Answer>((resolve) => {
+          late = resolve;
+        });
+      },
+      [`PUT ${PRESS("fire")}`]: () =>
+        new Promise<Answer>((resolve) => {
+          refuse = resolve;
+        }),
+      // A count the press alone can't make, so the saved answer is seen drawn.
+      [`PUT ${PRESS("love")}`]: { status: 200, body: counted({ love: 7 }, ["love"]) },
+    });
+    draw();
+    await userEvent.click(await button(/Fire, 0/));
+    await userEvent.click(await button(/Love, 0/));
+    // Fire is refused while Love waits: the row is read again, and Love goes out.
+    refuse(problem(500, "kernel.error", "Something went wrong."));
+    expect(await button(/Love, 7/)).toHaveAttribute("aria-pressed", "true");
+    expect(reads).toBe(2);
+    late(read(counted()));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.getByRole("button", { name: "Love, 7" })).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("takes the reader's own back", async () => {
     const sent = routed({
       "GET /api/reactions": read(counted({ love: 2 }, ["love"])),
