@@ -326,7 +326,7 @@ Set in the site's admin (Admin → Settings), not on the host:
 | `lead` | string | blank | The line under the Art page's title |
 | `commission_link` | string | blank | Where "Commission work like this" goes: a path on the site or an https address; empty hides it |
 
-### `reactions` 0.1.0 (experimental)
+### `reactions` 0.1.1 (experimental)
 
 Reactions on posts, comments and messages
 
