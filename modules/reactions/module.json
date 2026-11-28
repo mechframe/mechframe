@@ -1,0 +1,75 @@
+{
+  "id": "reactions",
+  "name": "Reactions",
+  "version": "0.1.0",
+  "status": "experimental",
+  "category": "community",
+  "summary": "Reactions on posts, comments and messages",
+  "use_when": [
+    "Readers should react to posts, tracks or artwork with one press, without writing a comment",
+    "Several kinds of content need the same row of reactions and counts"
+  ],
+  "avoid_when": [
+    "Readers should say something in words; use comments",
+    "The site has no accounts for its readers: a reaction needs a signed-in member"
+  ],
+  "requires": {
+    "kernel": "^0.1",
+    "modules": {}
+  },
+  "conflicts": [],
+  "permissions": [],
+  "settings": [
+    {
+      "key": "palette",
+      "type": "json",
+      "default": ["fire", "love", "mind_blown"],
+      "secret": false,
+      "description": "The reactions offered, in the row's order: built-in keys only (fire, love, mind_blown), each once"
+    }
+  ],
+  "env": [
+    {
+      "name": "REACTIONS_RATE_LIMIT",
+      "required": false,
+      "description": "How many reactions a person may add or take back, as count/period; 60/1m by default"
+    }
+  ],
+  "routes": {
+    "api": "/api/reactions",
+    "public": [],
+    "member": [],
+    "admin": []
+  },
+  "tables": [
+    "reactions_reaction"
+  ],
+  "events": {
+    "emits": [],
+    "listens": []
+  },
+  "slots": [
+    "content.reactions"
+  ],
+  "bindings": [
+    "web"
+  ],
+  "jobs": [
+    {
+      "name": "sweep",
+      "schedule": "40 3 * * 0"
+    }
+  ],
+  "notifications": [],
+  "vocabularies": [],
+  "content_types": [],
+  "data_hooks": {
+    "export": true,
+    "delete": true
+  },
+  "source": {
+    "from": "VybeMindz backend/app/routers/messages.py (add_reaction, remove_reaction, _build_reactions) and models/__init__.py (Reaction); icons from VM Website design/site/Post.dc.html",
+    "commit": "7315225",
+    "license": "proprietary"
+  }
+}

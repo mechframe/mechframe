@@ -22,6 +22,7 @@ export { defineModule, defineSite } from "./src/modules";
 export type { ModuleDefinition, ModuleRoute, SiteDefinition } from "./src/modules";
 export type {
   AdminLinkEntry,
+  ContentReactionsEntry,
   ContentShareEntry,
   EditorToolEntry,
   IconName,
@@ -30,6 +31,7 @@ export type {
   LinkEntry,
   LinkLoaders,
   ProseEmbedEntry,
+  ReactionPartProps,
   SharePartProps,
   SlotName,
   Slots,
@@ -46,12 +48,20 @@ export type { AdminSection } from "./src/app/context";
 export { ADMIN_SECTIONS } from "./src/slots/sidebar";
 
 export { useSession, useSignOut } from "./src/session/session";
+// Where the session lives in the query cache, for a part that must know who's signed in
+// at the moment it acts, not at its last render (`reactions`' writes, decision 0068).
+export { SESSION_KEY } from "./src/session/session";
 export type { Session, SessionUser } from "./src/session/session";
 export { RequireAuth, RequirePermission } from "./src/guards/guards";
+// The sign-in page's address that brings the person back to a path on this site.
+export { signInFor } from "./src/guards/next";
 export { SLOT_LINKS, useSlot, SlotOutlet } from "./src/slots/slots";
 // Where an admin page offers to share what it's about (`content.share`, decision 0067).
 export { ShareParts } from "./src/slots/ShareParts";
 export type { ShareProps } from "./src/slots/ShareParts";
+// Where a public page draws reactions under one of its things (`content.reactions`, decision 0068).
+export { ReactionParts } from "./src/slots/ReactionParts";
+export type { ReactionProps } from "./src/slots/ReactionParts";
 export { useModuleEnabled, useSite } from "./src/site/site";
 export type { Site } from "./src/site/site";
 // A third-party script or iframe held for the visitor's consent (hook 6, decision 0052).

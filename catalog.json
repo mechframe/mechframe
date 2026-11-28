@@ -29,7 +29,7 @@
     {
       "id": "blog",
       "name": "Blog",
-      "version": "0.1.7",
+      "version": "0.1.8",
       "status": "experimental",
       "category": "content",
       "summary": "Dated posts in Markdown, with categories, scheduling, related posts and a cover from media or the AI.",
@@ -239,6 +239,27 @@
           "media": "^0.1.4",
           "embeds": "^0.1"
         }
+      },
+      "conflicts": []
+    },
+    {
+      "id": "reactions",
+      "name": "Reactions",
+      "version": "0.1.0",
+      "status": "experimental",
+      "category": "community",
+      "summary": "Reactions on posts, comments and messages",
+      "use_when": [
+        "Readers should react to posts, tracks or artwork with one press, without writing a comment",
+        "Several kinds of content need the same row of reactions and counts"
+      ],
+      "avoid_when": [
+        "Readers should say something in words; use comments",
+        "The site has no accounts for its readers: a reaction needs a signed-in member"
+      ],
+      "requires": {
+        "kernel": "^0.1",
+        "modules": {}
       },
       "conflicts": []
     },

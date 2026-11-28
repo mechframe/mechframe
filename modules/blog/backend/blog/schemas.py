@@ -71,6 +71,8 @@ class RelatedPostLink(Answer):
 class LivePost(PostCard):
     """A live post as its page draws it."""
 
+    #: Its id, as item references name it (`blog.post`): what reactions' row is given.
+    id: Id
     #: The body made HTML on the server and cleaned (kernel.markdown).
     html: str
     updated_at: When

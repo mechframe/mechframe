@@ -1,11 +1,13 @@
 // A live post at /blog/:slug (`dev plans/contracts/blog.md` §2; the site's Post
 // board): its category, title, byline, cover and body, made HTML and cleaned on
 // the server and drawn with the kit's Prose, then its related posts. The words
-// are the server copy's own (an h1, the byline, then the body). A slug a live
-// post left moves on to it; any other is the 404 page.
+// are the server copy's own (an h1, the byline, then the body). After the body
+// come the reactions any module fills the kernel's `content.reactions` with
+// (`dev plans/contracts/reactions.md`; none while reactions is off), then the
+// related posts. A slug a live post left moves on to it; any other is the 404 page.
 import { Link, Navigate, useLocation, useParams } from "react-router";
 
-import { ApiProblem, LoadError, NotFound, Prose, Seo } from "@/kernel";
+import { ApiProblem, LoadError, NotFound, Prose, ReactionParts, Seo } from "@/kernel";
 import { Picture } from "@/modules/media/public";
 
 import { day, pathOf } from "../api";
@@ -51,6 +53,7 @@ export default function Post() {
       </p>
       {post.cover ? <Picture image={post.cover} sizes="(min-width: 48rem) 44rem, 100vw" loading="eager" className="mf-blog-post-cover" /> : null}
       <Prose html={post.html} />
+      <ReactionParts type="blog.post" id={post.id} />
       {post.related.length ? (
         <section className="mf-blog-related-posts" aria-labelledby="mf-blog-related">
           <h2 id="mf-blog-related">Related posts</h2>

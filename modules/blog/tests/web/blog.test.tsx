@@ -225,6 +225,7 @@ function deferred(): { done: Promise<void>; release: () => void } {
 describe("a live post", () => {
   const live: LivePost = {
     ...card(),
+    id: "00000000-0000-4000-8000-0000000000b1",
     html: "<h2>Then</h2><p>A <strong>room</strong>.</p>",
     updated_at: "2026-11-21T12:00:00+00:00",
     search_title: "Ten years · Test Site",
@@ -248,6 +249,30 @@ describe("a live post", () => {
       expect(document.title).toBe("Ten years · Test Site");
     });
     expect(document.querySelector('meta[property="og:image"]')).toHaveAttribute("content", "https://files.test/c.png");
+  });
+
+  it("draws the reactions a module fills content.reactions with, after the body, and none with it off", async () => {
+    function Row({ type, id }: { type: string; id: string }) {
+      return <output>{`reactions to ${type} ${id}`}</output>;
+    }
+    const reacting = defineModule({
+      id: "reactions",
+      routes: { public: [], member: [], admin: [] },
+      slots: { "content.reactions": [{ id: "row", lazy: () => Promise.resolve({ default: Row }) }] },
+    });
+    routed({ "GET /api/blog/posts/ten-years": { status: 200, body: live } });
+    const on = renderApp({ path: "/blog/ten-years", modules: [blog, reacting] });
+    const row = await screen.findByRole("status");
+    expect(row).toHaveTextContent(`reactions to blog.post ${live.id}`);
+    const body = screen.getByRole("heading", { level: 2, name: "Then" });
+    const related = screen.getByRole("link", { name: "Salt" });
+    expect(body.compareDocumentPosition(row) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(row.compareDocumentPosition(related) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    on.unmount();
+
+    renderApp({ path: "/blog/ten-years", modules: [blog, reacting], on: ["blog"] });
+    expect(await screen.findByRole("heading", { level: 1, name: "Ten years" })).toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 
   it("is the 404 page where there's none, and moves on from a slug a post left", async () => {

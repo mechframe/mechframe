@@ -540,6 +540,11 @@ export interface components {
             published_at: string;
             /** Reading Minutes */
             reading_minutes: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
             /** Html */
             html: string;
             /**

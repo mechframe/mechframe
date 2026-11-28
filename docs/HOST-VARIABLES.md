@@ -216,7 +216,7 @@ Set in the site's admin (Admin → Settings), not on the host:
 | `autoplay_next` | bool | `true` | Play the next track in the queue when one ends |
 | `count_after_seconds` | int | `30` | Seconds really heard before a play counts, from 5 to 120 (or the whole of a shorter track) |
 
-### `blog` 0.1.7 (experimental)
+### `blog` 0.1.8 (experimental)
 
 Dated posts in Markdown, with categories, scheduling, related posts and a cover from media or the AI.
 
@@ -325,6 +325,20 @@ Set in the site's admin (Admin → Settings), not on the host:
 | `pieces_per_page` | int | `24` | Pieces on each page of the Art page, from 6 to 60 |
 | `lead` | string | blank | The line under the Art page's title |
 | `commission_link` | string | blank | Where "Commission work like this" goes: a path on the site or an https address; empty hides it |
+
+### `reactions` 0.1.0 (experimental)
+
+Reactions on posts, comments and messages
+
+| Variable | Needed | On Railway | What it's for |
+| --- | --- | --- | --- |
+| `REACTIONS_RATE_LIMIT` | Optional · Environment only | You type it (`mechframe add` lists it) | How many reactions a person may add or take back, as count/period; 60/1m by default |
+
+Set in the site's admin (Admin → Settings), not on the host:
+
+| Setting | Type | Default | What it's for |
+| --- | --- | --- | --- |
+| `palette` | json | `["fire", "love", "mind_blown"]` | The reactions offered, in the row's order: built-in keys only (fire, love, mind_blown), each once |
 
 ### `social` 0.1.0 (experimental)
 
