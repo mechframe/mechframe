@@ -48,6 +48,9 @@ export type { AdminSection } from "./src/app/context";
 export { ADMIN_SECTIONS } from "./src/slots/sidebar";
 
 export { useSession, useSignOut } from "./src/session/session";
+// Where the session lives in the query cache, for a part that must know who's signed in
+// at the moment it acts, not at its last render (`reactions`' writes, decision 0068).
+export { SESSION_KEY } from "./src/session/session";
 export type { Session, SessionUser } from "./src/session/session";
 export { RequireAuth, RequirePermission } from "./src/guards/guards";
 // The sign-in page's address that brings the person back to a path on this site.

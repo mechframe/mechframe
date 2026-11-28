@@ -11,7 +11,7 @@
   3. **A palette of built-in reactions,** not any emoji (§8, 1): `fire`, `love` and `mind_blown`, with the board's icons. The settings section `reactions` holds which are offered and their order, saved through the kernel's settings route. A key taken out keeps its rows, isn't counted, and can still be taken back.
   4. **Who:** a signed-in member with a verified address adds one, with moderation's time-out holding (SPEC 14.7: verification before public content); any member takes their own back (§8, 2). Guests can't. Everyone reads the counts; only the reader's own are named, never who else reacted (§8, 4).
   5. **One row each** per thing, person and key, held by a unique constraint and `INSERT … ON CONFLICT DO NOTHING`, so two presses at once make one.
-  6. **The web's sign-in link** is the kernel's `signInFor(path)`, now on its web surface, so a module sends a signed-out reader to sign in and back as `RequireAuth` does.
+  6. **The web's sign-in link** is the kernel's `signInFor(path)`, now on its web surface, so a module sends a signed-out reader to sign in and back as `RequireAuth` does. `SESSION_KEY` joins it: a row's queued write asks the query cache who's signed in when it goes and when its answer lands, so a press never goes out, or lands, under someone else (CodeRabbit and cubic on #170).
 - **Rejected:**
   - **Search's public documents** as the check (social's way): they can't tell a thing that's gone from one that's hidden, so the sweep couldn't keep a draft's reactions, and comments aren't searched.
   - **Blog listing reactions in `requires.modules`** and drawing its `public.ts`: a blog would need reactions.
@@ -19,7 +19,7 @@
   - **Any emoji from a picker, and custom emojis,** now: no board draws them and nothing before community needs them (§8, 1).
   - **Denormalised counts:** a thing's rows are counted from the unique index, which suits a page's one read.
 - **Consequences:**
-  - SPEC 6 gains `signInFor`; SPEC 8 the slot `content.reactions` and `ReactionParts`; `schema/module.schema.json` the slot's name.
+  - SPEC 6 gains `signInFor` and `SESSION_KEY`; SPEC 8 the slot `content.reactions` and `ReactionParts`; `schema/module.schema.json` the slot's name.
   - Blog 0.1.8 gives `blog.post` through `refs.py`, so a featured slot may also hold posts, and its `LivePost` carries the post's `id`.
   - Comments (step 3's next) can put the row under each comment by giving `comments.comment` through item references and drawing `ReactionParts`; its contract decides whether it needs more from reactions.
   - A site takes it with `mechframe add reactions`, and the kernel's part with `mechframe upgrade kernel`.

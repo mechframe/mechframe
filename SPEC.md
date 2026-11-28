@@ -260,7 +260,7 @@ Modules MUST import only from the kernel's public surface: `kernel/__init__.py` 
 
 | Name | Gives |
 | --- | --- |
-| `useSession()` | The user, their roles, and `can(permission)` for showing or hiding UI |
+| `useSession()` | The user, their roles, and `can(permission)` for showing or hiding UI; `SESSION_KEY` is the session's place in the query cache, for a part that must know who's signed in at the moment it acts (decision 0068) |
 | `api`, `useApiQuery` / `useApiMutation` and `apiQueryOptions` | The client, typed from the generated schema and wrapped in TanStack Query, for the kernel's paths; any answer but a success throws an `ApiProblem`; a query reads only, and a refusal (4xx) isn't retried (decision 0042) |
 | `createApiClient<paths>()` | A module's own typed client and hooks, from its `openapi.json` |
 | `<RequireAuth>`, `<RequirePermission>` | Route guards |
@@ -924,7 +924,7 @@ All eleven were answered on 2026-11-12, and the sections above already reflect t
 
 | Date | Change |
 | --- | --- |
-| 2026-11-28 | The eleventh module, `reactions` (`dev plans/contracts/reactions.md`, decision 0068): Fire, Love and Mind blown under any module's live thing, named by its content type and id and checked through item references (hook 11), so neither module requires the other. Section 6 gains `signInFor` on the web surface; section 8 gains the slot `content.reactions` and the kernel's `ReactionParts`, which a module's public page draws under its thing (blog's post page first) |
+| 2026-11-28 | The eleventh module, `reactions` (`dev plans/contracts/reactions.md`, decision 0068): Fire, Love and Mind blown under any module's live thing, named by its content type and id and checked through item references (hook 11), so neither module requires the other. Section 6 gains `signInFor` and `SESSION_KEY` on the web surface; section 8 gains the slot `content.reactions` and the kernel's `ReactionParts`, which a module's public page draws under its thing (blog's post page first) |
 | 2026-11-25 | Hook 11, item references (decision 0072, `dev plans/contracts/featured.md`): a module's `refs.py`'s `REFS`, a tuple of `refs.Source`, gives what another module may point at; `kernel.refs`'s `types`, `find` and `pick` ask the modules that are on, so a module that points (featured) and one pointed at (discography) never require each other. Section 6 gains its row, section 7 its file and the hooks index's ninth row (decision 0052 keeps 9 and 10 for entitlements and profile tabs) |
 | 2026-11-24 | The ninth module, `social`, social posting (`dev plans/contracts/social.md`, decision 0067): a published thing shared to the site's channels through Buffer from its admin page's Share card. Section 6 gains `server_copy.preview` and `search.public_document`, a public thing's link preview by its content type and id; section 8 gains the slot `content.share` and the kit's `ShareParts`, which a module's admin page draws for its content (blog's post editor first) |
 | 2026-11-24 | The eighth module, `audio-player` (`dev plans/contracts/audio-player.md`, decision 0071): one player for a site's own audio that modules hand items to, one thing playing at a time, SoundCloud behind its controls in the consent category `media`, and plays counted once per listener a day with nothing kept that identifies anyone; section 6's `rate_limit` row gains `client_address` |

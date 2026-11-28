@@ -10,7 +10,7 @@ import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { ReactionParts } from "@/kernel";
+import { ReactionParts, SESSION_KEY } from "@/kernel";
 import { renderWithKernel, testUser } from "@/kernel/testing";
 
 import type { Counted, Reactions } from "../../web/api";
@@ -220,15 +220,18 @@ describe("pressing", () => {
     const { queryClient } = draw();
     await userEvent.click(await button(/Fire, 3/));
     expect(screen.getByRole("button", { name: "Fire, 4" })).toHaveAttribute("aria-pressed", "true");
-    // Signed out, and the row read again for no one, before the member's answer comes.
+    // Signed out, and the row read again for no one; the member's answer comes at once,
+    // before the cache has told the row (CodeRabbit and cubic on #170).
+    const row = ["get", "/api/reactions", { params: { query: { type: "blog.post", id: [ID] } } }];
     act(() => {
-      queryClient.setQueryData(["kernel", "session"], null);
-      queryClient.setQueryData(["get", "/api/reactions", { params: { query: { type: "blog.post", id: [ID] } } }], read(counted({ fire: 4 })).body);
+      queryClient.setQueryData(SESSION_KEY, null);
+      queryClient.setQueryData(row, read(counted({ fire: 4 })).body);
+      fire({ status: 200, body: counted({ fire: 4 }, ["fire"]) });
     });
-    expect(await button(/Fire, 4/)).toHaveAttribute("aria-pressed", "false");
-    fire({ status: 200, body: counted({ fire: 4 }, ["fire"]) });
     await new Promise((resolve) => setTimeout(resolve, 50));
-    expect(screen.getByRole("button", { name: "Fire, 4" })).toHaveAttribute("aria-pressed", "false");
+    // Dropped, and read again for no one: never the member's own.
+    expect(queryClient.getQueryData<Reactions>(row)?.items[0]?.mine).toEqual([]);
+    expect(await button(/Fire, /)).toHaveAttribute("aria-pressed", "false");
   });
 
   it("never sends a queued press once another person is signed in (CodeRabbit on #170)", async () => {
@@ -244,14 +247,33 @@ describe("pressing", () => {
     const { queryClient } = draw();
     await userEvent.click(await button(/Fire, 0/));
     await userEvent.click(await button(/Love, 0/));
-    // The cache tells the row on a later tick: let it see the new person first.
-    await act(async () => {
-      queryClient.setQueryData(["kernel", "session"], testUser({ id: "00000000-0000-4000-8000-000000000002" }));
-      await new Promise((resolve) => setTimeout(resolve, 20));
-    });
+    // The answer comes at once, before the cache has told the row (CodeRabbit and cubic on #170).
+    queryClient.setQueryData(SESSION_KEY, testUser({ id: "00000000-0000-4000-8000-000000000002" }));
     fire({ status: 200, body: counted({ fire: 1 }, ["fire"]) });
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(sent.filter((request) => request.method === "PUT").map((request) => new URL(request.url).pathname)).toEqual([PRESS("fire")]);
+  });
+
+  it("reads the row again when a queued press is dropped because the row has gone (cubic on #170)", async () => {
+    let fire: (value: Answer) => void = () => undefined;
+    const sent = routed({
+      "GET /api/reactions": read(counted()),
+      [`PUT ${PRESS("fire")}`]: () =>
+        new Promise<Answer>((resolve) => {
+          fire = resolve;
+        }),
+      [`PUT ${PRESS("love")}`]: { status: 200, body: counted({ love: 1 }, ["love"]) },
+    });
+    const { queryClient, unmount } = draw();
+    await userEvent.click(await button(/Fire, 0/));
+    await userEvent.click(await button(/Love, 0/));
+    unmount();
+    fire({ status: 200, body: counted({ fire: 1 }, ["fire"]) });
+    const row = ["get", "/api/reactions", { params: { query: { type: "blog.post", id: [ID] } } }];
+    await waitFor(() => {
+      expect(queryClient.getQueryState(row)?.isInvalidated).toBe(true);
+    });
+    expect(sent.filter((request) => request.method === "PUT")).toHaveLength(1);
   });
 
   it("lets an unverified member take their own back (CodeRabbit on #170)", async () => {

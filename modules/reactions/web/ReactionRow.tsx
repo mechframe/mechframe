@@ -8,7 +8,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 
-import { ApiProblem, failureWords, signInFor, useSession, useToast, type ReactionPartProps } from "@/kernel";
+import { ApiProblem, SESSION_KEY, failureWords, signInFor, useSession, useToast, type ReactionPartProps, type SessionUser } from "@/kernel";
 
 import { PRESS, READ, api, readOf, useApiQuery, type Counted, type Reactions } from "./api";
 import { ReactionIcon } from "./icons";
@@ -42,15 +42,11 @@ export default function ReactionRow({ type, id }: ReactionPartProps) {
   // no press is queued after it, since it can't hold that one yet (Codex on #170).
   const queue = useRef<Promise<void>>(Promise.resolve());
   const queued = useRef(0);
-  // Who's signed in now, and whether the row is still drawn: a write, its answer and its
-  // putting back are the presser's alone, so none goes out or lands once someone else is
-  // signed in, or no one, or the row has gone (CodeRabbit on #170).
-  const signedIn = session.status === "signed-in" ? session.user.id : null;
-  const who = useRef(signedIn);
+  // Whether the row is still drawn. A write, its answer and its putting back are the
+  // presser's alone: none goes out or lands once someone else is signed in, or no one,
+  // or the row has gone, each asked at that moment from the cache, not at the last
+  // render (CodeRabbit and cubic on #170).
   const drawn = useRef(true);
-  useEffect(() => {
-    who.current = signedIn;
-  }, [signedIn]);
   useEffect(() => {
     drawn.current = true;
     return () => {
@@ -87,18 +83,32 @@ export default function ReactionRow({ type, id }: ReactionPartProps) {
       return;
     }
     const by = session.user.id;
-    const still = () => drawn.current && who.current === by;
+    const still = () => drawn.current && queryClient.getQueryData<SessionUser | null>(SESSION_KEY)?.id === by;
+    // A press dropped leaves the row to be read again, so no unsaved press stays drawn (cubic on #170).
+    const dropped = () => {
+      void queryClient.invalidateQueries({ queryKey });
+    };
     sending.current.add(key);
     queued.current += 1;
     set((row) => toggled(row, key, on, order));
     const write = async () => {
       try {
-        if (!still()) return;
+        if (!still()) {
+          dropped();
+          return;
+        }
         const at = { params: { path: { type, id, key } } };
         const { data } = on ? await api.DELETE(PRESS, at) : await api.PUT(PRESS, at);
-        if (data && queued.current === 1 && still()) set(() => data);
+        if (!still()) {
+          dropped();
+          return;
+        }
+        if (data && queued.current === 1) set(() => data);
       } catch (error) {
-        if (!still()) return;
+        if (!still()) {
+          dropped();
+          return;
+        }
         set((row) => toggled(row, key, !on, order));
         if (error instanceof ApiProblem && error.code === UNVERIFIED) setUnverified(true);
         else toast({ tone: "danger", text: failureWords(error) || "That reaction wasn't saved. Try again." });
