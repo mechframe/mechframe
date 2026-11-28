@@ -212,6 +212,12 @@ _SEED = [
     "('ten-years-on', '00000000-0000-0000-0000-000000000008', now())",
     "INSERT INTO blog_post_related (post_id, related_id, position) VALUES "
     "('00000000-0000-0000-0000-000000000008', '00000000-0000-0000-0000-000000000009', 0)",
+    "INSERT INTO portfolio_piece (id, version, title, slug, artist_id, year, about, image_id, "
+    "video_url, video_id, created_at, updated_at, status, published_at) VALUES "
+    "('00000000-0000-0000-0000-000000000010', 1, 'Harbour at dusk', 'harbour-at-dusk', :user, "
+    "2025, 'Oil on canvas', '00000000-0000-0000-0000-000000000006', "
+    "'https://www.youtube.com/watch?v=dQw4w9WgXcQ', 'dQw4w9WgXcQ', now(), now(), 'published', "
+    "now())",
     "INSERT INTO contact_message (id, received_at, name, email, email_normal, topic, topic_label, "
     "message, wants_news, status, held_reason, status_at, notified_at, user_id) VALUES "
     "(gen_random_uuid(), now(), 'Rae', 'Rae@example.com', 'rae@example.com', 'work', "

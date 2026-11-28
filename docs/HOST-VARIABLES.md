@@ -312,6 +312,20 @@ No host variables of its own.
 
 **From the kernel:** Write with AI needs `ANTHROPIC_API_KEY` or a key saved in Settings → AI.
 
+### `portfolio` 0.1.0 (experimental)
+
+Paintings, design, animation and video by discipline, each with its picture, artist and page.
+
+No host variables of its own.
+
+Set in the site's admin (Admin → Settings), not on the host:
+
+| Setting | Type | Default | What it's for |
+| --- | --- | --- | --- |
+| `pieces_per_page` | int | `24` | Pieces on each page of the Art page, from 6 to 60 |
+| `lead` | string | blank | The line under the Art page's title |
+| `commission_link` | string | blank | Where "Commission work like this" goes: a path on the site or an https address; empty hides it |
+
 ### `social` 0.1.0 (experimental)
 
 Shares a published post, release or product to the site's social channels through Buffer, from its own admin page.
@@ -353,18 +367,6 @@ Set in the site's admin (Admin → Settings), not on the host:
 | --- | --- | --- | --- |
 | `free_download_for_email` | bool | `false` | Offer a tagged free download in exchange for an email |
 | `credit_line` | string | `prod. by Vibrant Mindz` | Credit printed on every agreement |
-
-### `portfolio` 0.1.0 (planned, not built yet)
-
-Artwork, design, animation and video pieces grouped by discipline, each optionally linked to a shop listing.
-
-No host variables of its own.
-
-Set in the site's admin (Admin → Settings), not on the host:
-
-| Setting | Type | Default | What it's for |
-| --- | --- | --- | --- |
-| `pieces_per_page` | int | `24` | Pieces on each list page |
 
 ### `roster` 0.1.0 (planned, not built yet)
 

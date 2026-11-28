@@ -53,4 +53,25 @@ Checked 2026-11-28, about 06:00 Eastern (11:00 UTC): `main` was de279f9 (#168), 
 
 ## 9. Result
 
-(Written by the side lane when its PR lands.)
+Side lane M14, 2026-11-28, about 06:15 to 07:50 Eastern (11:15 to 12:50 UTC).
+
+- **The contract** (`dev plans/contracts/portfolio.md`) went to the owner first, and was approved as recommended, its eight answers in §8. Its "Changes as built" lists what the build says more exactly; none changes what was approved.
+- **#170, portfolio 0.1.0,** from `main` at 7e59b9b (#169), pushed once. Decision 0074 and migration `portfolio_0001` were used; 0075 to 0079 and `discography_0002` are still free. Step 3's `prs` gains 170, and `python -m tools.progress` remade `docs/PROGRESS.md` and the ledger's rows. Republishing the ledger is the main lane's.
+  - **Built:** pieces with one picture from media, one discipline (the kernel's `portfolio_discipline`), the account they're credited to, a year, words and an optional YouTube link, drafted, scheduled and published through the lifecycle. Search, `refs.py` (`portfolio.piece`), server copy (`VisualArtwork`, `CollectionPage`, the sitemap), export and erase, and the seed. Collective › Portfolio and the Art page are drawn to VM Website's AdminPortfolio and Art boards, with a Settings section "Art page".
+  - **The two permissions** (decision 0074): `portfolio.piece.add` for an artist's own pieces, held only while they hold it, and `portfolio.piece.manage` for every piece. `require_owner_or` passes anyone holding the permission it names, so VM Website's planned seed, which gives its artist role `portfolio.piece.manage`, `roster.profile.manage` and `licensing.work.manage`, would have opened every artist's work to every artist. The main lane was told, for roster's contract. VM Website's seed change (`portfolio.piece.add` and `media.image.upload` for the artist role) goes to its session once this PR lands.
+  - **The boards:** VM Website Dev 27 was asked which boards draw portfolio, and didn't answer during the session. The build follows AdminPortfolio and Art, the two the design folder has (`design/site/README.md`, the Admin's seventh row).
+- **Local before the push:**
+  - portfolio's Python suites (backend and HTTP contract): 55 passed, 95.4% of its backend's lines and branches;
+  - `tests/`, `kernel/tests/contract/` and `kernel/tests/test_app.py`: 743 passed, 1 skipped, 19 xfailed (10 minutes);
+  - web: portfolio's 15 Vitest tests, ESLint and tsc clean; mypy clean across the project;
+  - e2e: `portfolio.spec.ts`, 2 passed (both themes, axe at 1440 and 390), from a throwaway config in the worktree, the main lane told before and after;
+  - on a fresh site, `mechframe add` media, embeds and portfolio, then `mechframe check`: passed. The brand check is clean.
+- **Traps hit:**
+  - a seed may never ask for the owner (`ctx.user("owner")` raises): use the seeded editor;
+  - a manifest's `summary` is 120 characters at most (`tools.validate_schemas`);
+  - the e2e server's storage is off, so media can't give any picture an address: a module whose every item needs a picture stands in its reads at the browser, as blog's covers are;
+  - axe's `label-content-name-mismatch`: a button named by `aria-label` must contain its visible words, so "Edit" is a visually hidden prefix instead;
+  - jsdom joins inline spans' words without spaces in a computed name, and Chromium doesn't: match a tile's name with `/^Edit ?Title/`.
+- **Candidates for `knowledge/`:**
+  - `require_owner_or(p)` passes staff holding `p` on anything: a role meant for "own only" needs a permission of its own (decision 0074);
+  - a module that needs pictures can't be e2e-tested for real while the e2e server's storage is off; a fake public bucket in `harness.e2e` would let it.

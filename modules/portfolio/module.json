@@ -1,0 +1,126 @@
+{
+  "id": "portfolio",
+  "name": "Portfolio",
+  "version": "0.1.0",
+  "status": "experimental",
+  "category": "content",
+  "summary": "Paintings, design, animation and video by discipline, each with its picture, artist and page.",
+  "use_when": [
+    "The site shows visual work such as paintings, graphic design, animation or video, grouped by discipline",
+    "Each piece needs its own address, credited to the artist who made it",
+    "Artists add and edit their own pieces, and staff edit all of them"
+  ],
+  "avoid_when": [
+    "Pieces are only for sale and need no showcase; use shop",
+    "It's an uncurated photo dump; a gallery block on a page is enough",
+    "The work is music or writing: that's discography or blog"
+  ],
+  "requires": {
+    "kernel": "^0.1",
+    "modules": {
+      "media": "^0.1.4",
+      "embeds": "^0.1"
+    }
+  },
+  "conflicts": [],
+  "permissions": [
+    {
+      "key": "portfolio.piece.add",
+      "description": "Add pieces, and edit and delete the ones credited to you",
+      "default_roles": [
+        "admin",
+        "editor"
+      ]
+    },
+    {
+      "key": "portfolio.piece.manage",
+      "description": "Edit and delete every piece, and credit it to anyone who may add pieces",
+      "default_roles": [
+        "admin",
+        "editor"
+      ]
+    }
+  ],
+  "settings": [
+    {
+      "key": "pieces_per_page",
+      "type": "int",
+      "default": 24,
+      "secret": false,
+      "description": "Pieces on each page of the Art page, from 6 to 60"
+    },
+    {
+      "key": "lead",
+      "type": "string",
+      "default": "",
+      "secret": false,
+      "description": "The line under the Art page's title"
+    },
+    {
+      "key": "commission_link",
+      "type": "string",
+      "default": "",
+      "secret": false,
+      "description": "Where \"Commission work like this\" goes: a path on the site or an https address; empty hides it"
+    }
+  ],
+  "env": [],
+  "routes": {
+    "api": "/api/portfolio",
+    "public": [
+      "/art",
+      "/art/:discipline",
+      "/art/piece/:slug"
+    ],
+    "member": [],
+    "admin": [
+      "/admin/portfolio"
+    ]
+  },
+  "tables": [
+    "portfolio_piece"
+  ],
+  "events": {
+    "emits": [
+      "portfolio.piece.deleted"
+    ],
+    "listens": []
+  },
+  "slots": [
+    "nav.public",
+    "nav.admin",
+    "admin.settings.section"
+  ],
+  "bindings": [
+    "web"
+  ],
+  "jobs": [],
+  "notifications": [],
+  "vocabularies": [
+    {
+      "key": "portfolio_discipline",
+      "label": "Disciplines",
+      "hierarchical": false
+    }
+  ],
+  "content_types": [
+    {
+      "key": "portfolio.piece",
+      "label": "Piece",
+      "lifecycle": true,
+      "search": true,
+      "taxonomy": [
+        "portfolio_discipline"
+      ]
+    }
+  ],
+  "data_hooks": {
+    "export": true,
+    "delete": true
+  },
+  "source": {
+    "from": "new (Vibrant Mindz backend scaffold, 2026-11-15)",
+    "commit": "n/a",
+    "license": "proprietary"
+  }
+}

@@ -217,6 +217,32 @@
       "conflicts": []
     },
     {
+      "id": "portfolio",
+      "name": "Portfolio",
+      "version": "0.1.0",
+      "status": "experimental",
+      "category": "content",
+      "summary": "Paintings, design, animation and video by discipline, each with its picture, artist and page.",
+      "use_when": [
+        "The site shows visual work such as paintings, graphic design, animation or video, grouped by discipline",
+        "Each piece needs its own address, credited to the artist who made it",
+        "Artists add and edit their own pieces, and staff edit all of them"
+      ],
+      "avoid_when": [
+        "Pieces are only for sale and need no showcase; use shop",
+        "It's an uncurated photo dump; a gallery block on a page is enough",
+        "The work is music or writing: that's discography or blog"
+      ],
+      "requires": {
+        "kernel": "^0.1",
+        "modules": {
+          "media": "^0.1.4",
+          "embeds": "^0.1"
+        }
+      },
+      "conflicts": []
+    },
+    {
       "id": "social",
       "name": "Social",
       "version": "0.1.0",
