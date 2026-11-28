@@ -154,3 +154,15 @@ Access is the routes' permissions, as now. The seed is unchanged.
 3. **A track with no player of its own plays from its album's.** Bandcamp's frame is then the album's, and it starts at the album's first (or featured) track, not this one. *Recommended:* keep it, as your order says ("else its album's"), and paste a track's own code wherever that track matters. *The other way:* only a track's own player makes it live; an album's player shows on its Release page alone.
 
 ## Changes after approval
+
+None.
+
+## Changes as built (discography 0.1.5 and embeds 0.1.2, `claude/mechframe-side-lane-bandcamp-4ebef7`, #174)
+
+None of these changes what was approved:
+- `public.ts` also exports `SOURCE` (`discography.track`), so a page finds a track in `playerQueue` by its key.
+- `bandcamp_player` keeps one plain form of a link: https, the host in lower case, no trailing slash.
+- discography's summary reads "…; tracks play from an upload, SoundCloud or Bandcamp." (a summary is 120 characters at most).
+- `remove_audio` keeps a typed length while the track still plays, from SoundCloud or Bandcamp.
+- On discography's own pages, the frame takes the focus when it replaces its Listen.
+- A Bandcamp-only release hides Play album, and its dock isn't drawn.

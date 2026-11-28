@@ -101,14 +101,14 @@
     {
       "id": "discography",
       "name": "Discography",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "status": "experimental",
       "category": "media",
-      "summary": "Albums, EPs and singles with tracks, credits and streaming links; tracks play from an upload or a SoundCloud link.",
+      "summary": "Albums, EPs and singles with tracks, credits and streaming links; tracks play from an upload, SoundCloud or Bandcamp.",
       "use_when": [
         "The site belongs to an artist, band, label or collective that releases music",
         "Releases and tracks need their own pages, credits, streaming links or an on-site player",
-        "Music is uploaded as masters, or already on SoundCloud, and should play on the site"
+        "Music is uploaded as masters, or already on SoundCloud or Bandcamp, and should play on the site"
       ],
       "avoid_when": [
         "Music is only linked out and never played on the site: that's embeds",
@@ -118,7 +118,7 @@
         "kernel": "^0.1",
         "modules": {
           "media": "^0.1",
-          "embeds": "^0.1",
+          "embeds": "^0.1.2",
           "audio-player": "^0.1"
         }
       },
@@ -127,7 +127,7 @@
     {
       "id": "embeds",
       "name": "Embeds",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "status": "experimental",
       "category": "media",
       "summary": "YouTube, SoundCloud, Spotify and Bandcamp players from a pasted link, loaded only once a visitor plays.",
