@@ -2,7 +2,8 @@
 // discipline on Collective › Portfolio and opens a piece in the editor; a visitor
 // finds it on the Art page, opens its panel at its address and closes it again.
 // Each page has nothing serious for axe, in both themes, at 1440 and at a phone's
-// 390, and nothing loads from YouTube until a visitor plays the video. The e2e
+// 390, and nothing loads from YouTube until a visitor plays the video. The editor adds a
+// piece, its picture picked from the library, and publishes it. The e2e
 // server runs with storage off (harness.e2e), so media can't give a picture an
 // address: the pieces' reads are stood in at the browser, as blog's spec stands in
 // its cover, while the disciplines and the Art page's settings are the server's.
@@ -89,19 +90,49 @@ for (const [name, canvas] of Object.entries(THEMES)) {
     const discipline = { slug: `paintings-${tag}`, label };
     const { slug, piece, card, draft } = standIn(tag, discipline);
 
-    // The pieces, stood in: storage is off, so media can't give a picture an address.
-    await page.route("**/api/portfolio/admin/pieces?*", (route) => route.fulfill({ json: { items: [piece, draft], next_cursor: null, no_artist: 1 } }));
-    await page.route("**/api/portfolio/admin/pieces", (route) => route.fulfill({ json: { items: [piece, draft], next_cursor: null, no_artist: 1 } }));
-    await page.route(`**/api/portfolio/admin/pieces/${ID}`, (route) => route.fulfill({ json: piece }));
+    // The pieces, stood in: storage is off, so media can't give a picture an address. The
+    // library's list, the new piece's save and its publish are stood in too, so the editor
+    // adds and publishes it as a person would (cubic on #171).
+    const image = { ...PICTURE, bytes: 1000, content_type: "image/png", filename: "harbour.png", uploaded_by: null, created_at: "2026-11-28T12:00:00+00:00", version: 1 };
+    const fresh = { ...piece, status: "draft" as const, published_at: null, path: null, video: null };
+    let live = false;
+    const sent: string[] = [];
+    await page.route("**/api/media/admin/images*", (route) => route.fulfill({ json: { items: [image], next_cursor: null, missing_alt: 0 } }));
+    await page.route(/\/api\/portfolio\/admin\/pieces(\?.*)?$/, async (route) => {
+      if (route.request().method() === "POST") {
+        sent.push(JSON.stringify(route.request().postDataJSON()));
+        await route.fulfill({ status: 201, json: fresh });
+        return;
+      }
+      await route.fulfill({ json: { items: live ? [piece, draft] : [draft], next_cursor: null, no_artist: 1 } });
+    });
+    await page.route(`**/api/portfolio/admin/pieces/${ID}/publish`, async (route) => {
+      live = true;
+      await route.fulfill({ json: piece });
+    });
+    await page.route(`**/api/portfolio/admin/pieces/${ID}`, (route) => route.fulfill({ json: live ? piece : fresh }));
     await page.reload();
     await theme(page, name, canvas);
-    await expect(page.getByText("1 piece has no artist")).toBeVisible();
+    // Only the uncredited draft is there yet: none has an artist.
+    await expect(page.getByText("No piece has an artist yet")).toBeVisible();
     const grid = page.getByRole("list", { name: "Pieces" });
     await expect(grid.getByRole("button", { name: new RegExp(`^Edit A draft ${tag}`) })).toContainText("No artist");
-    await grid.getByRole("button", { name: new RegExp(`^Edit ${piece.title}`) }).click();
-    await expect(page.getByRole("textbox", { name: "Title" })).toHaveValue(piece.title);
-    await expect(page.getByLabel("Discipline")).toHaveValue(discipline.slug);
+
+    await page.getByRole("button", { name: "Add a piece" }).click();
+    const picker = page.getByRole("dialog", { name: "Choose the new piece's picture" });
+    await picker.getByRole("button", { name: `${PICTURE.alt}, 1200 × 900` }).click();
+    await expect(page).toHaveURL(/\/admin\/portfolio\/new$/);
+    await page.getByRole("textbox", { name: "Title" }).fill(piece.title);
+    await expect(page.getByRole("textbox", { name: "Address" })).toHaveValue(`harbour-at-dusk-${tag}`);
+    await page.getByLabel("Discipline").selectOption({ label });
+    await cleanAtEachWidth(page);
+    await page.getByRole("button", { name: "Publish", exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`/admin/portfolio/${ID}$`));
     await expect(page.getByRole("link", { name: "View on the site" })).toHaveAttribute("href", `/art/piece/${slug}`);
+    await expect(page.getByLabel("Discipline")).toHaveValue(discipline.slug);
+    expect(sent).toHaveLength(1);
+    expect(JSON.parse(sent[0] ?? "{}")).toMatchObject({ title: piece.title, discipline: discipline.slug, image_id: PICTURE.id });
+    await expect(grid.getByRole("button", { name: new RegExp(`^Edit ${piece.title}`) })).toBeVisible();
     await cleanAtEachWidth(page);
 
     // A visitor, with no session: the Art page lists it, and its address opens the panel.

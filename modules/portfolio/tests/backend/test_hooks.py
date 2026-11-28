@@ -331,3 +331,37 @@ async def test_a_long_piece_is_described_in_its_opening_words_and_an_empty_disci
     assert isinstance(empty, server_copy.Page)
     assert empty.title.startswith("Sculpture · Art")
     assert "Nothing here yet." in str(empty.words)
+
+
+async def test_every_artwork_has_a_description_and_an_unbroken_one_is_cut(
+    db: AsyncSession,
+) -> None:
+    """cubic on #171: an empty about falls back to the line, and words with no
+    space in them are cut where they are, not to an ellipsis alone."""
+    plain = await _piece(db, await _artist(db), about="")
+    unbroken = await _piece(db, None, about="x" * 400)
+    assert PAGES is not None
+    page = await PAGES.page(db, service.path(plain), {"slug": plain.slug})
+    assert isinstance(page, server_copy.Page)
+    (artwork,) = page.data
+    assert artwork["description"] == "Paintings, by petro, 2025"
+    long = await PAGES.page(db, service.path(unbroken), {"slug": unbroken.slug})
+    assert isinstance(long, server_copy.Page)
+    assert long.description == "x" * 159 + "…"
+
+
+async def test_a_disciplines_sitemap_date_is_its_own_newest_piece(db: AsyncSession) -> None:
+    """cubic on #171: a discipline's page changed when its own pieces did."""
+    first, second = await new_discipline(db, "Old"), await new_discipline(db, "New")
+    old = await _piece(db, None, discipline=first)
+    await _piece(db, None, discipline=second)
+    await db.execute(
+        text("UPDATE portfolio_piece SET updated_at = now() - interval '30 days' WHERE id = :id"),
+        {"id": old.id},
+    )
+    await db.commit()
+    assert PAGES is not None
+    entries = {entry.path: entry.modified for entry in await PAGES.sitemap(db)}
+    assert entries[f"/art/{first}"] is not None
+    assert entries[f"/art/{second}"] is not None
+    assert entries[f"/art/{first}"] < entries[f"/art/{second}"]

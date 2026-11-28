@@ -22,5 +22,5 @@
   - Only the panel, as drawn, with no address per piece. Rejected (§8, 5): crawlers would see only the lists.
 - **Consequences:**
   - portfolio 0.1.0's table is `portfolio_piece` (`portfolio_0001`, depending on `kernel_0014` and `media_0001`). It gives `portfolio.piece` to `kernel.refs`, lifecycle and search.
-  - VM Website's seed gives its artist role `portfolio.piece.add` and `media.image.upload`. Roster and licensing face the same trap (`roster.profile.manage`, `licensing.work.manage` in the same seed): their contracts split the permission likewise.
+  - **To follow, outside this decision's PR:** VM Website's planned seed still gives its artist role `portfolio.piece.manage`, which opens every piece to every artist. It is to give `portfolio.piece.add` and `media.image.upload` instead; VM Website's session makes that change once portfolio 0.1.0 is on `main`. Roster and licensing face the same trap (`roster.profile.manage`, `licensing.work.manage` in the same seed): their contracts are to split the permission likewise.
   - Module settings are saved under `kernel.settings.manage`, as every module's are, so portfolio declares no settings permission of its own. The Art page reads its lead and commission link through its own public `GET /api/portfolio/art`.

@@ -8,7 +8,7 @@ A piece has a title, an address under `/art/piece/` (made from the title, editab
 
 **Who may change a piece** (decision 0074): someone holding `portfolio.piece.add`, such as a site's artist role, adds pieces, credited to themself, and changes and deletes the ones credited to them, only while they hold it. Staff holding `portfolio.piece.manage` change every piece and credit it to anyone who may add pieces, or to no one. The kernel's `require_owner_or` lets through anyone holding the permission it names, so an artist role must hold `add`, never `manage`.
 
-Collective › Portfolio shows the pieces as a grid, newest edit first, by discipline: a warning while some have no artist ("Credit the first"), each tile's pill ("No artist", "Draft", "Scheduled"), and the editor beside the grid for the piece chosen. Add a piece picks its picture first. A save someone else got to first asks which to keep.
+Collective › Portfolio shows the pieces as a grid, newest edit first, by discipline: for staff holding `manage`, a warning while some have no artist ("Credit the first"); each tile's pill ("No artist", "Draft", "Scheduled"), and the editor beside the grid for the piece chosen. Add a piece picks its picture first. A save someone else got to first asks which to keep.
 
 The Art page, `/art`, shows the live pieces newest first, with a chip for each discipline that has something live. Each chip is an address, `/art/<discipline>`. A piece's address, `/art/piece/<slug>`, is the same page with the board's panel open above the grid: the big picture, a video's player behind embeds' consent facade, the discipline, the title, "By petro, 2025", the words, "Commission work like this" while the settings have a link, and Close.
 

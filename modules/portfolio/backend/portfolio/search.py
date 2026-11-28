@@ -37,8 +37,8 @@ class Pieces(search.Source):
             if after is not None:
                 statement = statement.where(Piece.id > after)
             found = list(await db.scalars(statement))
-            for piece in found:
-                yield await service.document(db, piece)
+            for document in await service.documents(db, found):
+                yield document
             if len(found) < PAGE:
                 return
             after = found[-1].id

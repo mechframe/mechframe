@@ -506,3 +506,79 @@ async def test_the_admin_list_pages_by_discipline(db: AsyncSession) -> None:
         db, mine=artist, q=None, discipline=discipline, cursor=first["next_cursor"], limit=1
     )
     assert [each["id"] for each in after["items"]] == [str(one.id)]
+
+
+async def test_a_manager_credited_with_a_piece_must_be_able_to_add_pieces(
+    db: AsyncSession,
+) -> None:
+    """cubic on #171: a manage-only account crediting a piece to itself is
+    someone `artists()` leaves out, so the credit is refused."""
+    curator = await make_person(db, "Cur", role=await make_role(db, MANAGE))
+    refused = await _problem(
+        service.create(
+            db,
+            {
+                "title": "Mine",
+                "slug": slug(),
+                "discipline": await new_discipline(db),
+                "image_id": str(await make_image(db)),
+            },
+            by=curator,
+            manages=True,
+            adds=False,
+        )
+    )
+    assert (refused.code, refused.status) == ("portfolio.not_an_artist", 422)
+    await db.rollback()
+    nobody = await service.create(
+        db,
+        {
+            "title": "Uncredited",
+            "slug": slug(),
+            "discipline": await new_discipline(db),
+            "image_id": str(await make_image(db)),
+            "artist_id": None,
+        },
+        by=curator,
+        manages=True,
+        adds=False,
+    )
+    assert nobody.artist_id is None
+
+
+async def test_an_unchanged_discipline_is_not_a_change(db: AsyncSession) -> None:
+    """cubic on #171: the audit names only the fields that changed."""
+    artist = await _artist(db)
+    discipline = await new_discipline(db)
+    piece = await _new(db, artist, discipline=discipline)
+    await service.change(
+        db,
+        piece.id,
+        piece.version,
+        {"discipline": discipline, "title": "Renamed"},
+        by=artist,
+        manages=False,
+        adds=True,
+    )
+    await db.commit()
+    details = await db.scalar(
+        text(
+            "SELECT details FROM kernel_audit_event WHERE action = 'portfolio.piece.changed' "
+            "AND target_id = :id"
+        ),
+        {"id": str(piece.id)},
+    )
+    assert details == {"fields": ["title"]}
+
+
+async def test_a_video_id_is_eleven_of_youtubes_letters(db: AsyncSession) -> None:
+    """cubic on #171: the table holds no shorter id, whatever writes it."""
+    from sqlalchemy.exc import IntegrityError
+
+    artist = await _artist(db)
+    piece_id = (await _new(db, artist, video_url="https://youtu.be/dQw4w9WgXcQ")).id
+    with pytest.raises(IntegrityError, match="video_id_shape"):
+        await db.execute(
+            text("UPDATE portfolio_piece SET video_id = 'short' WHERE id = :id"), {"id": piece_id}
+        )
+    await db.rollback()

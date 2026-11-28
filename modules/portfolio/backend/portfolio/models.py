@@ -37,6 +37,8 @@ MAX_ABOUT = 2000
 MAX_VIDEO_URL = 500
 #: The earliest year a piece can carry; the latest is next year (`service`).
 MIN_YEAR = 1000
+#: A YouTube video's id.
+VIDEO_ID_PATTERN = r"^[A-Za-z0-9_-]{11}$"
 
 
 def slug_rule(column: str) -> str:
@@ -52,6 +54,10 @@ class Piece(lifecycle.Publishable, Base):
         CheckConstraint(f"char_length(about) <= {MAX_ABOUT}", name="about_length"),
         CheckConstraint(f"year IS NULL OR year >= {MIN_YEAR}", name="year_range"),
         CheckConstraint("(video_url IS NULL) = (video_id IS NULL)", name="video_whole"),
+        # A YouTube video's id is 11 of its letters, never fewer (cubic on #171).
+        CheckConstraint(
+            f"video_id IS NULL OR video_id ~ '{VIDEO_ID_PATTERN}'", name="video_id_shape"
+        ),
         CheckConstraint("version >= 1", name="version_positive"),
         Index("ix_portfolio_piece_live", "status", "published_at"),
         Index("ix_portfolio_piece_updated_at", "updated_at"),

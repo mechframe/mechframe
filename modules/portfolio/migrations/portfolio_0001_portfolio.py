@@ -64,6 +64,10 @@ def upgrade() -> None:
         sa.CheckConstraint(
             "(video_url IS NULL) = (video_id IS NULL)", name=op.f("ck_portfolio_piece_video_whole")
         ),
+        sa.CheckConstraint(
+            "video_id IS NULL OR video_id ~ '^[A-Za-z0-9_-]{11}$'",
+            name=op.f("ck_portfolio_piece_video_id_shape"),
+        ),
         sa.CheckConstraint("version >= 1", name=op.f("ck_portfolio_piece_version_positive")),
         sa.CheckConstraint(lifecycle.RULE, name=op.f("ck_portfolio_piece_lifecycle")),
         sa.ForeignKeyConstraint(

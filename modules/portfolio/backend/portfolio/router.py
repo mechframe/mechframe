@@ -153,7 +153,11 @@ async def new_piece(
     """A draft; 409 `portfolio.slug_taken` for a slug another piece has."""
     # Only the fields sent: an artist left out is whoever adds it, one sent as null no one.
     piece = await service.create(
-        db, body.model_dump(exclude_unset=True), by=person.id, manages=person.manages
+        db,
+        body.model_dump(exclude_unset=True),
+        by=person.id,
+        manages=person.manages,
+        adds=person.adds,
     )
     shown = await service.one(db, piece)
     await db.commit()

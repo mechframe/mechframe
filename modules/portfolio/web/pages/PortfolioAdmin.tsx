@@ -98,7 +98,8 @@ export default function PortfolioAdmin() {
   const uncreditedWhat =
     noArtist === null || noArtist === 0
       ? null
-      : everyLoaded && noArtist === pieces.length
+      : // Only the whole list can say none has one: a discipline's is a part (cubic on #171).
+        !discipline && everyLoaded && noArtist === pieces.length
         ? "No piece has an artist yet"
         : noArtist === 1
           ? "1 piece has no artist"

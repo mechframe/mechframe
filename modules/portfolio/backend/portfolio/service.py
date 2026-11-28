@@ -178,12 +178,20 @@ async def _free(db: AsyncSession, slug: str, piece_id: uuid.UUID | None) -> None
         raise _taken(slug)
 
 
+#: The slug's own unique constraint: the one failure a flush answers 409 `portfolio.slug_taken` for.
+SLUG_CONSTRAINT = "uq_portfolio_piece_slug"
+
+
 async def _flushed(db: AsyncSession, slug: str) -> None:
+    """Flushes; a slug another piece took meanwhile is 409, and any other
+    failure goes up as it is (cubic on #171)."""
     try:
         async with db.begin_nested():
             await db.flush()
-    except IntegrityError:
-        raise _taken(slug) from None
+    except IntegrityError as error:
+        if SLUG_CONSTRAINT in str(error.orig):
+            raise _taken(slug) from None
+        raise
 
 
 # --- people ----------------------------------------------------------------------------------
@@ -287,18 +295,19 @@ async def disciplines_of(
 
 
 async def counted(db: AsyncSession, *, live: bool) -> list[dict[str, Any]]:
-    """Every discipline with its pieces: the live ones, or all of them."""
-    out = []
-    for term in await terms(db):
-        statement = (
-            select(func.count())
-            .select_from(Piece)
-            .where(Piece.id.in_(taxonomy.tagged(CONTENT_TYPE, VOCABULARY, term["slug"])))
-        )
-        if live:
-            statement = statement.where(lifecycle.visible(Piece))
-        out.append({**term, "pieces": int(await db.scalar(statement) or 0)})
-    return out
+    """Every discipline with its pieces, the live ones or all of them: the
+    pieces' ids in one read and their terms in another, not a count a
+    discipline (cubic on #171)."""
+    statement = select(Piece.id)
+    if live:
+        statement = statement.where(lifecycle.visible(Piece))
+    ids = list(await db.scalars(statement))
+    held = await disciplines_of(db, ids)
+    counts: dict[str, int] = {}
+    for discipline in held.values():
+        if discipline is not None:
+            counts[discipline["slug"]] = counts.get(discipline["slug"], 0) + 1
+    return [{**term, "pieces": counts.get(term["slug"], 0)} for term in await terms(db)]
 
 
 async def live_disciplines(db: AsyncSession) -> list[dict[str, str]]:
@@ -396,12 +405,21 @@ def video_of(piece: Piece) -> dict[str, str] | None:
 # --- what the site shows ---------------------------------------------------------------------
 
 
+async def documents(db: AsyncSession, pieces: Sequence[Piece]) -> list[search.Document]:
+    """Pieces as site search finds them, their related reads made once for all
+    of them: each one's title, words, artist and discipline (cubic on #171)."""
+    found = []
+    for piece, card in zip(pieces, await cards(db, pieces), strict=True):
+        discipline = card["discipline"]["label"] if card["discipline"] else ""
+        words = " ".join(part for part in (piece.about, card["artist"] or "", discipline) if part)
+        found.append(search.Document(CONTENT_TYPE, piece.id, piece.title, words, path(piece)))
+    return found
+
+
 async def document(db: AsyncSession, piece: Piece) -> search.Document:
-    """The piece as site search finds it: its title, its words, its artist and its discipline."""
-    (card,) = await cards(db, [piece])
-    discipline = card["discipline"]["label"] if card["discipline"] else ""
-    words = " ".join(part for part in (piece.about, card["artist"] or "", discipline) if part)
-    return search.Document(CONTENT_TYPE, piece.id, piece.title, words, path(piece))
+    """The piece as site search finds it."""
+    (found,) = await documents(db, [piece])
+    return found
 
 
 def line(discipline: dict[str, str] | None, artist: str | None, year: int | None) -> str:
@@ -642,11 +660,17 @@ async def every(
 
 
 async def create(
-    db: AsyncSession, fields: dict[str, Any], *, by: uuid.UUID, manages: bool
+    db: AsyncSession,
+    fields: dict[str, Any],
+    *,
+    by: uuid.UUID,
+    manages: bool,
+    adds: bool = True,
 ) -> Piece:
     """A new piece, a draft, from the fields sent. Its slug, left out, is made
     from its title. Its artist, left out, is whoever adds it; only staff
-    holding `manage` credit it to someone else, or to no one."""
+    holding `manage` credit it to someone else, or to no one. Whoever it's
+    credited to may add pieces, a manager crediting themself too (cubic on #171)."""
     title: str = fields["title"]
     if "artist_id" in fields:
         artist = _uuid(fields["artist_id"], "artist_id") if fields["artist_id"] else None
@@ -654,7 +678,7 @@ async def create(
         artist = by
     if artist != by and not manages:
         raise _forbidden()
-    if artist is not None and artist != by:
+    if artist is not None and (artist != by or not adds):
         await _check_artist(db, artist)
     if fields.get("slug"):
         slug = fields["slug"]
@@ -720,6 +744,9 @@ async def change(
     term_id = None
     if fields.get("discipline") is not None:
         term_id = await _check_discipline(db, fields["discipline"])
+        now = (await disciplines_of(db, [piece.id])).get(piece.id)
+        if now is not None and now["slug"] == fields["discipline"]:
+            term_id = None  # the one it has: nothing to file, nothing to audit (cubic on #171)
     if "artist_id" in fields:
         artist = _uuid(fields["artist_id"], "artist_id") if fields["artist_id"] else None
         if artist != piece.artist_id:

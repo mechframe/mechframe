@@ -129,6 +129,8 @@ export default function Art() {
           ))}
         </nav>
       ) : null}
+      {disciplines.error ? <LoadError what="The disciplines" error={disciplines.error} onRetry={() => void disciplines.refetch()} /> : null}
+      {page.error ? <LoadError what="The Art page's words" error={page.error} onRetry={() => void page.refetch()} /> : null}
       {piece.data ? <Panel piece={piece.data} commission={commission} back={fromList} /> : null}
       {piece.error ? <LoadError what="The piece" error={piece.error} onRetry={() => void piece.refetch()} /> : null}
       {pieces.error ? (

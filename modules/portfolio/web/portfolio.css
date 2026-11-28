@@ -168,10 +168,6 @@
   color: var(--mf-color-text-strong);
 }
 
-.mf-portfolio-panel-title:focus {
-  outline: none;
-}
-
 .mf-portfolio-panel-byline {
   color: var(--mf-color-text);
 }

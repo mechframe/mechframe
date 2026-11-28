@@ -139,9 +139,10 @@ export function PieceEditor({ piece, picked, disciplines, me, manages, onSaved, 
    * Takes in a piece the server answered with: what was typed that `sent` didn't
    * hold stays as typed. A save's `sent` is what it sent; a Publish's or an
    * Unpublish's is the piece as saved before it, so edits not yet saved survive
-   * it, still unsaved (Codex on #171).
+   * it, still unsaved (Codex on #171). `announce` false keeps the page from
+   * moving on yet, for a save a Publish goes on from (cubic on #171).
    */
-  function took(data: AdminPiece, sent: Form) {
+  function took(data: AdminPiece, sent: Form, announce = true) {
     queryClient.setQueryData(["get", ONE, { params: { path: { piece_id: data.id } } }], data);
     setSaved(data);
     // What was typed after the save went stays as typed (blog's `rebased`).
@@ -151,11 +152,11 @@ export function PieceEditor({ piece, picked, disciplines, me, manages, onSaved, 
       return answer;
     });
     setConflict(null);
-    onSaved(data);
+    if (announce) onSaved(data);
     void refresh();
   }
 
-  async function save(from: Form = form, onto: AdminPiece | null = saved, carried: readonly FormField[] = []): Promise<AdminPiece> {
+  async function save(from: Form = form, onto: AdminPiece | null = saved, carried: readonly FormField[] = [], announce = true): Promise<AdminPiece> {
     const found = problems(from, onto === null);
     setChecked(found);
     if (Object.keys(found).length > 0) throw new Error("Some fields need fixing first: they're marked.");
@@ -164,7 +165,7 @@ export function PieceEditor({ piece, picked, disciplines, me, manages, onSaved, 
       const { data } = await api.POST(LIST, { body: created(from, { credits: manages, slugTyped }) });
       if (!data) throw new Error("The site answered without the piece.");
       guard.release();
-      took(data, from);
+      took(data, from, announce);
       return data;
     }
     const sent = changed(from, formOf(onto));
@@ -172,13 +173,14 @@ export function PieceEditor({ piece, picked, disciplines, me, manages, onSaved, 
     try {
       const { data } = await api.PATCH(ONE, { params: { path: { piece_id: onto.id } }, body: { version: onto.version, ...body(from, sent) } });
       if (!data) throw new Error("The site answered without the piece.");
-      took(data, from);
+      took(data, from, announce);
       return data;
     } catch (error) {
       if (error instanceof ApiProblem && error.code === "portfolio.changed") {
         const theirs = error.extra.piece as AdminPiece;
         const latest = formNow.current;
-        const fields = [...new Set([...carried, ...changed(latest, formOf(onto))])];
+        // Yours: what this save sent, even if typed back since, and what's typed now (cubic on #171).
+        const fields = [...new Set([...carried, ...sent, ...changed(latest, formOf(onto))])];
         const conflicting = conflictOf(error.detail, formOf(onto), latest, theirs, fields);
         if (conflicting.conflicts.length === 0) {
           // They changed only what you didn't: theirs, with yours on top, saved again.
@@ -186,7 +188,7 @@ export function PieceEditor({ piece, picked, disciplines, me, manages, onSaved, 
           setSaved(theirs);
           setForm(next);
           formNow.current = next;
-          return save(next, theirs, fields);
+          return save(next, theirs, fields, announce);
         }
         setConflict({ said: conflicting, theirs, mine: latest, fields });
       }
@@ -211,13 +213,21 @@ export function PieceEditor({ piece, picked, disciplines, me, manages, onSaved, 
 
   async function publish(schedule: boolean) {
     if (schedule && !at) throw new Error("Choose when it goes live.");
-    const current = dirty ? await save() : saved;
-    const { data } = await api.POST("/api/portfolio/admin/pieces/{piece_id}/publish", {
-      params: { path: { piece_id: current.id } },
-      body: schedule ? { at: new Date(at).toISOString() } : {},
-    });
-    if (!data) throw new Error("The site answered without the piece.");
-    took(data, formOf(current));
+    // A new piece is saved first, and the page moves on to it only once it's published,
+    // so the editor that shows it is the one with the answer (cubic on #171).
+    const fresh = saved === null;
+    const current = dirty ? await save(form, saved, [], false) : saved;
+    try {
+      const { data } = await api.POST("/api/portfolio/admin/pieces/{piece_id}/publish", {
+        params: { path: { piece_id: current.id } },
+        body: schedule ? { at: new Date(at).toISOString() } : {},
+      });
+      if (!data) throw new Error("The site answered without the piece.");
+      took(data, formOf(current));
+    } catch (error) {
+      if (fresh) onSaved(current);
+      throw error;
+    }
     setScheduling(false);
   }
 
@@ -408,6 +418,11 @@ export function PieceEditor({ piece, picked, disciplines, me, manages, onSaved, 
             <Button disabled={busy} onClick={() => void act(() => publish(false), "It's live on the Art page.")}>
               Publish
             </Button>
+            {saved?.status === "scheduled" ? (
+              <Button disabled={busy} onClick={() => void act(unpublish, "It's a draft again: it won't go live.")}>
+                Back to a draft
+              </Button>
+            ) : null}
             <Button
               disabled={busy}
               aria-expanded={scheduling}

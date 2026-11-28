@@ -30,8 +30,10 @@ def _excerpt(words: str) -> str:
     flat = " ".join(words.split())
     if len(flat) <= MAX_DESCRIPTION:
         return flat
-    cut = flat[: MAX_DESCRIPTION - 1].rsplit(" ", 1)[0]
-    return f"{cut}…"
+    cut = flat[: MAX_DESCRIPTION - 1]
+    # At a word's end when there is one; an unbroken run is cut where it is (cubic on #171).
+    words = cut.rsplit(" ", 1)[0] if " " in cut else cut
+    return f"{words}…"
 
 
 def _byline(card: Mapping[str, Any]) -> str:
@@ -87,8 +89,7 @@ class Art(server_copy.Pages):
             "url": url,
             "mainEntityOfPage": url,
         }
-        if piece.about:
-            artwork["description"] = piece.about
+        artwork["description"] = piece.about or description
         if card["discipline"] is not None:
             artwork["artform"] = card["discipline"]["label"]
         if card["artist"]:
@@ -187,6 +188,14 @@ class Art(server_copy.Pages):
         )
         site = await server_copy.identity(db)
         newest = max((piece.updated_at for piece in found), default=None)
+        # Each discipline's page changed when its own newest piece did (cubic on #171).
+        held = await service.disciplines_of(db, [piece.id for piece in found])
+        latest: dict[str, Any] = {}
+        for piece in found:
+            discipline = held.get(piece.id)
+            if discipline is not None:
+                slug = discipline["slug"]
+                latest[slug] = max(latest.get(slug, piece.updated_at), piece.updated_at)
         return [
             server_copy.Entry(
                 service.ART,
@@ -196,7 +205,9 @@ class Art(server_copy.Pages):
             ),
             *(
                 server_copy.Entry(
-                    f"{service.ART}/{each['slug']}", modified=newest, title=each["label"]
+                    f"{service.ART}/{each['slug']}",
+                    modified=latest.get(each["slug"]),
+                    title=each["label"],
                 )
                 for each in await service.live_disciplines(db)
             ),

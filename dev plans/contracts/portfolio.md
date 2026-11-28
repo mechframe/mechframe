@@ -30,27 +30,27 @@ The collective's visual work goes on the site without a deploy. Paintings, graph
 **Permissions** (§8, 2):
 - `portfolio.piece.add`: "Add pieces, and edit and delete the ones credited to you" (admin, editor). A site gives it to its artist role.
 - `portfolio.piece.manage`: "Edit and delete every piece, and credit it to anyone who may add pieces" (admin, editor).
-- `portfolio.settings.manage`: "The Art page's settings" (admin).
+- The Art page's settings are saved under the kernel's `kernel.settings.manage`, as every module's are: portfolio declares no settings permission (as built; the approved draft named `portfolio.settings.manage`).
 
-**The guard on a piece:** `require_owner_or("portfolio.piece.manage")`, then `check(piece.artist_id)`. So a piece credited to you is yours, and every piece is open to staff holding `manage`.
+**Who may change a piece** (as built): staff holding `manage` change every piece; someone holding `add` changes only a piece credited to them, while they hold it. The routes read both through `require_owner_or` (`router.who`), and the service checks them on the locked row (`service.may_change`). The approved draft said `require_owner_or("portfolio.piece.manage")` then `check(piece.artist_id)`, which passes the owner whatever they now hold.
 
 **HTTP** (`/api/portfolio`, behind `require_module("portfolio")`).
 
 **Public reads:**
-- `GET /pieces?discipline=&cursor=` → `{items: [PieceCard], next_cursor}`, the live pieces, newest first (by `published_at`, then id), `pieces_per_page` at a time.
+- `GET /pieces?discipline=&cursor=&limit=` → `{items: [PieceCard], next_cursor}`, the live pieces, newest first (by `published_at`, then id). `limit` is 1 to 60, the settings' `pieces_per_page` when it's left out.
   - A discipline that isn't one answers 404 `portfolio.discipline_not_found`.
-  - `PieceCard` is `{id, slug, title, discipline: {slug, label} | null, artist: str | null, year, picture: Picture, video: bool, path}`.
+  - `PieceCard` is `{id, slug, title, discipline: {slug, label} | null, artist: str | null, year, picture: Picture | null, has_video: bool, path}`; `picture` is null only when the library lost the image.
   - `artist` is the account's display name, never its address, and null without one.
   - `Picture` is media's `Picture`: `{id, url, srcset, width, height, alt, decorative}`.
 - `GET /pieces/{slug}` → `Piece`, which is `PieceCard` plus `about` and `video: {url, video_id} | null`. A draft or a slug with no piece answers 404 `portfolio.piece_not_found`.
 - `GET /disciplines` → `{items: [{slug, label}]}`: the disciplines that have a live piece, in the vocabulary's order.
 
 **Admin routes** (behind the admin gate):
-- `GET /admin/pieces?discipline=&q=&cursor=` (`add`) → `{items: [AdminPiece], next_cursor, no_artist}`, 50 a page, newest edit first.
+- `GET /admin/pieces?discipline=&q=&cursor=&limit=` (`add` or `manage`) → `{items: [AdminPiece], next_cursor, no_artist}`, newest edit first. `limit` is 1 to 100, 50 when it's left out.
   - With `manage`, every piece. Without it, the pieces credited to you, and `no_artist` is null.
   - `no_artist` counts the pieces with no artist, for the page's note.
 - `GET /admin/pieces/{id}` (owner or `manage`) → `AdminPiece`.
-  - `AdminPiece` is `{id, slug, title, discipline | null, artist: {id, name} | null, year, about, picture, video, status, publish_at, published_at, version, updated_at, path}`.
+  - `AdminPiece` is `{id, slug, title, discipline | null, artist: {id, name} | null, year, about, image_id, picture | null, video, status, publish_at, published_at, version, updated_at, path}`.
   - `path` is null while the piece isn't live.
 - `POST /admin/pieces` (`add`) takes `NewPiece {title, discipline, image_id, slug?, artist_id?, year?, about?, video_url?}` → 201 `AdminPiece`, a draft.
   - Without `manage`, the piece is credited to you, and an `artist_id` naming someone else is 403 `kernel.forbidden`.
@@ -172,7 +172,7 @@ Branch `portfolio`, migration `portfolio_0001`. Its `depends_on` is `kernel_0014
   - `migrations/portfolio_0001_portfolio.py`.
   - `web/`: `module.web.ts`, `api.ts`, `public.ts`, `pages/PortfolioAdmin.tsx`, `pages/Art.tsx` (the scaffold's `Public.tsx`), `components/` (the tile, the editor, the Disciplines dialog, the panel, `PieceCard`), `settings/ArtSettings.tsx`, `portfolio.css`.
   - `tests/`: `backend`, `contract`, `web` and `e2e`.
-- **Generated again:** `openapi.json`, `package.json`'s `api:*` entries and `schema.ts`, `catalog.json`, and `docs/progress.json` with `python -m tools.progress`.
+- **Generated again,** each by its own tool (`docs/COMMANDS.md`): `openapi.json` by `python -m tools.openapi`, then `schema.ts` by `npm run api:types` once `package.json`'s `api:*` lines name portfolio; `catalog.json` by `mechframe catalog`; `docs/HOST-VARIABLES.md` by `python -m tools.host_variables`; the event's schema by `python -m tools.event_schemas`; and `docs/PROGRESS.md` and the ledger's rows by `python -m tools.progress`, from `docs/progress.json`, which is edited by hand.
 - **The decision:** `docs/decisions/0074-portfolio.md`.
 - **Elsewhere:** a row in `dev plans/README.md`. SPEC doesn't change.
 - **Not mine:** VM Website's `site-additions/backend/app/site/seed.py` gives the artist role its permissions (§8, 2). Its session changes it.
@@ -274,3 +274,13 @@ None changes what was approved; each says what §2 meant, or adds what a screen 
 - **The e2e spec stands in the pieces' reads** at the browser: the e2e server runs with storage off, so media can't give any picture an address, and a piece can't be added there. The disciplines (added through the dialog) and the Art page's settings are the server's own. Adding, publishing and opening a piece at its address are the HTTP contract suite's, with real pictures in a fake S3.
 - **A piece in the editor has its own address,** `/admin/portfolio/<id>` (`/new` for a new one), with the discipline filter in the query (`?discipline=`): the kit's unsaved-changes guard asks only on a move to another path, so a `?piece=` query let another piece replace unsaved edits (Codex on #171). Its picture's use in the media library links there.
 - **Publish and Unpublish keep what's typed and not yet saved,** still unsaved: the answer is taken in against the piece as saved before it, not the form as it stands (Codex on #171).
+- **cubic on #171**, each with a test seen failing first where it's a behaviour:
+  - a piece credited to a manager who can't add pieces is refused, as any other credit is (`portfolio.not_an_artist`);
+  - a piece's `video_id` is 11 of YouTube's letters, a CHECK beside the contract's `char(11)`, so the table holds no shorter id;
+  - a scheduled piece has "Back to a draft"; a new piece's Publish moves the page on only once it's live; a save's conflict counts every field it sent as the person's;
+  - every `VisualArtwork` has a description (the line when there are no words), and a description with no space in it is cut where it is;
+  - each discipline's sitemap date is its own newest piece; the disciplines' counts and a reindex's documents are read in a few queries, not one a discipline or a piece;
+  - only the slug's own constraint is a 409 `portfolio.slug_taken`; any other failure of a save goes up as it is;
+  - the Art page says when its disciplines or its words couldn't be read, with Try again; the Disciplines dialog says a rename's or a delete's failure beside its row;
+  - the panel's heading keeps the site's focus outline;
+  - the e2e spec adds a piece through Add a piece and publishes it, with media's library and the piece's writes stood in.

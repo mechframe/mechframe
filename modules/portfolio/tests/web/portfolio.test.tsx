@@ -199,11 +199,15 @@ describe("Collective › Portfolio", () => {
     expect(await json(sent.find((each) => each.method === "PATCH") as Request)).toEqual({ version: 1, year: 2024, artist_id: ARTISTS.items[1]?.id });
   });
 
-  it("asks which to keep when someone saved the same field first", async () => {
-    routed({
+  it("asks which to keep when someone saved the same field first, and saves the choice", async () => {
+    let calls = 0;
+    const sent = routed({
       [LIST]: { status: 200, body: { items: [piece()], next_cursor: null, no_artist: 0 } },
       [`GET ${ONE}`]: { status: 200, body: piece() },
-      [`PATCH ${ONE}`]: problem(409, "portfolio.changed", { piece: piece({ version: 2, title: "Harbour, theirs" }) }),
+      [`PATCH ${ONE}`]: () => {
+        calls += 1;
+        return calls === 1 ? problem(409, "portfolio.changed", { piece: piece({ version: 2, title: "Harbour, theirs" }) }) : { status: 200, body: piece({ version: 3, title: "Harbour, mine" }) };
+      },
     });
     renderApp({ path: `/admin/portfolio/${ID}`, modules: [portfolio], session: editor });
 
@@ -211,8 +215,95 @@ describe("Collective › Portfolio", () => {
     await userEvent.clear(title);
     await userEvent.type(title, "Harbour, mine");
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
-    expect(await screen.findByText("Harbour, theirs")).toBeInTheDocument();
-    expect(screen.getByText("Harbour, mine")).toBeInTheDocument();
+    const asking = await screen.findByRole("group", { name: "Saved by someone else since you opened it" });
+    expect(within(asking).getByText("Harbour, theirs")).toBeInTheDocument();
+    await userEvent.click(within(asking).getByRole("radio", { name: "Keep mine" }));
+    await userEvent.click(within(asking).getByRole("button", { name: "Save with these choices" }));
+    await waitFor(() => {
+      expect(sent.filter((each) => each.method === "PATCH").length).toBe(2);
+    });
+    expect(await json(sent.filter((each) => each.method === "PATCH")[1] as Request)).toEqual({ version: 2, title: "Harbour, mine" });
+  });
+
+  it("takes a scheduled piece back to a draft (cubic on #171)", async () => {
+    const scheduled = piece({ status: "scheduled", publish_at: "2026-12-01T09:00:00+00:00" });
+    const sent = routed({
+      [LIST]: { status: 200, body: { items: [scheduled], next_cursor: null, no_artist: 0 } },
+      [`GET ${ONE}`]: { status: 200, body: scheduled },
+      [`POST ${ONE}/unpublish`]: { status: 200, body: piece() },
+    });
+    renderApp({ path: `/admin/portfolio/${ID}`, modules: [portfolio], session: editor });
+
+    await userEvent.click(await screen.findByRole("button", { name: "Back to a draft" }));
+    await waitFor(() => {
+      expect(sent.some((each) => each.method === "POST" && new URL(each.url).pathname.endsWith("/unpublish"))).toBe(true);
+    });
+    expect(await screen.findByText("A draft. Nothing shows on the Art page until you publish it.")).toBeInTheDocument();
+  });
+
+  it("never says no piece has an artist from one discipline's list (cubic on #171)", async () => {
+    routed({
+      [LIST]: {
+        status: 200,
+        body: { items: [piece({ artist: null }), piece({ id: "2", title: "Sticker", artist: null })], next_cursor: null, no_artist: 2 },
+      },
+    });
+    renderApp({ path: "/admin/portfolio?discipline=paintings", modules: [portfolio], session: editor });
+
+    expect(await screen.findByText("2 pieces have no artist")).toBeInTheDocument();
+    expect(screen.queryByText("No piece has an artist yet")).not.toBeInTheDocument();
+  });
+
+  it("publishes a new piece, and moves on to it only once it's live (cubic on #171)", async () => {
+    const image = { ...PICTURE, bytes: 1000, content_type: "image/png", filename: "harbour.png", uploaded_by: "Big Haas", created_at: "2026-11-28T12:00:00+00:00", version: 1 };
+    const published = piece({ status: "published", path: "/art/piece/harbour-at-dusk", published_at: "2026-11-28T12:00:00+00:00" });
+    let live = false;
+    const sent = routed({
+      [LIST]: { status: 200, body: { items: [], next_cursor: null, no_artist: 0 } },
+      "GET /api/media/admin/images": { status: 200, body: { items: [image], next_cursor: null, missing_alt: 0 } },
+      "POST /api/portfolio/admin/pieces": { status: 201, body: piece() },
+      // Answered late, as a busy server would: a page that moved on before it never shows it live.
+      [`POST ${ONE}/publish`]: async () => {
+        await new Promise((done) => setTimeout(done, 300));
+        live = true;
+        return { status: 200, body: published };
+      },
+      [`GET ${ONE}`]: () => ({ status: 200, body: live ? published : piece() }),
+    });
+    const { router } = renderApp({ path: "/admin/portfolio", modules: [portfolio], session: editor });
+
+    await userEvent.click(await screen.findByRole("button", { name: "Add a piece" }));
+    const picker = await screen.findByRole("dialog", { name: "Choose the new piece's picture" });
+    await userEvent.click(await within(picker).findByRole("button", { name: "Boats at dusk, 1200 × 900" }));
+    await userEvent.type(await screen.findByRole("textbox", { name: "Title" }), "Harbour at dusk");
+    await userEvent.selectOptions(screen.getByRole("combobox", { name: "Discipline" }), "paintings");
+    await userEvent.click(screen.getByRole("button", { name: "Publish" }));
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe(`/admin/portfolio/${ID}`);
+    });
+    expect(live).toBe(true);
+    expect(await screen.findByRole("link", { name: "View on the site" })).toHaveAttribute("href", "/art/piece/harbour-at-dusk");
+    const made = sent.find((each) => each.method === "POST" && new URL(each.url).pathname === "/api/portfolio/admin/pieces") as Request;
+    expect(await json(made)).toMatchObject({ title: "Harbour at dusk", discipline: "paintings", image_id: PICTURE.id });
+  });
+
+  it("says a rename's failure beside the discipline renamed (cubic on #171)", async () => {
+    routed({
+      [LIST]: { status: 200, body: { items: [], next_cursor: null, no_artist: 0 } },
+      [`PATCH /api/kernel/admin/terms/${DISCIPLINES.items[0]?.id ?? ""}`]: problem(500, "kernel.internal_error"),
+    });
+    renderApp({ path: "/admin/portfolio", modules: [portfolio], session: editor });
+
+    await userEvent.click(await screen.findByRole("button", { name: "Disciplines" }));
+    const dialog = await screen.findByRole("dialog", { name: "Edit disciplines" });
+    const name = within(dialog).getByRole("textbox", { name: "Name of Paintings" });
+    await userEvent.clear(name);
+    await userEvent.type(name, "Painting");
+    await userEvent.click(within(dialog).getAllByRole("button", { name: "Rename" })[0] as HTMLElement);
+    await waitFor(() => {
+      expect(name).toHaveAttribute("aria-invalid", "true");
+    });
+    expect(within(dialog).getByRole("textbox", { name: "New discipline" })).not.toHaveAttribute("aria-invalid", "true");
   });
 
   it("lets an artist edit their own piece, credited to them with no choice", async () => {
@@ -360,6 +451,19 @@ describe("the Art page", () => {
     expect(screen.queryByRole("link", { name: "Commission work like this" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^Play/ })).toBeInTheDocument();
     expect(document.querySelector("iframe")).toBeNull();
+  });
+
+  it("says when the disciplines or the page's words couldn't be read, with Try again (cubic on #171)", async () => {
+    routed({
+      "GET /api/portfolio/pieces": { status: 200, body: { items: [card()], next_cursor: null } },
+      "GET /api/portfolio/disciplines": problem(500, "kernel.internal_error"),
+      "GET /api/portfolio/art": problem(500, "kernel.internal_error"),
+    });
+    renderApp({ path: "/art", modules: [portfolio] });
+
+    expect(await screen.findByText("The disciplines couldn't be loaded.")).toBeInTheDocument();
+    expect(screen.getByText("The Art page's words couldn't be loaded.")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Try again" })).toHaveLength(2);
   });
 
   it("answers a piece that isn't live with the site's not-found page", async () => {
