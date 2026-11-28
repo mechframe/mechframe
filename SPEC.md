@@ -260,7 +260,8 @@ Modules MUST import only from the kernel's public surface: `kernel/__init__.py` 
 
 | Name | Gives |
 | --- | --- |
-| `useSession()` | The user, their roles, and `can(permission)` for showing or hiding UI; `SESSION_KEY` is the session's place in the query cache, for a part that must know who's signed in at the moment it acts (decision 0068) |
+| `useSession()` | The user, their roles, and `can(permission)` for showing or hiding UI |
+| `SESSION_KEY` | The session's place in the query cache, read with `queryClient.getQueryData(SESSION_KEY)`, for a part that must know who's signed in at the moment it acts, not at its last render (decision 0068) |
 | `api`, `useApiQuery` / `useApiMutation` and `apiQueryOptions` | The client, typed from the generated schema and wrapped in TanStack Query, for the kernel's paths; any answer but a success throws an `ApiProblem`; a query reads only, and a refusal (4xx) isn't retried (decision 0042) |
 | `createApiClient<paths>()` | A module's own typed client and hooks, from its `openapi.json` |
 | `<RequireAuth>`, `<RequirePermission>` | Route guards |
