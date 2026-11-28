@@ -90,6 +90,9 @@ export default function ReactionRow({ type, id }: ReactionPartProps) {
     };
     sending.current.add(key);
     queued.current += 1;
+    // A read already on its way began before this press, so it would draw over it:
+    // it's stopped, here and before a saved answer is drawn (CodeRabbit on #170).
+    void queryClient.cancelQueries({ queryKey });
     set((row) => toggled(row, key, on, order));
     const write = async () => {
       try {
@@ -103,7 +106,10 @@ export default function ReactionRow({ type, id }: ReactionPartProps) {
           dropped();
           return;
         }
-        if (data && queued.current === 1) set(() => data);
+        if (data && queued.current === 1) {
+          await queryClient.cancelQueries({ queryKey });
+          if (still()) set(() => data);
+        }
       } catch (error) {
         if (!still()) {
           dropped();

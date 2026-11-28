@@ -177,6 +177,34 @@ describe("pressing", () => {
     expect(screen.getByRole("button", { name: "Fire, 1" })).toHaveAttribute("aria-pressed", "true");
   });
 
+  it("lets no read begun before a saved press draw over it (CodeRabbit on #170)", async () => {
+    let reads = 0;
+    let late: (value: Answer) => void = () => undefined;
+    routed({
+      // The first read at once; the one after Fire's refusal held until Love is saved.
+      "GET /api/reactions": () => {
+        reads += 1;
+        if (reads === 1) return read(counted());
+        return new Promise<Answer>((resolve) => {
+          late = resolve;
+        });
+      },
+      [`PUT ${PRESS("fire")}`]: problem(500, "kernel.error", "Something went wrong."),
+      [`PUT ${PRESS("love")}`]: { status: 200, body: counted({ love: 1 }, ["love"]) },
+    });
+    draw();
+    await userEvent.click(await button(/Fire, 0/));
+    expect(await screen.findByText("Something went wrong.")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(reads).toBe(2);
+    });
+    await userEvent.click(await button(/Love, 0/));
+    expect(await button(/Love, 1/)).toHaveAttribute("aria-pressed", "true");
+    late(read(counted()));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.getByRole("button", { name: "Love, 1" })).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("takes the reader's own back", async () => {
     const sent = routed({
       "GET /api/reactions": read(counted({ love: 2 }, ["love"])),
