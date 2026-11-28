@@ -72,7 +72,7 @@ The collective's visual work goes on the site without a deploy. Paintings, graph
   - the schema's own, for lengths.
 
 **What a save does besides:**
-- records the picture's place with `media.use(image_id, owner="portfolio.piece:<id>", label=title, link="/admin/portfolio?piece=<id>")`, and `media.release`s the old picture or, on a delete, every picture;
+- records the picture's place with `media.use(image_id, owner="portfolio.piece:<id>", label=title, link="/admin/portfolio/<id>")`, and `media.release`s the old picture or, on a delete, every picture;
 - indexes the piece for search: hook 3's `search.py`, with its title, about, artist and discipline;
 - audits each action as `portfolio.piece.created`, `.changed` (the fields' names), `.published`, `.scheduled`, `.unpublished` and `.deleted`. Each holds the piece's id, never its words: a title may hold an `@` the audit refuses as an address (featured's lesson).
 

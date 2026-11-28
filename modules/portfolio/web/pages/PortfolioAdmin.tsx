@@ -91,7 +91,8 @@ export default function PortfolioAdmin() {
   }
 
   function filter(slug: string) {
-    setSearch(slug ? { discipline: slug } : {}, { replace: true });
+    // The address's state goes with it: a new piece's picture lives there (cubic on #171).
+    setSearch(slug ? { discipline: slug } : {}, { replace: true, state: location.state as unknown });
   }
 
   const lead = labels.length ? `${joined(labels)}. Everything live here shows on the Art page.` : "Everything live here shows on the Art page.";

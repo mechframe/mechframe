@@ -287,6 +287,25 @@ describe("Collective › Portfolio", () => {
     expect(await json(made)).toMatchObject({ title: "Harbour at dusk", discipline: "paintings", image_id: PICTURE.id });
   });
 
+  it("keeps a new piece open while a discipline's chip is pressed (cubic on #171)", async () => {
+    const image = { ...PICTURE, bytes: 1000, content_type: "image/png", filename: "harbour.png", uploaded_by: "Big Haas", created_at: "2026-11-28T12:00:00+00:00", version: 1 };
+    routed({
+      [LIST]: { status: 200, body: { items: [], next_cursor: null, no_artist: 0 } },
+      "GET /api/media/admin/images": { status: 200, body: { items: [image], next_cursor: null, missing_alt: 0 } },
+    });
+    const { router } = renderApp({ path: "/admin/portfolio", modules: [portfolio], session: editor });
+
+    await userEvent.click(await screen.findByRole("button", { name: "Add a piece" }));
+    const picker = await screen.findByRole("dialog", { name: "Choose the new piece's picture" });
+    await userEvent.click(await within(picker).findByRole("button", { name: "Boats at dusk, 1200 × 900" }));
+    await userEvent.type(await screen.findByRole("textbox", { name: "Title" }), "Harbour at dusk");
+    await userEvent.click(screen.getByRole("button", { name: "Graphic design" }));
+    await waitFor(() => {
+      expect(router.state.location.search).toBe("?discipline=graphic-design");
+    });
+    expect(screen.getByRole("textbox", { name: "Title" })).toHaveValue("Harbour at dusk");
+  });
+
   it("says a rename's failure beside the discipline renamed (cubic on #171)", async () => {
     routed({
       [LIST]: { status: 200, body: { items: [], next_cursor: null, no_artist: 0 } },
