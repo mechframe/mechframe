@@ -21,7 +21,7 @@ Overwritten every session. This one: 2026-11-28, about 06:30 to 10:45 Eastern (1
   - **The site's answers** (VM Website Dev 27, the owner's word): only the Post board draws reactions; signed out goes to sign-in; the switch's line is "Reactions on posts, comments and messages"; the board's icons ship.
 - **Portfolio 0.1.0 (#171, the side lane, decision 0074).** The owner approved `dev plans/contracts/portfolio.md` as recommended (eight answers).
   - **What it does:** pieces by discipline, each with one picture from media, the account it's credited to, a year, words and an optional YouTube link, through the lifecycle. It also gives search, `portfolio.piece` item references, server copy, export and erase, and a seed. Collective › Portfolio and the Art page are drawn to the AdminPortfolio and Art boards.
-  - **Two permissions:** `portfolio.piece.add` for an artist's own pieces, `portfolio.piece.manage` for every piece. `require_owner_or(p)` passes anyone holding `p`, so a "your own" role needs its own permission. VM Website has its seed change.
+  - **Two permissions:** `portfolio.piece.add` for an artist's own pieces, `portfolio.piece.manage` for every piece. `require_owner_or(p)` passes anyone holding `p`, so a "your own" role needs its own permission. The side lane sent VM Website its seed change (`portfolio.piece.add` and `media.image.upload` for the artist role); the site's session hasn't confirmed it's applied.
   - **Its Result** is in `dev plans/done/2026-11-28-side-lane-m14-portfolio.md` §9.
 - **The owner's call on VM Website's asks** (2026-11-28, "as recommended"):
   - B, Bandcamp's own player (discography and embeds), goes to the side lane after portfolio.

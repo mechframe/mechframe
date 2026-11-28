@@ -10,7 +10,7 @@ MechFrame (`CLAUDE.md`, `SPEC.md`), public at mechframe/mechframe. The first sit
 
 - **Yours:** ask B in `modules/discography/` and `modules/embeds/`, and its contract `dev plans/contracts/bandcamp-player.md`. The owner gave B to this lane on 2026-11-28 ("as recommended").
 - **Not yours:** the kernel, the kit and `kernel/web/src/admin/`; `modules/comments/`, `reactions/`, `media/` and `featured/` (ask C touches media and featured); `docs/HANDOFF.md`, `CLAUDE.md`'s state sections and the ledger. Ask the main lane (the newest "AI DevKit Development" session in the main checkout) first.
-- **Generated files:** the PR makes its own (`docs/COMMANDS.md`): `python -m tools.openapi`, `npm run api:types`, `mechframe catalog`, `python -m tools.host_variables`, and its `docs/progress.json` line then `python -m tools.progress`. After merging `main`, take main's copies and make them again. SPEC's change log: keep main's and add your line.
+- **Generated files:** the PR makes its own (which to run after which change: `docs/COMMANDS.md`): `python -m tools.openapi`, `npm run api:types`, `mechframe catalog`, `python -m tools.host_variables`, and its `docs/progress.json` line then `python -m tools.progress`. After merging `main`, take main's copies and make them again. SPEC's change log: keep main's and add your line.
 
 ## 3. State (verify it)
 
@@ -23,7 +23,7 @@ Checked 2026-11-28, about 10:45 Eastern: `main` was 8e48530 (#171), and the main
    - its approved `dev plans/contracts/player-sources.md` (2026-11-27);
    - the boards in `C:\DEV\VM Website\design\site\`, canvas 123.
    In short: discography keeps a Bandcamp player per track and per album from pasted embed code (embeds' `fromBandcampCode`); a track with no file or SoundCloud link plays from its own Bandcamp player, else its album's, and counts as Live; the reads (`Card`, release and track reads, `playerItem`) carry it; embeds exports its frame without its own facade (the boards' Listen is the facade); the admin's "Bandcamp player" field. The site's side waits switched off (`NO_BANDCAMP`). It goes to the owner before any code.
-2. **Build it** in one PR (discography and embeds each a version up), linted with `module-contract-lint`.
+2. **Build it** in one PR (discography and embeds each a version up), linted with `module-contract-lint`; before the push, `python -m tools.validate_schemas`, the brand check on lifted code, and `mechframe add` then `mechframe check` on a fresh site.
 3. **Report** in this file's section 9, Result, and in the PR. Never write in `docs/HANDOFF.md`.
 
 ## 5. Ask the owner, don't decide

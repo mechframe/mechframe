@@ -16,14 +16,14 @@ MechFrame (`CLAUDE.md`, `SPEC.md`), public at mechframe/mechframe. Vibrant Mindz
 ## 3. State (verify it)
 
 Checked 2026-11-28, about 10:45 Eastern (15:45 UTC):
-- **`main`:** 8e48530 (#171), then this handoff's docs PR (`docs/handoff-m4n`). Check `git log -1 origin/main` and `gh pr list`.
+- **`main`:** 8e48530 (#171), then this handoff's docs PR #172 (`docs/handoff-m4n`): land it first if it's still open. Check `git log -1 origin/main` and `gh pr list`.
 - **Versions:** blog 0.1.8, reactions 0.1.0, portfolio 0.1.0; the rest in `catalog.json`.
 - **Progress:** v1.0 at 83% (51 of 61). Step 3: reactions and portfolio built; comments, then roster.
 
 ## 4. The job, in order
 
 1. **Reactions 0.1.1** (VM Website Dev 28's X1 and X2; the owner: the board wins): in `modules/reactions/web/reactions.css`, drop `.mf-reaction-count`'s `tabular-nums`, and give `.mf-reaction` `line-height: normal` after its `font`. VM Website's page: `dev plans/2026-11-28-reactions-row-ask.md`. One small PR; done when the site's six Post states are exact at 1440 and 390.
-2. **Comments' contract** (`_templates\feature-CONTRACT.md` into `dev plans/contracts/comments.md`, skill `mechframe-module-extractor`). Sources: the module plan's §9, `modules/_comments/`, the `k3-moderation` and `k3-notifications` contracts, hook 5, decision 0068. To the owner before any code. The boards (`C:\DEV\VM Website\design\site\`, read 2026-11-28):
+2. **Comments' contract** (`C:\DEV\_templates\feature-CONTRACT.md` into `dev plans/contracts/comments.md`, skill `mechframe-module-extractor`). Sources: the module plan's §9, `modules/_comments/`, the `k3-moderation` and `k3-notifications` contracts, hook 5, decision 0068. To the owner before any code. The boards (`C:\DEV\VM Website\design\site\`, read 2026-11-28):
    - **`Post.dc.html`:** Top or Newest; the form (Name, Email "(never shown)", "Email me replies", guests' and first comments wait for approval); each comment's name, role badge, time, heart and count, Reply, Report; "This comment was removed." keeps its replies; replies one level in.
    - **`AdminComments.dc.html`:** Waiting, Approved, Spam; Approve, Don't publish, Spam; "The oldest has waited [n] days"; "Spam teaches the filter."
    - **`AdminSettings.dc.html`:** the Comments switch.
