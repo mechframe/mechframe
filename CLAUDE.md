@@ -10,24 +10,24 @@ The binding directives are in `C:\DEV\CLAUDE.md` and `C:\DEV\DIRECTIVES.md`, whi
 - **Path:** `C:\DEV\AI-DevKit`. **Remote:** `https://github.com/mechframe/mechframe` (decision 0034), **public** (decision 0011). Never commit secrets, client material or private notes; private notes go in `docs/private/` (gitignored).
 - **The contract:** `SPEC.md`. Every module, the kernel and the CLI follow it. Read the sections you touch before every change.
 
-## Current state (2026-11-27)
+## Current state (2026-11-28)
 
-- **v1.0 is at 80%** (49 of 61 steps). Nothing is deployed. **The kernel is done**, K0 to K5 (#1 to #96), with K2's steps 9 to 11 waiting until the site needs them (decision 0029); `mechframe upgrade kernel` is in (#111, #114; decision 0053).
+- **v1.0 is at 83%** (51 of 61 steps). Nothing of MechFrame's is deployed; the site's staging is VM Website's (https://vybesite.com). **The kernel is done**, K0 to K5 (#1 to #96), with K2's steps 9 to 11 waiting until the site needs them (decision 0029); `mechframe upgrade kernel` is in (#111, #114; decision 0053).
 - **Hooks:** 1 to 8 (#97 to #110, decision 0052) and 11, item references (`kernel/backend/kernel/refs.py`, #153, decision 0072). Entitlements and profile tabs wait until just before Vibrant Mindz's step 5 and wave 2b.
-- **Modules built:** media 0.1.4, pages 0.1.1, blog 0.1.7, contact 0.1.2, embeds 0.1.1, campaigns 0.1.1, discography 0.1.3, audio-player 0.1.2, featured 0.1.0 and social 0.1.0. Each one's `MODULE.md` and `CHANGELOG.md` say what it does, and `catalog.json` indexes them. The Vibrant Mindz scaffolds wait as `modules/_<id>/`.
-- **The first real site** is the new Vibrant Mindz site (`docs/plans/vibrant-mindz-module-plan.md`). It's built in its own session (`C:\DEV\VM Website`) from MechFrame's `main`. Its checks against the boards send items here, with the owner's calls relayed.
-- **Next, main lane** (`dev plans/2026-11-27-next-session-m4m-board-check.md`): VM Website's board check of #165, then step 1's close; step 2's close (all four tests, after the owner's iPhone Safari check); the flaky axe test diagnosed; and step 3's order and lanes, the owner's call.
-- **Side lane:** discography 0.1.4 (`dev plans/2026-11-27-side-lane-m13-discography-0-1-4.md`), in a worktree: K11's `QuietLink`, its long e2e test within 30 seconds, and the site's Admin › Music differences. Two lanes run at once ("Two lanes", below).
+- **Modules built:** media 0.1.4, pages 0.1.1, blog 0.1.7, contact 0.1.2, embeds 0.1.1, campaigns 0.1.1, discography 0.1.4, audio-player 0.1.2, featured 0.1.0 and social 0.1.0. Each one's `MODULE.md` and `CHANGELOG.md` say what it does, and `catalog.json` indexes them. The Vibrant Mindz scaffolds wait as `modules/_<id>/`.
+- **The first real site** is the new Vibrant Mindz site (`docs/plans/vibrant-mindz-module-plan.md`). It's built in its own session (`C:\DEV\VM Website`) from MechFrame's `main`. Its checks against the boards send items here, with the owner's calls relayed. Its steps 1 and 2 are done; the iPhone Safari check of the player waits for the site's deploy with audio uploads (the owner, 2026-11-28).
+- **Next, main lane** (`dev plans/2026-11-28-next-session-m4n-reactions.md`): step 3 in the owner's order, reactions then comments, each contract first, for the owner; roster last.
+- **Side lane:** portfolio (`dev plans/2026-11-28-side-lane-m14-portfolio.md`), contract first, in a worktree. Two lanes run at once ("Two lanes", below).
 - **After v1.0:** the module roadmap and ten contract hooks (decision 0018, `docs/plans/module-roadmap.md`), and VybeSite's page builder for `pages` (the owner, 2026-11-21).
 - The state PR by PR is in `docs/archive/` (to 2026-11-21, then to 2026-11-26). Next steps, blockers and warnings live in `docs/HANDOFF.md`.
 
 ## Last Completed Task
 
-2026-11-26, about 07:00 Eastern, to 2026-11-27, about 13:40 (Claude Code, the owner's machine, the owner on Remote Control at times): session M4l, the main lane.
+2026-11-27, about 14:00 Eastern, to 2026-11-28, about 06:00 (Claude Code, the owner's machine, the owner on Remote Control at times): session M4m, the main lane.
 
-- **#164:** `CLAUDE.md` and `AGENTS.md` leaned, 176 lines to 133, word for word into `docs/COMMANDS.md`, `docs/REPO-MAP.md` and `docs/archive/`; the ledger README's check step.
-- **#165, VM Website Dev 22's ask:** the kit's last differences from the boards (R1 to R3, R6 to R9, K9 to K12, and the new `QuietLink`); blog 0.1.7's Draw a cover (C1 to C3); audio-player 0.1.2; campaigns 0.1.1, with Set aside named by its words. Decision 0040 amended a third time.
-- **The side lane** landed #163 (discography 0.1.3), with the fix for the test #164 broke.
+- **#168, step 1's close:** VM Website Dev 25's board check of #165 held, with its two asks done, a dialog's title and the AI's problem line in the font's own line (D1, R8; decision 0040 amended a fourth time); and two e2e flakes fixed, Settings' tests in one worker and axe waiting for running fades.
+- **Step 2's close** (the handoff's PR): schemas, CI and E2E on `main`, `mechframe check` on a fresh site with step 2's five modules, and VM Website Dev 27's board check of Admin › Music. The owner moved the iPhone Safari check to the site's deploy.
+- **The side lane** landed #167 (discography 0.1.4). The owner set step 3's order and lanes.
 
 ## Read order
 
