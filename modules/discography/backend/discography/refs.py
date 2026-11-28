@@ -98,7 +98,7 @@ class Releases(refs.Source):
         tracks = await service.tracks_of(db, [release.id for release in releases])
         found: list[refs.Ref] = []
         for release in releases:
-            playable = sum(1 for track in tracks[release.id] if service.plays_from(track))
+            playable = sum(1 for track in tracks[release.id] if service.plays_from(track, release))
             live = _visible(release) and playable > 0
             found.append(
                 refs.Ref(
@@ -150,7 +150,7 @@ class Tracks(refs.Source):
         pictures = await service.pictures_of(db, [release for _, release in rows])
         found: list[refs.Ref] = []
         for track, release in rows:
-            live = _visible(release) and service.plays_from(track) is not None
+            live = _visible(release) and service.plays_from(track, release) is not None
             found.append(
                 refs.Ref(
                     id=track.id,

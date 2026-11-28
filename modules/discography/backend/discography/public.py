@@ -34,9 +34,11 @@ class Card:
     title: str
     artist_line: str
     cover: media.Picture | None
-    #: The stream file, when it plays from an upload; else the SoundCloud link.
+    #: The stream file, when it plays from an upload; else the SoundCloud link;
+    #: else Bandcamp's player (0.1.5): its own, else its release's.
     stream_url: str | None
     soundcloud_url: str | None
+    bandcamp_url: str | None
     duration_ms: int | None
     #: 1,000 integers from 0 to 255 for a stream file; None for a link.
     peaks: list[int] | None
@@ -53,7 +55,7 @@ def path(release_slug: str, track_slug: str | None = None) -> str:
 
 
 def _card(release: Release, track: Track, picture: media.Picture | None, explicit: bool) -> Card:
-    upload = service.plays_from(track) == "upload"
+    upload = service.plays_from(track, release) == "upload"
     return Card(
         id=track.id,
         title=track.title,
@@ -61,6 +63,7 @@ def _card(release: Release, track: Track, picture: media.Picture | None, explici
         cover=picture,
         stream_url=service.stream_url(track) if upload else None,
         soundcloud_url=None if upload else track.soundcloud_url,
+        bandcamp_url=service.bandcamp_of(track, release),
         duration_ms=track.duration_ms,
         peaks=track.peaks if upload else None,
         explicit=explicit and track.explicit,
@@ -109,7 +112,7 @@ async def release_cards(db: AsyncSession, ids: Iterable[uuid.UUID]) -> dict[uuid
         playable = [
             _card(release, track, picture, badge)
             for track in tracks[release.id]
-            if service.plays_from(track)
+            if service.plays_from(track, release)
         ]
         if not playable:
             continue
@@ -121,6 +124,7 @@ async def release_cards(db: AsyncSession, ids: Iterable[uuid.UUID]) -> dict[uuid
             cover=picture,
             stream_url=first.stream_url,
             soundcloud_url=first.soundcloud_url,
+            bandcamp_url=first.bandcamp_url,
             duration_ms=sum(each.duration_ms or 0 for each in playable) or None,
             peaks=None,
             explicit=any(each.explicit for each in playable),

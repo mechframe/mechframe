@@ -6,8 +6,9 @@ its tracks, changes the site at once, writes its search document again and
 says `discography.release.changed`.
 
 **A track plays from** its stream file once the job has made it, else from
-its SoundCloud link, else not at all; a track that can't play is in no public
-answer. An upload is judged by its bytes (`audio.probe`), stored privately,
+its SoundCloud link, else in Bandcamp's own player (its own, else its
+release's; 0.1.5, `dev plans/contracts/bandcamp-player.md`), else not at all;
+a track that can't play is in no public answer. An upload is judged by its bytes (`audio.probe`), stored privately,
 and queued for `discography.process_track`; files a change leaves behind go
 after its commit (`discography.delete_files`).
 
@@ -281,21 +282,37 @@ async def tracks_of(
 # --- what plays ------------------------------------------------------------------------------
 
 
-def plays_from(track: Track) -> str | None:
-    """The stream file once one is made, else the link, else nothing. A
-    replaced master leaves its track's stream in place while the new one is
+def plays_from(track: Track, release: Release) -> str | None:
+    """The stream file once one is made, else the SoundCloud link, else
+    Bandcamp's player (the track's own, else its release's), else nothing.
+    A replaced master leaves its track's stream in place while the new one is
     made, and if that fails, so a replace never takes a track off the site
     (Codex on #145): `stream_key` is set only by a finished job."""
     if track.stream_key:
         return "upload"
     if track.soundcloud_url:
         return "soundcloud"
+    if track.bandcamp_url or release.bandcamp_url:
+        return "bandcamp"
     return None
 
 
 def playable_clause() -> Any:
-    """`plays_from` as SQL."""
-    return or_(Track.stream_key.is_not(None), Track.soundcloud_url.is_not(None))
+    """`plays_from` as SQL, for a query that joins the track's `Release`."""
+    return or_(
+        Track.stream_key.is_not(None),
+        Track.soundcloud_url.is_not(None),
+        Track.bandcamp_url.is_not(None),
+        Release.bandcamp_url.is_not(None),
+    )
+
+
+def bandcamp_of(track: Track, release: Release) -> str | None:
+    """The Bandcamp player a track plays in: its own, else its release's;
+    None unless it plays from Bandcamp."""
+    if plays_from(track, release) != "bandcamp":
+        return None
+    return track.bandcamp_url or release.bandcamp_url
 
 
 def stream_url(track: Track) -> str | None:
@@ -319,6 +336,37 @@ def soundcloud_link(url: str) -> tuple[str, str]:
         )
     parts = urlsplit(url.strip())
     return f"https://soundcloud.com{parts.path.rstrip('/')}", found.kind
+
+
+#: What a field says when its paste isn't Bandcamp's player of its kind.
+NOT_BANDCAMP = {
+    "track": (
+        "That isn't a Bandcamp track's embed code. On the track's Bandcamp page, "
+        "choose Share, then Embed, and copy the code."
+    ),
+    "album": (
+        "That isn't a Bandcamp album's embed code. On the album's Bandcamp page, "
+        "choose Share, then Embed, and copy the code."
+    ),
+}
+
+
+def bandcamp_player(pasted: str, kind: str) -> str:
+    """The Bandcamp player a paste names, as the page's link with the
+    player's id in its fragment: from Bandcamp's own embed code, or from the
+    link its field shows back. Only the link is kept, and nothing in a code
+    runs or loads (`embeds` reads it by pattern); 422 for anything else, or
+    for a player of the other kind."""
+    text = pasted.strip()
+    if text.startswith("<"):
+        code = embeds.from_bandcamp_code(text)
+        text = code[0] if code else ""
+    found = embeds.recognise(text) if text else None
+    if found is None or found.provider != "bandcamp" or found.kind != kind:
+        raise _invalid("bandcamp_url", "discography.not_bandcamp", NOT_BANDCAMP[kind])
+    parts = urlsplit(text)
+    slug = parts.path.strip("/").split("/")[1]
+    return f"https://{parts.hostname}/{kind}/{slug}#{parts.fragment}"
 
 
 # --- covers ----------------------------------------------------------------------------------
@@ -548,7 +596,7 @@ async def documents(db: AsyncSession, releases: Sequence[Release]) -> list[searc
     not three a release (CodeRabbit on #145, 0.1.3)."""
     tracks = await tracks_of(db, [release.id for release in releases])
     shown = {
-        release.id: [track for track in tracks[release.id] if plays_from(track)]
+        release.id: [track for track in tracks[release.id] if plays_from(track, release)]
         for release in releases
     }
     credited = await credits_of(
@@ -596,8 +644,10 @@ async def _touched(db: AsyncSession, release: Release) -> None:
 # --- public reads ----------------------------------------------------------------------------
 
 
-def _explicit(tracks: Iterable[Track], settings: Settings) -> bool:
-    return settings.show_explicit_badge and any(t.explicit for t in tracks if plays_from(t))
+def _explicit(release: Release, tracks: Iterable[Track], settings: Settings) -> bool:
+    return settings.show_explicit_badge and any(
+        t.explicit for t in tracks if plays_from(t, release)
+    )
 
 
 async def cards(db: AsyncSession, releases: Sequence[Release]) -> list[dict[str, Any]]:
@@ -615,8 +665,8 @@ async def cards(db: AsyncSession, releases: Sequence[Release]) -> list[dict[str,
             "credit_line": release.credit_line,
             "summary": release.summary,
             "cover": _cover(pictures.get(release.cover_id) if release.cover_id else None),
-            "explicit": _explicit(tracks[release.id], settings),
-            "track_count": sum(1 for track in tracks[release.id] if plays_from(track)),
+            "explicit": _explicit(release, tracks[release.id], settings),
+            "track_count": sum(1 for track in tracks[release.id] if plays_from(track, release)),
             "tracklist_to_come": release.tracklist_to_come,
             "path": release_path(release),
             "published_at": _when(release.published_at),
@@ -718,10 +768,11 @@ async def tracks_by_id(db: AsyncSession, ids: Sequence[uuid.UUID]) -> list[dict[
     )
     releases = list({release.id: release for _, release in rows}.values())
     pictures = await pictures_of(db, releases)
+    every = await tracks_of(db, [release.id for release in releases])
     numbered = {
         track.id: number
-        for tracks in (await tracks_of(db, [release.id for release in releases])).values()
-        for number, track in _shown_tracks(tracks)
+        for release in releases
+        for number, track in _shown_tracks(release, every[release.id])
     }
     label = (await settings_of(db)).show_explicit_badge
     found: dict[uuid.UUID, dict[str, Any]] = {}
@@ -776,7 +827,7 @@ async def _move_of(db: AsyncSession, old: str) -> tuple[bool, str | None]:
         path = release_path(release)
         return True, (path if path != f"{PREFIX}{old}" else None)
     track = await db.get(Track, track_id)
-    if track is None or not plays_from(track):
+    if track is None or not plays_from(track, release):
         return True, None
     return True, track_path(release, track)
 
@@ -790,25 +841,26 @@ def _line(release: Release, track: Track, number: int, *, label: bool) -> dict[s
         "number": number,
         "duration_ms": track.duration_ms,
         "explicit": label and track.explicit,
-        "plays_from": plays_from(track),
-        "stream_url": stream_url(track) if plays_from(track) == "upload" else None,
+        "plays_from": plays_from(track, release),
+        "stream_url": stream_url(track) if plays_from(track, release) == "upload" else None,
         "soundcloud_url": track.soundcloud_url,
         "soundcloud_kind": track.soundcloud_kind,
+        "bandcamp_url": bandcamp_of(track, release),
         "has_lyrics": bool(track.lyrics),
         "path": track_path(release, track),
     }
 
 
-def _shown_tracks(tracks: list[Track]) -> list[tuple[int, Track]]:
-    """The tracks that play, numbered from 1 in their order."""
-    return list(enumerate((track for track in tracks if plays_from(track)), start=1))
+def _shown_tracks(release: Release, tracks: list[Track]) -> list[tuple[int, Track]]:
+    """The release's tracks that play, numbered from 1 in their order."""
+    return list(enumerate((track for track in tracks if plays_from(track, release)), start=1))
 
 
 async def shown(db: AsyncSession, release: Release) -> dict[str, Any]:
     """A live release as its page draws it."""
     [card] = await cards(db, [release])
     pictures = await pictures_of(db, [release])
-    tracks = _shown_tracks((await tracks_of(db, [release.id]))[release.id])
+    tracks = _shown_tracks(release, (await tracks_of(db, [release.id]))[release.id])
     credited = await credits_of(db, release_ids=[release.id])
     links = await links_of(db, [release.id])
     label = (await settings_of(db)).show_explicit_badge
@@ -848,7 +900,7 @@ async def live_track(
             return None
         now = await live_track(db, moved.rsplit("/", 1)[1], track_slug)
         return track_path(now[0], now[1]) if isinstance(now, tuple) else now
-    tracks = _shown_tracks((await tracks_of(db, [release.id]))[release.id])
+    tracks = _shown_tracks(release, (await tracks_of(db, [release.id]))[release.id])
     for number, track in tracks:
         if track.slug == track_slug:
             return release, track, number
@@ -872,7 +924,7 @@ async def track_shown(
         },
         "artist_line": release.artist_line,
         "cover": _cover(pictures.get(release.cover_id) if release.cover_id else None),
-        "peaks": track.peaks if plays_from(track) == "upload" else None,
+        "peaks": track.peaks if plays_from(track, release) == "upload" else None,
         "lyrics": track.lyrics if settings.show_lyrics and track.lyrics else None,
         "credits": public_credits(credited[track.id]),
     }
@@ -885,10 +937,10 @@ async def artist_links(db: AsyncSession) -> list[dict[str, str]]:
 # --- the admin: releases ---------------------------------------------------------------------
 
 
-def _audio(track: Track) -> dict[str, Any]:
+def _audio(release: Release, track: Track) -> dict[str, Any]:
     return {
         "state": track.audio_state,
-        "plays_from": plays_from(track),
+        "plays_from": plays_from(track, release),
         "percent": track.processing_percent,
         "error": track.audio_error,
         "error_words": ERROR_WORDS.get(track.audio_error or ""),
@@ -896,6 +948,7 @@ def _audio(track: Track) -> dict[str, Any]:
         "master_bytes": track.master_bytes,
         "soundcloud_url": track.soundcloud_url,
         "soundcloud_kind": track.soundcloud_kind,
+        "bandcamp_url": track.bandcamp_url,
         "duration_ms": track.duration_ms,
         "stream_url": stream_url(track),
     }
@@ -911,7 +964,7 @@ def _admin_track(release: Release, track: Track, credits: int) -> dict[str, Any]
         "title": track.title,
         "slug": track.slug,
         "explicit": track.explicit,
-        "audio": _audio(track),
+        "audio": _audio(release, track),
         "has_lyrics": bool(track.lyrics),
         "credit_count": credits,
     }
@@ -945,7 +998,7 @@ async def _rows(db: AsyncSession, releases: Sequence[Release]) -> list[dict[str,
             "publish_at": _when(release.publish_at),
             "published_at": _when(release.published_at),
             "track_count": len(tracks[release.id]),
-            "unplayable": sum(1 for track in tracks[release.id] if not plays_from(track)),
+            "unplayable": sum(1 for track in tracks[release.id] if not plays_from(track, release)),
             "tracklist_to_come": release.tracklist_to_come,
             "updated_at": release.updated_at.isoformat(),
         }
@@ -975,6 +1028,7 @@ async def full_release(db: AsyncSession, release: Release) -> dict[str, Any]:
         **row,
         "credit_line": release.credit_line,
         "summary": release.summary,
+        "bandcamp_url": release.bandcamp_url,
         "back_cover": _cover(
             pictures.get(release.back_cover_id) if release.back_cover_id else None
         ),
@@ -1117,6 +1171,9 @@ async def change_release(
         if fields[name] is None and name not in _CLEARABLE:
             continue
         setattr(release, name, fields[name])
+    if "bandcamp_url" in fields:
+        pasted = fields["bandcamp_url"]
+        release.bandcamp_url = bandcamp_player(pasted, "album") if (pasted or "").strip() else None
     release.slug = slug
     release.version += 1
     release.updated_at = clock.now()
@@ -1481,20 +1538,21 @@ async def replace_audio(
 
 
 async def remove_audio(db: AsyncSession, track_id: uuid.UUID, *, by: uuid.UUID | None) -> Track:
-    """The upload gone: the track plays from its link, if it has one."""
+    """The upload gone: the track plays from its link or its Bandcamp player, if it has one."""
     track = await get_track(db, track_id, lock=True)
+    release = await get_release(db, track.release_id)
     files = _files_of(track)
     track.master_key = track.master_name = track.stream_key = None
     track.master_bytes = track.processing_percent = None
     track.audio_error = None
     track.peaks = None
     track.audio_state = "none"
-    if not track.soundcloud_url:
+    if not plays_from(track, release):
         track.duration_ms = None
     track.version += 1
     track.updated_at = clock.now()
     await _delete_later(db, files)
-    await _touched(db, await get_release(db, track.release_id))
+    await _touched(db, release)
     audit.record(
         db, "discography.track.audio_removed", actor=by, target=("discography.track", track.id)
     )
@@ -1531,6 +1589,9 @@ async def change_track(
         track.soundcloud_url, track.soundcloud_kind = (
             soundcloud_link(link) if link else (None, None)
         )
+    if "bandcamp_url" in fields:
+        pasted = fields["bandcamp_url"]
+        track.bandcamp_url = bandcamp_player(pasted, "track") if (pasted or "").strip() else None
     for name in TRACK_FIELDS:
         if name not in fields:
             continue
@@ -1804,13 +1865,13 @@ async def count_play(db: AsyncSession, request: Request, track_id: uuid.UUID) ->
     the job's stream file doesn't wait: only a delete or a FOR UPDATE does."""
     row = (
         await db.execute(
-            select(Track)
+            select(Track, Release)
             .join(Release, Release.id == Track.release_id)
             .where(Track.id == track_id, lifecycle.visible(Release))
             .with_for_update(read=True, key_share=True, of=Track)
         )
     ).first()
-    if row is None or not plays_from(row[0]):
+    if row is None or not plays_from(row[0], row[1]):
         return False
     return await audio_player.count(db, request, source=PLAYS, item_id=track_id)
 
