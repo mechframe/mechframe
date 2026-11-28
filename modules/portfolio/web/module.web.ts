@@ -16,7 +16,11 @@ export default defineModule({
       { path: "/art/piece/:slug", lazy: () => import("./pages/Art") },
     ],
     member: [],
-    admin: [{ path: "/admin/portfolio", lazy: () => import("./pages/PortfolioAdmin"), permission: ADD }],
+    admin: [
+      { path: "/admin/portfolio", lazy: () => import("./pages/PortfolioAdmin"), permission: ADD },
+      // A piece in the editor has an address of its own, so the kit's guard asks before another replaces it.
+      { path: "/admin/portfolio/:id", lazy: () => import("./pages/PortfolioAdmin"), permission: ADD },
+    ],
   },
   slots: {
     "nav.public": [{ label: "Art", to: "/art" }],

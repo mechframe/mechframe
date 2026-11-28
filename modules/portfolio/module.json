@@ -74,7 +74,8 @@
     ],
     "member": [],
     "admin": [
-      "/admin/portfolio"
+      "/admin/portfolio",
+      "/admin/portfolio/:id"
     ]
   },
   "tables": [

@@ -2,12 +2,13 @@
 // VM Website's AdminPortfolio board): the note while pieces have no artist,
 // the chips by discipline (and Disciplines for staff holding
 // kernel.taxonomy.manage), the grid of pieces with their pills, and the editor
-// beside it for the piece chosen (`?piece=<id>`). Add a piece picks its
-// picture first. Someone holding `portfolio.piece.add` alone sees and edits
+// beside it for the piece chosen, at its own address (`/admin/portfolio/<id>`,
+// `/new` for a new one), so the kit's guard asks before another replaces unsaved
+// edits (Codex on #171). Add a piece picks its picture first. Someone holding `portfolio.piece.add` alone sees and edits
 // their own pieces; `portfolio.piece.manage` every piece (decision 0074).
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { useSearchParams } from "react-router";
+import { useLocation, useNavigate, useParams, useSearchParams } from "react-router";
 
 import { AdminPage, Attention, Button, Card, Chip, LoadError, Pill, useSession, type Tone } from "@/kernel";
 import { ImagePicker, Picture } from "@/modules/media/public";
@@ -55,11 +56,14 @@ export default function PortfolioAdmin() {
   const manages = signedIn?.can(MANAGE) ?? false;
   const mayTaxonomy = signedIn?.can(TAXONOMY) ?? false;
   const me = { id: signedIn?.user.id ?? "", name: signedIn?.user.name || signedIn?.user.email || "You" };
+  const navigate = useNavigate();
+  const location = useLocation();
+  const chosen = useParams().id ?? "";
+  // The filter is in the address, so it stays as a piece is chosen.
   const [search, setSearch] = useSearchParams();
-  const chosen = search.get("piece") ?? "";
-  const [discipline, setDiscipline] = useState("");
+  const discipline = search.get("discipline") ?? "";
   const [picking, setPicking] = useState(false);
-  const [picked, setPicked] = useState<PiecePicture | null>(null);
+  const picked = chosen === NEW ? ((location.state as { picked?: PiecePicture } | null)?.picked ?? null) : null;
   const [editingDisciplines, setEditingDisciplines] = useState(false);
 
   const disciplines = useApiQuery("get", DISCIPLINES);
@@ -82,8 +86,12 @@ export default function PortfolioAdmin() {
   const items = disciplines.data?.items ?? [];
   const labels = items.map((each) => each.label);
 
-  function choose(piece: string) {
-    setSearch(piece ? { piece } : {});
+  function choose(piece: string, state?: { picked: PiecePicture }) {
+    void navigate({ pathname: piece ? `/admin/portfolio/${piece}` : "/admin/portfolio", search: location.search }, state ? { state } : undefined);
+  }
+
+  function filter(slug: string) {
+    setSearch(slug ? { discipline: slug } : {}, { replace: true });
   }
 
   const lead = labels.length ? `${joined(labels)}. Everything live here shows on the Art page.` : "Everything live here shows on the Art page.";
@@ -118,7 +126,7 @@ export default function PortfolioAdmin() {
           tone="warning"
           what={uncreditedWhat}
           why="The Art page names no artist on them until each is credited."
-          {...(firstUncredited ? { action: { label: "Credit the first", to: `/admin/portfolio?piece=${firstUncredited.id}` } } : {})}
+          {...(firstUncredited ? { action: { label: "Credit the first", to: `/admin/portfolio/${firstUncredited.id}` } } : {})}
         />
       ) : null}
       <div className="mf-portfolio-board">
@@ -127,7 +135,7 @@ export default function PortfolioAdmin() {
             <Chip
               pressed={discipline === ""}
               onPressedChange={() => {
-                setDiscipline("");
+                filter("");
               }}
             >
               All
@@ -137,7 +145,7 @@ export default function PortfolioAdmin() {
                 key={each.id}
                 pressed={discipline === each.slug}
                 onPressedChange={() => {
-                  setDiscipline(each.slug);
+                  filter(each.slug);
                 }}
               >
                 {each.label}
@@ -193,7 +201,6 @@ export default function PortfolioAdmin() {
                 me={me}
                 manages={manages}
                 onSaved={(piece) => {
-                  setPicked(null);
                   choose(piece.id);
                 }}
                 onDeleted={() => {
@@ -227,9 +234,8 @@ export default function PortfolioAdmin() {
         <ImagePicker
           title="Choose the new piece's picture"
           onPick={(image) => {
-            setPicked(pictureOf(image));
             setPicking(false);
-            choose(NEW);
+            choose(NEW, { picked: pictureOf(image) });
           }}
           onClose={() => {
             setPicking(false);

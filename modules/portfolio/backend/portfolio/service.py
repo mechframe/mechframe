@@ -349,7 +349,7 @@ async def _place_picture(db: AsyncSession, piece: Piece) -> None:
         piece.image_id,
         owner=owner(piece.id),
         label=piece.title,
-        link=f"/admin/portfolio?piece={piece.id}",
+        link=f"/admin/portfolio/{piece.id}",
     )
     await media.release(db, owner=owner(piece.id), keep=[piece.image_id])
 

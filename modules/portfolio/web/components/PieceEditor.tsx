@@ -135,6 +135,12 @@ export function PieceEditor({ piece, picked, disciplines, me, manages, onSaved, 
     ]);
   }
 
+  /**
+   * Takes in a piece the server answered with: what was typed that `sent` didn't
+   * hold stays as typed. A save's `sent` is what it sent; a Publish's or an
+   * Unpublish's is the piece as saved before it, so edits not yet saved survive
+   * it, still unsaved (Codex on #171).
+   */
   function took(data: AdminPiece, sent: Form) {
     queryClient.setQueryData(["get", ONE, { params: { path: { piece_id: data.id } } }], data);
     setSaved(data);
@@ -211,15 +217,16 @@ export function PieceEditor({ piece, picked, disciplines, me, manages, onSaved, 
       body: schedule ? { at: new Date(at).toISOString() } : {},
     });
     if (!data) throw new Error("The site answered without the piece.");
-    took(data, formNow.current);
+    took(data, formOf(current));
     setScheduling(false);
   }
 
   async function unpublish() {
     if (!saved) return;
+    const before = formOf(saved);
     const { data } = await api.POST("/api/portfolio/admin/pieces/{piece_id}/unpublish", { params: { path: { piece_id: saved.id } } });
     if (!data) throw new Error("The site answered without the piece.");
-    took(data, formNow.current);
+    took(data, before);
   }
 
   async function remove() {

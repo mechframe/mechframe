@@ -165,7 +165,7 @@ describe("Collective › Portfolio", () => {
     expect(within(grid).getByRole("button", { name: /^Edit ?Sticker/ })).toHaveTextContent("No artist");
     expect(within(grid).getByRole("button", { name: /^Edit ?Mural/ })).not.toHaveTextContent(/Draft|No artist|Scheduled/);
     expect(screen.getByText("1 piece has no artist")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Credit the first" })).toHaveAttribute("href", "/admin/portfolio?piece=2");
+    expect(screen.getByRole("link", { name: "Credit the first" })).toHaveAttribute("href", "/admin/portfolio/2");
     expect(screen.getByText("Paintings, graphic design and video. Everything live here shows on the Art page.")).toBeInTheDocument();
   });
 
@@ -186,7 +186,7 @@ describe("Collective › Portfolio", () => {
       [`GET ${ONE}`]: { status: 200, body: piece() },
       [`PATCH ${ONE}`]: { status: 200, body: piece({ version: 2, year: 2024, artist: { id: ARTISTS.items[1]?.id ?? "", name: "petro" } }) },
     });
-    renderApp({ path: `/admin/portfolio?piece=${ID}`, modules: [portfolio], session: editor });
+    renderApp({ path: `/admin/portfolio/${ID}`, modules: [portfolio], session: editor });
 
     const year = await screen.findByRole("textbox", { name: "Year" });
     await userEvent.clear(year);
@@ -205,7 +205,7 @@ describe("Collective › Portfolio", () => {
       [`GET ${ONE}`]: { status: 200, body: piece() },
       [`PATCH ${ONE}`]: problem(409, "portfolio.changed", { piece: piece({ version: 2, title: "Harbour, theirs" }) }),
     });
-    renderApp({ path: `/admin/portfolio?piece=${ID}`, modules: [portfolio], session: editor });
+    renderApp({ path: `/admin/portfolio/${ID}`, modules: [portfolio], session: editor });
 
     const title = await screen.findByRole("textbox", { name: "Title" });
     await userEvent.clear(title);
@@ -221,7 +221,7 @@ describe("Collective › Portfolio", () => {
       [LIST]: { status: 200, body: { items: [mine], next_cursor: null, no_artist: null } },
       [`GET ${ONE}`]: { status: 200, body: mine },
     });
-    renderApp({ path: `/admin/portfolio?piece=${ID}`, modules: [portfolio], session: artist });
+    renderApp({ path: `/admin/portfolio/${ID}`, modules: [portfolio], session: artist });
 
     const by = await screen.findByRole("textbox", { name: "By" });
     expect(by).toHaveValue("J Tone");
@@ -239,7 +239,7 @@ describe("Collective › Portfolio", () => {
       [`POST ${ONE}/publish`]: { status: 200, body: piece({ status: "published", path: "/art/piece/harbour-at-dusk", published_at: "2026-11-28T12:00:00+00:00" }) },
       [`DELETE ${ONE}`]: { status: 204 },
     });
-    renderApp({ path: `/admin/portfolio?piece=${ID}`, modules: [portfolio], session: editor });
+    renderApp({ path: `/admin/portfolio/${ID}`, modules: [portfolio], session: editor });
 
     await userEvent.click(await screen.findByRole("button", { name: "Publish" }));
     expect(await screen.findByRole("link", { name: "View on the site" })).toHaveAttribute("href", "/art/piece/harbour-at-dusk");
@@ -250,6 +250,41 @@ describe("Collective › Portfolio", () => {
     await waitFor(() => {
       expect(sent.some((each) => each.method === "DELETE")).toBe(true);
     });
+  });
+
+  it("asks before another piece replaces unsaved edits (Codex on #171)", async () => {
+    const other = piece({ id: "81111111-1111-4111-8111-111111111111", title: "Mural" });
+    routed({
+      [LIST]: { status: 200, body: { items: [piece(), other], next_cursor: null, no_artist: 0 } },
+      [`GET ${ONE}`]: { status: 200, body: piece() },
+      [`GET /api/portfolio/admin/pieces/${other.id}`]: { status: 200, body: other },
+    });
+    const { router } = renderApp({ path: `/admin/portfolio/${ID}`, modules: [portfolio], session: editor });
+
+    const title = await screen.findByRole("textbox", { name: "Title" });
+    await userEvent.type(title, ", again");
+    await userEvent.click(screen.getByRole("button", { name: /^Edit ?Mural/ }));
+    const asking = await screen.findByRole("dialog", { name: "You have changes that aren't saved" });
+    await userEvent.click(within(asking).getByRole("button", { name: "Stay" }));
+    expect(router.state.location.pathname).toBe(`/admin/portfolio/${ID}`);
+    expect(screen.getByRole("textbox", { name: "Title" })).toHaveValue("Harbour at dusk, again");
+  });
+
+  it("keeps unsaved edits through Unpublish (Codex on #171)", async () => {
+    const live = piece({ status: "published", path: "/art/piece/harbour-at-dusk", published_at: "2026-11-28T12:00:00+00:00" });
+    routed({
+      [LIST]: { status: 200, body: { items: [live], next_cursor: null, no_artist: 0 } },
+      [`GET ${ONE}`]: { status: 200, body: live },
+      [`POST ${ONE}/unpublish`]: { status: 200, body: piece() },
+    });
+    renderApp({ path: `/admin/portfolio/${ID}`, modules: [portfolio], session: editor });
+
+    const title = await screen.findByRole("textbox", { name: "Title" });
+    await userEvent.type(title, ", again");
+    await userEvent.click(screen.getByRole("button", { name: "Unpublish" }));
+    expect(await screen.findByRole("button", { name: "Publish" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Title" })).toHaveValue("Harbour at dusk, again");
+    expect(screen.getByRole("button", { name: "Save" })).toBeEnabled();
   });
 
   it("adds a discipline through the kernel's term routes", async () => {

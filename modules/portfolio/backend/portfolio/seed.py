@@ -132,7 +132,7 @@ async def seed(db: AsyncSession, ctx: seeding.Context) -> None:
             picture.id,
             owner=service.owner(piece.id),
             label=title,
-            link=f"/admin/portfolio?piece={piece.id}",
+            link=f"/admin/portfolio/{piece.id}",
         )
         if state == LIVE:
             piece.published_at = ctx.now  # publish keeps it: the seed's own fixed instant

@@ -29,7 +29,7 @@ The Art page, `/art`, shows the live pieces newest first, with a chip for each d
   - `portfolio.piece.manage`: `GET /admin/artists`;
   - refusals: 403 `kernel.forbidden`; 409 `portfolio.changed` (with the piece now) and `portfolio.slug_taken`; 422 `portfolio.unknown_discipline`, `image_not_found`, `not_youtube`, `not_an_artist` and `bad_year`.
 - **Table:** `portfolio_piece` (migration `portfolio_0001`, branch `portfolio`). The discipline is the kernel's `kernel_term_link`.
-- **Web:** `/admin/portfolio` (Portfolio, under the sidebar's Collective), the Art page at `/art`, `/art/:discipline` and `/art/piece/:slug`, Art in the site's header, and the Settings section "Art page".
+- **Web:** `/admin/portfolio` (Portfolio, under the sidebar's Collective), a piece in its editor at `/admin/portfolio/<id>` (`/new` for a new one), the Art page at `/art`, `/art/:discipline` and `/art/piece/:slug`, Art in the site's header, and the Settings section "Art page".
 - **Hooks:** lifecycle and search (`portfolio.piece`), taxonomy (`portfolio_discipline`), item references (`refs.py`, `portfolio.piece`, "Pieces"), server copy (each page's words, a `VisualArtwork` for a piece, a `CollectionPage` for a list, the sitemap), export and erase (the pieces credited to a person; erase keeps them, uncredited), and the seed (the four disciplines, and three live pieces and a draft while storage is on).
 - **Events:** emits `portfolio.piece.deleted` (v1 `{id}`); listens to nothing.
 - **Permissions:** `portfolio.piece.add`, `portfolio.piece.manage`.
